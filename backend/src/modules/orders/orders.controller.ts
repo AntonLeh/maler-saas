@@ -20,7 +20,10 @@ export async function getOrder(
   next: NextFunction
 ) {
   try {
-    const order = await getOrderById(req.params.id);
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    const order = await getOrderById(id);
     res.json(order);
   } catch (error) {
     next(error);

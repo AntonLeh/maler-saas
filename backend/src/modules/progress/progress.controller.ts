@@ -7,7 +7,10 @@ export async function getOrderProgress(
   next: NextFunction
 ) {
   try {
-    const progress = await getProgressByOrderId(req.params.id);
+    const rawId = req.params.id;
+    const orderId = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    const progress = await getProgressByOrderId(orderId);
     res.json(progress);
   } catch (error) {
     next(error);

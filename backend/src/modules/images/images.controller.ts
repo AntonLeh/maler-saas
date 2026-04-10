@@ -7,7 +7,10 @@ export async function getOrderImages(
   next: NextFunction
 ) {
   try {
-    const images = await getImagesByOrderId(req.params.id);
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+    const images = await getImagesByOrderId(id);
     res.json(images);
   } catch (error) {
     next(error);
