@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-
+const API_BASE_URL = "https://maler-saas-backend.onrender.com";
 type Customer = {
   id: number;
   company_id: number;
@@ -104,7 +104,7 @@ function App() {
   async function loadCustomers() {
     try {
       setLoadingCustomers(true);
-      const response = await fetch("http://localhost:3000/customers");
+      
       const data = await response.json();
 
       if (Array.isArray(data)) {
@@ -124,7 +124,7 @@ function App() {
   async function loadOrders() {
     try {
       setLoadingOrders(true);
-      const response = await fetch("http://localhost:3000/orders");
+      const response = await fetch(`${API_BASE_URL}/orders`);
       const data = await response.json();
 
       if (Array.isArray(data)) {
@@ -145,8 +145,8 @@ function App() {
     try {
       setLoadingProgress(true);
       const response = await fetch(
-        `http://localhost:3000/orders/${orderId}/progress`
-      );
+  `${API_BASE_URL}/orders/${orderId}/progress`
+);
       const data = await response.json();
 
       if (Array.isArray(data)) {
@@ -178,13 +178,13 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(orderData),
-      });
+      const response = await fetch(`${API_BASE_URL}/orders`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(orderData),
+});
 
       const data = await response.json();
 
@@ -221,15 +221,15 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/orders/${progressData.order_id}/progress`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(progressData),
-        }
-      );
+  `${API_BASE_URL}/orders/${progressData.order_id}/progress`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(progressData),
+  }
+);
 
       const data = await response.json();
 
