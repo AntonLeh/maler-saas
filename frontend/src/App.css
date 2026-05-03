@@ -390,10 +390,19 @@ code {
   color: #6d28d9;
 }
 
-.status-abgeschlossen {
+.status-zur-pruefung {
+  background: #fff7d6;
+  color: #b45309;
+  font-weight: 700;
+  border: 1px solid #fcd34d;
+}
+
+.status-fertig {
   background: #dcfce7;
   color: #15803d;
+  font-weight: 700;
 }
+
 
 .empty-state {
   padding: 20px;
@@ -463,14 +472,18 @@ code {
 }
 
 .single-page-section {
-  margin-top: 24px;
+  margin: 32px auto;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-page-card {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 10px;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .page-topbar {
@@ -1602,4 +1615,209 @@ code {
   background: #2563eb;
   color: white;
   transform: scale(1.05);
+}
+
+
+/* Mitarbeiter-Dashboard mobil optimieren */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 0;
+    background: #f5f7fb;
+  }
+
+  .dashboard-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .topbar-left h1 {
+    font-size: 1.4rem;
+    line-height: 1.2;
+  }
+
+  .topbar-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .topbar-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .user-box {
+    width: 100%;
+  }
+
+  .single-page-section {
+    padding: 0;
+  }
+
+  .card {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .page-topbar h3 {
+    font-size: 1.15rem;
+    line-height: 1.25;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+
+  @media (max-width: 768px) {
+  .form-actions {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px !important;
+  }
+
+  .form-actions .btn,
+  .btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
+    border-radius: 14px;
+  }
+
+  .btn-danger {
+    width: 100%;
+  }
+}
+
+  .form-group textarea,
+  .form-group select,
+  .form-group input {
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .customer-item {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .customer-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 0.85rem;
+  }
+
+  .info-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #ffffff;
+  border: none;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #53986c, #32764c);
+  transform: translateY(-1px);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #1f2937;
+  border: none;
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  transform: translateY(-1px);
+}
+
+/* Registrierung & Onboarding */
+.auth-wrapper input,
+.auth-wrapper select,
+.auth-wrapper textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  margin-bottom: 12px;
+  border: 1px solid #d7dde8;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 15px;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.auth-wrapper input:focus,
+.auth-wrapper select:focus,
+.auth-wrapper textarea:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.auth-wrapper input::placeholder,
+.auth-wrapper textarea::placeholder {
+  color: #8a94a6;
+}
+
+.auth-wrapper .card {
+  border-radius: 22px;
+  padding: 32px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.auth-wrapper h1 {
+  margin-bottom: 10px;
+}
+
+.auth-wrapper h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.auth-wrapper .form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .auth-wrapper .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .auth-wrapper .card {
+    margin: 20px 12px !important;
+    padding: 22px;
+  }
 }

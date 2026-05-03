@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { supabase } from "../lib/supabase";
 
-const formatDateTime = (value: string) => {
+  const formatDateTime = (value: string) => {
   const hasTimezone = /[zZ]|[+\-]\d{2}:\d{2}$/.test(value);
   const normalizedValue = hasTimezone ? value : `${value}Z`;
 
@@ -15,7 +16,7 @@ const formatDateTime = (value: string) => {
   }).format(new Date(normalizedValue));
 };
 
-const formatDateOnly = (value: string | null) => {
+  const formatDateOnly = (value: string | null) => {
   if (!value) return "-";
 
   const parts = value.split("-");
@@ -44,6 +45,17 @@ type ProgressEntry = {
   created_at: string;
 };
 
+type ProgressImage = {
+  id: number;
+  tenant_id: number;
+  progress_id: number;
+  user_id: number;
+  image_url: string;
+  file_path: string | null;
+  created_at: string;
+  order_id: number;
+};
+
 type TimeEntry = {
   id: number;
   user_id: number;
@@ -62,9 +74,15 @@ type EmployeeDashboardProps = {
   onLogout: () => void;
   orders: EmployeeOrder[];
   progressEntries: ProgressEntry[];
+  progressImages: ProgressImage[];
   timeEntries: TimeEntry[];
+  onOpenMessages: () => void;
+  unreadMessages: number;
   onUpdateOrderStatus: (orderId: string, newStatus: string) => Promise<void>;
-  onCreateProgress: (orderId: string, note: string) => Promise<void>;
+  onCreateProgress: (orderId: string, note: string) => Promise<any>;
+  onReloadProgress: () => Promise<void>;
+  onReloadOrders: () => Promise<void>;
+  onDeleteProgressImage: (imageId: number, filePath: string | null) => Promise<void>;
   onStartWork: (orderId: string) => Promise<void>;
   onStartBreak: (timeEntryId: number) => Promise<void>;
   onEndBreak: (timeEntryId: number) => Promise<void>;
@@ -77,13 +95,19 @@ export default function EmployeeDashboard({
   onLogout,
   orders,
   progressEntries = [],
+  progressImages = [],
   timeEntries = [],
   onUpdateOrderStatus,
   onCreateProgress,
+  onReloadProgress,
+  onReloadOrders,
+  onDeleteProgressImage,
   onStartWork,
   onStartBreak,
   onEndBreak,
   onEndWork,
+  onOpenMessages,
+  unreadMessages,
 }: EmployeeDashboardProps) {
 
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
@@ -93,7 +117,27 @@ export default function EmployeeDashboard({
   const [endingBreakTimeEntryId, setEndingBreakTimeEntryId] = useState<number | null>(null);
   const [endingWorkTimeEntryId, setEndingWorkTimeEntryId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [finishNoteErrorOrderId, setFinishNoteErrorOrderId] = useState<string | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [progressNotes, setProgressNotes] = useState<Record<string, string>>({});
+  const [selectedProgressImages, setSelectedProgressImages] = useState<
+  Record<string, File[]>
+>({});
+
+const handleProgressImageChange = (
+  orderId: string,
+  files: File[]
+) => {
+  if (files.length > 4) {
+    setMessage("Bitte maximal 4 Bilder pro Fortschritt auswählen.");
+    files = files.slice(0, 4);
+  }
+
+  setSelectedProgressImages((prev) => ({
+    ...prev,
+    [orderId]: files,
+  }));
+};
 
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -105,6 +149,8 @@ export default function EmployeeDashboard({
         return "status-badge status-inbearbeitung";
       case "pausiert":
         return "status-badge status-pausiert";
+      case "zur_pruefung":
+        return "status-badge status-zur-pruefung";
       case "fertig":
         return "status-badge status-fertig";
       case "abgerechnet":
@@ -137,6 +183,40 @@ export default function EmployeeDashboard({
     }
   };
 
+  const handleCompleteOrder = async (orderId: string) => {
+  const note = (progressNotes[orderId] || "").trim();
+
+  if (!note) {
+  setFinishNoteErrorOrderId(orderId);
+  return;
+}
+
+setFinishNoteErrorOrderId(null);
+
+  setSavingProgressOrderId(orderId);
+  setMessage("");
+
+  try {
+    await handleSaveProgress(orderId);
+
+    await onUpdateOrderStatus(orderId, "zur_pruefung");
+
+    await onReloadProgress();
+    await onReloadOrders();
+
+    setMessage("Auftrag wurde fertig gemeldet.");
+  } catch (error) {
+    console.error("Fehler beim Fertigmelden des Auftrags:", error);
+    setMessage(
+      `Auftrag konnte nicht fertig gemeldet werden: ${
+        error instanceof Error ? error.message : "Unbekannter Fehler"
+      }`
+    );
+  } finally {
+    setSavingProgressOrderId(null);
+  }
+};
+
   const handleProgressInputChange = (orderId: string, value: string) => {
     setProgressNotes((prev) => ({
       ...prev,
@@ -145,34 +225,90 @@ export default function EmployeeDashboard({
   };
 
   const handleSaveProgress = async (orderId: string) => {
-    const note = (progressNotes[orderId] || "").trim();
+  const note = (progressNotes[orderId] || "").trim();
+  const imageFiles = selectedProgressImages[orderId] || [];
 
-    if (!note) {
-      setMessage("Bitte zuerst eine Fortschrittsnotiz eingeben.");
-      return;
+  if (!note && imageFiles.length === 0) {
+    setMessage("Bitte eine Fortschrittsnotiz oder ein Bild hinzufügen.");
+    return;
+  }
+
+  setSavingProgressOrderId(orderId);
+  setMessage("");
+
+  try {
+    const savedProgress = await onCreateProgress(
+      orderId,
+      note || "Fortschrittsbild hochgeladen."
+    );
+    console.log("SAVED PROGRESS:", savedProgress);
+    console.log("IMAGE FILE:", imageFiles);
+
+    if (imageFiles.length > 0 && savedProgress?.id) {
+  for (const imageFile of imageFiles) {
+    const fileExt = imageFile.name.split(".").pop();
+
+    const filePath =
+      `${orderId}/progress-${savedProgress.id}-${Date.now()}-` +
+      `${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("order-progress-images")
+      .upload(filePath, imageFile, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw uploadError;
     }
 
-    setSavingProgressOrderId(orderId);
-    setMessage("");
+    const { data: publicUrlData } = supabase.storage
+      .from("order-progress-images")
+      .getPublicUrl(filePath);
 
-    try {
-      await onCreateProgress(orderId, note);
-      setProgressNotes((prev) => ({
-        ...prev,
-        [orderId]: "",
-      }));
-      setMessage("Fortschritt erfolgreich gespeichert.");
-    } catch (error) {
-      console.error("Fehler beim Speichern des Fortschritts:", error);
-      setMessage(
-        `Fortschritt konnte nicht gespeichert werden: ${
-          error instanceof Error ? error.message : "Unbekannter Fehler"
-        }`
-      );
-    } finally {
-      setSavingProgressOrderId(null);
+    const imageUrl = publicUrlData.publicUrl;
+
+    const { error: imageInsertError } = await supabase
+      .from("order_progress_images")
+      .insert({
+        tenant_id: savedProgress.tenant_id,
+        order_id: Number(orderId),
+        progress_id: savedProgress.id,
+        user_id: savedProgress.user_id,
+        image_url: imageUrl,
+        file_path: filePath,
+      });
+
+    if (imageInsertError) {
+      throw imageInsertError;
     }
-  };
+  }
+}
+
+    setProgressNotes((prev) => ({
+      ...prev,
+      [orderId]: "",
+    }));
+
+    setSelectedProgressImages((prev) => ({
+      ...prev,
+      [orderId]: [],
+    }));
+
+    await onReloadProgress();
+    setMessage("Fortschritt erfolgreich gespeichert.");
+  } catch (error) {
+    console.error("Fehler beim Speichern des Fortschritts:", error);
+    setMessage(
+      `Fortschritt konnte nicht gespeichert werden: ${
+        error instanceof Error ? error.message : "Unbekannter Fehler"
+      }`
+    );
+  } finally {
+    setSavingProgressOrderId(null);
+  }
+};
 
   const handleStartWork = async (orderId: string) => {
   setStartingWorkOrderId(orderId);
@@ -313,9 +449,7 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
         <header className="topbar">
           <div className="topbar-left">
             <h1>Mitarbeiter-Dashboard</h1>
-            <p className="topbar-subtitle">
-              Hier sieht der Mitarbeiter nur seine eigenen Aufträge.
-            </p>
+            
           </div>
 
           <div className="topbar-right">
@@ -331,10 +465,19 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
           </div>
         </header>
 
-        <section className="single-page-section">
+<section className="action-bar">
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={onOpenMessages}
+  >
+    Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
+  </button>
+</section>
+
+          <section className="single-page-section">
           <div className="card">
             <h2>Meine Aufträge</h2>
-            <p>Es werden nur die dir zugewiesenen Aufträge angezeigt.</p>
 
             {message && <p className="info-text">{message}</p>}
 
@@ -351,14 +494,46 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
                   const totalNetMinutes = getTotalNetMinutesForOrder(order.id);
 
                   return (
-                    <div key={order.id} className="card" style={{ marginBottom: "1rem" }}>
+                    <div
+  key={order.id}
+  className="card"
+  style={{
+    marginBottom: "1rem",
+    border: openTimeEntry ? "2px solid #22c55e" : "1px solid #e5e7eb",
+    background: openTimeEntry ? "#f0fdf4" : "#ffffff",
+    boxShadow: openTimeEntry
+      ? "0 6px 20px rgba(34,197,94,0.15)"
+      : undefined,
+  }}
+>
                       <div className="page-topbar">
+
+                        {openTimeEntry && (
+  <div
+    style={{
+      display: "inline-block",
+      marginBottom: "10px",
+      padding: "6px 12px",
+      borderRadius: "999px",
+      background: "#22c55e",
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: "0.85rem",
+    }}
+  >
+    🟢 AKTIV
+  </div>
+)}
                         <div>
                           <h3>{order.title}</h3>
                           <p>{order.description || "Keine Beschreibung"}</p>
                         </div>
 
-                        <span className={getStatusClass(order.status)}>{order.status}</span>
+                        <span className={getStatusClass(order.status)}>
+  {order.status === "zur_pruefung"
+    ? "🔎 Zur Prüfung"
+    : order.status.replaceAll("_", " ")}
+</span>
                       </div>
 
                       <p>
@@ -505,7 +680,23 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
                       </div>
 
                       <div className="form-group">
-                        <label>Neue Fortschrittsnotiz</label>
+                        <label>
+                        Neue Fortschrittsnotiz / Abschlussnotiz
+                        <span style={{ color: "#f60707", fontWeight: 700 }}> *</span>
+                        </label>
+                        {finishNoteErrorOrderId === order.id && (
+  <p
+    className="info-text"
+    style={{
+      marginTop: "4px",
+      marginBottom: "8px",
+      fontWeight: 600,
+      color: "#b91c1c",
+    }}
+  >
+    Für „Auftrag fertig melden“ bitte eine kurze Abschlussnotiz eintragen.
+  </p>
+)}
                         <textarea
                           value={progressNotes[order.id] || ""}
                           onChange={(e) =>
@@ -516,18 +707,69 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
                         />
                       </div>
 
+                      <div className="form-group">
+  <label>Fortschrittsbild</label>
+  <input
+  type="file"
+  accept="image/png,image/jpeg,image/webp"
+  multiple
+  onChange={(e) =>
+    handleProgressImageChange(
+      order.id,
+      Array.from(e.target.files || [])
+    )
+  }
+/>
+
+  {selectedProgressImages[order.id]?.length > 0 && (
+  <div className="info-text">
+    <strong>{selectedProgressImages[order.id].length} Bild(er) ausgewählt:</strong>
+    <ul style={{ margin: "6px 0 0 18px" }}>
+      {selectedProgressImages[order.id].map((file) => (
+        <li key={file.name}>{file.name}</li>
+      ))}
+    </ul>
+  </div>
+)}
+</div>
                       <div className="form-actions">
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => handleSaveProgress(order.id)}
-                          disabled={savingProgressOrderId === order.id}
-                        >
-                          {savingProgressOrderId === order.id
-                            ? "Speichert..."
-                            : "Fortschritt speichern"}
-                        </button>
-                      </div>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => handleSaveProgress(order.id)}
+    disabled={savingProgressOrderId === order.id}
+  >
+    {savingProgressOrderId === order.id
+      ? "Speichert..."
+      : "Fortschritt speichern"}
+  </button>
+</div>
+
+<div
+  style={{
+    marginTop: "18px",
+    paddingTop: "18px",
+    borderTop: "2px solid #e5e7eb",
+  }}
+>
+  <h4 style={{ marginBottom: "10px" }}>Auftrag abschließen</h4>
+
+  <div className="form-actions">
+    <button
+      type="button"
+      className="btn btn-danger"
+      onClick={() => handleCompleteOrder(order.id)}
+      disabled={
+        savingProgressOrderId === order.id ||
+        order.status === "fertig"
+      }
+    >
+      {order.status === "fertig"
+        ? "Auftrag ist fertig"
+        : "Auftrag fertig melden"}
+    </button>
+  </div>
+</div>
 
                       <div style={{ marginTop: "1rem" }}>
                         <h4>Verlauf</h4>
@@ -544,6 +786,81 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
                                   </span>
                                 </div>
                                 <div style={{ marginTop: "0.5rem" }}>{entry.note}</div>
+
+{progressImages.filter((img) => img.progress_id === entry.id).length > 0 && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gap: "10px",
+      marginTop: "12px",
+    }}
+  >
+    {progressImages
+      .filter((img) => img.progress_id === entry.id)
+      .map((img) => (
+        <div
+  key={img.id}
+  style={{
+    position: "relative",
+  }}
+>
+  <button
+    type="button"
+    onClick={async () => {
+  const confirmed = window.confirm(
+    "Möchtest du dieses Bild wirklich löschen?"
+  );
+
+  if (!confirmed) return;
+
+  await onDeleteProgressImage(img.id, img.file_path);
+}}
+    style={{
+      position: "absolute",
+      top: "6px",
+      right: "6px",
+      width: "28px",
+      height: "28px",
+      borderRadius: "50%",
+      border: "none",
+      background: "rgba(220,38,38,0.9)",
+      color: "#fff",
+      fontWeight: 700,
+      cursor: "pointer",
+      zIndex: 2,
+    }}
+  >
+    ✕
+  </button>
+
+  <button
+  type="button"
+  onClick={() => setSelectedImagePreview(img.image_url)}
+  style={{
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    width: "100%",
+    cursor: "pointer",
+  }}
+>
+  <img
+    src={img.image_url}
+    alt="Fortschritt"
+    style={{
+      width: "100%",
+      height: "140px",
+      borderRadius: "10px",
+      border: "1px solid #ddd",
+      objectFit: "cover",
+    }}
+  />
+</button>
+</div>
+      ))}
+  </div>
+)}
                               </div>
                             ))}
                           </div>
@@ -557,6 +874,60 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
           </div>
         </section>
       </div>
+
+{selectedImagePreview && (
+  <div
+    onClick={() => setSelectedImagePreview(null)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.85)",
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+    }}
+  >
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedImagePreview(null);
+      }}
+      style={{
+        position: "absolute",
+        top: "18px",
+        right: "18px",
+        width: "42px",
+        height: "42px",
+        borderRadius: "50%",
+        border: "none",
+        background: "#fff",
+        color: "#111",
+        fontSize: "22px",
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      ✕
+    </button>
+
+    <img
+      src={selectedImagePreview}
+      alt="Fortschritt groß"
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "85vh",
+        borderRadius: "14px",
+        background: "#fff",
+        objectFit: "contain",
+      }}
+    />
+  </div>
+)}
+
     </div>
   );
 }

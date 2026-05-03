@@ -4,24 +4,22 @@ type ProjectManagerDashboardProps = {
   userName: string;
   userEmail: string;
   onLogout: () => void;
-  onOpenCustomers: () => void;
   onOpenOrders: () => void;
   onOpenCreateCustomer: () => void;
-  onOpenCreateOrder: () => void;
-  onOpenAssignOrder: () => void;
-  onOpenTimeEvaluation: () => void;
+  onOpenCreateSiteVisit: () => void;
+  onOpenMessages: () => void;
+  unreadMessages: number;
 };
 
 export default function ProjectManagerDashboard({
   userName,
   userEmail,
   onLogout,
-  onOpenCustomers,
   onOpenOrders,
   onOpenCreateCustomer,
-  onOpenCreateOrder,
-  onOpenAssignOrder,
-  onOpenTimeEvaluation,
+  onOpenCreateSiteVisit,
+  onOpenMessages,
+  unreadMessages,
 }: ProjectManagerDashboardProps) {
   return (
     <div className="dashboard-page">
@@ -47,58 +45,39 @@ export default function ProjectManagerDashboard({
           </div>
         </header>
 
-        <section className="stats-grid stats-grid-5">
-          <button
-            type="button"
-            className="stat-card stat-card-clickable"
-            onClick={onOpenCustomers}
-          >
-            <span className="stat-label">Kunden</span>
-            <strong className="stat-value">Öffnen</strong>
-          </button>
-
-          <button
-            type="button"
-            className="stat-card stat-card-clickable"
-            onClick={onOpenOrders}
-          >
-            <span className="stat-label">Aufträge</span>
-            <strong className="stat-value">Öffnen</strong>
-          </button>
-        </section>
-
         <section className="action-bar">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onOpenCreateCustomer}
-          >
-            + Kunde anlegen
-          </button>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={onOpenOrders}
+  >
+    Offene Aufträge
+  </button>
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onOpenCreateOrder}
-          >
-            + Auftrag anlegen
-          </button>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={onOpenCreateCustomer}
+  >
+    + Kunde anlegen
+  </button>
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onOpenAssignOrder}
-          >
-            Auftrag zuweisen
-          </button>
-          <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onOpenTimeEvaluation}
-          >
-          Arbeitsstunden
-          </button>
-        </section>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={onOpenCreateSiteVisit}
+  >
+    + Aufmaß anlegen
+  </button>
+
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={onOpenMessages}
+  >
+    Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
+  </button>
+</section>
 
       </div>
     </div>

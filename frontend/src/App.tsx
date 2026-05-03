@@ -5,10 +5,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import AssignOrder from "./pages/AssignOrder";
 import ProjectManagerDashboard from "./pages/ProjectManagerDashboard";
+import PlatformOwnerDashboard from "./pages/PlatformOwnerDashboard";
+import CompanyRegisterPage from "./pages/CompanyRegisterPage";
 import "./App.css";
 import AdminTimeEvaluation from "./components/AdminTimeEvaluation";
 import GlobalSettings from "./pages/GlobalSettings";
 import { generateQuotePdf } from "./lib/quotePdf";
+import InvoicesPage from "./pages/InvoicesPage";
+import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -62,8 +66,30 @@ type Order = {
   start_date: string | null;
   end_date: string | null;
   assigned_to: number | null;
+  assigned_project_manager_id: number | null;
   created_by: number;
   created_at?: string;
+};
+
+type OrderProgress = {
+  id: number;
+  tenant_id: number;
+  order_id: string;
+  user_id: number;
+  status: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+type ProgressImage = {
+  id: number;
+  tenant_id: number;
+  progress_id: number;
+  user_id: number;
+  image_url: string;
+  file_path: string | null;
+  created_at: string;
+  order_id: number;
 };
 
 type CustomerFormData = {
@@ -144,6 +170,7 @@ type CompanySettings = {
   primary_color: string | null;
   created_at: string;
   updated_at: string;
+  onboarding_completed: boolean;
 };
 
 type SiteVisitRoomForm = {
@@ -280,7 +307,14 @@ type QuoteListItem = {
   customer_id: number;
 };
 
-type OrdersFilterMode = "all" | "open" | "completed" | "customer";
+type OrdersFilterMode =
+  | "all"
+  | "new"
+  | "open"
+  | "finished"
+  | "billed"
+  | "completed"
+  | "customer";
 
 type CurrentPage =
   | "dashboard"
@@ -301,7 +335,9 @@ type CurrentPage =
   | "create-site-visit"
   | "pricing-rules"
   | "quotes-list"
-  | "quote-detail";
+  | "quote-detail"
+  | "messages"
+  | "invoices-list";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -314,20 +350,33 @@ export default function App() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [employees, setEmployees] = useState<AppUser[]>([]);
+  const [orderAssignments, setOrderAssignments] = useState<any[]>([]);
+
+  const [messages, setMessages] = useState<any[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [newMessage, setNewMessage] = useState("");
+  const [messageRecipientId, setMessageRecipientId] = useState("");
+  const [messageImage, setMessageImage] = useState<File | null>(null);
+  const [messageRecipients, setMessageRecipients] = useState<any[]>([]);
+
   const [progressEntries, setProgressEntries] = useState<ProgressEntry[]>([]);
+  const [progressImages, setProgressImages] = useState<ProgressImage[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
 
   const [additionalQuotePositions, setAdditionalQuotePositions] = useState<AdditionalQuotePosition[]>([]);
   const [loadingAdditionalQuotePositions, setLoadingAdditionalQuotePositions] = useState(false);
   const [additionalQuotePositionsMessage, setAdditionalQuotePositionsMessage] = useState("");
-
+  const [showAcceptQuoteForm, setShowAcceptQuoteForm] = useState(false);
   const [editingValidUntil, setEditingValidUntil] = useState(false);
   const [validUntilValue, setValidUntilValue] = useState("");
 
   const [currentPage, setCurrentPage] = useState<CurrentPage>("dashboard");
+  const [showCompanyRegister, setShowCompanyRegister] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [orderProgress, setOrderProgress] = useState<OrderProgress[]>([]);
   const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -352,6 +401,7 @@ export default function App() {
 
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [loadingCompanySettings, setLoadingCompanySettings] = useState(false);
+  const [showCompanyOnboarding, setShowCompanyOnboarding] = useState(false);
 
   const [pricingRules, setPricingRules] = useState<QuotePricingRule[]>([]);
   const [loadingPricingRules, setLoadingPricingRules] = useState(false);
@@ -386,6 +436,9 @@ export default function App() {
     end_date: "",
     assigned_to: "",
   });
+
+  const [selectedProjectManagerId, setSelectedProjectManagerId] = useState("");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
   const [employeeForm, setEmployeeForm] = useState<EmployeeFormData>({
     first_name: "",
@@ -549,6 +602,7 @@ export default function App() {
         setCustomers([]);
         setOrders([]);
         setEmployees([]);
+        setInvoices([]);
         setCurrentPage("dashboard");
         setEditingCustomerId(null);
         setEditingOrderId(null);
@@ -569,6 +623,7 @@ export default function App() {
       if (!profile) {
         setCustomers([]);
         setOrders([]);
+        setInvoices([]);
         setEmployees([]);
         setProgressEntries([]);
         setTimeEntries([]);
@@ -580,6 +635,7 @@ export default function App() {
       if (profile.role_id === EMPLOYEE_ROLE_ID) {
         setCustomers([]);
         setEmployees([]);
+        setInvoices([]);
         setEditingCustomerId(null);
         setEditingOrderId(null);
         setEditingEmployeeId(null);
@@ -599,11 +655,12 @@ export default function App() {
       }
 
       await Promise.all([
-        loadCustomers(profile.tenant_id),
-        loadOrders(profile.tenant_id),
-        loadEmployees(profile.tenant_id),
-        loadProgressEntries(profile.tenant_id),
-      ]);
+  loadCustomers(profile.tenant_id),
+  loadOrders(profile.tenant_id),
+  loadInvoices(profile.tenant_id),
+  loadEmployees(profile.tenant_id),
+  loadProgressEntries(profile.tenant_id),
+]);
 
       setCurrentPage("dashboard");
       setLoadingData(false);
@@ -906,6 +963,16 @@ const handleAcceptQuote = async () => {
     return;
   }
 
+  if (!selectedProjectManagerId) {
+    setQuoteDetailMessage("Bitte zuerst einen Projektleiter auswählen.");
+    return;
+  }
+
+  if (selectedEmployeeIds.length === 0) {
+    setQuoteDetailMessage("Bitte mindestens einen Mitarbeiter auswählen.");
+    return;
+  }
+
   try {
     setQuoteDetailMessage("");
 
@@ -925,44 +992,66 @@ const handleAcceptQuote = async () => {
     }
 
     const { data: newOrder, error: orderError } = await supabase
-  .from("orders")
-  .insert({
-    tenant_id: userProfile.tenant_id,
-    customer_id: quoteDetail.customer_id,
-    title:
-      quoteDetail.title ||
-      `Auftrag aus Angebot ${quoteDetail.quote_number || quoteDetail.id}`,
-    description: quoteDetail.description || quoteDetail.notes || "",
-    status: "neu",
-    priority: "normal",
-    address_street: quoteDetail.address_street || "",
-    address_zip: quoteDetail.address_zip || "",
-    address_city: quoteDetail.address_city || "",
-    created_by: userProfile.id,
-    assigned_project_manager_id: null,
-    quote_id: quoteDetail.id,
-    accepted_quote_total: Number(quoteDetail.total_amount || 0),
-    accepted_at: now,
-  })
-  .select()
-  .single();
+      .from("orders")
+      .insert({
+        tenant_id: userProfile.tenant_id,
+        customer_id: quoteDetail.customer_id,
+        title:
+          quoteDetail.title ||
+          `Auftrag aus Angebot ${quoteDetail.quote_number || quoteDetail.id}`,
+        description: quoteDetail.description || quoteDetail.notes || "",
+        status: "neu",
+        priority: "normal",
+        address_street: quoteDetail.address_street || "",
+        address_zip: quoteDetail.address_zip || "",
+        address_city: quoteDetail.address_city || "",
+        created_by: userProfile.id,
+        assigned_project_manager_id: Number(selectedProjectManagerId),
+        quote_id: quoteDetail.id,
+        accepted_quote_total: Number(quoteDetail.total_amount || 0),
+        accepted_at: now,
+      })
+      .select()
+      .single();
 
-if (orderError) {
-  throw orderError;
-}
+    if (orderError) {
+      throw orderError;
+    }
+
+    const assignments = [
+      {
+        tenant_id: userProfile.tenant_id,
+        order_id: newOrder.id,
+        user_id: Number(selectedProjectManagerId),
+        assignment_role: "project_manager",
+      },
+      ...selectedEmployeeIds.map((employeeId) => ({
+        tenant_id: userProfile.tenant_id,
+        order_id: newOrder.id,
+        user_id: Number(employeeId),
+        assignment_role: "employee",
+      })),
+    ];
+
+    const { error: assignmentError } = await supabase
+      .from("order_assignments")
+      .insert(assignments);
+
+    if (assignmentError) {
+      throw assignmentError;
+    }
 
     setQuoteDetailMessage("Angebot wurde bestätigt und ein Auftrag wurde erzeugt.");
 
-await loadQuoteDetail(
-  quoteDetail.id,
-  userProfile.tenant_id
-);
+    setShowAcceptQuoteForm(false);
+    setSelectedProjectManagerId("");
+    setSelectedEmployeeIds([]);
 
-await loadOrders(userProfile.tenant_id);
+    await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
+    await loadOrders(userProfile.tenant_id);
 
-if (newOrder) {
-  openEditOrderPage(newOrder as Order);
-}
+    setCurrentPage("orders-list");
+
   } catch (error: any) {
     console.error("Fehler beim Bestätigen des Angebots:", error);
     setQuoteDetailMessage(
@@ -972,27 +1061,209 @@ if (newOrder) {
 };
 
   const loadOrders = async (tenantId: number) => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Fehler beim Laden der Aufträge:", error);
-      setOrders([]);
+  if (error) {
+    console.error("Fehler beim Laden der Aufträge:", error);
+    setOrders([]);
+    setOrderAssignments([]);
+    return;
+  }
+
+  setOrders(data || []);
+
+  const orderIds = (data || []).map((order) => order.id);
+
+  if (orderIds.length === 0) {
+    setOrderAssignments([]);
+    return;
+  }
+
+  const { data: assignments, error: assignmentError } = await supabase
+    .from("order_assignments")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .in("order_id", orderIds);
+
+  if (assignmentError) {
+    console.error("Fehler beim Laden der Zuweisungen:", assignmentError);
+    setOrderAssignments([]);
+    return;
+  }
+
+  setOrderAssignments(assignments || []);
+};
+
+  const loadInvoices = async (tenantId: number) => {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("invoice_date", { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden der Rechnungen:", error);
+    setInvoices([]);
+    return;
+  }
+
+  setInvoices(data || []);
+};
+
+  const loadOrderProgress = async (
+  orderId: string,
+  tenantId: number
+) => {
+  const { data, error } = await supabase
+    .from("order_progress")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden des Auftragsverlaufs:", error);
+    setOrderProgress([]);
+    return;
+  }
+
+  setOrderProgress((data as OrderProgress[]) || []);
+};
+
+const loadMessages = async (tenantId: number) => {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden der Nachrichten:", error);
+    setMessages([]);
+    return;
+  }
+
+  const loadedMessages = data || [];
+
+setMessages(loadedMessages);
+
+const unread = loadedMessages.filter((msg) => {
+  if (!userProfile) return false;
+
+  const isOwn = Number(msg.sender_id) === Number(userProfile.id);
+
+  if (isOwn) return false;
+
+  const isForMe =
+    msg.recipient_id === null ||
+    Number(msg.recipient_id) === Number(userProfile.id);
+
+  return isForMe && !msg.read_at;
+}).length;
+
+setUnreadMessages(unread);
+};
+
+const handleSendMessage = async () => {
+  if (!userProfile) return;
+
+  const cleanMessage = newMessage.trim();
+
+  if (!cleanMessage && !messageImage) return;
+
+  let imageUrl: string | null = null;
+
+  if (messageImage) {
+    const fileExt = messageImage.name.split(".").pop();
+    const fileName = `${userProfile.tenant_id}/${userProfile.id}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("message-images")
+      .upload(fileName, messageImage);
+
+    if (uploadError) {
+      console.error("Fehler beim Hochladen des Bildes:", uploadError);
       return;
     }
 
-    setOrders(data || []);
-  };
+    const { data: publicUrlData } = supabase.storage
+      .from("message-images")
+      .getPublicUrl(fileName);
+
+    imageUrl = publicUrlData.publicUrl;
+  }
+
+  const { error } = await supabase
+    .from("messages")
+    .insert([
+      {
+        tenant_id: userProfile.tenant_id,
+        sender_id: userProfile.id,
+        recipient_id: messageRecipientId ? Number(messageRecipientId) : null,
+        order_id: null,
+        message_type: messageRecipientId ? "direct" : "broadcast",
+        message: cleanMessage || "Bildnachricht",
+        image_url: imageUrl,
+      },
+    ]);
+
+  if (error) {
+    console.error("Fehler beim Senden:", error);
+    return;
+  }
+
+  setNewMessage("");
+  setMessageRecipientId("");
+  setMessageImage(null);
+
+  await loadMessages(userProfile.tenant_id);
+};
+
+const handleDeleteMessage = async (messageId: number) => {
+  if (!userProfile) return;
+
+  const confirmDelete = window.confirm(
+    "Möchtest du diese Nachricht wirklich löschen?"
+  );
+
+  if (!confirmDelete) return;
+
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("id", messageId)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (error) {
+    console.error("Fehler beim Löschen der Nachricht:", error);
+    return;
+  }
+
+  await loadMessages(userProfile.tenant_id);
+};
+
+const loadMessageRecipients = async () => {
+  const { data, error } = await supabase.rpc("get_message_recipients");
+
+  if (error) {
+    console.error("Fehler beim Laden der Empfänger:", error);
+    setMessageRecipients([]);
+    return;
+  }
+
+  setMessageRecipients(data || []);
+};
 
   const loadEmployees = async (tenantId: number) => {
     const { data, error } = await supabase
       .from("app_users")
       .select("*")
       .eq("tenant_id", tenantId)
-      .in("role_id", [PROJECT_MANAGER_ROLE_ID, EMPLOYEE_ROLE_ID])
+      .in("role_id", [ADMIN_ROLE_ID, PROJECT_MANAGER_ROLE_ID, EMPLOYEE_ROLE_ID])
       .order("last_name", { ascending: true });
 
     if (error) {
@@ -1005,38 +1276,84 @@ if (newOrder) {
   };
 
   const loadEmployeeOrders = async (tenantId: number, employeeId: number) => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("assigned_to", employeeId)
-      .order("created_at", { ascending: false });
+  const { data: assignments, error: assignmentError } = await supabase
+    .from("order_assignments")
+    .select("order_id")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", employeeId)
+    .eq("assignment_role", "employee");
 
-    if (error) {
-      console.error("Fehler beim Laden der Mitarbeiter-Aufträge:", error);
-      setOrders([]);
-      return;
-    }
+  if (assignmentError) {
+    console.error("Fehler beim Laden der Mitarbeiter-Zuweisungen:", assignmentError);
+    setOrders([]);
+    return;
+  }
 
-    setOrders(data || []);
-  };
+  const orderIds = (assignments || []).map((item) => item.order_id);
 
-  const loadEmployeeProgressEntries = async (tenantId: number, employeeId: number) => {
-    const { data, error } = await supabase
-      .from("order_progress")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", employeeId)
-      .order("created_at", { ascending: false });
+  if (orderIds.length === 0) {
+    setOrders([]);
+    return;
+  }
 
-    if (error) {
-      console.error("Fehler beim Laden der Fortschritte:", error);
-      setProgressEntries([]);
-      return;
-    }
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .in("id", orderIds)
+    .not("status", "in", '("fertig","abgerechnet")')
+    .order("created_at", { ascending: false });
 
-    setProgressEntries(data || []);
-  };
+  if (error) {
+    console.error("Fehler beim Laden der Mitarbeiter-Aufträge:", error);
+    setOrders([]);
+    return;
+  }
+
+  setOrders(data || []);
+};
+
+  const loadEmployeeProgressEntries = async (
+  tenantId: number,
+  employeeId: number
+) => {
+  const { data, error } = await supabase
+    .from("order_progress")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", employeeId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden der Fortschritte:", error);
+    setProgressEntries([]);
+    setProgressImages([]);
+    return;
+  }
+
+  setProgressEntries(data || []);
+
+  const progressIds = (data || []).map((entry) => entry.id);
+
+  if (progressIds.length === 0) {
+    setProgressImages([]);
+    return;
+  }
+
+  const { data: imageData, error: imageError } = await supabase
+    .from("order_progress_images")
+    .select("*")
+    .in("progress_id", progressIds)
+    .order("created_at", { ascending: false });
+
+  if (imageError) {
+    console.error("Fehler beim Laden der Fortschrittsbilder:", imageError);
+    setProgressImages([]);
+    return;
+  }
+
+  setProgressImages((imageData as ProgressImage[]) || []);
+};
 
   const loadCompanySettings = async (tenantId: number) => {
     try {
@@ -1052,7 +1369,17 @@ if (newOrder) {
         throw error;
       }
 
-      setCompanySettings((data as CompanySettings | null) || null);
+      const settings = (data as CompanySettings | null) || null;
+
+setCompanySettings(settings);
+
+if (
+  settings &&
+  settings.onboarding_completed === false &&
+  userProfile?.role_id === 2
+) {
+  setShowCompanyOnboarding(true);
+}
     } catch (error) {
       console.error("Fehler beim Laden der company_settings:", error);
       setCompanySettings(null);
@@ -1173,14 +1500,19 @@ if (newOrder) {
       loadCompanySettings(userProfile.tenant_id);
       loadPricingRules(userProfile.tenant_id);
       loadQuotes(userProfile.tenant_id);
-    }
+      loadMessages(userProfile.tenant_id);
+      loadMessageRecipients();
+}
 
     const isEmployee = userProfile.role_id === EMPLOYEE_ROLE_ID;
 
-    if (!isEmployee) return;
+if (!isEmployee) return;
 
-    loadEmployeeTimeEntries(userProfile.tenant_id, userProfile.id);
-  }, [userProfile]);
+loadEmployees(userProfile.tenant_id);
+loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
+loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
+loadEmployeeTimeEntries(userProfile.tenant_id, userProfile.id);
+}, [userProfile]);
 
 
   const handleEmployeeUpdateOrderStatus = async (
@@ -1194,7 +1526,7 @@ if (newOrder) {
     console.log("USER:", userProfile.id);
     console.log("ORDER:", orderId);
 
-    const allowedStatuses = ["in_arbeit", "pausiert", "fertig"];
+    const allowedStatuses = ["in_arbeit", "pausiert", "zur_pruefung"];
 
     if (!allowedStatuses.includes(newStatus)) {
       throw new Error("Dieser Status ist für Mitarbeiter nicht erlaubt.");
@@ -1231,6 +1563,25 @@ if (newOrder) {
     await loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
   };
 
+  const handleApproveOrder = async (orderId: string | number) => {
+  if (!userProfile) return;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "fertig" })
+    .eq("id", orderId)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (error) {
+    console.error("Fehler beim Freigeben:", error);
+    setOrderMessage(`Freigabe fehlgeschlagen: ${error.message}`);
+    return;
+  }
+
+  setOrderMessage("Auftrag wurde freigegeben und abgeschlossen.");
+  await loadOrders(userProfile.tenant_id);
+};
+
   const formatDateOnly = (value: string | null) => {
     if (!value) return "-";
 
@@ -1242,23 +1593,25 @@ if (newOrder) {
   };
 
   const handleCreateProgress = async (orderId: string, note: string) => {
-    if (!userProfile) {
-      throw new Error("Benutzerprofil nicht geladen.");
-    }
+  if (!userProfile) {
+    throw new Error("Benutzerprofil nicht geladen.");
+  }
 
-    const cleanNote = note.trim();
+  const cleanNote = note.trim();
 
-    if (!cleanNote) {
-      throw new Error("Bitte eine Notiz eingeben.");
-    }
+  if (!cleanNote) {
+    throw new Error("Bitte eine Notiz eingeben.");
+  }
 
-    const currentOrder = orders.find((order) => order.id === orderId);
+  const currentOrder = orders.find((order) => order.id === orderId);
 
-    if (!currentOrder) {
-      throw new Error("Auftrag nicht gefunden.");
-    }
+  if (!currentOrder) {
+    throw new Error("Auftrag nicht gefunden.");
+  }
 
-    const { error } = await supabase.from("order_progress").insert([
+  const { data, error } = await supabase
+    .from("order_progress")
+    .insert([
       {
         tenant_id: userProfile.tenant_id,
         order_id: orderId,
@@ -1266,15 +1619,89 @@ if (newOrder) {
         status: currentOrder.status,
         note: cleanNote,
       },
-    ]);
+    ])
+    .select()
+    .single();
 
-    if (error) {
-      console.error("Fehler beim Speichern des Fortschritts:", error);
-      throw new Error("Fortschritt konnte nicht gespeichert werden.");
+  if (error) {
+    console.error("Fehler beim Speichern des Fortschritts:", error);
+    throw new Error("Fortschritt konnte nicht gespeichert werden.");
+  }
+
+  await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
+
+  return data;
+};
+
+const handleCreateInvoice = async (orderId: string | number) => {
+  if (!userProfile) return;
+
+  const confirmCreate = window.confirm(
+    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?"
+  );
+
+  if (!confirmCreate) return;
+
+  const { data, error } = await supabase.rpc("create_invoice_from_order", {
+    p_order_id: Number(orderId),
+  });
+
+  if (error) {
+    console.error("Fehler beim Erstellen der Rechnung:", error);
+    setOrderMessage(`Rechnung konnte nicht erstellt werden: ${error.message}`);
+    return;
+  }
+
+  const { error: orderUpdateError } = await supabase
+    .from("orders")
+    .update({ status: "abgerechnet" })
+    .eq("id", orderId)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (orderUpdateError) {
+    console.error("Fehler beim Aktualisieren des Auftrags:", orderUpdateError);
+    setOrderMessage(
+      `Rechnung wurde erstellt, aber der Auftrag konnte nicht auf abgerechnet gesetzt werden: ${orderUpdateError.message}`
+    );
+    return;
+  }
+
+  setOrderMessage(`Rechnung wurde erstellt. Rechnungs-ID: ${data}`);
+  await loadOrders(userProfile.tenant_id);
+};
+
+const handleDeleteProgressImage = async (
+  imageId: number,
+  filePath: string | null
+) => {
+  if (!userProfile) {
+    throw new Error("Benutzerprofil nicht geladen.");
+  }
+
+  if (filePath) {
+    const { error: storageError } = await supabase.storage
+      .from("order-progress-images")
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error("Fehler beim Löschen des Bildes aus Storage:", storageError);
+      throw new Error("Bilddatei konnte nicht gelöscht werden.");
     }
+  }
 
-    await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
-  };
+  const { error } = await supabase
+    .from("order_progress_images")
+    .delete()
+    .eq("id", imageId)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (error) {
+    console.error("Fehler beim Löschen des Bild-Datensatzes:", error);
+    throw new Error("Bild konnte nicht gelöscht werden.");
+  }
+
+  await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
+};
 
   const handleEmployeeStartWork = async (orderId: string) => {
     if (!userProfile) {
@@ -1395,6 +1822,7 @@ if (newOrder) {
     resetOrderForm();
     resetEmployeeForm();
     setTimeEntries([]);
+    setInvoices([]);
   };
 
   const handleCustomerChange = (
@@ -2325,6 +2753,30 @@ if (newOrder) {
     setCurrentPage("orders-list");
   };
 
+  const openMessagesPage = async () => {
+  if (!userProfile) {
+    setCurrentPage("messages");
+    return;
+  }
+
+  setCurrentPage("messages");
+
+  const { error } = await supabase
+    .from("messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("tenant_id", userProfile.tenant_id)
+    .is("read_at", null)
+    .neq("sender_id", userProfile.id)
+    .or(`recipient_id.is.null,recipient_id.eq.${userProfile.id}`);
+
+  if (error) {
+    console.error("Fehler beim Markieren als gelesen:", error);
+    return;
+  }
+
+  await loadMessages(userProfile.tenant_id);
+};
+
   const openEmployeesListPage = () => {
     setCurrentPage("employees-list");
   };
@@ -2368,24 +2820,35 @@ if (newOrder) {
     };
 
     const openEditOrderPage = (order: Order) => {
-      if (!canEditOrders) return;
+  if (!canEditOrders) return;
 
-      setOrderMessage("");
-      setEditingOrderId(order.id);
-      setOrderForm({
-        customer_id: order.customer_id || "",
-        title: order.title || "",
-        description: order.description || "",
-        status: order.status || "neu",
-        address_street: order.address_street || "",
-        address_zip: order.address_zip || "",
-        address_city: order.address_city || "",
-        start_date: order.start_date || "",
-        end_date: order.end_date || "",
-        assigned_to: order.assigned_to ? String(order.assigned_to) : "",
-      });
-      setCurrentPage("edit-order");
-    };
+  setOrderMessage("");
+  setEditingOrderId(order.id);
+
+  setOrderForm({
+    customer_id: order.customer_id || "",
+    title: order.title || "",
+    description: order.description || "",
+    status: order.status || "neu",
+    address_street: order.address_street || "",
+    address_zip: order.address_zip || "",
+    address_city: order.address_city || "",
+    start_date: order.start_date || "",
+    end_date: order.end_date || "",
+    assigned_to: "",
+  });
+
+  setSelectedProjectManagerId(
+    order.assigned_project_manager_id
+      ? String(order.assigned_project_manager_id)
+      : ""
+  );
+
+  setSelectedEmployeeIds([]);
+
+  loadOrderProgress(order.id, order.tenant_id);
+  setCurrentPage("edit-order");
+};
 
     const openCreateEmployeePage = () => {
       setEmployeeMessage("");
@@ -2458,7 +2921,7 @@ if (newOrder) {
       };
 
       const { error } = await supabase.from("customers").insert([newCustomer]);
-
+        console.log("Read update error:", error);
       if (error) {
         console.error("Fehler beim Speichern des Kunden:", error);
         setCustomerMessage(`Kunde konnte nicht gespeichert werden: ${error.message}`);
@@ -2555,7 +3018,10 @@ if (newOrder) {
         address_city: orderForm.address_city.trim() || null,
         start_date: orderForm.start_date || null,
         end_date: orderForm.end_date || null,
-        assigned_to: orderForm.assigned_to ? Number(orderForm.assigned_to) : null,
+        assigned_to: null,
+assigned_project_manager_id: selectedProjectManagerId
+  ? Number(selectedProjectManagerId)
+  : null,
         created_by: userProfile.id,
       };
 
@@ -2617,6 +3083,56 @@ if (newOrder) {
         setSavingOrder(false);
         return;
       }
+
+      const { error: deleteAssignmentsError } = await supabase
+  .from("order_assignments")
+  .delete()
+  .eq("order_id", editingOrderId)
+  .eq("tenant_id", userProfile.tenant_id);
+
+if (deleteAssignmentsError) {
+  console.error("Fehler beim Löschen alter Zuweisungen:", deleteAssignmentsError);
+  setOrderMessage(
+    `Alte Zuweisungen konnten nicht gelöscht werden: ${deleteAssignmentsError.message}`
+  );
+  setSavingOrder(false);
+  return;
+}
+
+const assignments = [
+  ...(selectedProjectManagerId
+    ? [
+        {
+          tenant_id: userProfile.tenant_id,
+          order_id: editingOrderId,
+          user_id: Number(selectedProjectManagerId),
+          assignment_role: "project_manager",
+        },
+      ]
+    : []),
+
+  ...selectedEmployeeIds.map((id) => ({
+    tenant_id: userProfile.tenant_id,
+    order_id: editingOrderId,
+    user_id: Number(id),
+    assignment_role: "employee",
+  })),
+];
+
+if (assignments.length > 0) {
+  const { error: assignmentsError } = await supabase
+    .from("order_assignments")
+    .insert(assignments);
+
+  if (assignmentsError) {
+    console.error("Fehler beim Speichern der Zuweisungen:", assignmentsError);
+    setOrderMessage(
+      `Zuweisungen konnten nicht gespeichert werden: ${assignmentsError.message}`
+    );
+    setSavingOrder(false);
+    return;
+  }
+}
 
       setOrderMessage("Auftrag erfolgreich aktualisiert.");
       await loadOrders(userProfile.tenant_id);
@@ -2928,10 +3444,68 @@ if (newOrder) {
       return map;
     }, [employees]);
 
+    const userNameMap = useMemo(() => {
+  const map = new Map<number, string>();
+
+  [...employees, ...messageRecipients].forEach((user) => {
+    if (!map.has(Number(user.id))) {
+      map.set(
+        Number(user.id),
+        `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+          user.email ||
+          `Benutzer #${user.id}`
+      );
+    }
+  });
+
+  if (userProfile) {
+    map.set(
+      Number(userProfile.id),
+      `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() ||
+        userProfile.email ||
+        "Ich"
+    );
+  }
+
+  return map;
+}, [employees, messageRecipients, userProfile]);
+
+    const orderEmployeeNamesMap = useMemo(() => {
+  const map = new Map<string, string>();
+
+  orderAssignments.forEach((assignment) => {
+    const orderId = String(assignment.order_id);
+
+    const personName =
+      employeeNameMap.get(Number(assignment.user_id)) ||
+      `Mitarbeiter #${assignment.user_id}`;
+
+    let label = personName;
+
+    if (assignment.assignment_role === "project_manager") {
+      label = `🟦 Projektleiter: ${personName}`;
+    }
+
+    if (assignment.assignment_role === "employee") {
+      label = `🟩 ${personName}`;
+    }
+
+    const currentNames = map.get(orderId);
+
+    map.set(
+      orderId,
+      currentNames ? `${currentNames}<br>${label}` : label
+    );
+  });
+
+  return map;
+}, [orderAssignments, employeeNameMap]);
+
     const stats = useMemo(() => {
       const totalCustomers = customers.length;
       const totalOrders = orders.length;
-      const totalEmployees = employees.length;
+const totalInvoices = invoices.length;
+const totalEmployees = employees.length;
 
       const openOrders = orders.filter(
         (order) => order.status !== "fertig" && order.status !== "abgerechnet"
@@ -2944,11 +3518,12 @@ if (newOrder) {
       return {
         totalCustomers,
         totalOrders,
+        totalInvoices,
         totalEmployees,
         openOrders,
         completedOrders,
       };
-    }, [customers, orders, employees]);
+    }, [customers, orders, invoices, employees]);
 
     const filteredCustomers = useMemo(() => {
       const term = customerSearch.trim().toLowerCase();
@@ -2987,23 +3562,42 @@ if (newOrder) {
     }, [employees, employeeSearch]);
 
     const ordersByMode = useMemo(() => {
-      switch (ordersFilterMode) {
-        case "open":
-          return orders.filter(
-            (order) => order.status !== "fertig" && order.status !== "abgerechnet"
-          );
-        case "completed":
-          return orders.filter(
-            (order) => order.status === "fertig" || order.status === "abgerechnet"
-          );
-        case "customer":
-          return selectedCustomerId
-            ? orders.filter((order) => order.customer_id === selectedCustomerId)
-            : orders;
-        default:
-          return orders;
-      }
-    }, [orders, ordersFilterMode, selectedCustomerId]);
+  switch (ordersFilterMode) {
+    case "open":
+      return orders.filter(
+        (order) =>
+          order.status !== "fertig" &&
+          order.status !== "abgerechnet"
+      );
+
+    case "finished":
+      return orders.filter(
+        (order) => order.status === "fertig"
+      );
+
+    case "billed":
+      return orders.filter(
+        (order) => order.status === "abgerechnet"
+      );
+
+    case "completed":
+      return orders.filter(
+        (order) =>
+          order.status === "fertig" ||
+          order.status === "abgerechnet"
+      );
+
+    case "customer":
+      return selectedCustomerId
+        ? orders.filter(
+            (order) => order.customer_id === selectedCustomerId
+          )
+        : orders;
+
+    default:
+      return orders;
+  }
+}, [orders, ordersFilterMode, selectedCustomerId]);
 
     const filteredOrders = useMemo(() => {
       let result = ordersByMode;
@@ -3073,26 +3667,71 @@ if (newOrder) {
           return "Auftragsliste";
       }
     };
-    const handleAssignOrder = async (orderId: string, employeeId: number | null) => {
-      if (!userProfile || !canAssignOrders) return;
+    const handleAssignOrder = async (
+  orderId: string,
+  projectManagerId: number,
+  employeeIds: number[]
+) => {
+  if (!userProfile || !canAssignOrders) return;
 
-      const { error } = await supabase
-        .from("orders")
-        .update({ assigned_to: employeeId })
-        .eq("id", orderId)
-        .eq("tenant_id", userProfile.tenant_id);
+  // 1) Auftrag aktualisieren
+  const { error: orderError } = await supabase
+    .from("orders")
+    .update({
+      assigned_project_manager_id: projectManagerId,
+      assigned_to: employeeIds.length > 0 ? employeeIds[0] : null, // Übergang
+    })
+    .eq("id", orderId)
+    .eq("tenant_id", userProfile.tenant_id);
 
-      if (error) {
-        console.error("Fehler beim Zuweisen:", error);
-        throw error;
-      }
+  if (orderError) {
+    console.error("Fehler beim Aktualisieren des Auftrags:", orderError);
+    throw orderError;
+  }
 
-      await Promise.all([
-        loadOrders(userProfile.tenant_id),
-        loadEmployees(userProfile.tenant_id),
-        loadProgressEntries(userProfile.tenant_id),
-      ]);
-    };
+  // 2) Alte Zuordnungen löschen
+  const { error: deleteError } = await supabase
+    .from("order_assignments")
+    .delete()
+    .eq("tenant_id", userProfile.tenant_id)
+    .eq("order_id", orderId);
+
+  if (deleteError) {
+    console.error("Fehler beim Löschen alter Zuordnungen:", deleteError);
+    throw deleteError;
+  }
+
+  // 3) Projektleiter + Mitarbeiter neu speichern
+  const assignments = [
+    {
+      tenant_id: userProfile.tenant_id,
+      order_id: orderId,
+      user_id: projectManagerId,
+      assignment_role: "project_manager",
+    },
+    ...employeeIds.map((id) => ({
+      tenant_id: userProfile.tenant_id,
+      order_id: orderId,
+      user_id: id,
+      assignment_role: "employee",
+    })),
+  ];
+
+  const { error: insertError } = await supabase
+    .from("order_assignments")
+    .insert(assignments);
+
+  if (insertError) {
+    console.error("Fehler beim Speichern der Zuordnungen:", insertError);
+    throw insertError;
+  }
+
+  await Promise.all([
+    loadOrders(userProfile.tenant_id),
+    loadEmployees(userProfile.tenant_id),
+    loadProgressEntries(userProfile.tenant_id),
+  ]);
+};
     const getProgressEntriesForOrder = (orderId: string) => {
       return progressEntries.filter((entry) => entry.order_id === orderId);
     };
@@ -3122,6 +3761,8 @@ if (newOrder) {
           return "status-badge status-inbearbeitung";
         case "pausiert":
           return "status-badge status-pausiert";
+         case "zur_pruefung":
+          return "status-badge status-zur-pruefung"; 
         case "fertig":
           return "status-badge status-fertig";
         case "abgerechnet":
@@ -3141,6 +3782,30 @@ if (newOrder) {
         </div>
       );
     }
+
+if (showCompanyRegister) {
+  return (
+    <CompanyRegisterPage
+      onBackToLogin={() => setShowCompanyRegister(false)}
+    />
+  );
+}
+
+if (
+  showCompanyOnboarding &&
+  userProfile?.tenant_id &&
+  userProfile?.role_id === 2
+) {
+  return (
+    <CompanyOnboardingPage
+      tenantId={Number(userProfile.tenant_id)}
+      onCompleted={() => {
+        setShowCompanyOnboarding(false);
+        loadCompanySettings(Number(userProfile.tenant_id));
+      }}
+    />
+  );
+}
 
     if (!session) {
       return (
@@ -3175,6 +3840,14 @@ if (newOrder) {
               <button type="submit" className="btn btn-primary">
                 Einloggen
               </button>
+              <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: "100%", marginTop: 12 }}
+              onClick={() => setShowCompanyRegister(true)}
+              >
+              Neue Firma registrieren
+            </button>
             </form>
 
             {loginMessage && <p className="info-text">{loginMessage}</p>}
@@ -3194,11 +3867,26 @@ if (newOrder) {
           userName={fullName}
           userEmail={session.user.email || ""}
           onLogout={handleLogout}
+          onOpenMessages={openMessagesPage}
+          unreadMessages={unreadMessages}
+
           orders={orders}
           progressEntries={progressEntries}
           timeEntries={timeEntries}
+          progressImages={progressImages}
           onUpdateOrderStatus={handleEmployeeUpdateOrderStatus}
           onCreateProgress={handleCreateProgress}
+          onReloadProgress={async () => {
+          if (userProfile) {
+          await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
+  }
+}}
+onReloadOrders={async () => {
+  if (userProfile) {
+    await loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
+  }
+}}
+          onDeleteProgressImage={handleDeleteProgressImage}
           onStartWork={handleEmployeeStartWork}
           onStartBreak={handleEmployeeStartBreak}
           onEndBreak={handleEmployeeEndBreak}
@@ -3215,16 +3903,15 @@ if (newOrder) {
 
       return (
         <ProjectManagerDashboard
-          userName={fullName}
-          userEmail={session.user.email || ""}
-          onLogout={handleLogout}
-          onOpenCustomers={openCustomersListPage}
-          onOpenOrders={() => openOrdersListPage("all")}
-          onOpenCreateCustomer={openCreateCustomerPage}
-          onOpenCreateOrder={openCreateOrderPage}
-          onOpenAssignOrder={() => setCurrentPage("assign-order")}
-          onOpenTimeEvaluation={() => setCurrentPage("time-evaluation")}
-        />
+  userName={fullName}
+  userEmail={session.user.email || ""}
+  onLogout={handleLogout}
+  onOpenOrders={() => openOrdersListPage("open")}
+  onOpenCreateCustomer={openCreateCustomerPage}
+  onOpenCreateSiteVisit={() => setCurrentPage("create-site-visit")}
+  onOpenMessages={openMessagesPage}
+  unreadMessages={unreadMessages}
+/>
       );
     }
 
@@ -3312,7 +3999,12 @@ if (newOrder) {
 
           {!loadingData && userProfile && (
             <>
-              {currentPage === "dashboard" && isAdmin && (
+
+{currentPage === "dashboard" && userProfile?.role_id === 1 && (
+  <PlatformOwnerDashboard onBack={openDashboard} />
+)}
+
+              {currentPage === "dashboard" && isAdmin && userProfile?.role_id !== 1 && (
                 <>
                   <section className="stats-grid stats-grid-5">
                     <button
@@ -3325,13 +4017,13 @@ if (newOrder) {
                     </button>
 
                     <button
-                      type="button"
-                      className="stat-card stat-card-clickable"
-                      onClick={() => openOrdersListPage("all")}
-                    >
-                      <span className="stat-label">Aufträge gesamt</span>
-                      <strong className="stat-value">{stats.totalOrders}</strong>
-                    </button>
+  type="button"
+  className="stat-card stat-card-clickable"
+  onClick={() => openOrdersListPage("new")}
+>
+  <span className="stat-label">Aufträge</span>
+  <strong className="stat-value">{stats.totalOrders}</strong>
+</button>
 
                     <button
                       type="button"
@@ -3345,104 +4037,91 @@ if (newOrder) {
                     <button
                       type="button"
                       className="stat-card stat-card-clickable"
-                      onClick={() => openOrdersListPage("open")}
+                      onClick={() => setCurrentPage("invoices-list")}
                     >
-                      <span className="stat-label">Offene Aufträge</span>
-                      <strong className="stat-value">{stats.openOrders}</strong>
+                      <span className="stat-label">Rechnungen</span>
+                      <strong className="stat-value">{stats.totalInvoices}</strong>
                     </button>
 
-                    <button
-                      type="button"
-                      className="stat-card stat-card-clickable"
-                      onClick={() => openOrdersListPage("completed")}
-                    >
-                      <span className="stat-label">Fertig / Abgerechnet</span>
-                      <strong className="stat-value">{stats.completedOrders}</strong>
-                    </button>
                   </section>
 
                   <section className="action-bar">
-                    {canCreateCustomers && (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={openCreateCustomerPage}
-                      >
-                        + Kunde anlegen
-                      </button>
-                    )}
+  {canCreateCustomers && (
+    <button
+      type="button"
+      className="btn btn-success"
+      onClick={openCreateCustomerPage}
+    >
+      + Kunde anlegen
+    </button>
+  )}
 
-                    {canCreateOrders && (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={openCreateOrderPage}
-                      >
-                        + Auftrag anlegen
-                      </button>
-                    )}
+  {isAdmin && (
+    <button
+      type="button"
+      className="btn btn-success"
+      onClick={openCreateEmployeePage}
+    >
+      + Mitarbeiter anlegen
+    </button>
+  )}
 
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={openCreateEmployeePage}
-                      >
-                        + Mitarbeiter anlegen
-                      </button>
-                    )}
+  <button
+    type="button"
+    className="btn btn-success"
+    onClick={() => setCurrentPage("create-site-visit")}
+  >
+    + Besichtigung anlegen
+  </button>
 
-                    {canAssignOrders && (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => setCurrentPage("assign-order")}
-                      >
-                        Auftrag zuweisen
-                      </button>
-                    )}
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => setCurrentPage("quotes-list")}
+  >
+    Angebote
+  </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setCurrentPage("time-evaluation")}
-                    >
-                      Arbeitsstunden
-                    </button>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => setCurrentPage("invoices-list")}
+  >
+    Rechnungen
+  </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setCurrentPage("settings")}
-                    >
-                      Einstellungen
-                    </button>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => setCurrentPage("time-evaluation")}
+  >
+    Arbeitsstunden
+  </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setCurrentPage("create-site-visit")}
-                    >
-                      Besichtigung anlegen
-                    </button>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={openMessagesPage}
+  >
+    Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
+  </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setCurrentPage("quotes-list")}
-                    >
-                      Angebote
-                    </button>
+  <button
+    type="button"
+    className="btn btn-warning"
+    onClick={() => setCurrentPage("settings")}
+  >
+    Einstellungen
+  </button>
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setCurrentPage("pricing-rules")}
-                    >
-                      Preisregeln
-                    </button>
-
-                  </section>
+  <button
+    type="button"
+    className="btn btn-warning"
+    onClick={() => setCurrentPage("pricing-rules")}
+  >
+    Preisregeln
+  </button>
+</section>
                 </>
               )}
 
@@ -3681,23 +4360,6 @@ if (newOrder) {
                             </div>
                           </div>
                         </div>
-
-                        {isProjectManager && (
-                          <div
-                            style={{
-                              marginTop: "14px",
-                              padding: "11px 13px",
-                              borderRadius: "12px",
-                              background: "#fff7ed",
-                              border: "1px solid #fed7aa",
-                              fontSize: "13px",
-                              color: "#9a3412",
-                              fontWeight: 500,
-                            }}
-                          >
-                            Projektleiter sehen keine Preise und können kein Angebot erzeugen.
-                          </div>
-                        )}
                       </div>
 
                       <div className="settings-section">
@@ -4597,16 +5259,16 @@ if (newOrder) {
                               {savingSiteVisit ? "Speichert..." : "Speichern"}
                             </button>
 
-                            {(userProfile?.role_id === 1 || userProfile?.role_id === 2) && (
-                              <button
-                                type="submit"
-                                className="btn btn-secondary"
-                                disabled={savingSiteVisit}
-                                onClick={() => setCreateQuoteAfterSave(true)}
-                              >
-                                Angebot
-                              </button>
-                            )}
+                            {(isAdmin || isProjectManager) && (
+  <button
+    type="submit"
+    className="btn btn-secondary"
+    disabled={savingSiteVisit}
+    onClick={() => setCreateQuoteAfterSave(true)}
+  >
+    Angebot
+  </button>
+)}
                           </div>
 
                           {/* Mobile */}
@@ -4829,6 +5491,22 @@ if (newOrder) {
                         className="search-input"
                       />
 
+                            <select
+    value={ordersFilterMode}
+    onChange={(e) =>
+      openOrdersListPage(
+        e.target.value as "all" | "open" | "completed"
+      )
+    }
+    className="search-input"
+  >
+    <option value="all">Alle Aufträge</option>
+<option value="open">Offene Aufträge</option>
+<option value="finished">Fertige Aufträge</option>
+<option value="billed">Abgerechnete Aufträge</option>
+<option value="completed">Fertig + abgerechnet</option>
+  </select>
+
                       <select
                         value={selectedEmployeeFilterId}
                         onChange={(e) => setSelectedEmployeeFilterId(e.target.value)}
@@ -4912,16 +5590,18 @@ if (newOrder) {
                                     {customerNameMap.get(order.customer_id) || order.customer_id}
                                   </td>
 
-                                  <td>
-                                    {order.assigned_to
-                                      ? employeeNameMap.get(order.assigned_to) || `Mitarbeiter #${order.assigned_to}`
-                                      : "Nicht zugewiesen"}
-                                  </td>
+                                  <td
+  dangerouslySetInnerHTML={{
+    __html: orderEmployeeNamesMap.get(String(order.id)) || "Nicht zugewiesen",
+  }}
+/>
 
                                   <td>
                                     <span className={getStatusClass(order.status)}>
-                                      {order.status}
-                                    </span>
+  {order.status === "zur_pruefung"
+    ? "🔎 Zur Prüfung"
+    : order.status.replaceAll("_", " ")}
+</span>
                                   </td>
 
                                   <td>
@@ -4935,16 +5615,39 @@ if (newOrder) {
                                   </td>
 
                                   <td>
-                                    {canEditOrders && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-secondary btn-small"
-                                        onClick={() => openEditOrderPage(order)}
-                                      >
-                                        Bearbeiten
-                                      </button>
-                                    )}
-                                  </td>
+  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+    {canEditOrders && (
+      <button
+        type="button"
+        className="btn btn-secondary btn-small"
+        onClick={() => openEditOrderPage(order)}
+      >
+        Bearbeiten
+      </button>
+    )}
+
+    {order.status === "zur_pruefung" && (
+      <button
+        type="button"
+        className="btn btn-primary btn-small"
+        onClick={() => handleApproveOrder(order.id)}
+      >
+        Freigeben
+      </button>
+    )}
+
+    {order.status === "fertig" && isAdmin && (
+  <button
+    type="button"
+    className="btn btn-primary btn-small"
+    onClick={() => handleCreateInvoice(order.id)}
+  >
+    🧾 Rechnung erstellen
+  </button>
+)}
+
+  </div>
+</td>
                                 </tr>
                               );
                             })}
@@ -4990,12 +5693,12 @@ if (newOrder) {
   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
   {quoteDetail?.status !== "accepted" && (
     <button
-      type="button"
-      className="btn btn-primary"
-      onClick={handleAcceptQuote}
-    >
-      Angebot bestätigen
-    </button>
+  type="button"
+  className="btn btn-primary"
+  onClick={() => setShowAcceptQuoteForm(true)}
+>
+  Angebot in Auftrag überführen
+</button>
   )}
 
   <button
@@ -5011,6 +5714,111 @@ if (newOrder) {
 
                       {loadingQuoteDetail && <p className="info-text">Angebot wird geladen...</p>}
                       {quoteDetailMessage && <p className="info-text">{quoteDetailMessage}</p>}
+                    
+                    {showAcceptQuoteForm && (
+  <div
+    className="card"
+    style={{
+      marginTop: "20px",
+      padding: "20px",
+      border: "2px solid #dbeafe",
+      background: "#f8fbff",
+    }}
+  >
+    <h3 style={{ marginBottom: "20px" }}>
+      Auftrag aus Angebot erstellen
+    </h3>
+
+    <div className="form-group">
+      <label>Projektleiter auswählen</label>
+      <select
+        value={selectedProjectManagerId}
+        onChange={(e) => setSelectedProjectManagerId(e.target.value)}
+      >
+        <option value="">Bitte wählen</option>
+
+        {employees
+          .filter((u) => u.role_id === 3)
+          .map((pm) => (
+            <option key={pm.id} value={pm.id}>
+              {pm.first_name} {pm.last_name}
+            </option>
+          ))}
+      </select>
+    </div>
+
+    <div className="form-group" style={{ marginTop: "20px" }}>
+      <label>Mitarbeiter auswählen</label>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "8px",
+          marginTop: "10px",
+        }}
+      >
+        {employees
+          .filter((u) => u.role_id === 4)
+          .map((employee) => (
+            <label
+              key={employee.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedEmployeeIds.includes(String(employee.id))}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedEmployeeIds([
+                      ...selectedEmployeeIds,
+                      String(employee.id),
+                    ]);
+                  } else {
+                    setSelectedEmployeeIds(
+                      selectedEmployeeIds.filter(
+                        (id) => id !== String(employee.id)
+                      )
+                    );
+                  }
+                }}
+              />
+
+              {employee.first_name} {employee.last_name}
+            </label>
+          ))}
+      </div>
+    </div>
+
+    <div
+      style={{
+        marginTop: "25px",
+        display: "flex",
+        gap: "10px",
+        flexWrap: "wrap",
+      }}
+    >
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={handleAcceptQuote}
+      >
+        Auftrag jetzt erstellen
+      </button>
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => setShowAcceptQuoteForm(false)}
+      >
+        Abbrechen
+      </button>
+    </div>
+  </div>
+)}
 
                       {quoteDetail && (
                         <>
@@ -5428,6 +6236,7 @@ if (newOrder) {
                   onBack={openDashboard}
                 />
               )}
+
               {currentPage === "time-evaluation" && (isAdmin || userProfile?.role_id === 3) && (
                 <section className="single-page-section">
                   <div className="card">
@@ -5468,14 +6277,13 @@ if (newOrder) {
                 />
               )}
 
-
               {currentPage === "create-customer" && canCreateCustomers && (
                 <section className="single-page-section">
                   <div className="card form-page-card">
                     <div className="page-topbar">
                       <div>
                         <h2>Kunde anlegen</h2>
-                        <p>Neuen Kunden für den aktuellen Tenant erfassen.</p>
+                        <p>Neuen Kunden erfassen.</p>
                       </div>
 
                       <button
@@ -5576,48 +6384,50 @@ if (newOrder) {
                         </div>
                       </div>
 
-                      <div className="settings-section">
-                        <h3>Kundenrabatt</h3>
-                        <p>Optionaler Standardrabatt für diesen Kunden.</p>
+                      {isAdmin && (
+  <div className="settings-section">
+    <h3>Kundenrabatt</h3>
+    <p>Optionaler Standardrabatt für diesen Kunden.</p>
 
-                        <div className="form-row two-cols">
-                          <div className="form-group">
-                            <label>Rabattart</label>
-                            <select
-                              name="discount_type"
-                              value={customerForm.discount_type}
-                              onChange={handleCustomerChange}
-                            >
-                              <option value="percent">Prozent (%)</option>
-                              <option value="amount">Fester Betrag ({currencySymbol})</option>
-                            </select>
-                          </div>
+    <div className="form-row two-cols">
+      <div className="form-group">
+        <label>Rabattart</label>
+        <select
+          name="discount_type"
+          value={customerForm.discount_type}
+          onChange={handleCustomerChange}
+        >
+          <option value="percent">Prozent (%)</option>
+          <option value="amount">Fester Betrag ({currencySymbol})</option>
+        </select>
+      </div>
 
-                          <div className="form-group">
-                            <label>Rabattwert</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              name="discount_value"
-                              value={customerForm.discount_value}
-                              onChange={handleCustomerChange}
-                              placeholder="z. B. 10"
-                            />
-                          </div>
-                        </div>
+      <div className="form-group">
+        <label>Rabattwert</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          name="discount_value"
+          value={customerForm.discount_value}
+          onChange={handleCustomerChange}
+          placeholder="z. B. 10"
+        />
+      </div>
+    </div>
 
-                        <div className="form-group">
-                          <label>Rabatt-Notiz</label>
-                          <textarea
-                            name="discount_note"
-                            value={customerForm.discount_note}
-                            onChange={handleCustomerChange}
-                            rows={2}
-                            placeholder="z. B. Stammkunde, Sondervereinbarung, Rahmenvertrag"
-                          />
-                        </div>
-                      </div>
+    <div className="form-group">
+      <label>Rabatt-Notiz</label>
+      <textarea
+        name="discount_note"
+        value={customerForm.discount_note}
+        onChange={handleCustomerChange}
+        rows={2}
+        placeholder="z. B. Stammkunde, Sondervereinbarung, Rahmenvertrag"
+      />
+    </div>
+  </div>
+)}
 
                       <div className="form-group">
                         <label>Notizen</label>
@@ -5751,48 +6561,53 @@ if (newOrder) {
                           />
                         </div>
                       </div>
-<div className="settings-section">
-  <h3>Kundenrabatt</h3>
-  <p>Optionaler Standardrabatt für diesen Kunden.</p>
 
-  <div className="form-row two-cols">
-    <div className="form-group">
-      <label>Rabattart</label>
-      <select
-        name="discount_type"
-        value={customerForm.discount_type}
-        onChange={handleCustomerChange}
-      >
-        <option value="percent">Prozent (%)</option>
-        <option value="amount">Fester Betrag ({currencySymbol})</option>
-      </select>
+{isAdmin && (
+  <div className="settings-section">
+    <h3>Kundenrabatt</h3>
+    <p>Optionaler Standardrabatt für diesen Kunden.</p>
+
+    <div className="form-row two-cols">
+      <div className="form-group">
+        <label>Rabattart</label>
+        <select
+          name="discount_type"
+          value={customerForm.discount_type}
+          onChange={handleCustomerChange}
+        >
+          <option value="percent">Prozent (%)</option>
+          <option value="amount">
+            Fester Betrag ({currencySymbol})
+          </option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Rabattwert</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          name="discount_value"
+          value={customerForm.discount_value}
+          onChange={handleCustomerChange}
+          placeholder="z. B. 10"
+        />
+      </div>
     </div>
 
     <div className="form-group">
-      <label>Rabattwert</label>
-      <input
-        type="number"
-        step="0.01"
-        min="0"
-        name="discount_value"
-        value={customerForm.discount_value}
+      <label>Rabatt-Notiz</label>
+      <textarea
+        name="discount_note"
+        value={customerForm.discount_note}
         onChange={handleCustomerChange}
-        placeholder="z. B. 10"
+        rows={2}
+        placeholder="z. B. Stammkunde, Sondervereinbarung, Rahmenvertrag"
       />
     </div>
   </div>
-
-  <div className="form-group">
-    <label>Rabatt-Notiz</label>
-    <textarea
-      name="discount_note"
-      value={customerForm.discount_note}
-      onChange={handleCustomerChange}
-      rows={2}
-      placeholder="z. B. Stammkunde, Sondervereinbarung, Rahmenvertrag"
-    />
-  </div>
-</div>
+)}
                       <div className="form-group">
                         <label>Notizen</label>
                         <textarea
@@ -6017,20 +6832,66 @@ if (newOrder) {
                       </div>
 
                       <div className="form-group">
-                        <label>Mitarbeiter zuweisen</label>
-                        <select
-                          name="assigned_to"
-                          value={orderForm.assigned_to}
-                          onChange={handleOrderChange}
-                        >
-                          <option value="">Kein Mitarbeiter zugewiesen</option>
-                          {employees.map((employee) => (
-                            <option key={employee.id} value={employee.id}>
-                              {employee.first_name || ""} {employee.last_name || ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+  <label>Projektleiter</label>
+  <select
+    value={selectedProjectManagerId}
+    onChange={(e) => setSelectedProjectManagerId(e.target.value)}
+  >
+    <option value="">Bitte wählen</option>
+    {employees
+  .filter((pm) => pm.role_id === 3)
+  .map((pm) => (
+      <option key={pm.id} value={pm.id}>
+        {pm.first_name || ""} {pm.last_name || ""}
+      </option>
+    ))}
+  </select>
+</div>
+
+<div className="form-group">
+  <label>Mitarbeiter zuweisen</label>
+
+  <div
+    style={{
+      display: "grid",
+      gap: "8px",
+      marginTop: "10px",
+    }}
+  >
+    {employees.map((employee) => (
+      <label
+        key={employee.id}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={selectedEmployeeIds.includes(String(employee.id))}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedEmployeeIds([
+                ...selectedEmployeeIds,
+                String(employee.id),
+              ]);
+            } else {
+              setSelectedEmployeeIds(
+                selectedEmployeeIds.filter(
+                  (id) => id !== String(employee.id)
+                )
+              );
+            }
+          }}
+        />
+
+        {employee.first_name || ""} {employee.last_name || ""}
+      </label>
+    ))}
+  </div>
+</div>
 
                       <div className="form-group">
                         <label>Auftragstitel</label>
@@ -6136,6 +6997,38 @@ if (newOrder) {
                       </div>
 
                       {orderMessage && <p className="info-text">{orderMessage}</p>}
+
+                          <div className="settings-section" style={{ marginTop: "30px" }}>
+  <h3>Auftragsverlauf</h3>
+
+  {orderProgress.length === 0 ? (
+    <p className="info-text">Noch keine Fortschrittseinträge vorhanden.</p>
+  ) : (
+    <div className="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Status</th>
+            <th>Notiz</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderProgress.map((entry) => (
+            <tr key={entry.id}>
+              <td>
+                {new Date(entry.created_at).toLocaleString("de-DE")}
+              </td>
+              <td>{entry.status || "-"}</td>
+              <td>{entry.note || "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+                      
                     </form>
                   </div>
                 </section>
@@ -6434,6 +7327,190 @@ if (newOrder) {
                   </section>
                 )}
 
+{currentPage === "messages" && (
+  <section className="single-page-section">
+    <div className="card form-page-card">
+      <div className="page-topbar">
+        <div>
+          <h2>Nachrichten</h2>
+          <p>Interne Kommunikation im Team.</p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={openDashboard}
+        >
+          Zurück zum Dashboard
+        </button>
+      </div>
+
+        <div className="form-group" style={{ marginTop: "20px" }}>
+  <label>Empfänger</label>
+  <select
+    className="search-input"
+    value={messageRecipientId}
+    onChange={(e) => setMessageRecipientId(e.target.value)}
+  >
+    <option value="">Alle</option>
+
+    {messageRecipients.map((user) => {
+  const roleLabel =
+    user.role_id === 2
+      ? "🔴 Admin"
+      : user.role_id === 3
+      ? "🔵 Projektleiter"
+      : "🟢 Mitarbeiter";
+
+  return (
+    <option key={user.id} value={String(user.id)}>
+      {roleLabel} · {user.first_name || ""} {user.last_name || ""}
+    </option>
+  );
+})}
+  </select>
+</div>
+
+      <div className="form-group" style={{ marginTop: "20px" }}>
+        <textarea
+          className="search-input"
+          rows={3}
+          placeholder="Nachricht schreiben..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+        />
+      </div>
+
+        <div className="form-group" style={{ marginTop: "12px" }}>
+  <label>Bild anhängen</label>
+  <input
+    type="file"
+    accept="image/png,image/jpeg,image/webp"
+    onChange={(e) => setMessageImage(e.target.files?.[0] || null)}
+  />
+
+  {messageImage && (
+    <p className="info-text" style={{ marginTop: "8px" }}>
+      Ausgewählt: {messageImage.name}
+    </p>
+  )}
+</div>
+
+      <div className="form-actions" style={{ marginTop: "15px" }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSendMessage}
+        >
+          Nachricht senden
+        </button>
+      </div>
+
+      <div style={{ marginTop: "30px", display: "grid", gap: "12px" }}>
+        {messages.length === 0 ? (
+          <p>Noch keine Nachrichten vorhanden.</p>
+        ) : (
+          messages.map((msg) => {
+  const isOwnMessage = Number(msg.sender_id) === userProfile?.id;
+
+  const sender =
+    messageRecipients.find((u) => Number(u.id) === Number(msg.sender_id)) ||
+    employees.find((u) => Number(u.id) === Number(msg.sender_id));
+
+  const roleColor =
+    sender?.role_id === 2
+      ? "#fee2e2"
+      : sender?.role_id === 3
+      ? "#dbeafe"
+      : "#dcfce7";
+
+  return (
+    <div
+      key={msg.id}
+      style={{
+        display: "flex",
+        justifyContent: isOwnMessage ? "flex-end" : "flex-start",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          padding: "14px",
+          borderRadius: "18px",
+          background: isOwnMessage ? "#6d28d9" : "#ffffff",
+          color: isOwnMessage ? "#ffffff" : "#111827",
+          border: `2px solid ${isOwnMessage ? "#6d28d9" : roleColor}`,
+          maxWidth: "75%",
+          width: "fit-content",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+        }}
+      >
+        {(msg.sender_id === userProfile?.id || isAdmin) && (
+          <button
+            type="button"
+            onClick={() => handleDeleteMessage(Number(msg.id))}
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "10px",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+            title="Nachricht löschen"
+          >
+            🗑️
+          </button>
+        )}
+
+        <div
+          style={{
+            fontSize: "12px",
+            marginBottom: "8px",
+            paddingRight: "28px",
+            color: isOwnMessage ? "#ede9fe" : "#64748b",
+          }}
+        >
+          <strong>
+            {userNameMap.get(Number(msg.sender_id)) ||
+              `Benutzer #${msg.sender_id}`}
+          </strong>
+          {" · "}
+          {formatDateTime(msg.created_at)}
+        </div>
+
+        <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+          {msg.message}
+        </div>
+
+        {msg.image_url && (
+          <img
+            src={msg.image_url}
+            alt="Nachrichtenbild"
+            style={{
+              marginTop: "12px",
+              maxWidth: "320px",
+              width: "100%",
+              borderRadius: "12px",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+})
+        )}
+      </div>
+    </div>
+  </section>
+)}
+{currentPage === "invoices-list" && (
+  <InvoicesPage
+    onBack={openDashboard}
+  />
+)}
             </>
           )}
 
