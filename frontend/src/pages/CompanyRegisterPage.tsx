@@ -32,13 +32,14 @@ export default function CompanyRegisterPage({ onBackToLogin }: Props) {
       email,
       password,
       options: {
-        data: {
-          company_name: companyName,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
-        },
-      },
+  data: {
+    signup_type: "company",
+    company_name: companyName,
+    first_name: firstName,
+    last_name: lastName,
+    phone: phone,
+  },
+},
     });
 
     if (error) {
