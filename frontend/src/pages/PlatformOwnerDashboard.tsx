@@ -168,6 +168,78 @@ export default function PlatformOwnerDashboard({
     }).format(Number(value || 0));
   };
 
+const updateTenantStatus = async (tenantId: number, status: string) => {
+  const { error } = await supabase
+    .from("tenants")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", tenantId);
+
+  if (error) {
+    alert("Status konnte nicht geändert werden.");
+    console.error(error);
+    return;
+  }
+
+  await loadTenants();
+};
+
+const extendTrial = async (tenantId: number) => {
+  const subscription = getSubscriptionForTenant(tenantId);
+
+  if (!subscription) {
+    alert("Keine Subscription für diese Firma gefunden.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      trial_ends_at: new Date(
+        new Date(subscription.trial_ends_at || new Date()).getTime() +
+          14 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", subscription.id);
+
+  if (error) {
+    alert("Trial konnte nicht verlängert werden.");
+    console.error(error);
+    return;
+  }
+
+  await loadTenants();
+};
+
+const deleteTenantCompletely = async (tenantId: number, companyName: string) => {
+  const firstConfirm = confirm(
+    `Firma "${companyName}" wirklich ENDGÜLTIG löschen? Alle Daten dieser Firma werden gelöscht.`
+  );
+
+  if (!firstConfirm) return;
+
+  const secondConfirm = confirm(
+    `Letzte Warnung: Das kann nicht rückgängig gemacht werden. "${companyName}" endgültig löschen?`
+  );
+
+  if (!secondConfirm) return;
+
+  const { error } = await supabase.rpc("delete_tenant_completely", {
+    p_tenant_id: tenantId,
+  });
+
+  if (error) {
+    alert("Firma konnte nicht gelöscht werden.");
+    console.error(error);
+    return;
+  }
+
+  await loadTenants();
+};
+
   return (
     <section className="single-page-section">
       <div className="card form-page-card">
@@ -226,6 +298,7 @@ export default function PlatformOwnerDashboard({
                   <th>Rechnungen</th>
                   <th>Firmenumsatz</th>
                   <th>Erstellt</th>
+                  <th>Aktionen</th>
                 </tr>
               </thead>
 
@@ -270,6 +343,43 @@ export default function PlatformOwnerDashboard({
                       </td>
 
                       <td>{formatDate(tenant.created_at)}</td>
+                      <td>
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <button
+  type="button"
+  className="btn btn-secondary"
+  onClick={() => updateTenantStatus(tenant.id, "active")}
+>
+  Aktivieren
+</button>
+
+<button
+  type="button"
+  className="btn btn-secondary"
+  onClick={() =>
+    deleteTenantCompletely(tenant.id, tenant.company_name)
+  }
+>
+  Löschen
+</button>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => updateTenantStatus(tenant.id, "blocked")}
+    >
+      Sperren
+    </button>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => extendTrial(tenant.id)}
+    >
+      Trial +14 Tage
+    </button>
+  </div>
+</td>
                     </tr>
                   );
                 })}

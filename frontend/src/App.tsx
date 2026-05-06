@@ -399,6 +399,11 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
 
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordRepeat, setNewPasswordRepeat] = useState("");
+  const [resetPasswordMessage, setResetPasswordMessage] = useState("");
+
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [loadingCompanySettings, setLoadingCompanySettings] = useState(false);
   const [showCompanyOnboarding, setShowCompanyOnboarding] = useState(false);
@@ -574,22 +579,39 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       setLoadingApp(true);
+      
+const urlParams = new URLSearchParams(window.location.search);
+const isResetPassword = urlParams.get("reset-password") === "true";
 
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+const {
+  data: { session: currentSession },
+} = await supabase.auth.getSession();
 
-      setSession(currentSession);
+if (isResetPassword) {
+  setShowResetPassword(true);
+  setSession(null);
+} else {
+  setSession(currentSession);
+}
 
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, newSession) => {
-        setSession(newSession);
-      });
+const {
+  data: { subscription },
+} = supabase.auth.onAuthStateChange((event, newSession) => {
+  if (
+    String(event) === "PASSWORD_RECOVERY" ||
+    window.location.search.includes("reset-password=true")
+  ) {
+    setShowResetPassword(true);
+    setSession(null);
+    return;
+  }
 
-      setLoadingApp(false);
+  setSession(newSession);
+});
 
-      return () => subscription.unsubscribe();
+setLoadingApp(false);
+
+return () => subscription.unsubscribe();
     };
 
     initAuth();
@@ -1784,13 +1806,85 @@ const handleDeleteProgressImage = async (
     });
 
     if (error) {
-      setLoginMessage(`Login fehlgeschlagen: ${error.message}`);
-      return;
-    }
+  let germanMessage = "Login fehlgeschlagen.";
+
+  if (error.message === "Invalid login credentials") {
+    germanMessage = "E-Mail-Adresse oder Passwort ist falsch.";
+  }
+
+  if (error.message.includes("Email not confirmed")) {
+    germanMessage = "Bitte bestätige zuerst deine E-Mail-Adresse.";
+  }
+
+  setLoginMessage(germanMessage);
+  return;
+}
 
     setLoginMessage("Login erfolgreich.");
     setLoginPassword("");
   };
+
+  const handlePasswordReset = async () => {
+  if (!loginEmail) {
+    setLoginMessage("Bitte zuerst deine E-Mail-Adresse eingeben.");
+    return;
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
+    redirectTo: "https://maler-saas.com/?reset-password=true",
+  });
+
+  if (error) {
+    setLoginMessage("Passwort-Reset konnte nicht gestartet werden.");
+    console.error(error);
+    return;
+  }
+
+  setLoginMessage(
+    "Wir haben dir eine E-Mail zum Zurücksetzen des Passworts geschickt."
+  );
+};
+
+
+const handleSetNewPassword = async () => {
+  if (!newPassword || !newPasswordRepeat) {
+    setResetPasswordMessage("Bitte beide Passwortfelder ausfüllen.");
+    return;
+  }
+
+  if (newPassword !== newPasswordRepeat) {
+    setResetPasswordMessage("Die Passwörter stimmen nicht überein.");
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    setResetPasswordMessage(
+      "Das Passwort sollte mindestens 6 Zeichen haben."
+    );
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    setResetPasswordMessage("Passwort konnte nicht gespeichert werden.");
+    console.error(error);
+    return;
+  }
+
+  setResetPasswordMessage("Passwort erfolgreich geändert.");
+setShowResetPassword(false);
+setNewPassword("");
+setNewPasswordRepeat("");
+
+window.history.replaceState({}, document.title, window.location.pathname);
+
+await supabase.auth.signOut();
+setSession(null);
+setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort einloggen.");
+};
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -3807,7 +3901,48 @@ if (
   );
 }
 
+if (showResetPassword) {
+  return (
+    <div className="auth-wrapper">
+      <div className="card form-page-card" style={{ maxWidth: 520, margin: "60px auto" }}>
+        <h2>Neues Passwort setzen</h2>
+        <p>Bitte ein neues Passwort vergeben.</p>
+
+        <input
+          type="password"
+          placeholder="Neues Passwort"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Passwort wiederholen"
+          value={newPasswordRepeat}
+          onChange={(e) => setNewPasswordRepeat(e.target.value)}
+        />
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ width: "100%", marginTop: 12 }}
+          onClick={handleSetNewPassword}
+        >
+          Passwort speichern
+        </button>
+
+        {resetPasswordMessage && (
+  <div className="message-box error">
+    {resetPasswordMessage}
+  </div>
+)}
+      </div>
+    </div>
+  );
+}
+
     if (!session) {
+
       return (
         <div className="login-page">
           <div className="login-card">
@@ -3840,6 +3975,16 @@ if (
               <button type="submit" className="btn btn-primary">
                 Einloggen
               </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ width: "100%", marginTop: 12 }}
+                onClick={handlePasswordReset}
+                >
+                Passwort vergessen?
+              </button>
+
               <button
               type="button"
               className="btn btn-secondary"
@@ -3850,7 +3995,11 @@ if (
             </button>
             </form>
 
-            {loginMessage && <p className="info-text">{loginMessage}</p>}
+            {loginMessage && (
+  <div className="message-box error">
+    {loginMessage}
+  </div>
+)}
           </div>
         </div>
       );

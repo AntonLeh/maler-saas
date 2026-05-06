@@ -22,11 +22,30 @@ export default function CompanyRegisterPage({ onBackToLogin }: Props) {
     setMessage("");
 
     if (password !== passwordRepeat) {
-      setMessage("Passwörter stimmen nicht überein.");
-      return;
-    }
+  setMessage("Passwörter stimmen nicht überein.");
+  return;
+}
 
-    setLoading(true);
+setLoading(true);
+
+const { data: emailAvailable, error: emailCheckError } = await supabase.rpc(
+  "check_email_available",
+  {
+    p_email: email,
+  }
+);
+
+if (emailCheckError) {
+  setMessage("E-Mail-Adresse konnte nicht geprüft werden.");
+  setLoading(false);
+  return;
+}
+
+if (emailAvailable === false) {
+  setMessage("Diese E-Mail-Adresse ist bereits registriert.");
+  setLoading(false);
+  return;
+}
 
     const { error } = await supabase.auth.signUp({
       email,
