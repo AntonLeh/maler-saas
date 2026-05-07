@@ -13,6 +13,8 @@ import GlobalSettings from "./pages/GlobalSettings";
 import { generateQuotePdf } from "./lib/quotePdf";
 import InvoicesPage from "./pages/InvoicesPage";
 import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
+import AgbPage from "./pages/AgbPage";
+import DatenschutzPage from "./pages/DatenschutzPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -318,6 +320,8 @@ type OrdersFilterMode =
 
 type CurrentPage =
   | "dashboard"
+  | "agb"
+  | "datenschutz"
   | "employee-dashboard"
   | "customers-list"
   | "orders-list"
@@ -3877,11 +3881,35 @@ const totalEmployees = employees.length;
       );
     }
 
+    if (currentPage === "agb") {
+  return (
+    <AgbPage
+      onBack={() => {
+        setShowCompanyRegister(true);
+        setCurrentPage("dashboard");
+      }}
+    />
+  );
+}
+
+if (currentPage === "datenschutz") {
+  return (
+    <DatenschutzPage
+      onBack={() => {
+        setShowCompanyRegister(true);
+        setCurrentPage("dashboard");
+      }}
+    />
+  );
+}
+
 if (showCompanyRegister) {
   return (
     <CompanyRegisterPage
-      onBackToLogin={() => setShowCompanyRegister(false)}
-    />
+  onBackToLogin={() => setShowCompanyRegister(false)}
+  onOpenAgb={() => setCurrentPage("agb")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+/>
   );
 }
 

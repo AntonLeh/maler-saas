@@ -3,9 +3,15 @@ import { supabase } from "../lib/supabase";
 
 type Props = {
   onBackToLogin: () => void;
+  onOpenAgb: () => void;
+  onOpenDatenschutz: () => void;
 };
 
-export default function CompanyRegisterPage({ onBackToLogin }: Props) {
+export default function CompanyRegisterPage({
+  onBackToLogin,
+  onOpenAgb,
+  onOpenDatenschutz,
+}: Props) {
   const [companyName, setCompanyName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -13,6 +19,7 @@ export default function CompanyRegisterPage({ onBackToLogin }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -23,6 +30,11 @@ export default function CompanyRegisterPage({ onBackToLogin }: Props) {
 
     if (password !== passwordRepeat) {
   setMessage("Passwörter stimmen nicht überein.");
+  return;
+}
+
+    if (!acceptTerms) {
+  setMessage("Bitte akzeptiere die AGB und Datenschutzbestimmungen.");
   return;
 }
 
@@ -133,6 +145,25 @@ if (emailAvailable === false) {
             onChange={(e) => setPasswordRepeat(e.target.value)}
             required
           />
+
+        <label className="terms-checkbox">
+  <input
+    type="checkbox"
+    checked={acceptTerms}
+    onChange={(e) => setAcceptTerms(e.target.checked)}
+  />
+
+  <span>
+    Ich akzeptiere die{" "}
+    <button type="button" className="link-button" onClick={onOpenAgb}>
+      AGB
+    </button>{" "}
+    und die{" "}
+    <button type="button" className="link-button" onClick={onOpenDatenschutz}>
+      Datenschutzbestimmungen
+    </button>
+  </span>
+</label>
 
           <button
             type="submit"
