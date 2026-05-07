@@ -448,6 +448,7 @@ export default function App() {
 
   const [selectedProjectManagerId, setSelectedProjectManagerId] = useState("");
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [projectManagerWorksToo, setProjectManagerWorksToo] = useState(false);
 
   const [employeeForm, setEmployeeForm] = useState<EmployeeFormData>({
     first_name: "",
@@ -994,10 +995,12 @@ const handleAcceptQuote = async () => {
     return;
   }
 
-  if (selectedEmployeeIds.length === 0) {
-    setQuoteDetailMessage("Bitte mindestens einen Mitarbeiter auswählen.");
-    return;
-  }
+  if (selectedEmployeeIds.length === 0 && !projectManagerWorksToo) {
+  setQuoteDetailMessage(
+    "Bitte mindestens einen Mitarbeiter auswählen oder angeben, dass der Projektleiter selbst den Auftrag ausführt."
+  );
+  return;
+}
 
   try {
     setQuoteDetailMessage("");
@@ -1044,6 +1047,12 @@ const handleAcceptQuote = async () => {
       throw orderError;
     }
 
+    const finalEmployeeIds = projectManagerWorksToo
+  ? Array.from(
+      new Set([...selectedEmployeeIds, selectedProjectManagerId])
+    )
+  : selectedEmployeeIds;
+
     const assignments = [
       {
         tenant_id: userProfile.tenant_id,
@@ -1051,7 +1060,7 @@ const handleAcceptQuote = async () => {
         user_id: Number(selectedProjectManagerId),
         assignment_role: "project_manager",
       },
-      ...selectedEmployeeIds.map((employeeId) => ({
+      ...finalEmployeeIds.map((employeeId) => ({
         tenant_id: userProfile.tenant_id,
         order_id: newOrder.id,
         user_id: Number(employeeId),
@@ -1087,11 +1096,20 @@ const handleAcceptQuote = async () => {
 };
 
   const loadOrders = async (tenantId: number) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select("*")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
+
+  // Projektleiter: nur eigene aktive Aufträge
+  if (userProfile?.role_id === 3) {
+    query = query
+      .eq("assigned_project_manager_id", userProfile.id)
+      .not("status", "in", '("fertig","abgerechnet")');
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Fehler beim Laden der Aufträge:", error);
@@ -4033,7 +4051,12 @@ if (showResetPassword) {
       );
     }
 
-    if (!loadingData && userProfile && isEmployee && currentPage === "employee-dashboard") {
+    if (
+  !loadingData &&
+  userProfile &&
+  (isEmployee || userProfile.role_id === 3) &&
+  currentPage === "employee-dashboard"
+) {
       const fullName =
         `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() ||
         session.user.email ||
@@ -4086,6 +4109,7 @@ onReloadOrders={async () => {
   onOpenOrders={() => openOrdersListPage("open")}
   onOpenCreateCustomer={openCreateCustomerPage}
   onOpenCreateSiteVisit={() => setCurrentPage("create-site-visit")}
+  onOpenWorkOrders={() => setCurrentPage("employee-dashboard")}
   onOpenMessages={openMessagesPage}
   unreadMessages={unreadMessages}
 />
@@ -5923,6 +5947,15 @@ onReloadOrders={async () => {
           ))}
       </select>
     </div>
+
+    <label className="terms-checkbox" style={{ marginTop: "10px" }}>
+  <input
+    type="checkbox"
+    checked={projectManagerWorksToo}
+    onChange={(e) => setProjectManagerWorksToo(e.target.checked)}
+  />
+  <span>Projektleiter führt den Auftrag selbst mit aus</span>
+</label>
 
     <div className="form-group" style={{ marginTop: "20px" }}>
       <label>Mitarbeiter auswählen</label>

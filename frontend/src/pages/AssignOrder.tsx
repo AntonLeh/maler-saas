@@ -32,7 +32,7 @@ export default function AssignOrder({
   const [selectedOrder, setSelectedOrder] = useState("");
   const [selectedProjectManager, setSelectedProjectManager] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-
+  const [projectManagerWorksToo, setProjectManagerWorksToo] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -50,20 +50,33 @@ export default function AssignOrder({
     return;
   }
 
-  if (selectedEmployees.length === 0) {
-    setMessage("Bitte mindestens einen Mitarbeiter auswählen.");
-    return;
-  }
+  if (selectedEmployees.length === 0 && !projectManagerWorksToo) {
+  setMessage("Bitte mindestens einen Mitarbeiter oder Projektleiter auswählen.");
+  return;
+}
 
   setLoading(true);
   setMessage("");
 
   try {
-    await onAssign(
+    const finalEmployeeIds = projectManagerWorksToo
+  ? Array.from(new Set([...selectedEmployees, Number(selectedProjectManager)]))
+  : selectedEmployees;
+
+await onAssign(
   selectedOrder,
   Number(selectedProjectManager),
-  selectedEmployees
+  finalEmployeeIds
 );
+
+<label className="terms-checkbox">
+  <input
+    type="checkbox"
+    checked={projectManagerWorksToo}
+    onChange={(e) => setProjectManagerWorksToo(e.target.checked)}
+  />
+  <span>Projektleiter führt den Auftrag selbst mit aus</span>
+</label>
 
     setMessage("Zuweisung gespeichert.");
   } catch (err: any) {
