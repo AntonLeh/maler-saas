@@ -16,11 +16,18 @@ type Invoice = {
   status: string;
 };
 
-type InvoicesPageProps = {
-  onBack: () => void;
+type UserProfile = {
+  id: number;
+  tenant_id: number;
+  role_id: number;
 };
 
-export default function InvoicesPage({ onBack }: InvoicesPageProps) {
+type InvoicesPageProps = {
+  onBack: () => void;
+  userProfile: UserProfile;
+};
+
+export default function InvoicesPage({ onBack, userProfile }: InvoicesPageProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,13 +90,14 @@ export default function InvoicesPage({ onBack }: InvoicesPageProps) {
     }
 
     const { data: companySettings, error: settingsError } = await supabase
-      .from("company_settings")
-      .select("*")
-      .single();
+  .from("company_settings")
+  .select("*")
+  .eq("tenant_id", userProfile.tenant_id)
+  .maybeSingle();
 
-    if (settingsError) {
-      console.error("Fehler beim Laden der Firmeneinstellungen:", settingsError);
-    }
+if (settingsError) {
+  console.error("Fehler beim Laden der Firmeneinstellungen:", settingsError);
+}
 
     const quoteId =
       order?.accepted_quote_id ??

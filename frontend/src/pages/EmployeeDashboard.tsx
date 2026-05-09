@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import EmployeeMaterialsSection from "./EmployeeMaterialsSection";
 
   const formatDateTime = (value: string) => {
   const hasTimezone = /[zZ]|[+\-]\d{2}:\d{2}$/.test(value);
@@ -71,6 +72,8 @@ type TimeEntry = {
 type EmployeeDashboardProps = {
   userName: string;
   userEmail: string;
+  tenantId: number;
+  currentUserId: number;
   onLogout: () => void;
   orders: EmployeeOrder[];
   progressEntries: ProgressEntry[];
@@ -92,6 +95,8 @@ type EmployeeDashboardProps = {
 export default function EmployeeDashboard({
   userName,
   userEmail,
+  tenantId,
+  currentUserId,
   onLogout,
   orders,
   progressEntries = [],
@@ -109,7 +114,7 @@ export default function EmployeeDashboard({
   onOpenMessages,
   unreadMessages,
 }: EmployeeDashboardProps) {
-
+  const [showOrders, setShowOrders] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [savingProgressOrderId, setSavingProgressOrderId] = useState<string | null>(null);
   const [startingWorkOrderId, setStartingWorkOrderId] = useState<string | null>(null);
@@ -473,11 +478,39 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
   >
     Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
   </button>
-</section>
 
-          <section className="single-page-section">
-          <div className="card">
-            <h2>Meine Aufträge</h2>
+  <button
+  type="button"
+  className="btn btn-primary"
+  onClick={() => setShowOrders((prev) => !prev)}
+  style={{ marginLeft: "10px" }}
+>
+  {showOrders ? "Aufträge ausblenden" : "Meine Aufträge"}
+</button>
+</section>
+          
+
+          {showOrders && (
+  <section className="single-page-section">
+    <div className="card">
+      <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1rem",
+  }}
+>
+  <h2 style={{ margin: 0 }}>Meine Aufträge</h2>
+
+  <button
+    type="button"
+    className="btn btn-secondary"
+    onClick={() => setShowOrders(false)}
+  >
+    Zurück zum Dashboard
+  </button>
+</div>
 
             {message && <p className="info-text">{message}</p>}
 
@@ -548,6 +581,12 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
                       {formatDateOnly(order.end_date)}
                       </p>
                         
+                          <EmployeeMaterialsSection
+                          tenantId={tenantId}
+                          orderId={order.id}
+                          currentUserId={currentUserId}
+                      />
+
                         <div className="form-group">
   <label>Stechuhr</label>
 
@@ -873,6 +912,7 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
             )}
           </div>
         </section>
+        )}
       </div>
 
 {selectedImagePreview && (

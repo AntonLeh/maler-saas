@@ -8,6 +8,7 @@ type ProjectManagerDashboardProps = {
   onOpenCreateCustomer: () => void;
   onOpenCreateSiteVisit: () => void;
   onOpenWorkOrders: () => void;
+  onOpenMaterials: () => void;
   onOpenMessages: () => void;
   unreadMessages: number;
 };
@@ -20,6 +21,7 @@ export default function ProjectManagerDashboard({
   onOpenCreateCustomer,
   onOpenCreateSiteVisit,
   onOpenWorkOrders,
+  onOpenMaterials,
   onOpenMessages,
   unreadMessages,
 }: ProjectManagerDashboardProps) {
@@ -62,6 +64,14 @@ export default function ProjectManagerDashboard({
   onClick={onOpenWorkOrders}
 >
   Meine Ausführungsaufträge
+</button>
+
+<button
+  type="button"
+  className="btn btn-primary"
+  onClick={onOpenMaterials}
+>
+  Materialverwaltung
 </button>
 
   <button

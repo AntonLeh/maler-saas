@@ -15,6 +15,8 @@ import InvoicesPage from "./pages/InvoicesPage";
 import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
 import AgbPage from "./pages/AgbPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
+import MaterialsPage from "./pages/MaterialsPage";
+import OrderMaterialsSection from "./pages/OrderMaterialsSection";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -320,6 +322,7 @@ type OrdersFilterMode =
 
 type CurrentPage =
   | "dashboard"
+  | "employee-orders"
   | "agb"
   | "datenschutz"
   | "employee-dashboard"
@@ -341,7 +344,8 @@ type CurrentPage =
   | "quotes-list"
   | "quote-detail"
   | "messages"
-  | "invoices-list";
+  | "invoices-list"
+  | "materials";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -1325,7 +1329,7 @@ const loadMessageRecipients = async () => {
     .select("order_id")
     .eq("tenant_id", tenantId)
     .eq("user_id", employeeId)
-    .eq("assignment_role", "employee");
+    .in("assignment_role", ["employee", "project_manager"]);
 
   if (assignmentError) {
     console.error("Fehler beim Laden der Mitarbeiter-Zuweisungen:", assignmentError);
@@ -1548,9 +1552,10 @@ if (
       loadMessageRecipients();
 }
 
-    const isEmployee = userProfile.role_id === EMPLOYEE_ROLE_ID;
+    const canUseEmployeeDashboard =
+  userProfile.role_id === EMPLOYEE_ROLE_ID || userProfile.role_id === 3;
 
-if (!isEmployee) return;
+if (!canUseEmployeeDashboard) return;
 
 loadEmployees(userProfile.tenant_id);
 loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
@@ -2852,13 +2857,17 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
   };
 
   const openDashboard = () => {
-    if (isEmployee) {
-      setCurrentPage("employee-dashboard");
-      return;
-    }
+  if (isEmployee) {
+    setCurrentPage("employee-dashboard");
+    return;
+  }
 
-    setCurrentPage("dashboard");
-  };
+  setCurrentPage("dashboard");
+};
+
+const openEmployeeOrders = () => {
+  setCurrentPage("employee-orders");
+};
 
   const openCustomersListPage = () => {
     setCurrentPage("customers-list");
@@ -4066,10 +4075,11 @@ if (showResetPassword) {
         <EmployeeDashboard
           userName={fullName}
           userEmail={session.user.email || ""}
+          tenantId={userProfile.tenant_id}
+          currentUserId={userProfile.id}
           onLogout={handleLogout}
           onOpenMessages={openMessagesPage}
           unreadMessages={unreadMessages}
-
           orders={orders}
           progressEntries={progressEntries}
           timeEntries={timeEntries}
@@ -4110,6 +4120,7 @@ onReloadOrders={async () => {
   onOpenCreateCustomer={openCreateCustomerPage}
   onOpenCreateSiteVisit={() => setCurrentPage("create-site-visit")}
   onOpenWorkOrders={() => setCurrentPage("employee-dashboard")}
+  onOpenMaterials={() => setCurrentPage("materials")}
   onOpenMessages={openMessagesPage}
   unreadMessages={unreadMessages}
 />
@@ -4290,6 +4301,14 @@ onReloadOrders={async () => {
   >
     Rechnungen
   </button>
+
+  <button
+  type="button"
+  className="btn btn-primary"
+  onClick={() => setCurrentPage("materials")}
+>
+  Materialverwaltung
+</button>
 
   <button
     type="button"
@@ -7237,9 +7256,18 @@ onReloadOrders={async () => {
       </table>
     </div>
   )}
-</div>
-                      
+</div>            
                     </form>
+
+                  {editingOrderId && userProfile && (
+  <OrderMaterialsSection
+    tenantId={userProfile.tenant_id}
+    orderId={Number(editingOrderId)}
+    employees={employees}
+    currentUserId={userProfile.id}
+  />
+)}
+
                   </div>
                 </section>
               )}
@@ -7537,6 +7565,13 @@ onReloadOrders={async () => {
                   </section>
                 )}
 
+                {currentPage === "materials" && userProfile && (
+  <MaterialsPage
+    tenantId={userProfile.tenant_id}
+    onBack={openDashboard}
+  />
+)}
+
 {currentPage === "messages" && (
   <section className="single-page-section">
     <div className="card form-page-card">
@@ -7718,8 +7753,9 @@ onReloadOrders={async () => {
 )}
 {currentPage === "invoices-list" && (
   <InvoicesPage
-    onBack={openDashboard}
-  />
+  onBack={openDashboard}
+  userProfile={userProfile}
+/>
 )}
             </>
           )}

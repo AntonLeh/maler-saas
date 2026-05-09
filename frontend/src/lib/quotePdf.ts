@@ -217,24 +217,38 @@ if (companySettings?.logo_url) {
   y += 7;
 
   if (quoteDetail?.description) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const descriptionLines = doc.splitTextToSize(
-      quoteDetail.description,
-      pageWidth - marginLeft - marginRight
-    );
-    const introText =
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  const descriptionLines = doc.splitTextToSize(
+    quoteDetail.description,
+    pageWidth - marginLeft - marginRight
+  );
+
+  doc.text(descriptionLines, marginLeft, y);
+  y += descriptionLines.length * 5 + 5;
+}
+
+const introText =
+  quoteDetail?.intro_text ||
+  quoteDetail?.introduction_text ||
+  quoteDetail?.quote_intro_text ||
   companySettings?.quote_intro_text ||
   "Vielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen folgendes Angebot unterbreiten zu dürfen.";
 
-const introLines = doc.splitTextToSize(introText, 180);
+const textWidth = pageWidth - marginLeft - marginRight;
 
 doc.setFont("helvetica", "normal");
 doc.setFontSize(9);
-doc.text(introLines, marginLeft, y);
 
-y += introLines.length * 5 + 0;
-  }
+doc.text(introText, marginLeft, y, {
+  maxWidth: textWidth,
+  align: "left",
+});
+
+const introLines = doc.splitTextToSize(introText, textWidth);
+
+y += introLines.length * 4.2 + 3;
 
   // Positionen
   const tableRows = (quoteItems ?? []).map((item) => {
