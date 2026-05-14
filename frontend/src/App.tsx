@@ -17,6 +17,12 @@ import AgbPage from "./pages/AgbPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
 import MaterialsPage from "./pages/MaterialsPage";
 import OrderMaterialsSection from "./pages/OrderMaterialsSection";
+import CustomerPortalPage from "./pages/CustomerPortalPage";
+import LockedFeatureCard from "./components/LockedFeatureCard";
+import PricingPage from "./pages/PricingPage";
+import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
+import TrialBanner from "./components/TrialBanner";
+import BillingPage from "./pages/BillingPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -37,6 +43,27 @@ type AppUser = {
   is_active?: boolean;
   created_at?: string;
   hourly_rate: number | null;
+};
+
+type SubscriptionFeature = {
+  enabled: boolean;
+  status: "active" | "beta" | "planned" | "locked" | string;
+};
+
+type Subscription = {
+  id: number;
+  tenant_id: number;
+  plan: "starter" | "professional" | "business" | "enterprise" | string;
+  status: string;
+  max_users: number;
+  storage_limit_gb: number;
+  image_limit: number;
+  monthly_price: number;
+  currency: string;
+  features: Record<string, SubscriptionFeature>;
+  is_trial?: boolean;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
 };
 
 type Customer = {
@@ -326,6 +353,7 @@ type CurrentPage =
   | "agb"
   | "datenschutz"
   | "employee-dashboard"
+  | "customer-view"
   | "customers-list"
   | "orders-list"
   | "employees-list"
@@ -345,7 +373,10 @@ type CurrentPage =
   | "quote-detail"
   | "messages"
   | "invoices-list"
-  | "materials";
+  | "customer-portal-locked"
+  | "pricing"
+  | "materials"
+  | "billing";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -421,6 +452,24 @@ export default function App() {
   const [savingPricingRules, setSavingPricingRules] = useState(false);
   const [pricingRulesMessage, setPricingRulesMessage] = useState("");
 
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+
+  const loadSubscription = async (_tenantId: number) => {
+  const { data, error } = await supabase.rpc("get_my_subscription");
+
+  if (error) {
+    console.error("Fehler beim Laden der Subscription:", error);
+    setSubscription(null);
+    return;
+  }
+
+  setSubscription(data as Subscription);
+};
+
+  const hasFeature = (featureKey: string) => {
+  return subscription?.features?.[featureKey]?.enabled === true;
+  };
+
   const [customerForm, setCustomerForm] = useState<CustomerFormData>({
     first_name: "",
     last_name: "",
@@ -436,6 +485,10 @@ export default function App() {
     discount_value: "",
     discount_note: "",
   });
+
+  if (window.location.pathname === "/customer-view") {
+  return <CustomerPortalPage />;
+}
 
   const [orderForm, setOrderForm] = useState<OrderFormData>({
     customer_id: "",
@@ -746,28 +799,36 @@ return () => subscription.unsubscribe();
   };
 
   const loadUserProfile = async (authUserId: string): Promise<AppUser | null> => {
-    const { data, error } = await supabase
-      .from("app_users")
-      .select("*")
-      .eq("auth_user_id", authUserId)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
 
-    if (error) {
-      console.error("Fehler beim Laden des Benutzerprofils:", JSON.stringify(error, null, 2));
-      setUserProfile(null);
-      return null;
-    }
+  if (error) {
+    console.error(
+      "Fehler beim Laden des Benutzerprofils:",
+      JSON.stringify(error, null, 2)
+    );
+    setUserProfile(null);
+    return null;
+  }
 
-    if (!data) {
-      console.warn("Kein Benutzerprofil gefunden für auth_user_id:", authUserId);
-      setUserProfile(null);
-      return null;
-    }
+  if (!data) {
+    console.warn("Kein Benutzerprofil gefunden für auth_user_id:", authUserId);
+    setUserProfile(null);
+    return null;
+  }
 
-    setUserProfile(data as AppUser);
-    return data as AppUser;
-  };
+  setUserProfile(data as AppUser);
 
+  if (data?.tenant_id) {
+    console.log("Subscription wird geladen für Tenant:", data.tenant_id);
+    await loadSubscription(data.tenant_id);
+  }
+
+  return data as AppUser;
+};
   const loadCustomers = async (tenantId: number) => {
     const { data, error } = await supabase
       .from("customers")
@@ -989,6 +1050,70 @@ const handleSaveValidUntil = async () => {
   await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
 };
 
+const handleCreateCustomerPortalLink = async () => {
+  if (!userProfile || !selectedQuoteId) return;
+
+  const { data: quote, error: quoteError } = await supabase
+    .from("quotes")
+    .select(`
+      id,
+      tenant_id,
+      customer_id,
+      customers (
+        id,
+        email
+      )
+    `)
+    .eq("id", selectedQuoteId)
+    .eq("tenant_id", userProfile.tenant_id)
+    .single();
+
+  if (quoteError || !quote) {
+    console.error("Fehler beim Laden des Angebots:", quoteError);
+    alert("Angebot konnte nicht geladen werden.");
+    return;
+  }
+
+  const customerEmail = Array.isArray((quote as any).customers)
+  ? (quote as any).customers[0]?.email
+  : (quote as any).customers?.email;
+
+  if (!customerEmail) {
+    alert("Beim Kunden ist keine E-Mail-Adresse hinterlegt.");
+    return;
+  }
+
+  const token =
+    crypto.randomUUID() + "-" + Math.random().toString(36).slice(2);
+
+  const { error } = await supabase
+    .from("customer_portal_access")
+    .insert({
+      tenant_id: userProfile.tenant_id,
+      quote_id: quote.id,
+      customer_id: quote.customer_id,
+      customer_email: customerEmail,
+      access_token: token,
+      is_active: true,
+    });
+
+  if (error) {
+    console.error("Kundenlink konnte nicht erstellt werden:", error);
+    alert("Kundenlink konnte nicht erstellt werden.");
+    return;
+  }
+
+  const portalUrl =
+    window.location.origin + "/customer-view?token=" + token;
+
+  await navigator.clipboard.writeText(portalUrl);
+
+  alert(
+    "Kundenportal-Link erstellt und in die Zwischenablage kopiert:\n\n" +
+      portalUrl
+  );
+};
+
 const handleAcceptQuote = async () => {
   if (!quoteDetail || !userProfile?.tenant_id) {
     return;
@@ -998,6 +1123,24 @@ const handleAcceptQuote = async () => {
     setQuoteDetailMessage("Bitte zuerst einen Projektleiter auswählen.");
     return;
   }
+
+  const { data: existingOrder, error: existingOrderError } = await supabase
+  .from("orders")
+  .select("id")
+  .eq("tenant_id", userProfile.tenant_id)
+  .eq("quote_id", quoteDetail.id)
+  .maybeSingle();
+
+if (existingOrderError) {
+  throw existingOrderError;
+}
+
+if (existingOrder) {
+  setQuoteDetailMessage(
+    "Für dieses Angebot wurde bereits ein Auftrag erstellt. Es wird kein zweiter Auftrag angelegt."
+  );
+  return;
+}
 
   if (selectedEmployeeIds.length === 0 && !projectManagerWorksToo) {
   setQuoteDetailMessage(
@@ -2865,6 +3008,18 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
   setCurrentPage("dashboard");
 };
 
+const getTrialDaysLeft = () => {
+  if (!subscription?.trial_ends_at) return null;
+
+  const end = new Date(subscription.trial_ends_at).getTime();
+  const now = new Date().getTime();
+
+  return Math.max(
+    0,
+    Math.ceil((end - now) / (1000 * 60 * 60 * 24))
+  );
+};
+
 const openEmployeeOrders = () => {
   setCurrentPage("employee-orders");
 };
@@ -4168,12 +4323,32 @@ onReloadOrders={async () => {
           <header className="topbar">
             <div className="topbar-left">
               <h1>Maler SaaS Plattform</h1>
-              <p className="topbar-subtitle">
-                {isAdmin
-                  ? "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
-                  : "Dashboard"}
-
-              </p>
+              <p
+  style={{
+    fontSize: "13px",
+    color: "#666",
+    marginTop: "4px",
+    lineHeight: 1.5,
+  }}
+>
+  {subscription ? (
+    <>
+      <strong>
+        {subscription.plan.toUpperCase()}
+      </strong>{" "}
+      Plan aktiv •{" "}
+      {subscription.features?.customerPortal?.enabled
+        ? "Kundenportal freigeschaltet"
+        : "Kundenportal gesperrt"}
+      {" • "}
+      {subscription.features?.materials?.enabled
+        ? "Materialverwaltung freigeschaltet"
+        : "Materialverwaltung gesperrt"}
+    </>
+  ) : (
+    "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
+  )}
+</p>
             </div>
 
             <div className="topbar-right">
@@ -4211,6 +4386,33 @@ onReloadOrders={async () => {
 
           {!loadingData && userProfile && (
             <>
+
+{subscription?.status === "payment_required" &&
+  currentPage !== "pricing" && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "#f8fafc",
+        overflowY: "auto",
+      }}
+    >
+      <PaymentRequiredOverlay
+        onChoosePlan={() => setCurrentPage("pricing")}
+        onLogout={handleLogout}
+      />
+    </div>
+)}
+
+{subscription?.is_trial &&
+  subscription?.status === "trialing" &&
+  getTrialDaysLeft() !== null && (
+    <TrialBanner
+      daysLeft={getTrialDaysLeft() ?? 0}
+      onUpgrade={() => setCurrentPage("pricing")}
+    />
+)}
 
 {currentPage === "dashboard" && userProfile?.role_id === 1 && (
   <PlatformOwnerDashboard onBack={openDashboard} />
@@ -4325,6 +4527,14 @@ onReloadOrders={async () => {
   >
     Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
   </button>
+
+  <button
+  type="button"
+  className="btn btn-warning"
+  onClick={() => setCurrentPage("billing")}
+>
+  Abrechnung & Abo
+</button>
 
   <button
     type="button"
@@ -6031,6 +6241,20 @@ onReloadOrders={async () => {
       }}
     >
       <button
+  type="button"
+  className="btn btn-secondary"
+  onClick={() => {
+    if (!hasFeature("customerPortal")) {
+      setCurrentPage("customer-portal-locked");
+      return;
+    }
+
+    handleCreateCustomerPortalLink();
+  }}
+>
+  Kundenlink erstellen
+</button>
+      <button
         type="button"
         className="btn btn-primary"
         onClick={handleAcceptQuote}
@@ -7565,10 +7789,71 @@ onReloadOrders={async () => {
                   </section>
                 )}
 
-                {currentPage === "materials" && userProfile && (
-  <MaterialsPage
-    tenantId={userProfile.tenant_id}
+                {currentPage === "materials" &&
+  userProfile &&
+  hasFeature("materials") && (
+    <MaterialsPage
+      tenantId={userProfile.tenant_id}
+      onBack={openDashboard}
+    />
+)}
+
+{currentPage === "materials" &&
+  userProfile &&
+  !hasFeature("materials") && (
+    <LockedFeatureCard
+      feature="Materialverwaltung"
+      requiredPlan="Professional"
+      description="Verwalten Sie Materialzuweisungen, Übergaben, Verbrauch, Rückgaben und Materialhistorien direkt pro Auftrag und Mitarbeiter."
+      onUpgradeClick={() => setCurrentPage("pricing")}
+    />
+)}
+
+{currentPage === "customer-portal-locked" && (
+  <LockedFeatureCard
+    feature="Kundenportal"
+    requiredPlan="Professional"
+    description="Erzeugen Sie Kundenlinks, damit Ihre Kunden Angebote, Fortschritte, Bilder und Rechnungen online verfolgen können."
+    onUpgradeClick={() => setCurrentPage("pricing")}
+  />
+)}
+
+{currentPage === "pricing" && (
+  <PricingPage
+    currentPlan={subscription?.plan}
     onBack={openDashboard}
+    onUpgrade={async (plan) => {
+      const { data, error } = await supabase.functions.invoke(
+        "create-stripe-checkout",
+        {
+          body: {
+            plan,
+          },
+        }
+      );
+
+      if (error) {
+        console.error("Stripe Checkout Fehler:", error);
+        alert("Stripe Checkout konnte nicht gestartet werden.");
+        return;
+      }
+
+      if (!data?.url) {
+        console.error("Keine Stripe Checkout URL erhalten:", data);
+        alert("Keine Stripe Checkout URL erhalten.");
+        return;
+      }
+
+      window.location.href = data.url;
+    }}
+  />
+)}
+
+{currentPage === "billing" && (
+  <BillingPage
+    subscription={subscription}
+    onBack={openDashboard}
+    onOpenPricing={() => setCurrentPage("pricing")}
   />
 )}
 

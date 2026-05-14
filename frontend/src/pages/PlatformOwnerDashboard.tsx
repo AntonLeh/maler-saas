@@ -26,9 +26,20 @@ type Plan = {
 type Subscription = {
   id: number;
   tenant_id: number;
-  plan_id: number;
+  plan: "starter" | "professional" | "business" | "enterprise" | string;
   status: string;
-  trial_ends_at: string | null;
+  max_users: number;
+  storage_limit_gb: number;
+  image_limit: number;
+  features: Record<string, any>;
+  billing_cycle: string;
+  monthly_price: number;
+  currency: string;
+  started_at: string;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  trial_ends_at?: string | null;
 };
 
 type TenantStats = {
@@ -37,6 +48,17 @@ type TenantStats = {
   orders: number;
   invoices: number;
   revenue: number;
+};
+
+type BillingEvent = {
+  id: number;
+  tenant_id: number;
+  event_type: string;
+  old_plan: string | null;
+  new_plan: string | null;
+  amount: number | null;
+  currency: string | null;
+  created_at: string;
 };
 
 type PlatformOwnerDashboardProps = {
@@ -49,6 +71,7 @@ export default function PlatformOwnerDashboard({
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [billingEvents, setBillingEvents] = useState<BillingEvent[]>([]);
   const [tenantStats, setTenantStats] = useState<Record<number, TenantStats>>({});
   const [loading, setLoading] = useState(true);
 
@@ -64,21 +87,36 @@ export default function PlatformOwnerDashboard({
       .from("plans")
       .select("*");
 
-    const { data: subscriptionsData, error: subscriptionsError } = await supabase
-      .from("subscriptions")
-      .select("*");
+    const {
+  data: subscriptionsData,
+  error: subscriptionsError,
+} = await supabase.rpc("owner_get_subscriptions");
 
-    if (tenantsError || plansError || subscriptionsError) {
+const { data: billingEventsData, error: billingEventsError } =
+  await supabase
+    .from("billing_events")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+    if (
+  tenantsError ||
+  plansError ||
+  subscriptionsError ||
+  billingEventsError
+) {
       console.error("Fehler beim Laden der Owner-Daten:", {
         tenantsError,
         plansError,
         subscriptionsError,
+        billingEventsError
       });
       setTenants([]);
       setPlans([]);
       setSubscriptions([]);
       setTenantStats({});
+      setBillingEvents([]);
       setLoading(false);
+
       return;
     }
 
@@ -87,6 +125,7 @@ export default function PlatformOwnerDashboard({
     setTenants(loadedTenants);
     setPlans((plansData as Plan[]) || []);
     setSubscriptions((subscriptionsData as Subscription[]) || []);
+    setBillingEvents((billingEventsData as BillingEvent[]) || []);
 
     const statsByTenant: Record<number, TenantStats> = {};
 
@@ -137,14 +176,142 @@ export default function PlatformOwnerDashboard({
     loadTenants();
   }, []);
 
+const handleChangePlan = async (
+  tenantId: number,
+  newPlan: string
+) => {
+  const { error } = await supabase.rpc("upgrade_subscription", {
+    p_tenant_id: tenantId,
+    p_plan: newPlan,
+  });
+
+  if (error) {
+    console.error("Fehler beim Ändern des Plans:", error);
+    alert("Plan konnte nicht geändert werden.");
+    return;
+  }
+
+  alert("Plan wurde erfolgreich geändert.");
+
+  await loadTenants();
+};
+
   const stats = useMemo(() => {
+   const trialStartedTenantIds = new Set(
+  billingEvents
+    .filter((event) => event.event_type === "trial_started")
+    .map((event) => event.tenant_id)
+);
+
+const convertedTenantIds = new Set(
+  billingEvents
+    .filter(
+      (event) =>
+        event.event_type === "subscription_activated" ||
+        event.event_type === "payment_received"
+    )
+    .map((event) => event.tenant_id)
+);
+
+const convertedFromTrialCount = Array.from(
+  trialStartedTenantIds
+).filter((tenantId) => convertedTenantIds.has(tenantId)).length;
+
+const trialConversionRate =
+  trialStartedTenantIds.size > 0
+    ? Math.round(
+        (convertedFromTrialCount /
+          trialStartedTenantIds.size) *
+          100
+      )
+    : 0;
     return {
       total: tenants.length,
       trial: tenants.filter((tenant) => tenant.status === "trial").length,
       active: tenants.filter((tenant) => tenant.status === "active").length,
       blocked: tenants.filter((tenant) => tenant.status === "blocked").length,
+      trialStartedCount: trialStartedTenantIds.size,
+convertedFromTrialCount,
+trialConversionRate,
     };
-  }, [tenants]);
+  }, [tenants, billingEvents]);
+
+  const ownerKpis = useMemo(() => {
+  const activeSubscriptions = subscriptions.filter(
+    (subscription) => subscription.status === "active"
+  );
+
+  const trialSubscriptions = subscriptions.filter(
+    (subscription) => subscription.status === "trialing"
+  );
+
+  const paymentRequiredSubscriptions = subscriptions.filter(
+    (subscription) => subscription.status === "payment_required"
+  );
+
+  const mrr = activeSubscriptions.reduce((sum, subscription) => {
+    return sum + Number(subscription.monthly_price || 0);
+  }, 0);
+
+  const starterCount = subscriptions.filter(
+    (subscription) => subscription.plan === "starter"
+  ).length;
+
+  const professionalCount = subscriptions.filter(
+    (subscription) => subscription.plan === "professional"
+  ).length;
+
+  const businessCount = subscriptions.filter(
+    (subscription) => subscription.plan === "business"
+  ).length;
+
+  const enterpriseCount = subscriptions.filter(
+    (subscription) => subscription.plan === "enterprise"
+  ).length;
+
+  const trialStartedTenantIds = new Set(
+  billingEvents
+    .filter((event) => event.event_type === "trial_started")
+    .map((event) => event.tenant_id)
+);
+
+const convertedTenantIds = new Set(
+  billingEvents
+    .filter(
+      (event) =>
+        event.event_type === "subscription_activated" ||
+        event.event_type === "payment_received"
+    )
+    .map((event) => event.tenant_id)
+);
+
+const convertedFromTrialCount = Array.from(
+  trialStartedTenantIds
+).filter((tenantId) => convertedTenantIds.has(tenantId)).length;
+
+const trialConversionRate =
+  trialStartedTenantIds.size > 0
+    ? Math.round(
+        (convertedFromTrialCount /
+          trialStartedTenantIds.size) *
+          100
+      )
+    : 0;
+
+  return {
+  mrr,
+  activeCount: activeSubscriptions.length,
+  trialCount: trialSubscriptions.length,
+  paymentRequiredCount: paymentRequiredSubscriptions.length,
+  starterCount,
+  professionalCount,
+  businessCount,
+  enterpriseCount,
+  trialStartedCount: trialStartedTenantIds.size,
+  convertedFromTrialCount,
+  trialConversionRate,
+};
+}, [subscriptions, billingEvents]);
 
   const getPlanName = (planId: number | null) => {
     if (!planId) return "-";
@@ -153,8 +320,10 @@ export default function PlatformOwnerDashboard({
   };
 
   const getSubscriptionForTenant = (tenantId: number) => {
-    return subscriptions.find((item) => item.tenant_id === tenantId) || null;
-  };
+  return subscriptions.find(
+    (subscription) => Number(subscription.tenant_id) === Number(tenantId)
+  );
+};
 
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "-";
@@ -274,7 +443,78 @@ const deleteTenantCompletely = async (tenantId: number, companyName: string) => 
             <span className="stat-label">Gesperrt</span>
             <strong className="stat-value">{stats.blocked}</strong>
           </div>
+          <div className="stat-card">
+  <span className="stat-label">
+    Trial Conversion
+  </span>
+
+  <strong className="stat-value">
+    {ownerKpis.trialConversionRate}%
+  </strong>
+
+  <div className="table-subtitle">
+    {ownerKpis.convertedFromTrialCount} von{" "}
+    {ownerKpis.trialStartedCount}
+  </div>
+</div>
         </section>
+        <section
+  className="stats-grid stats-grid-5"
+  style={{ marginTop: "18px" }}
+>
+  <div className="stat-card">
+    <span className="stat-label">MRR</span>
+
+    <strong className="stat-value">
+      {ownerKpis.mrr.toFixed(0)} CHF
+    </strong>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">
+      Zahlende Firmen
+    </span>
+
+    <strong className="stat-value">
+      {ownerKpis.activeCount}
+    </strong>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">
+      Trials aktiv
+    </span>
+
+    <strong className="stat-value">
+      {ownerKpis.trialCount}
+    </strong>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">
+      Zahlung erforderlich
+    </span>
+
+    <strong className="stat-value">
+      {ownerKpis.paymentRequiredCount}
+    </strong>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">
+      Planverteilung
+    </span>
+
+    <strong
+      className="stat-value"
+      style={{ fontSize: "15px" }}
+    >
+      S {ownerKpis.starterCount} ·
+      P {ownerKpis.professionalCount} ·
+      B {ownerKpis.businessCount}
+    </strong>
+  </div>
+</section>
 
         {loading ? (
           <p className="info-text">Firmen werden geladen...</p>
@@ -303,87 +543,157 @@ const deleteTenantCompletely = async (tenantId: number, companyName: string) => 
               </thead>
 
               <tbody>
-                {tenants.map((tenant) => {
-                  const subscription = getSubscriptionForTenant(tenant.id);
+  {tenants.map((tenant) => {
+    const subscription = getSubscriptionForTenant(tenant.id);
+    
+    return (
+      <tr key={tenant.id}>
+        <td>
+          <strong>{tenant.company_name}</strong>
 
-                  return (
-                    <tr key={tenant.id}>
-                      <td>
-                        <strong>{tenant.company_name}</strong>
-                        <div className="table-subtitle">{tenant.slug}</div>
-                      </td>
+          <div className="table-subtitle">
+            {tenant.slug}
+          </div>
+        </td>
 
-                      <td>
-                        {tenant.email || "-"}
-                        <div className="table-subtitle">{tenant.phone || ""}</div>
-                      </td>
+        <td>
+          {tenant.email || "-"}
 
-                      <td>
-                        <span className="status-badge status-geplant">
-                          {tenant.status}
-                        </span>
-                      </td>
+          <div className="table-subtitle">
+            {tenant.phone || ""}
+          </div>
+        </td>
 
-                      <td>{getPlanName(tenant.current_plan_id)}</td>
+        <td>
+          <span className="status-badge status-geplant">
+            {tenant.status}
+          </span>
+        </td>
 
-                      <td>{formatDate(subscription?.trial_ends_at)}</td>
+        <td>
+          <select
+            value={subscription?.plan || "starter"}
+            onChange={(e) =>
+              handleChangePlan(tenant.id, e.target.value)
+            }
+            style={{
+              padding: "7px 10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              minWidth: "170px",
+            }}
+          >
+            <option value="starter">Starter</option>
+            <option value="professional">Professional</option>
+            <option value="business">Business</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
 
-                      <td>{tenantStats[tenant.id]?.users ?? 0}</td>
-
-                      <td>{tenantStats[tenant.id]?.customers ?? 0}</td>
-
-                      <td>{tenantStats[tenant.id]?.orders ?? 0}</td>
-
-                      <td>{tenantStats[tenant.id]?.invoices ?? 0}</td>
-
-                      <td>
-                        <strong>
-                          {formatMoney(tenantStats[tenant.id]?.revenue ?? 0)}
-                        </strong>
-                      </td>
-
-                      <td>{formatDate(tenant.created_at)}</td>
-                      <td>
-  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-    <button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() => updateTenantStatus(tenant.id, "active")}
+          <div
+  style={{
+    marginTop: "6px",
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#666",
+  }}
 >
-  Aktivieren
-</button>
+  Aktuell:{" "}
+  {(subscription?.plan || "starter").toUpperCase()}
+</div>
 
-<button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() =>
-    deleteTenantCompletely(tenant.id, tenant.company_name)
-  }
->
-  Löschen
-</button>
+          <div className="table-subtitle">
+            {subscription?.monthly_price
+              ? `${subscription.monthly_price} ${subscription.currency}/Monat`
+              : "Kein Preis hinterlegt"}
+          </div>
+        </td>
 
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={() => updateTenantStatus(tenant.id, "blocked")}
-    >
-      Sperren
-    </button>
+        <td>
+          {formatDate(subscription?.trial_ends_at)}
+        </td>
 
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={() => extendTrial(tenant.id)}
-    >
-      Trial +14 Tage
-    </button>
-  </div>
-</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+        <td>
+          {tenantStats[tenant.id]?.users ?? 0}
+        </td>
+
+        <td>
+          {tenantStats[tenant.id]?.customers ?? 0}
+        </td>
+
+        <td>
+          {tenantStats[tenant.id]?.orders ?? 0}
+        </td>
+
+        <td>
+          {tenantStats[tenant.id]?.invoices ?? 0}
+        </td>
+
+        <td>
+          <strong>
+            {formatMoney(
+              tenantStats[tenant.id]?.revenue ?? 0
+            )}
+          </strong>
+        </td>
+
+        <td>
+          {formatDate(tenant.created_at)}
+        </td>
+
+        <td>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() =>
+                updateTenantStatus(tenant.id, "active")
+              }
+            >
+              Aktivieren
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() =>
+                deleteTenantCompletely(
+                  tenant.id,
+                  tenant.company_name
+                )
+              }
+            >
+              Löschen
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() =>
+                updateTenantStatus(tenant.id, "blocked")
+              }
+            >
+              Sperren
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => extendTrial(tenant.id)}
+            >
+              Trial +14 Tage
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
             </table>
           </div>
         )}

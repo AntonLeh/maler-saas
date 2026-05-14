@@ -102,12 +102,17 @@ export default function CompanyOnboardingPage({ tenantId, onCompleted }: Props) 
       .eq("id", tenantId);
 
     if (settingsError || tenantError) {
-  console.error("settingsError:", settingsError);
-  console.error("tenantError:", tenantError);
   setMessage("Fehler beim Speichern der Firmendaten. Details siehe Konsole.");
   setSaving(false);
   return;
 }
+
+await supabase.rpc(
+  "create_business_trial_for_tenant",
+  {
+    p_tenant_id: tenantId,
+  }
+);
 
     setSaving(false);
     onCompleted();
