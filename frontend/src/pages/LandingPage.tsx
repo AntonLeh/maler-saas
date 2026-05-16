@@ -140,6 +140,33 @@ export default function LandingPage({
           <span>Kundenportal</span>
           <span>KI</span>
         </section>
+        <section className="landing-section landing-how-it-works">
+  <p className="landing-section-label">So funktioniert es</p>
+
+  <h2>Vom ersten Aufmaß bis zur fertigen Rechnung.</h2>
+
+  <div className="how-grid">
+    {[
+      "Firma registrieren",
+      "Mitarbeiter anlegen",
+      "Aufmaß erfassen",
+      "Angebot erstellen",
+      "Auftrag steuern",
+      "Rechnung erzeugen",
+    ].map((step, index) => (
+      <article key={step}>
+        <span>{index + 1}</span>
+
+        <h3>{step}</h3>
+
+        <p>
+          Schritt für Schritt digitalisiert MalerSaaS deinen gesamten
+          Betriebsablauf.
+        </p>
+      </article>
+    ))}
+  </div>
+</section>
 
         <section id="solution" className="landing-section">
           <p className="landing-section-label">Eine Plattform statt Insellösungen</p>

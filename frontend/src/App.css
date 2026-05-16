@@ -2985,3 +2985,71 @@ code {
   display: block;
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
 }
+
+.landing-how-it-works {
+  text-align: center;
+}
+
+.how-grid {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  text-align: left;
+}
+
+.how-grid article {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 26px;
+  padding: 26px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
+}
+
+.how-grid article span {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  margin-bottom: 18px;
+}
+
+.how-grid h3 {
+  margin: 0 0 10px;
+}
+
+.how-grid p {
+  color: #475569;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .how-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Fix: Materialtabelle bleibt im Kartenrahmen und scrollt innen */
+.card:has(.orders-table-wide) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.card:has(.orders-table-wide) .table-wrapper {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: block;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card:has(.orders-table-wide) .orders-table-wide {
+  min-width: 1100px;
+}

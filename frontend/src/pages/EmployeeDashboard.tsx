@@ -483,7 +483,6 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
   type="button"
   className="btn btn-primary"
   onClick={() => setShowOrders((prev) => !prev)}
-  style={{ marginLeft: "10px" }}
 >
   {showOrders ? "Aufträge ausblenden" : "Meine Aufträge"}
 </button>

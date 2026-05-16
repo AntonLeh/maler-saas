@@ -58,7 +58,7 @@ const plans = [
     price: "Individuell",
     color: "#7c3aed",
     features: [
-      "White Label",
+      "Statistik",
       "Eigene Domain",
       "Custom Features",
       "Persönlicher Support",

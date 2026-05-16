@@ -251,7 +251,7 @@ if (quantity > remaining) {
       {message && <div className="message-box info">{message}</div>}
 
       <div className="table-wrapper">
-        <table className="orders-table orders-table-wide">
+  <table className="orders-table orders-table-wide">
           <thead>
             <tr>
               <th>Material</th>
