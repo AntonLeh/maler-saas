@@ -1,53 +1,96 @@
-type Props = {
+type AgbPageProps = {
   onBack: () => void;
 };
 
-export default function AgbPage({ onBack }: Props) {
+export default function AgbPage({
+  onBack,
+}: AgbPageProps) {
   return (
-    <div className="auth-wrapper">
-      <div
-        className="card form-page-card"
-        style={{
-          maxWidth: 900,
-          margin: "40px auto",
-          lineHeight: 1.7,
-        }}
-      >
-        <button type="button" className="btn btn-secondary" onClick={onBack}>
-          Zurück zur Registrierung
-        </button>
+    <div className="legal-page">
+      <div className="legal-card">
+        <div className="legal-topbar">
+          <div>
+            <h1>Allgemeine Geschäftsbedingungen</h1>
+            <p>Nutzungsbedingungen für die SaaS-Plattform MalerSaaS.</p>
+          </div>
 
-        <h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onBack}
+          >
+            Zurück
+          </button>
+        </div>
 
-        <h3>1. Geltungsbereich</h3>
-        <p>
-          Diese AGB regeln die Nutzung der Plattform MalerSaaS durch
-          registrierte Unternehmen und Nutzer.
-        </p>
+        <section className="legal-section">
+          <h2>1. Geltungsbereich</h2>
 
-        <h3>2. Leistungen</h3>
-        <p>
-          MalerSaaS bietet digitale Werkzeuge zur Verwaltung von Kunden,
-          Mitarbeitern, Angeboten, Aufträgen und Rechnungen.
-        </p>
+          <p>
+            Diese Allgemeinen Geschäftsbedingungen regeln die Nutzung
+            der Plattform MalerSaaS durch Unternehmen und Nutzer.
+          </p>
+        </section>
 
-        <h3>3. Registrierung</h3>
-        <p>
-          Nutzer verpflichten sich, bei der Registrierung wahrheitsgemäße
-          Angaben zu machen.
-        </p>
+        <section className="legal-section">
+          <h2>2. Leistungsumfang</h2>
 
-        <h3>4. Haftung</h3>
-        <p>
-          Die Nutzung erfolgt im gesetzlichen Rahmen. Für Ausfälle höherer Gewalt
-          wird keine Haftung übernommen.
-        </p>
+          <p>
+            MalerSaaS stellt digitale Werkzeuge zur Verwaltung von
+            Aufträgen, Kunden, Mitarbeitern, Materialien,
+            Zeiterfassungen, Rechnungen und weiteren betrieblichen
+            Prozessen zur Verfügung.
+          </p>
+        </section>
 
-        <h3>5. Kündigung</h3>
-        <p>
-          Vertragsverhältnisse können entsprechend der jeweils vereinbarten
-          Laufzeit beendet werden.
-        </p>
+        <section className="legal-section">
+          <h2>3. Registrierung</h2>
+
+          <p>
+            Für die Nutzung der Plattform ist eine Registrierung
+            erforderlich. Der Nutzer verpflichtet sich, korrekte
+            Angaben zu machen.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>4. Zahlungsbedingungen</h2>
+
+          <p>
+            Kostenpflichtige Funktionen können im Rahmen eines
+            Abonnements angeboten werden. Die Abrechnung erfolgt
+            über externe Zahlungsdienstleister.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>5. Verfügbarkeit</h2>
+
+          <p>
+            Wir bemühen uns um eine möglichst unterbrechungsfreie
+            Verfügbarkeit der Plattform, übernehmen jedoch keine
+            Garantie für jederzeitige Erreichbarkeit.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>6. Haftung</h2>
+
+          <p>
+            Die Nutzung der Plattform erfolgt auf eigene Verantwortung.
+            Eine Haftung für indirekte Schäden oder Datenverluste ist
+            ausgeschlossen, soweit gesetzlich zulässig.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>7. Änderungen</h2>
+
+          <p>
+            Wir behalten uns vor, Funktionen, Inhalte oder diese
+            Bedingungen jederzeit anzupassen oder weiterzuentwickeln.
+          </p>
+        </section>
       </div>
     </div>
   );

@@ -1,54 +1,100 @@
-type Props = {
+type DatenschutzPageProps = {
   onBack: () => void;
 };
 
-export default function DatenschutzPage({ onBack }: Props) {
+export default function DatenschutzPage({
+  onBack,
+}: DatenschutzPageProps) {
   return (
-    <div className="auth-wrapper">
-      <div
-        className="card form-page-card"
-        style={{
-          maxWidth: 900,
-          margin: "40px auto",
-          lineHeight: 1.7,
-        }}
-      >
-        <button type="button" className="btn btn-secondary" onClick={onBack}>
-          Zurück zur Registrierung
-        </button>
+    <div className="legal-page">
+      <div className="legal-card">
+        <div className="legal-topbar">
+          <div>
+            <h1>Datenschutzerklärung</h1>
+            <p>Informationen zur Verarbeitung personenbezogener Daten.</p>
+          </div>
 
-        <h1>Datenschutzerklärung</h1>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onBack}
+          >
+            Zurück
+          </button>
+        </div>
 
-        <h3>1. Verantwortliche Stelle</h3>
-        <p>
-          Verantwortlich für die Datenverarbeitung im Rahmen von MalerSaaS ist
-          der jeweilige Plattformbetreiber.
-        </p>
+        <section className="legal-section">
+          <h2>Allgemeines</h2>
 
-        <h3>2. Erhobene Daten</h3>
-        <p>
-          Im Rahmen der Nutzung können personenbezogene Daten wie Name,
-          E-Mail-Adresse, Telefonnummer und betriebliche Daten gespeichert
-          werden.
-        </p>
+          <p>
+            Der Schutz Ihrer persönlichen Daten ist uns wichtig.
+            Wir behandeln personenbezogene Daten vertraulich und
+            entsprechend der gesetzlichen Datenschutzvorschriften.
+          </p>
+        </section>
 
-        <h3>3. Zweck der Verarbeitung</h3>
-        <p>
-          Die Verarbeitung erfolgt ausschließlich zur Bereitstellung und
-          Verbesserung der Plattformfunktionen.
-        </p>
+        <section className="legal-section">
+          <h2>Verantwortlicher</h2>
 
-        <h3>4. Weitergabe an Dritte</h3>
-        <p>
-          Eine Weitergabe personenbezogener Daten erfolgt nur, soweit dies
-          gesetzlich erforderlich oder technisch notwendig ist.
-        </p>
+          <p>
+            Anton Lehmann
+            <br />
+            C/ Muntanya 63
+            <br />
+            07420 Sa Pobla
+            <br />
+            Spanien
+          </p>
+        </section>
 
-        <h3>5. Rechte der Nutzer</h3>
-        <p>
-          Nutzer haben jederzeit das Recht auf Auskunft, Berichtigung und
-          Löschung ihrer gespeicherten Daten im gesetzlichen Rahmen.
-        </p>
+        <section className="legal-section">
+          <h2>Verarbeitete Daten</h2>
+
+          <p>
+            Im Rahmen der Nutzung von MalerSaaS können unter anderem
+            folgende Daten verarbeitet werden:
+          </p>
+
+          <ul>
+            <li>Benutzerdaten</li>
+            <li>Kundendaten</li>
+            <li>Auftragsdaten</li>
+            <li>Zeiterfassungen</li>
+            <li>Bilder und Dokumente</li>
+            <li>Rechnungsdaten</li>
+            <li>Login- und Systeminformationen</li>
+          </ul>
+        </section>
+
+        <section className="legal-section">
+          <h2>Technische Dienstleister</h2>
+
+          <p>
+            Zur Bereitstellung der Plattform können externe
+            technische Dienstleister eingesetzt werden,
+            beispielsweise für Hosting, Datenbanken,
+            Zahlungsabwicklung oder E-Mail-Versand.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>Zahlungsabwicklung</h2>
+
+          <p>
+            Zahlungen und Abonnements werden über Stripe verarbeitet.
+            Es gelten zusätzlich die Datenschutzbestimmungen von Stripe.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>Ihre Rechte</h2>
+
+          <p>
+            Sie haben das Recht auf Auskunft, Berichtigung,
+            Löschung sowie Einschränkung der Verarbeitung
+            Ihrer personenbezogenen Daten.
+          </p>
+        </section>
       </div>
     </div>
   );

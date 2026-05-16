@@ -15,6 +15,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
 import AgbPage from "./pages/AgbPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
+import ImpressumPage from "./pages/ImpressumPage";
 import MaterialsPage from "./pages/MaterialsPage";
 import OrderMaterialsSection from "./pages/OrderMaterialsSection";
 import CustomerPortalPage from "./pages/CustomerPortalPage";
@@ -23,6 +24,7 @@ import PricingPage from "./pages/PricingPage";
 import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
 import TrialBanner from "./components/TrialBanner";
 import BillingPage from "./pages/BillingPage";
+import LandingPage from "./pages/LandingPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -352,6 +354,7 @@ type CurrentPage =
   | "employee-orders"
   | "agb"
   | "datenschutz"
+  | "impressum"
   | "employee-dashboard"
   | "customer-view"
   | "customers-list"
@@ -453,6 +456,7 @@ export default function App() {
   const [pricingRulesMessage, setPricingRulesMessage] = useState("");
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [showLoginPage, setShowLoginPage] = useState(false);
 
   const loadSubscription = async (_tenantId: number) => {
   const { data, error } = await supabase.rpc("get_my_subscription");
@@ -4063,6 +4067,16 @@ const totalEmployees = employees.length;
       );
     }
 
+    if (currentPage === "impressum") {
+  return (
+    <ImpressumPage
+      onBack={() => {
+        setCurrentPage("dashboard");
+      }}
+    />
+  );
+}
+
     if (currentPage === "agb") {
   return (
     <AgbPage
@@ -4152,14 +4166,31 @@ if (showResetPassword) {
 }
 
     if (!session) {
+      if (!showLoginPage && !showCompanyRegister) {
+  return (
+    <LandingPage
+  onLogin={() => setShowLoginPage(true)}
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
 
       return (
         <div className="login-page">
           <div className="login-card">
             <div className="login-header">
-              <h1>Maler SaaS Plattform</h1>
-              <p>Bitte einloggen, um das Dashboard zu öffnen.</p>
-            </div>
+  <img
+    src="/images/logo.png"
+    alt="MalerSaaS Logo"
+    className="login-logo-image"
+  />
+
+  <h1>MalerSaaS</h1>
+  <p>Bitte einloggen, um das Dashboard zu öffnen.</p>
+</div>
 
             <form onSubmit={handleLogin} className="form-stack">
               <div className="form-group">

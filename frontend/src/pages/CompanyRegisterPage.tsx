@@ -87,6 +87,11 @@ if (emailAvailable === false) {
   return (
     <div className="auth-wrapper">
       <div className="card" style={{ maxWidth: 550, margin: "50px auto" }}>
+        <img
+  src="/images/logo.png"
+  alt="MalerSaaS Logo"
+  className="register-logo-image"
+/>
         <h1>Firma registrieren</h1>
         <p>Neue Malerfirma für MalerSaaS anlegen</p>
 
