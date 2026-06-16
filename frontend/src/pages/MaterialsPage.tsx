@@ -115,7 +115,7 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
           </div>
 
           <button type="button" className="btn btn-secondary" onClick={onBack}>
-            Zurück
+            Zurück zum Dashboard
           </button>
         </div>
 

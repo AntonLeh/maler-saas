@@ -379,7 +379,8 @@ type CurrentPage =
   | "customer-portal-locked"
   | "pricing"
   | "materials"
-  | "billing";
+  | "billing"
+  | "project-manager-work-orders";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -4291,6 +4292,75 @@ onReloadOrders={async () => {
       );
     }
 
+    if (
+  !loadingData &&
+  userProfile &&
+  isProjectManager &&
+  currentPage === "project-manager-work-orders"
+) {
+  const fullName =
+    `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() ||
+    session.user.email ||
+    "Projektleiter";
+
+  return (
+    <div className="dashboard-page project-manager-work-orders">
+      <div className="dashboard-container">
+        <div className="page-topbar">
+          <div>
+            <h1>Meine Ausführungsaufträge</h1>
+            <p>
+              Aufträge, bei denen du selbst als ausführende Person eingeteilt bist.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setCurrentPage("dashboard")}
+          >
+            Zurück zum Projektleiter-Dashboard
+          </button>
+        </div>
+
+        <EmployeeDashboard
+          userName={fullName}
+          userEmail={session.user.email || ""}
+          tenantId={userProfile.tenant_id}
+          currentUserId={userProfile.id}
+          onLogout={handleLogout}
+          onOpenMessages={openMessagesPage}
+          unreadMessages={unreadMessages}
+          orders={orders}
+          progressEntries={progressEntries}
+          timeEntries={timeEntries}
+          progressImages={progressImages}
+          onUpdateOrderStatus={handleEmployeeUpdateOrderStatus}
+          onCreateProgress={handleCreateProgress}
+          onReloadProgress={async () => {
+            if (userProfile) {
+              await loadEmployeeProgressEntries(
+                userProfile.tenant_id,
+                userProfile.id
+              );
+            }
+          }}
+          onReloadOrders={async () => {
+            if (userProfile) {
+              await loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
+            }
+          }}
+          onDeleteProgressImage={handleDeleteProgressImage}
+          onStartWork={handleEmployeeStartWork}
+          onStartBreak={handleEmployeeStartBreak}
+          onEndBreak={handleEmployeeEndBreak}
+          onEndWork={handleEmployeeEndWork}
+        />
+      </div>
+    </div>
+  );
+}
+
     if (!loadingData && userProfile && isProjectManager && currentPage === "dashboard") {
       const fullName =
         `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() ||
@@ -4305,7 +4375,7 @@ onReloadOrders={async () => {
   onOpenOrders={() => openOrdersListPage("open")}
   onOpenCreateCustomer={openCreateCustomerPage}
   onOpenCreateSiteVisit={() => setCurrentPage("create-site-visit")}
-  onOpenWorkOrders={() => setCurrentPage("employee-dashboard")}
+  onOpenWorkOrders={() => setCurrentPage("project-manager-work-orders")}
   onOpenMaterials={() => setCurrentPage("materials")}
   onOpenMessages={openMessagesPage}
   unreadMessages={unreadMessages}

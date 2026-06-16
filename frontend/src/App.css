@@ -3053,3 +3053,23 @@ code {
 .card:has(.orders-table-wide) .orders-table-wide {
   min-width: 1100px;
 }
+/* =========================
+   Project Manager Work Orders View
+   ========================= */
+
+.project-manager-work-orders .dashboard-container {
+  padding-top: 0;
+}
+
+.project-manager-work-orders .dashboard-container > .topbar {
+  display: none;
+}
+
+.project-manager-work-orders .dashboard-container > .action-bar {
+  display: none;
+}
+
+.project-manager-work-orders .dashboard-page {
+  padding: 0;
+  background: transparent;
+}
