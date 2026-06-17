@@ -3526,6 +3526,37 @@ if (assignments.length > 0) {
         console.log("Create employee - access token vorhanden:", !!session?.access_token);
         console.log("Create employee - access token prefix:", session?.access_token?.slice(0, 20));
 
+        const { count: activeEmployeeCount, error: countEmployeesError } = await supabase
+  .from("app_users")
+  .select("id", { count: "exact", head: true })
+  .eq("tenant_id", userProfile.tenant_id)
+  .eq("is_active", true)
+  .in("role_id", [3, 4]);
+
+if (countEmployeesError) {
+  console.error("Mitarbeiteranzahl konnte nicht geprüft werden:", countEmployeesError);
+  setEmployeeMessage("Mitarbeiterlimit konnte nicht geprüft werden.");
+  setSavingEmployee(false);
+  return;
+}
+
+if (!subscription) {
+  setEmployeeMessage("Abo konnte nicht geprüft werden.");
+  setSavingEmployee(false);
+  return;
+}
+
+const maxUsers = Number(subscription.max_users || 0);
+const currentUsers = Number(activeEmployeeCount || 0);
+
+if (maxUsers > 0 && currentUsers >= maxUsers) {
+  setEmployeeMessage(
+    `Mitarbeiterlimit erreicht: Dein aktuelles Paket erlaubt maximal ${maxUsers} aktive Mitarbeiter. Bitte upgrade dein Paket.`
+  );
+  setSavingEmployee(false);
+  return;
+}
+        
         const response = await fetch(
           `${supabaseUrl}/functions/v1/create-employee-auth`,
           {
