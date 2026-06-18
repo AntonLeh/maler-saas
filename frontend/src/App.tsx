@@ -7938,6 +7938,7 @@ onReloadOrders={async () => {
       requiredPlan="Professional"
       description="Verwalten Sie Materialzuweisungen, Übergaben, Verbrauch, Rückgaben und Materialhistorien direkt pro Auftrag und Mitarbeiter."
       onUpgradeClick={() => setCurrentPage("pricing")}
+      onBackClick={openDashboard}
     />
 )}
 
@@ -7947,6 +7948,7 @@ onReloadOrders={async () => {
     requiredPlan="Professional"
     description="Erzeugen Sie Kundenlinks, damit Ihre Kunden Angebote, Fortschritte, Bilder und Rechnungen online verfolgen können."
     onUpgradeClick={() => setCurrentPage("pricing")}
+    onBackClick={openDashboard}
   />
 )}
 

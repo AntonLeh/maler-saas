@@ -10,44 +10,49 @@ const plans = [
   {
     id: "starter",
     name: "Starter",
-    price: "149 CHF",
+    price: "79 €",
     color: "#6b7280",
     features: [
+      "Bis 3 Mitarbeiter",
       "Kundenverwaltung",
+      "Auftragsverwaltung",
       "Angebote & Rechnungen",
       "Zeiterfassung",
       "PWA App",
       "Fortschrittsnotizen",
+      "Basis-Support",
     ],
   },
 
   {
     id: "professional",
     name: "Professional",
-    price: "349 CHF",
+    price: "149 €",
     color: "#2563eb",
     recommended: true,
     features: [
+      "Bis 8 Mitarbeiter",
       "Alles aus Starter",
       "Kundenportal",
       "Materialverwaltung",
       "Projektleiter",
-      "Bilder & Fortschritt",
-      "Premium Support",
+      "Bilder & Baudokumentation",
+      "Premium-Support",
     ],
   },
 
   {
     id: "business",
     name: "Business",
-    price: "699 CHF",
+    price: "399 €",
     color: "#d97706",
     features: [
+      "Bis 20 Mitarbeiter",
       "Alles aus Professional",
       "API-Zugriff",
       "KPI & Reports",
-      "Mehr Speicher",
-      "Multi-Standorte",
+      "Erweiterte Auswertungen",
+      "Mehr Speicherplatz",
       "Prioritäts-Support",
     ],
   },
@@ -55,14 +60,18 @@ const plans = [
   {
     id: "enterprise",
     name: "Enterprise",
-    price: "Individuell",
+    price: "799 €",
     color: "#7c3aed",
     features: [
-      "Statistik",
+      "Ab 21 Mitarbeiter",
+      "Alles aus Business",
+      "Mitarbeiter-Bewertungssystem",
+      "Leistungs- & Umsatzstatistiken",
       "Eigene Domain",
-      "Custom Features",
+      "KI-Telefonassistent",
+      "KI-Chatassistent",
+      "Social-Media-Automatisierung",
       "Persönlicher Support",
-      "Enterprise SLA",
     ],
   },
 ];
@@ -88,7 +97,7 @@ export default function PricingPage({
           className="btn btn-secondary"
           onClick={onBack}
         >
-          Zurück
+          Zurück zum Dashboard
         </button>
       </div>
 
