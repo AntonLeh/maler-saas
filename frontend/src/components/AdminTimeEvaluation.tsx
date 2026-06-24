@@ -80,6 +80,25 @@ export default function AdminTimeEvaluation() {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
 
+  const totalEmployees = employeeSummary.length;
+
+const totalNetMinutes = employeeSummary.reduce(
+  (sum, employee) => sum + employee.total_net_minutes,
+  0
+);
+
+const totalLaborCost = employeeSummary.reduce(
+  (sum, employee) => sum + employee.labor_cost,
+  0
+);
+
+const topEmployee =
+  employeeSummary.length > 0
+    ? [...employeeSummary].sort(
+        (a, b) => b.total_net_minutes - a.total_net_minutes
+      )[0]
+    : null;
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -163,6 +182,30 @@ export default function AdminTimeEvaluation() {
       {loading && <p>Lade Zeitauswertung...</p>}
       {errorText && <p style={{ color: "red" }}>{errorText}</p>}
 
+      <div className="kpi-grid">
+  <div className="kpi-card">
+    <span>👷 Mitarbeiter</span>
+    <strong>{totalEmployees}</strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>⏱ Gesamtstunden</span>
+    <strong>{formatMinutesToReadable(totalNetMinutes)}</strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>💰 Lohnkosten</span>
+    <strong>{formatEuropeanNumber(totalLaborCost)}</strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>🏆 Top Mitarbeiter</span>
+    <strong>
+      {topEmployee ? topEmployee.employee_name : "-"}
+    </strong>
+  </div>
+</div>
+
       <h3>Gesamtstunden pro Mitarbeiter</h3>
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "24px" }}>
         <thead>
@@ -182,10 +225,15 @@ export default function AdminTimeEvaluation() {
           </tr>
         </thead>
         <tbody>
-          {employeeSummary.map((row) => (
+          {[...employeeSummary]
+  .sort((a, b) => b.total_net_minutes - a.total_net_minutes)
+  .map((row, index) => (
             <tr key={row.employee_id}>
               <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>
-                {row.employee_name}
+                {index === 0 && "🥇 "}
+{index === 1 && "🥈 "}
+{index === 2 && "🥉 "}
+{row.employee_name}
               </td>
               <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>
                 {row.total_entries}
