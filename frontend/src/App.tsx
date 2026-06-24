@@ -376,6 +376,8 @@ type CurrentPage =
   | "quote-detail"
   | "messages"
   | "invoices-list"
+  | "customer-analysis"
+  | "customer-analysis-locked"
   | "customer-portal-locked"
   | "pricing"
   | "materials"
@@ -394,6 +396,11 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [customerAnalysis, setCustomerAnalysis] = useState<any[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
+  const [openInvoiceCount, setOpenInvoiceCount] = useState(0);
+
+  const [loadingCustomerAnalysis, setLoadingCustomerAnalysis] = useState(false);
   const [employees, setEmployees] = useState<AppUser[]>([]);
   const [orderAssignments, setOrderAssignments] = useState<any[]>([]);
 
@@ -849,6 +856,100 @@ return () => subscription.unsubscribe();
 
     setCustomers(data || []);
   };
+
+  const loadCustomerAnalysis = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingCustomerAnalysis(true);
+
+  try {
+    const { data: customerData, error: customerError } = await supabase
+      .from("customers")
+      .select("id, first_name, last_name, company_name")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (customerError) throw customerError;
+
+    const { data: invoiceData, error: invoiceError } = await supabase
+      .from("invoices")
+      .select("id, customer_id, total_amount, status, invoice_date")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (invoiceError) throw invoiceError;
+
+    const analysis =
+      customerData?.map((customer: any) => {
+        const customerInvoices =
+          invoiceData?.filter(
+            (invoice: any) => invoice.customer_id === customer.id
+          ) || [];
+
+        const totalRevenue = customerInvoices.reduce(
+          (sum: number, invoice: any) =>
+            sum + Number(invoice.total_amount || 0),
+          0
+        );
+
+        const openAmount = customerInvoices
+          .filter((invoice: any) => invoice.status === "open")
+          .reduce(
+            (sum: number, invoice: any) =>
+              sum + Number(invoice.total_amount || 0),
+            0
+          );
+
+        return {
+          id: customer.id,
+          customerName:
+            customer.company_name ||
+            `${customer.first_name || ""} ${customer.last_name || ""}`.trim() ||
+            "Unbekannter Kunde",
+          invoiceCount: customerInvoices.length,
+          totalRevenue,
+          openAmount,
+        };
+      }) || [];
+
+    analysis.sort((a: any, b: any) => b.totalRevenue - a.totalRevenue);
+
+const monthlyMap = new Map<string, number>();
+
+invoiceData?.forEach((invoice: any) => {
+  if (!invoice.invoice_date) return;
+
+  const date = new Date(invoice.invoice_date);
+  const monthKey = date.toLocaleDateString("de-DE", {
+    month: "short",
+    year: "numeric",
+  });
+
+  monthlyMap.set(
+    monthKey,
+    (monthlyMap.get(monthKey) || 0) + Number(invoice.total_amount || 0)
+  );
+});
+
+const monthlyData = Array.from(monthlyMap.entries()).map(
+  ([month, revenue]) => ({
+    month,
+    revenue,
+  })
+);
+const openInvoices =
+  invoiceData?.filter(
+    (invoice: any) => invoice.status === "open"
+  ).length || 0;
+
+setCustomerAnalysis(analysis);
+setOpenInvoiceCount(openInvoices);
+setMonthlyRevenue(monthlyData);
+
+  } catch (error) {
+    console.error("Fehler beim Laden der Kundenanalyse:", error);
+  } finally {
+    setLoadingCustomerAnalysis(false);
+  }
+};
 
   const loadQuotes = async (tenantId: number) => {
     try {
@@ -3033,6 +3134,11 @@ const openEmployeeOrders = () => {
     setCurrentPage("customers-list");
   };
 
+  const openCustomerAnalysisPage = async () => {
+  await loadCustomerAnalysis();
+  setCurrentPage("customer-analysis");
+};
+
   const openOrdersListPage = (mode: OrdersFilterMode = "all") => {
     setOrdersFilterMode(mode);
     setCurrentPage("orders-list");
@@ -4464,22 +4570,23 @@ onReloadOrders={async () => {
   }}
 >
   {subscription ? (
-    <>
-      <strong>
-        {subscription.plan.toUpperCase()}
-      </strong>{" "}
-      Plan aktiv •{" "}
-      {subscription.features?.customerPortal?.enabled
-        ? "Kundenportal freigeschaltet"
-        : "Kundenportal gesperrt"}
-      {" • "}
-      {subscription.features?.materials?.enabled
-        ? "Materialverwaltung freigeschaltet"
-        : "Materialverwaltung gesperrt"}
-    </>
-  ) : (
-    "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
-  )}
+  <>
+    <strong>{subscription.plan.toUpperCase()}</strong>{" "}
+    Plan aktiv • {subscription.monthly_price} {subscription.currency}/Monat
+    {" • "}
+    Max. {subscription.max_users} Mitarbeiter
+    {" • "}
+    {subscription.features?.materials?.enabled
+      ? "Material aktiv"
+      : "Material gesperrt"}
+    {" • "}
+    {subscription.features?.customerPortal?.enabled
+      ? "Kundenportal aktiv"
+      : "Kundenportal gesperrt"}
+  </>
+) : (
+  "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
+)}
 </p>
             </div>
 
@@ -4683,6 +4790,22 @@ onReloadOrders={async () => {
   >
     Preisregeln
   </button>
+
+  <button
+  type="button"
+  className="btn btn-analysis"
+  onClick={() => {
+    if (!hasFeature("advancedReports")) {
+      setCurrentPage("customer-analysis-locked");
+      return;
+    }
+
+    openCustomerAnalysisPage();
+  }}
+>
+  📊 Kundenanalyse
+</button>
+
 </section>
                 </>
               )}
@@ -6855,6 +6978,183 @@ onReloadOrders={async () => {
                 </section>
               )}
 
+              {currentPage === "customer-analysis" && (() => {
+  const totalRevenue = customerAnalysis.reduce(
+    (sum, customer) => sum + customer.totalRevenue,
+    0
+  );
+
+  const totalOpen = customerAnalysis.reduce(
+    (sum, customer) => sum + customer.openAmount,
+    0
+  );
+
+  const totalCustomers = customerAnalysis.length;
+
+  const topCustomer =
+    customerAnalysis.length > 0 ? customerAnalysis[0].customerName : "-";
+
+    const topCustomerRevenue =
+  customerAnalysis.length > 0 ? customerAnalysis[0].totalRevenue : 0;
+
+  return (
+    <section className="single-page-section">
+      <div className="card">
+        <div className="page-topbar">
+          <div>
+            <h2>📊 Kundenanalyse</h2>
+            <p>Umsatz- und Rechnungsübersicht Ihrer Kunden.</p>
+          </div>
+
+          <button type="button" className="btn btn-secondary" onClick={openDashboard}>
+            Zurück zum Dashboard
+          </button>
+        </div>
+
+        {loadingCustomerAnalysis ? (
+          <p>Daten werden geladen...</p>
+        ) : (
+          <>
+            <div className="kpi-grid">
+              <div className="kpi-card">
+                <span>💰 Gesamtumsatz</span>
+                <strong>{totalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+              </div>
+
+              <div className="kpi-card">
+                <span>📂 Offen</span>
+                <strong>{totalOpen.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+              </div>
+
+              <div className="kpi-card">
+              <span>📄 Offene Rechnungen</span>
+              <strong>{openInvoiceCount}</strong>
+              </div>
+
+              <div className="kpi-card">
+                <span>👥 Kunden</span>
+                <strong>{totalCustomers}</strong>
+              </div>
+
+              <div className="kpi-card">
+  <span>🏆 Top Kunde</span>
+  <strong>{topCustomer}</strong>
+  <small>
+    {topCustomerRevenue.toLocaleString("de-DE", {
+      minimumFractionDigits: 2,
+    })}{" "}
+    {currencySymbol}
+  </small>
+</div>
+            </div>
+
+            <div className="analysis-section">
+  <h3>🏆 Top 10 Kunden</h3>
+
+  <div className="top-customers-list">
+    {customerAnalysis.slice(0, 10).map((customer, index) => (
+      <div key={customer.id} className="top-customer-item">
+        <div>
+          <strong>
+            #{index + 1} {customer.customerName}
+          </strong>
+        </div>
+
+        <div>
+          {customer.totalRevenue.toLocaleString("de-DE", {
+            minimumFractionDigits: 2,
+          })}{" "}
+          {currencySymbol}
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+            <div className="analysis-section">
+  <h3>📈 Umsatz pro Monat</h3>
+
+  {monthlyRevenue.length === 0 ? (
+    <p>Keine Monatsdaten vorhanden.</p>
+  ) : (
+    <div className="monthly-revenue-list">
+      {monthlyRevenue.map((month) => (
+        <div key={month.month} className="monthly-revenue-item">
+          <span>{month.month}</span>
+          <strong>
+            {month.revenue.toLocaleString("de-DE", {
+              minimumFractionDigits: 2,
+            })}{" "}
+            {currencySymbol}
+          </strong>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Kunde</th>
+                    <th>Rechnungen</th>
+                    <th>Umsatz</th>
+                    <th>Offen</th>
+                    <th>Kundenwert</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+  {customerAnalysis.map((customer) => {
+    const customerValue =
+      customer.totalRevenue >= 20000
+        ? "A-Kunde"
+        : customer.totalRevenue >= 5000
+        ? "B-Kunde"
+        : "C-Kunde";
+
+    const customerValueClass =
+      customer.totalRevenue >= 20000
+        ? "customer-value-a"
+        : customer.totalRevenue >= 5000
+        ? "customer-value-b"
+        : "customer-value-c";
+
+    return (
+      <tr key={customer.id}>
+                      <td>{customer.customerName}</td>
+                      <td>{customer.invoiceCount}</td>
+                      <td>
+                        {customer.totalRevenue.toLocaleString("de-DE", {
+                          minimumFractionDigits: 2,
+                        })}{" "}
+                        {currencySymbol}
+                      </td>
+                      <td>
+                        {customer.openAmount.toLocaleString("de-DE", {
+                          minimumFractionDigits: 2,
+                        })}{" "}
+                        {currencySymbol}
+                      </td>
+                      <td>
+                      <span className={`customer-value-badge ${customerValueClass}`}>
+                      {customerValue}
+                    </span>
+                      </td>
+                    </tr>
+                      );
+                  })}
+              </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+})()}
+
               {currentPage === "settings" && userProfile?.tenant_id && (
                 <GlobalSettings
                   tenantId={userProfile.tenant_id}
@@ -7947,6 +8247,16 @@ onReloadOrders={async () => {
     feature="Kundenportal"
     requiredPlan="Professional"
     description="Erzeugen Sie Kundenlinks, damit Ihre Kunden Angebote, Fortschritte, Bilder und Rechnungen online verfolgen können."
+    onUpgradeClick={() => setCurrentPage("pricing")}
+    onBackClick={openDashboard}
+  />
+)}
+
+{currentPage === "customer-analysis-locked" && (
+  <LockedFeatureCard
+    feature="Kundenanalyse"
+    requiredPlan="Business"
+    description="Analysieren Sie Umsätze, offene Rechnungen, Top-Kunden und Kundenwerte direkt aus Ihren Rechnungsdaten."
     onUpgradeClick={() => setCurrentPage("pricing")}
     onBackClick={openDashboard}
   />
