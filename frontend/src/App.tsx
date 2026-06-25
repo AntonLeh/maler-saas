@@ -376,13 +376,16 @@ type CurrentPage =
   | "quote-detail"
   | "messages"
   | "invoices-list"
+  | "order-analysis"
   | "customer-analysis"
   | "customer-analysis-locked"
   | "customer-portal-locked"
   | "pricing"
   | "materials"
   | "billing"
-  | "project-manager-work-orders";
+  | "project-manager-work-orders"
+  | "business-intelligence"
+  | "business-intelligence-locked";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -397,6 +400,9 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [customerAnalysis, setCustomerAnalysis] = useState<any[]>([]);
+  const [orderAnalysis, setOrderAnalysis] = useState<any[]>([]);
+  const [loadingOrderAnalysis, setLoadingOrderAnalysis] = useState(false);
+  
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [openInvoiceCount, setOpenInvoiceCount] = useState(0);
 
@@ -948,6 +954,79 @@ setMonthlyRevenue(monthlyData);
     console.error("Fehler beim Laden der Kundenanalyse:", error);
   } finally {
     setLoadingCustomerAnalysis(false);
+  }
+};
+
+const loadOrderAnalysis = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingOrderAnalysis(true);
+
+  try {
+    const { data: invoicesData, error: invoicesError } = await supabase
+      .from("invoices")
+      .select("order_id, total_amount")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (invoicesError) throw invoicesError;
+
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, title, status")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (ordersError) throw ordersError;
+
+    const { data: timeData, error: timeError } = await supabase.rpc(
+      "admin_get_time_evaluation",
+      {
+        p_from: null,
+        p_to: null,
+        p_employee_id: null,
+        p_order_id: null,
+      }
+    );
+
+    if (timeError) throw timeError;
+
+    const analysis =
+      ordersData?.map((order: any) => {
+        const orderInvoices =
+          invoicesData?.filter((invoice: any) => invoice.order_id === order.id) || [];
+
+        const revenue = orderInvoices.reduce(
+          (sum: number, invoice: any) => sum + Number(invoice.total_amount || 0),
+          0
+        );
+
+        const orderTimeEntries =
+          timeData?.filter((entry: any) => entry.order_id === order.id) || [];
+
+        const laborCost = orderTimeEntries.reduce(
+          (sum: number, entry: any) => sum + Number(entry.labor_cost || 0),
+          0
+        );
+
+        const grossProfit = revenue - laborCost;
+
+        return {
+          id: order.id,
+          title: order.title,
+          status: order.status,
+          revenue,
+          invoiceCount: orderInvoices.length,
+          laborCost,
+          grossProfit,
+        };
+      }) || [];
+
+    analysis.sort((a: any, b: any) => b.revenue - a.revenue);
+
+    setOrderAnalysis(analysis);
+  } catch (error) {
+    console.error("Fehler beim Laden der Auftragsanalyse:", error);
+  } finally {
+    setLoadingOrderAnalysis(false);
   }
 };
 
@@ -4754,14 +4833,6 @@ onReloadOrders={async () => {
   <button
     type="button"
     className="btn btn-primary"
-    onClick={() => setCurrentPage("time-evaluation")}
-  >
-    Arbeitsstunden
-  </button>
-
-  <button
-    type="button"
-    className="btn btn-primary"
     onClick={openMessagesPage}
   >
     Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
@@ -4791,19 +4862,26 @@ onReloadOrders={async () => {
     Preisregeln
   </button>
 
-  <button
+  
+
+<button
   type="button"
   className="btn btn-analysis"
-  onClick={() => {
+  onClick={async () => {
     if (!hasFeature("advancedReports")) {
-      setCurrentPage("customer-analysis-locked");
+      setCurrentPage("business-intelligence-locked");
       return;
     }
 
-    openCustomerAnalysisPage();
+    await Promise.all([
+      loadCustomerAnalysis(),
+      loadOrderAnalysis(),
+    ]);
+
+    setCurrentPage("business-intelligence");
   }}
 >
-  📊 Kundenanalyse
+  📊 Business Intelligence
 </button>
 
 </section>
@@ -6978,6 +7056,95 @@ onReloadOrders={async () => {
                 </section>
               )}
 
+              {currentPage === "business-intelligence" && (() => {
+  const biTotalRevenue = orderAnalysis.reduce(
+    (sum: number, order: any) => sum + Number(order.revenue || 0),
+    0
+  );
+
+  const biLaborCost = orderAnalysis.reduce(
+    (sum: number, order: any) => sum + Number(order.laborCost || 0),
+    0
+  );
+
+  const biGrossProfit = orderAnalysis.reduce(
+    (sum: number, order: any) => sum + Number(order.grossProfit || 0),
+    0
+  );
+
+  const biOpenAmount = customerAnalysis.reduce(
+    (sum: number, customer: any) => sum + Number(customer.openAmount || 0),
+    0
+  );
+
+  return (
+    <section className="single-page-section">
+      <div className="card">
+        <div className="page-topbar">
+          <div>
+            <h2>📊 Business Intelligence</h2>
+            <p>Unternehmer-Cockpit für Umsatz, Kosten und Auswertungen.</p>
+          </div>
+
+          <button type="button" className="btn btn-secondary" onClick={openDashboard}>
+            Zurück zum Dashboard
+          </button>
+        </div>
+
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>💰 Gesamtumsatz</span>
+            <strong>{biTotalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          </div>
+
+          <div className="kpi-card">
+            <span>💸 Lohnkosten</span>
+            <strong>{biLaborCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          </div>
+
+          <div className="kpi-card">
+            <span>📈 Deckungsbeitrag</span>
+            <strong>{biGrossProfit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          </div>
+
+          <div className="kpi-card">
+            <span>📂 Offene Forderungen</span>
+            <strong>{biOpenAmount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          </div>
+        </div>
+
+        <div className="kpi-grid">
+          <div className="card" style={{ cursor: "pointer" }} onClick={() => {
+            loadCustomerAnalysis();
+            setCurrentPage("customer-analysis");
+          }}>
+            <h3>📊 Kundenanalyse</h3>
+            <p>Umsatz, Top-Kunden und Forderungen.</p>
+          </div>
+
+          <div className="card" style={{ cursor: "pointer" }} onClick={() => {
+            loadOrderAnalysis();
+            setCurrentPage("order-analysis");
+          }}>
+            <h3>📈 Auftragsanalyse</h3>
+            <p>Umsatz, Lohnkosten und Deckungsbeiträge.</p>
+          </div>
+
+          <div className="card" style={{ cursor: "pointer" }} onClick={() => setCurrentPage("time-evaluation")}>
+            <h3>⏱ Arbeitsstunden</h3>
+            <p>Stunden, Lohnkosten und Mitarbeiterauswertung.</p>
+          </div>
+
+          <div className="card" style={{ opacity: 0.65 }}>
+            <h3>📦 Materialanalyse</h3>
+            <p>Materialkosten pro Auftrag — kommt als Nächstes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+})()}
+
               {currentPage === "customer-analysis" && (() => {
   const totalRevenue = customerAnalysis.reduce(
     (sum, customer) => sum + customer.totalRevenue,
@@ -7152,6 +7319,144 @@ onReloadOrders={async () => {
         )}
       </div>
     </section>
+  );
+})()}
+
+{currentPage === "order-analysis" && (() => {
+  const totalOrderRevenue = orderAnalysis.reduce(
+    (sum: number, order: any) => sum + Number(order.revenue || 0),
+    0
+  );
+
+  const totalOrderInvoices = orderAnalysis.reduce(
+    (sum: number, order: any) => sum + Number(order.invoiceCount || 0),
+    0
+  );
+
+  const averageOrderRevenue =
+    orderAnalysis.length > 0 ? totalOrderRevenue / orderAnalysis.length : 0;
+
+  const topOrder = orderAnalysis.length > 0 ? orderAnalysis[0] : null;
+
+  return (
+
+  <section className="single-page-section">
+    <div className="card">
+      <div className="page-topbar">
+        <div>
+          <h2>📈 Auftragsanalyse</h2>
+          <p>
+            Umsatz-, Kosten- und Gewinnanalyse pro Auftrag.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={openDashboard}
+        >
+          Zurück zum Dashboard
+        </button>
+      </div>
+
+      <div className="card">
+  {loadingOrderAnalysis ? (
+    <p>Daten werden geladen...</p>
+  ) : (
+    <>
+    <div className="kpi-grid">
+  <div className="kpi-card">
+    <span>💰 Gesamtumsatz</span>
+    <strong>
+      {totalOrderRevenue.toLocaleString("de-DE", {
+        minimumFractionDigits: 2,
+      })}{" "}
+      {currencySymbol}
+    </strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>📄 Rechnungen</span>
+    <strong>{totalOrderInvoices}</strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>📈 Ø Umsatz/Auftrag</span>
+    <strong>
+      {averageOrderRevenue.toLocaleString("de-DE", {
+        minimumFractionDigits: 2,
+      })}{" "}
+      {currencySymbol}
+    </strong>
+  </div>
+
+  <div className="kpi-card">
+    <span>🏆 Top Auftrag</span>
+    <strong>{topOrder ? topOrder.title : "-"}</strong>
+    {topOrder && (
+      <small>
+        {topOrder.revenue.toLocaleString("de-DE", {
+          minimumFractionDigits: 2,
+        })}{" "}
+        {currencySymbol}
+      </small>
+    )}
+  </div>
+</div>
+
+    <div className="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+  <th>Auftrag</th>
+  <th>Status</th>
+  <th>Rechnungen</th>
+  <th>Umsatz</th>
+  <th>Lohnkosten</th>
+  <th>Rohgewinn</th>
+</tr>
+        </thead>
+
+        <tbody>
+          {orderAnalysis.map((order: any) => (
+            <tr key={order.id}>
+              <td>{order.title}</td>
+
+              <td>{order.status}</td>
+
+              <td>{order.invoiceCount}</td>
+
+              <td>
+                {order.revenue.toLocaleString("de-DE", {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                {currencySymbol}
+              </td>
+
+                <td>
+  {order.laborCost.toLocaleString("de-DE", {
+    minimumFractionDigits: 2,
+  })}{" "}
+  {currencySymbol}
+</td>
+
+<td>
+  {order.grossProfit.toLocaleString("de-DE", {
+    minimumFractionDigits: 2,
+  })}{" "}
+  {currencySymbol}
+</td>
+
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    </>
+  )}
+</div>
+    </div>
+  </section>
   );
 })()}
 
@@ -8247,6 +8552,16 @@ onReloadOrders={async () => {
     feature="Kundenportal"
     requiredPlan="Professional"
     description="Erzeugen Sie Kundenlinks, damit Ihre Kunden Angebote, Fortschritte, Bilder und Rechnungen online verfolgen können."
+    onUpgradeClick={() => setCurrentPage("pricing")}
+    onBackClick={openDashboard}
+  />
+)}
+
+{currentPage === "business-intelligence-locked" && (
+  <LockedFeatureCard
+    feature="Business Intelligence"
+    requiredPlan="Business"
+    description="Analysieren Sie Kundenumsätze, Auftragsrentabilität, offene Forderungen, Lohnkosten und Unternehmenskennzahlen an einem zentralen Ort."
     onUpgradeClick={() => setCurrentPage("pricing")}
     onBackClick={openDashboard}
   />
