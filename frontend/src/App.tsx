@@ -386,7 +386,11 @@ type CurrentPage =
   | "project-manager-work-orders"
   | "business-intelligence"
   | "business-intelligence-locked"
-  | "material-analysis";
+  | "material-analysis"
+  | "performance-management"
+  | "performance-criteria"
+  | "employee-ranking"
+  | "employee-performance-entry";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -406,7 +410,13 @@ export default function App() {
   
   const [materialAnalysis, setMaterialAnalysis] = useState<any[]>([]);
   const [loadingMaterialAnalysis, setLoadingMaterialAnalysis] = useState(false);
+  const [performanceCriteria, setPerformanceCriteria] = useState<any[]>([]);
+  const [loadingPerformanceCriteria, setLoadingPerformanceCriteria] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [performanceEntryMessage, setPerformanceEntryMessage] = useState("");
+  const [ordersForPerformance, setOrdersForPerformance] = useState<any[]>([]);
 
+  const [customPoints, setCustomPoints] = useState<number | null>(null);
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [openInvoiceCount, setOpenInvoiceCount] = useState(0);
 
@@ -443,6 +453,11 @@ export default function App() {
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
   const [ordersFilterMode, setOrdersFilterMode] = useState<OrdersFilterMode>("all");
   const [selectedEmployeeFilterId, setSelectedEmployeeFilterId] = useState<string>("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+
+  const [selectedCriterionId, setSelectedCriterionId] = useState<number | null>(null);
+
+  const [performanceNote, setPerformanceNote] = useState("");
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
   const [availableSiteVisits, setAvailableSiteVisits] = useState<any[]>([]);
@@ -620,6 +635,8 @@ export default function App() {
 
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [deletingEmployeeId, setDeletingEmployeeId] = useState<number | null>(null);
+  const [employeeRanking, setEmployeeRanking] = useState<any[]>([]);
+  const [loadingEmployeeRanking, setLoadingEmployeeRanking] = useState(false);
 
   const isEmployee = userProfile?.role_id === EMPLOYEE_ROLE_ID;
   const isProjectManager = userProfile?.role_id === PROJECT_MANAGER_ROLE_ID;
@@ -820,6 +837,87 @@ return () => subscription.unsubscribe();
     });
   };
 
+  const loadOrdersForPerformance = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, title")
+      .eq("tenant_id", userProfile.tenant_id)
+      .order("title");
+
+    if (error) throw error;
+
+    setOrdersForPerformance(data || []);
+  } catch (error) {
+    console.error("Fehler beim Laden der Aufträge:", error);
+  }
+};
+
+const saveEmployeePerformance = async () => {
+  setPerformanceEntryMessage("");
+
+  if (!userProfile?.tenant_id || !userProfile?.id) {
+    setPerformanceEntryMessage("Benutzerprofil nicht geladen.");
+    return;
+  }
+
+  if (!selectedEmployeeId) {
+    setPerformanceEntryMessage("Bitte einen Mitarbeiter auswählen.");
+    return;
+  }
+
+  if (!selectedCriterionId) {
+    setPerformanceEntryMessage("Bitte ein Bewertungskriterium auswählen.");
+    return;
+  }
+
+  const selectedCriterion = performanceCriteria.find(
+    (criterion: any) => criterion.id === selectedCriterionId
+  );
+
+  if (!selectedCriterion) {
+    setPerformanceEntryMessage("Bewertungskriterium nicht gefunden.");
+    return;
+  }
+
+  const pointsToSave =
+    customPoints !== null
+      ? Number(customPoints)
+      : Number(selectedCriterion.default_points || 0);
+
+  try {
+    const { error } = await supabase
+      .from("employee_performance")
+      .insert({
+        tenant_id: userProfile.tenant_id,
+        employee_id: selectedEmployeeId,
+        criterion_id: selectedCriterionId,
+        order_id: selectedOrderId,
+        points: pointsToSave,
+        note: performanceNote.trim() || null,
+        created_by: userProfile.id,
+        source_type: "manual",
+      });
+
+    if (error) throw error;
+
+    setPerformanceEntryMessage("Bewertung wurde gespeichert.");
+
+    setSelectedEmployeeId(null);
+    setSelectedCriterionId(null);
+    setSelectedOrderId(null);
+    setCustomPoints(null);
+    setPerformanceNote("");
+
+    await loadEmployeeRanking();
+  } catch (error) {
+    console.error("Fehler beim Speichern der Bewertung:", error);
+    setPerformanceEntryMessage("Bewertung konnte nicht gespeichert werden.");
+  }
+};
+
   const loadUserProfile = async (authUserId: string): Promise<AppUser | null> => {
   const { data, error } = await supabase
     .from("app_users")
@@ -851,6 +949,7 @@ return () => subscription.unsubscribe();
 
   return data as AppUser;
 };
+
   const loadCustomers = async (tenantId: number) => {
     const { data, error } = await supabase
       .from("customers")
@@ -1796,6 +1895,111 @@ const loadMessageRecipients = async () => {
   }
 
   setProgressImages((imageData as ProgressImage[]) || []);
+};
+
+const loadPerformanceCriteria = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingPerformanceCriteria(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("performance_criteria")
+      .select("*")
+      .eq("tenant_id", userProfile.tenant_id)
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+
+    setPerformanceCriteria(data || []);
+  } catch (error) {
+    console.error("Fehler beim Laden der Bewertungskriterien:", error);
+  } finally {
+    setLoadingPerformanceCriteria(false);
+  }
+};
+
+const loadEmployeeRanking = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingEmployeeRanking(true);
+
+  try {
+    const { data: employees, error: employeeError } = await supabase
+      .from("app_users")
+      .select("id, first_name, last_name")
+      .eq("tenant_id", userProfile.tenant_id)
+      .eq("is_active", true)
+      .in("role_id", [3, 4]);
+
+    if (employeeError) throw employeeError;
+
+    const { data: performance, error: performanceError } = await supabase
+      .from("employee_performance")
+      .select("employee_id, points")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (performanceError) throw performanceError;
+
+    const ranking =
+      employees?.map((employee: any) => {
+        const entries =
+          performance?.filter(
+            (entry: any) => entry.employee_id === employee.id
+          ) || [];
+
+        const totalPoints = entries.reduce(
+          (sum: number, entry: any) => sum + Number(entry.points || 0),
+          0
+        );
+
+        let stars = 1;
+
+        if (totalPoints >= 95) stars = 5;
+        else if (totalPoints >= 85) stars = 4;
+        else if (totalPoints >= 70) stars = 3;
+        else if (totalPoints >= 50) stars = 2;
+
+        return {
+          id: employee.id,
+          name: `${employee.first_name} ${employee.last_name}`,
+          points: totalPoints,
+          stars,
+        };
+      }) || [];
+
+    ranking.sort((a: any, b: any) => b.points - a.points);
+
+    setEmployeeRanking(ranking);
+  } catch (error) {
+    console.error("Fehler beim Laden des Rankings:", error);
+  } finally {
+    setLoadingEmployeeRanking(false);
+  }
+};
+
+const togglePerformanceCriterion = async (
+  id: number,
+  currentValue: boolean
+) => {
+  try {
+    const { error } = await supabase
+      .from("performance_criteria")
+      .update({
+        is_active: !currentValue,
+      })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    loadPerformanceCriteria();
+  } catch (error) {
+    console.error(
+      "Fehler beim Aktualisieren des Kriteriums:",
+      error
+    );
+  }
 };
 
   const loadCompanySettings = async (tenantId: number) => {
@@ -7197,6 +7401,7 @@ onReloadOrders={async () => {
     insights.push(`✅ Deckungsbeitrag liegt bei ${marginRatio.toFixed(1)} %.`);
   }
 
+let companyLevel: "green" | "yellow" | "red" = "green";
 let companyStatus = "🟢 Gesund";
 
 if (
@@ -7205,6 +7410,7 @@ if (
   laborRatio > 45 ||
   marginRatio < 20
 ) {
+  companyLevel = "yellow";
   companyStatus = "🟡 Aufmerksamkeit empfohlen";
 }
 
@@ -7212,10 +7418,12 @@ if (
   open > 25000 ||
   marginRatio < 10
 ) {
+  companyLevel = "red";
   companyStatus = "🔴 Handlungsbedarf";
 }
 
   return {
+  level: companyLevel,
   status: companyStatus,
   insights,
 };
@@ -7253,7 +7461,15 @@ const businessAdvisor = generateBusinessInsights();
             <strong>{biMaterialCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
 
-          <div className="bi-hero-card bi-profit-card">
+          <div
+  className={`bi-hero-card ${
+    biContributionMargin < 0
+      ? "bi-profit-card-negative"
+      : biContributionMargin < biTotalRevenue * 0.2
+      ? "bi-profit-card-warning"
+      : "bi-profit-card"
+  }`}
+>
             <span>📈 Deckungsbeitrag</span>
             <strong>{biContributionMargin.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
@@ -7270,17 +7486,21 @@ const businessAdvisor = generateBusinessInsights();
 
     <div>
       <h3 style={{ margin: 0 }}>
-        Unternehmensberater
+       KI-Assistent für ihr Unternehmen
       </h3>
 
       <div
-  style={{
-    marginTop: "10px",
-    fontWeight: 700,
-    fontSize: "17px",
-  }}
+  className={`company-status-card ${businessAdvisor.level}`}
 >
-  {businessAdvisor.status}
+
+  <div className="company-status-label">
+    Unternehmensstatus
+  </div>
+
+  <div className="company-status-value">
+    {businessAdvisor.status}
+  </div>
+
 </div>
 
       <p
@@ -7337,11 +7557,368 @@ const businessAdvisor = generateBusinessInsights();
             <h3>📦 Materialanalyse</h3>
             <p>Verbrauch, Materialkosten und Wirtschaftlichkeit.</p>
           </div>
+
+          <div className="bi-module-card" onClick={() => setCurrentPage("performance-management")}
+>
+          <h3>🏆 Leistungsmanagement</h3>
+            <p>
+            Punkte, Sterne, Mitarbeiterentwicklung und Bonusgrundlagen.
+            </p>
+          </div>
         </div>
       </div>
     </section>
   );
 })()}
+
+              {currentPage === "performance-management" && (
+  <section className="single-page-section">
+    <div className="card">
+      <div className="page-topbar">
+        <div>
+          <h2>🏆 Leistungsmanagement</h2>
+          <p>
+            Mitarbeiterleistung, Punkte, Sterne und Anerkennungssystem.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage("business-intelligence")}
+        >
+          Zurück
+        </button>
+      </div>
+
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <span>🏆 Mitarbeiter des Monats</span>
+          <strong>Noch keine Daten</strong>
+        </div>
+
+        <div className="kpi-card">
+          <span>⭐ Durchschnitt</span>
+          <strong>-</strong>
+        </div>
+
+        <div className="kpi-card">
+          <span>👥 Bewertete Mitarbeiter</span>
+          <strong>0</strong>
+        </div>
+
+        <div className="kpi-card">
+          <span>💰 Bonusgrundlage</span>
+          <strong>In Vorbereitung</strong>
+        </div>
+      </div>
+
+      <div className="bi-module-grid">
+        <div
+  className="bi-module-card"
+  onClick={() => {
+    loadEmployeeRanking();
+    setCurrentPage("employee-ranking");
+  }}
+>
+  <h3>⭐ Mitarbeiter-Ranking</h3>
+  <p>
+    Punkte, Sterne und Entwicklung aller Mitarbeiter.
+  </p>
+</div>
+
+        <div
+  className="bi-module-card"
+  onClick={() => {
+    loadPerformanceCriteria();
+    setCurrentPage("performance-criteria");
+  }}
+>
+  <h3>⚙ Bewertungskriterien</h3>
+  <p>Kriterien wie Pünktlichkeit, Qualität, Dokumentation und Kundenlob.</p>
+</div>
+
+        <div className="bi-module-card">
+          <h3>💰 Bonusregeln</h3>
+          <p>Belohnungen, Prämien oder Anerkennungen nach Punktestand.</p>
+        </div>
+
+        <div
+  className="bi-module-card"
+  onClick={() => {
+    loadPerformanceCriteria();
+    loadEmployeeRanking();
+    loadOrdersForPerformance();
+
+    setCurrentPage("employee-performance-entry");
+}}
+>
+  <h3>📝 Bewertung erfassen</h3>
+  <p>
+    Manuelle Leistungsbewertung eines Mitarbeiters.
+  </p>
+</div>
+
+        <div className="bi-module-card">
+          <h3>⭐ Kundenbewertungen</h3>
+          <p>Bewertungen durch Kunden als Bestandteil der Leistungsbewertung.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+{currentPage === "performance-criteria" && (
+  <section className="single-page-section">
+    <div className="card">
+      <div className="page-topbar">
+        <div>
+          <h2>⚙ Bewertungskriterien</h2>
+          <p>
+            Regeln, Kategorien und Standardpunkte für die Leistungsbewertung.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage("performance-management")}
+        >
+          Zurück
+        </button>
+      </div>
+
+      {loadingPerformanceCriteria ? (
+        <p>Daten werden geladen...</p>
+      ) : (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Kategorie</th>
+                <th>Kriterium</th>
+                <th>Beschreibung</th>
+                <th>Punkte</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {performanceCriteria.map((criterion: any) => (
+                <tr key={criterion.id}>
+                  <td>{criterion.category}</td>
+                  <td>{criterion.name}</td>
+                  <td>{criterion.description || "-"}</td>
+                  <td>
+                    {criterion.default_points > 0 ? "+" : ""}
+                    {criterion.default_points}
+                  </td>
+                  <td>
+  <button
+    type="button"
+    className={
+      criterion.is_active
+        ? "btn-status-active"
+        : "btn-status-inactive"
+    }
+    onClick={() =>
+      togglePerformanceCriterion(
+        criterion.id,
+        criterion.is_active
+      )
+    }
+  >
+    {criterion.is_active ? "🟢 Aktiv" : "⚪ Inaktiv"}
+  </button>
+</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+{currentPage === "employee-ranking" && (
+  <section className="single-page-section">
+    <div className="card">
+      <div className="page-topbar">
+        <div>
+          <h2>⭐ Mitarbeiter-Ranking</h2>
+          <p>
+            Punkte, Sterne und Leistungsübersicht Ihrer Mitarbeiter.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage("performance-management")}
+        >
+          Zurück
+        </button>
+      </div>
+
+      {loadingEmployeeRanking ? (
+        <p>Daten werden geladen...</p>
+      ) : (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Rang</th>
+                <th>Mitarbeiter</th>
+                <th>Punkte</th>
+                <th>Sterne</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {employeeRanking.map((employee: any, index: number) => (
+                <tr key={employee.id}>
+                  <td>
+                    {index === 0
+                      ? "🥇"
+                      : index === 1
+                      ? "🥈"
+                      : index === 2
+                      ? "🥉"
+                      : index + 1}
+                  </td>
+
+                  <td>{employee.name}</td>
+
+                  <td>{employee.points}</td>
+
+                  <td>{"⭐".repeat(employee.stars)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+                {currentPage === "employee-performance-entry" && (
+  <section className="single-page-section">
+    <div className="card">
+      <div className="page-topbar">
+        <div>
+          <h2>📝 Bewertung erfassen</h2>
+          <p>Manuelle Leistungsbewertung eines Mitarbeiters.</p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage("performance-management")}
+        >
+          Zurück
+        </button>
+      </div>
+
+      <div className="form-stack">
+        <div className="form-group">
+          <label>Mitarbeiter</label>
+          <select
+            value={selectedEmployeeId || ""}
+            onChange={(e) =>
+              setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)
+            }
+          >
+            <option value="">Bitte auswählen</option>
+            {employeeRanking.map((employee: any) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+              <div className="form-group">
+  <label>Auftrag (optional)</label>
+
+  <select
+    value={selectedOrderId || ""}
+    onChange={(e) =>
+      setSelectedOrderId(
+        e.target.value ? Number(e.target.value) : null
+      )
+    }
+  >
+    <option value="">Kein Auftrag</option>
+
+    {ordersForPerformance.map((order: any) => (
+      <option key={order.id} value={order.id}>
+        {order.title}
+      </option>
+    ))}
+  </select>
+</div>
+
+        <div className="form-group">
+          <label>Kriterium</label>
+          <select
+            value={selectedCriterionId || ""}
+            onChange={(e) =>
+              setSelectedCriterionId(e.target.value ? Number(e.target.value) : null)
+            }
+          >
+            <option value="">Bitte auswählen</option>
+            {performanceCriteria.map((criterion: any) => (
+              <option key={criterion.id} value={criterion.id}>
+                {criterion.category} – {criterion.name} ({criterion.default_points > 0 ? "+" : ""}
+                {criterion.default_points})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+  <label>Eigene Punkte (optional)</label>
+  <input
+    type="number"
+    value={customPoints ?? ""}
+    onChange={(e) =>
+      setCustomPoints(
+        e.target.value === "" ? null : Number(e.target.value)
+      )
+    }
+    placeholder="Leer lassen = Standardpunkte"
+  />
+</div>
+
+        <div className="form-group">
+          <label>Kommentar</label>
+          <textarea
+            value={performanceNote}
+            onChange={(e) => setPerformanceNote(e.target.value)}
+            placeholder="Optionaler Kommentar zur Bewertung"
+            rows={4}
+          />
+        </div>
+
+        {performanceEntryMessage && (
+          <div className="form-group">
+            <p>{performanceEntryMessage}</p>
+          </div>
+        )}
+
+        <button
+  type="button"
+  className="btn btn-primary"
+  onClick={saveEmployeePerformance}
+>
+  Bewertung speichern
+</button>
+      </div>
+    </div>
+  </section>
+)}
 
               {currentPage === "customer-analysis" && (() => {
   const totalRevenue = customerAnalysis.reduce(

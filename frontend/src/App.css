@@ -3327,9 +3327,11 @@ code {
 
 .bi-advisor-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 18px;
+  text-align: center;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
 .bi-advisor-list {
@@ -3345,4 +3347,80 @@ code {
   padding: 14px 18px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
   line-height: 1.6;
+}
+
+.company-status-card {
+  margin-top: 18px;
+  margin-bottom: 22px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);
+  border: 2px solid #cbd5e1;
+}
+
+.company-status-card.green {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 2px solid #22c55e;
+}
+
+.company-status-card.yellow {
+  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+}
+
+.company-status-card.red {
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+  border: 2px solid #ef4444;
+}
+
+.company-status-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.company-status-value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.bi-profit-card-negative {
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+  border-color: #ef4444;
+}
+
+.bi-profit-card-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+.btn-status-active {
+  background: #22c55e;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-status-active:hover {
+  background: #16a34a;
+}
+
+.btn-status-inactive {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-status-inactive:hover {
+  background: #d1d5db;
 }
