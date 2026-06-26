@@ -385,7 +385,8 @@ type CurrentPage =
   | "billing"
   | "project-manager-work-orders"
   | "business-intelligence"
-  | "business-intelligence-locked";
+  | "business-intelligence-locked"
+  | "material-analysis";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -403,6 +404,9 @@ export default function App() {
   const [orderAnalysis, setOrderAnalysis] = useState<any[]>([]);
   const [loadingOrderAnalysis, setLoadingOrderAnalysis] = useState(false);
   
+  const [materialAnalysis, setMaterialAnalysis] = useState<any[]>([]);
+  const [loadingMaterialAnalysis, setLoadingMaterialAnalysis] = useState(false);
+
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [openInvoiceCount, setOpenInvoiceCount] = useState(0);
 
@@ -1027,6 +1031,69 @@ const loadOrderAnalysis = async () => {
     console.error("Fehler beim Laden der Auftragsanalyse:", error);
   } finally {
     setLoadingOrderAnalysis(false);
+  }
+};
+
+  const loadMaterialAnalysis = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingMaterialAnalysis(true);
+
+  try {
+    const { data: materialsData, error: materialsError } = await supabase
+      .from("materials")
+      .select("id, name, purchase_price")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (materialsError) throw materialsError;
+
+    const { data: logsData, error: logsError } = await supabase
+      .from("material_consumption_logs")
+      .select("material_id, quantity, action")
+      .eq("tenant_id", userProfile.tenant_id);
+
+    if (logsError) throw logsError;
+
+    const analysis =
+      materialsData?.map((material: any) => {
+        const logs =
+          logsData?.filter(
+            (log: any) =>
+              log.material_id === material.id &&
+              log.action === "used"
+          ) || [];
+
+        const quantity = logs.reduce(
+          (sum: number, log: any) =>
+            sum + Number(log.quantity || 0),
+          0
+        );
+
+        const materialCost =
+          quantity * Number(material.purchase_price || 0);
+
+        return {
+          id: material.id,
+          name: material.name,
+          quantity,
+          purchasePrice: Number(material.purchase_price || 0),
+          materialCost,
+        };
+      }) || [];
+
+    analysis.sort(
+      (a: any, b: any) =>
+        b.materialCost - a.materialCost
+    );
+
+    setMaterialAnalysis(analysis);
+  } catch (error) {
+    console.error(
+      "Fehler beim Laden der Materialanalyse:",
+      error
+    );
+  } finally {
+    setLoadingMaterialAnalysis(false);
   }
 };
 
@@ -7067,23 +7134,102 @@ onReloadOrders={async () => {
     0
   );
 
-  const biGrossProfit = orderAnalysis.reduce(
-    (sum: number, order: any) => sum + Number(order.grossProfit || 0),
+  const biMaterialCost = materialAnalysis.reduce(
+    (sum: number, material: any) => sum + Number(material.materialCost || 0),
     0
   );
+
+  const biContributionMargin = biTotalRevenue - biLaborCost - biMaterialCost;
 
   const biOpenAmount = customerAnalysis.reduce(
     (sum: number, customer: any) => sum + Number(customer.openAmount || 0),
     0
   );
 
+  const generateBusinessInsights = () => {
+  const insights: string[] = [];
+
+  const revenue = Number(biTotalRevenue || 0);
+  const labor = Number(biLaborCost || 0);
+  const material = Number(biMaterialCost || 0);
+  const margin = Number(biContributionMargin || 0);
+  const open = Number(biOpenAmount || 0);
+
+  const laborRatio = revenue > 0 ? (labor / revenue) * 100 : 0;
+  const materialRatio = revenue > 0 ? (material / revenue) * 100 : 0;
+  const marginRatio = revenue > 0 ? (margin / revenue) * 100 : 0;
+
+  if (revenue <= 0) {
+    insights.push("ℹ️ Noch keine belastbaren Umsatzdaten vorhanden.");
+  } else {
+    insights.push(
+      `📈 Gesamtumsatz aktuell: ${revenue.toLocaleString("de-DE", {
+        minimumFractionDigits: 2,
+      })} ${currencySymbol}.`
+    );
+  }
+
+  if (open > 10000) {
+    insights.push(
+      `⚠️ Offene Forderungen sind hoch: ${open.toLocaleString("de-DE", {
+        minimumFractionDigits: 2,
+      })} ${currencySymbol}.`
+    );
+  } else if (open > 0) {
+    insights.push("📂 Es gibt offene Forderungen, aber aktuell im überschaubaren Bereich.");
+  }
+
+  if (materialRatio > 30) {
+    insights.push(`⚠️ Materialkosten liegen bei ${materialRatio.toFixed(1)} % vom Umsatz.`);
+  } else if (materialRatio > 0) {
+    insights.push(`📦 Materialkosten liegen bei ${materialRatio.toFixed(1)} % vom Umsatz.`);
+  }
+
+  if (laborRatio > 45) {
+    insights.push(`⚠️ Lohnkosten liegen bei ${laborRatio.toFixed(1)} % vom Umsatz.`);
+  } else if (laborRatio > 0) {
+    insights.push(`👷 Lohnkosten liegen bei ${laborRatio.toFixed(1)} % vom Umsatz.`);
+  }
+
+  if (marginRatio < 20 && revenue > 0) {
+    insights.push(`🔴 Deckungsbeitrag liegt nur bei ${marginRatio.toFixed(1)} %. Nachkalkulation prüfen.`);
+  } else if (revenue > 0) {
+    insights.push(`✅ Deckungsbeitrag liegt bei ${marginRatio.toFixed(1)} %.`);
+  }
+
+let companyStatus = "🟢 Gesund";
+
+if (
+  open > 10000 ||
+  materialRatio > 30 ||
+  laborRatio > 45 ||
+  marginRatio < 20
+) {
+  companyStatus = "🟡 Aufmerksamkeit empfohlen";
+}
+
+if (
+  open > 25000 ||
+  marginRatio < 10
+) {
+  companyStatus = "🔴 Handlungsbedarf";
+}
+
+  return {
+  status: companyStatus,
+  insights,
+};
+};
+
+const businessAdvisor = generateBusinessInsights();
+
   return (
     <section className="single-page-section">
-      <div className="card">
+      <div className="bi-cockpit">
         <div className="page-topbar">
           <div>
             <h2>📊 Business Intelligence</h2>
-            <p>Unternehmer-Cockpit für Umsatz, Kosten und Auswertungen.</p>
+            <p>Unternehmer-Cockpit für Umsatz, Kosten und Rentabilität.</p>
           </div>
 
           <button type="button" className="btn btn-secondary" onClick={openDashboard}>
@@ -7091,53 +7237,105 @@ onReloadOrders={async () => {
           </button>
         </div>
 
-        <div className="kpi-grid">
-          <div className="kpi-card">
+        <div className="bi-hero-grid">
+          <div className="bi-hero-card">
             <span>💰 Gesamtumsatz</span>
             <strong>{biTotalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
 
-          <div className="kpi-card">
+          <div className="bi-hero-card">
             <span>💸 Lohnkosten</span>
             <strong>{biLaborCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
 
-          <div className="kpi-card">
-            <span>📈 Deckungsbeitrag</span>
-            <strong>{biGrossProfit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          <div className="bi-hero-card">
+            <span>📦 Materialkosten</span>
+            <strong>{biMaterialCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
 
-          <div className="kpi-card">
+          <div className="bi-hero-card bi-profit-card">
+            <span>📈 Deckungsbeitrag</span>
+            <strong>{biContributionMargin.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
+          </div>
+
+          <div className="bi-hero-card">
             <span>📂 Offene Forderungen</span>
             <strong>{biOpenAmount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
         </div>
 
-        <div className="kpi-grid">
-          <div className="card" style={{ cursor: "pointer" }} onClick={() => {
+        <div className="bi-advisor-card">
+  <div className="bi-advisor-header">
+    <span style={{ fontSize: "30px" }}>🤖</span>
+
+    <div>
+      <h3 style={{ margin: 0 }}>
+        Unternehmensberater
+      </h3>
+
+      <div
+  style={{
+    marginTop: "10px",
+    fontWeight: 700,
+    fontSize: "17px",
+  }}
+>
+  {businessAdvisor.status}
+</div>
+
+      <p
+        style={{
+          margin: "4px 0 0",
+          color: "#64748b",
+        }}
+      >
+        Automatische Auswertung Ihrer Unternehmenskennzahlen.
+      </p>
+    </div>
+  </div>
+
+  <div className="bi-advisor-list">
+    {businessAdvisor.insights.map((insight, index) => (
+      <div
+        key={index}
+        className="bi-advisor-item"
+      >
+        {insight}
+      </div>
+    ))}
+  </div>
+</div>
+
+        <h3 className="bi-section-title">Analysen</h3>
+
+        <div className="bi-module-grid">
+          <div className="bi-module-card" onClick={() => {
             loadCustomerAnalysis();
             setCurrentPage("customer-analysis");
           }}>
             <h3>📊 Kundenanalyse</h3>
-            <p>Umsatz, Top-Kunden und Forderungen.</p>
+            <p>Umsatz, Top-Kunden, Forderungen und A/B/C-Kunden.</p>
           </div>
 
-          <div className="card" style={{ cursor: "pointer" }} onClick={() => {
+          <div className="bi-module-card" onClick={() => {
             loadOrderAnalysis();
             setCurrentPage("order-analysis");
           }}>
             <h3>📈 Auftragsanalyse</h3>
-            <p>Umsatz, Lohnkosten und Deckungsbeiträge.</p>
+            <p>Umsatz, Lohnkosten und Deckungsbeiträge pro Auftrag.</p>
           </div>
 
-          <div className="card" style={{ cursor: "pointer" }} onClick={() => setCurrentPage("time-evaluation")}>
+          <div className="bi-module-card" onClick={() => setCurrentPage("time-evaluation")}>
             <h3>⏱ Arbeitsstunden</h3>
             <p>Stunden, Lohnkosten und Mitarbeiterauswertung.</p>
           </div>
 
-          <div className="card" style={{ opacity: 0.65 }}>
+          <div className="bi-module-card" onClick={() => {
+            loadMaterialAnalysis();
+            setCurrentPage("material-analysis");
+          }}>
             <h3>📦 Materialanalyse</h3>
-            <p>Materialkosten pro Auftrag — kommt als Nächstes.</p>
+            <p>Verbrauch, Materialkosten und Wirtschaftlichkeit.</p>
           </div>
         </div>
       </div>
@@ -7458,6 +7656,151 @@ onReloadOrders={async () => {
     </div>
   </section>
   );
+})()}
+
+{currentPage === "material-analysis" && (() => {
+
+  const totalMaterialCost = materialAnalysis.reduce(
+    (sum: number, material: any) =>
+      sum + material.materialCost,
+    0
+  );
+
+  const totalQuantity = materialAnalysis.reduce(
+    (sum: number, material: any) =>
+      sum + material.quantity,
+    0
+  );
+
+  const topMaterial =
+    materialAnalysis.length > 0
+      ? materialAnalysis[0]
+      : null;
+
+  return (
+    <section className="single-page-section">
+      <div className="card">
+
+        <div className="page-topbar">
+          <div>
+            <h2>📦 Materialanalyse</h2>
+
+            <p>
+              Materialverbrauch und Materialkosten.
+            </p>
+          </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() =>
+              setCurrentPage("business-intelligence")
+            }
+          >
+            Zurück
+          </button>
+        </div>
+
+        <div className="kpi-grid">
+
+          <div className="kpi-card">
+            <span>💰 Materialkosten</span>
+
+            <strong>
+              {totalMaterialCost.toLocaleString("de-DE", {
+                minimumFractionDigits: 2,
+              })}{" "}
+              {currencySymbol}
+            </strong>
+          </div>
+
+          <div className="kpi-card">
+            <span>📦 Gesamtverbrauch</span>
+
+            <strong>
+              {totalQuantity.toLocaleString("de-DE")}
+            </strong>
+          </div>
+
+          <div className="kpi-card">
+            <span>🏆 Top Material</span>
+
+            <strong>
+              {topMaterial
+                ? topMaterial.name
+                : "-"}
+            </strong>
+          </div>
+
+        </div>
+
+        <div className="table-wrapper">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Material</th>
+
+                <th>Verbrauch</th>
+
+                <th>Einkauf</th>
+
+                <th>Materialkosten</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {materialAnalysis.map((material: any) => (
+
+                <tr key={material.id}>
+
+                  <td>{material.name}</td>
+
+                  <td>{material.quantity}</td>
+
+                  <td>
+                    {material.purchasePrice.toLocaleString(
+                      "de-DE",
+                      {
+                        minimumFractionDigits: 2,
+                      }
+                    )}{" "}
+                    {currencySymbol}
+                  </td>
+
+                  <td>
+
+                    {material.materialCost.toLocaleString(
+                      "de-DE",
+                      {
+                        minimumFractionDigits: 2,
+                      }
+                    )}{" "}
+                    {currencySymbol}
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  );
+
 })()}
 
               {currentPage === "settings" && userProfile?.tenant_id && (

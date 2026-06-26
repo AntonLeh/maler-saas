@@ -3247,3 +3247,102 @@ code {
   border-radius: 12px;
   padding: 12px 16px;
 }
+
+.bi-cockpit {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+}
+
+.bi-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.bi-hero-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.bi-hero-card span {
+  display: block;
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.bi-hero-card strong {
+  display: block;
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.bi-profit-card {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #86efac;
+}
+
+.bi-section-title {
+  margin: 10px 0 16px;
+}
+
+.bi-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.bi-module-card {
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 20px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bi-module-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+}
+
+.bi-module-card h3 {
+  margin-top: 0;
+}
+
+.bi-advisor-card {
+  margin: 30px 0;
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 1px solid #bfdbfe;
+}
+
+.bi-advisor-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.bi-advisor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bi-advisor-item {
+  background: #ffffff;
+  border-left: 5px solid #2563eb;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  line-height: 1.6;
+}
