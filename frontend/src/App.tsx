@@ -25,6 +25,7 @@ import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
 import TrialBanner from "./components/TrialBanner";
 import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
+import PerformanceSimulator from "./components/PerformanceSimulator";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -390,7 +391,8 @@ type CurrentPage =
   | "performance-management"
   | "performance-criteria"
   | "employee-ranking"
-  | "employee-performance-entry";
+  | "employee-performance-entry"
+  | "employee-performance-profile";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -470,6 +472,10 @@ export default function App() {
   const [loadingQuoteDetail, setLoadingQuoteDetail] = useState(false);
   const [quoteDetailMessage, setQuoteDetailMessage] = useState("");
 
+  const [selectedPerformanceEmployee, setSelectedPerformanceEmployee] = useState<any | null>(null);
+  const [employeePerformanceDetails, setEmployeePerformanceDetails] = useState<any[]>([]);
+  const [loadingEmployeePerformanceDetails, setLoadingEmployeePerformanceDetails] = useState(false);
+
   const [loginEmail, setLoginEmail] = useState("admin@test-malerfirma.de");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
@@ -490,6 +496,26 @@ export default function App() {
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [showLoginPage, setShowLoginPage] = useState(false);
+  const [performanceRewards, setPerformanceRewards] = useState<any[]>([]);
+  const [loadingPerformanceRewards, setLoadingPerformanceRewards] = useState(false);
+  const [editingRewardId, setEditingRewardId] = useState<number | null>(null);
+  const [showRewardForm, setShowRewardForm] = useState(false);
+
+  const [rewardMinPoints, setRewardMinPoints] = useState("");
+  const [rewardMaxPoints, setRewardMaxPoints] = useState("");
+  const [rewardType, setRewardType] = useState("money");
+  const [rewardValue, setRewardValue] = useState("");
+  const [rewardDescription, setRewardDescription] = useState("");
+  const [rewardActive, setRewardActive] = useState(true);
+
+  const [showCriterionForm, setShowCriterionForm] = useState(false);
+  const [editingCriterionId, setEditingCriterionId] = useState<number | null>(null);
+
+  const [criterionCategory, setCriterionCategory] = useState("");
+  const [criterionName, setCriterionName] = useState("");
+  const [criterionDescription, setCriterionDescription] = useState("");
+  const [criterionPoints, setCriterionPoints] = useState("");
+  const [criterionActive, setCriterionActive] = useState(true);
 
   const loadSubscription = async (_tenantId: number) => {
   const { data, error } = await supabase.rpc("get_my_subscription");
@@ -1425,9 +1451,22 @@ const handleCreateCustomerPortalLink = async () => {
     return;
   }
 
+  const { data: existingOrder, error: orderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("tenant_id", userProfile.tenant_id)
+    .eq("customer_id", quote.customer_id)
+.order("id", { ascending: false })
+.limit(1)
+.maybeSingle();
+
+  if (orderError) {
+    console.error("Fehler beim Laden des Auftrags:", orderError);
+  }
+
   const customerEmail = Array.isArray((quote as any).customers)
-  ? (quote as any).customers[0]?.email
-  : (quote as any).customers?.email;
+    ? (quote as any).customers[0]?.email
+    : (quote as any).customers?.email;
 
   if (!customerEmail) {
     alert("Beim Kunden ist keine E-Mail-Adresse hinterlegt.");
@@ -1442,6 +1481,7 @@ const handleCreateCustomerPortalLink = async () => {
     .insert({
       tenant_id: userProfile.tenant_id,
       quote_id: quote.id,
+      order_id: existingOrder?.id || null,
       customer_id: quote.customer_id,
       customer_email: customerEmail,
       access_token: token,
@@ -1914,9 +1954,131 @@ const loadPerformanceCriteria = async () => {
 
     setPerformanceCriteria(data || []);
   } catch (error) {
-    console.error("Fehler beim Laden der Bewertungskriterien:", error);
+    console.error("Fehler beim Laden der Leistungsregeln:", error);
   } finally {
     setLoadingPerformanceCriteria(false);
+  }
+};
+
+
+
+const loadPerformanceRewards = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingPerformanceRewards(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("performance_rewards")
+      .select("*")
+      .eq("tenant_id", userProfile.tenant_id)
+      .order("min_points", { ascending: true });
+
+    if (error) throw error;
+
+    setPerformanceRewards(data || []);
+  } catch (error) {
+    console.error("Fehler beim Laden der Bonusregeln:", error);
+  } finally {
+    setLoadingPerformanceRewards(false);
+  }
+};
+
+const savePerformanceReward = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  if (!rewardMinPoints || !rewardValue || !rewardDescription || !rewardType) {
+    alert("Bitte alle Pflichtfelder ausfüllen.");
+    return;
+  }
+
+  try {
+    const { error } = await supabase.rpc("save_performance_reward", {
+      p_tenant_id: userProfile.tenant_id,
+      p_badge_name: rewardDescription,
+      p_min_points: Number(rewardMinPoints),
+      p_max_points: rewardMaxPoints
+        ? Number(rewardMaxPoints)
+        : null,
+      p_reward_type: rewardType,
+      p_reward_value: Number(rewardValue),
+      p_description: rewardDescription,
+      p_is_active: rewardActive,
+    });
+
+    if (error) throw error;
+
+    alert("Bonusregel gespeichert.");
+
+    setShowRewardForm(false);
+
+    setRewardMinPoints("");
+    setRewardMaxPoints("");
+    setRewardType("money");
+    setRewardValue("");
+    setRewardDescription("");
+    setRewardActive(true);
+
+    loadPerformanceRewards();
+
+  } catch (error) {
+    console.error("Bonusregel-Fehler:", JSON.stringify(error, null, 2));
+    console.error(error);
+    alert("Bonusregel konnte nicht gespeichert werden.");
+  }
+};
+
+const togglePerformanceReward = async (rewardId: number) => {
+  try {
+    const { error } = await supabase.rpc("toggle_performance_reward", {
+      p_reward_id: rewardId,
+    });
+
+    if (error) throw error;
+
+    loadPerformanceRewards();
+  } catch (error) {
+    console.error("Fehler beim Aktualisieren der Bonusregel:", error);
+    alert("Bonusregel konnte nicht aktualisiert werden.");
+  }
+};
+
+const editPerformanceReward = (reward: any) => {
+  setEditingRewardId(reward.id);
+
+  setRewardMinPoints(String(reward.min_points || ""));
+  setRewardMaxPoints(reward.max_points ? String(reward.max_points) : "");
+  setRewardType(reward.reward_type || "money");
+  setRewardValue(String(reward.reward_value || ""));
+  setRewardDescription(
+    reward.badge_name ||
+      reward.reward_name ||
+      reward.description ||
+      ""
+  );
+  setRewardActive(Boolean(reward.is_active));
+
+  setShowRewardForm(true);
+};
+
+const deletePerformanceReward = async (rewardId: number) => {
+  const confirmed = window.confirm(
+    "Möchten Sie diese Bonusregel wirklich löschen?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await supabase.rpc("delete_performance_reward", {
+      p_reward_id: rewardId,
+    });
+
+    if (error) throw error;
+
+    loadPerformanceRewards();
+  } catch (error) {
+    console.error("Fehler beim Löschen der Bonusregel:", error);
+    alert("Bonusregel konnte nicht gelöscht werden.");
   }
 };
 
@@ -1979,17 +2141,54 @@ const loadEmployeeRanking = async () => {
   }
 };
 
-const togglePerformanceCriterion = async (
-  id: number,
-  currentValue: boolean
+const loadEmployeePerformanceDetails = async (
+  employeeId: number
 ) => {
+  if (!userProfile?.tenant_id) return;
+
+  setLoadingEmployeePerformanceDetails(true);
+
   try {
-    const { error } = await supabase
-      .from("performance_criteria")
-      .update({
-        is_active: !currentValue,
-      })
-      .eq("id", id);
+    const { data, error } = await supabase
+      .from("employee_performance")
+      .select(`
+        id,
+        points,
+        note,
+        created_at,
+        performance_criteria (
+          name,
+          category
+        ),
+        orders (
+          title
+        )
+      `)
+      .eq("tenant_id", userProfile.tenant_id)
+      .eq("employee_id", employeeId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    setEmployeePerformanceDetails(data || []);
+  } catch (error) {
+    console.error(
+      "Fehler beim Laden der Bewertungshistorie:",
+      error
+    );
+  } finally {
+    setLoadingEmployeePerformanceDetails(false);
+  }
+};
+
+const togglePerformanceCriterion = async (id: number) => {
+  try {
+    const { error } = await supabase.rpc(
+      "toggle_performance_criterion",
+      {
+        p_criterion_id: id,
+      }
+    );
 
     if (error) throw error;
 
@@ -1999,6 +2198,100 @@ const togglePerformanceCriterion = async (
       "Fehler beim Aktualisieren des Kriteriums:",
       error
     );
+
+    alert("Leistungsregel konnte nicht aktualisiert werden.");
+  }
+};
+
+const editPerformanceCriterion = (criterion: any) => {
+  setEditingCriterionId(criterion.id);
+  setCriterionCategory(criterion.category || "");
+  setCriterionName(criterion.name || "");
+  setCriterionDescription(criterion.description || "");
+  setCriterionPoints(String(criterion.default_points ?? ""));
+  setCriterionActive(Boolean(criterion.is_active));
+  setShowCriterionForm(true);
+};
+
+const savePerformanceCriterion = async () => {
+  if (!userProfile?.tenant_id) return;
+
+  if (!criterionCategory || !criterionName || criterionPoints === "") {
+    alert("Bitte Kategorie, Kriterium und Punkte ausfüllen.");
+    return;
+  }
+
+  try {
+    const rpcName = editingCriterionId
+      ? "update_performance_criterion"
+      : "save_performance_criterion";
+
+    const rpcPayload = editingCriterionId
+      ? {
+          p_criterion_id: editingCriterionId,
+          p_category: criterionCategory,
+          p_name: criterionName,
+          p_description: criterionDescription,
+          p_default_points: Number(criterionPoints),
+          p_is_active: criterionActive,
+        }
+      : {
+          p_tenant_id: userProfile.tenant_id,
+          p_category: criterionCategory,
+          p_name: criterionName,
+          p_description: criterionDescription,
+          p_default_points: Number(criterionPoints),
+          p_is_active: criterionActive,
+        };
+
+    const { error } = await supabase.rpc(rpcName, rpcPayload);
+
+    if (error) throw error;
+
+    alert(
+      editingCriterionId
+        ? "Leistungsregel aktualisiert."
+        : "Leistungsregel erstellt."
+    );
+
+    setShowCriterionForm(false);
+    setEditingCriterionId(null);
+
+    setCriterionCategory("");
+    setCriterionName("");
+    setCriterionDescription("");
+    setCriterionPoints("");
+    setCriterionActive(true);
+
+    loadPerformanceCriteria();
+
+  } catch (error) {
+    console.error(error);
+    alert("Leistungsregel konnte nicht gespeichert werden.");
+  }
+};
+
+const deletePerformanceCriterion = async (criterionId: number) => {
+  const confirmed = window.confirm(
+    "Möchten Sie diese Leistungsregel wirklich löschen?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const { error } = await supabase.rpc(
+      "delete_performance_criterion",
+      {
+        p_criterion_id: criterionId,
+      }
+    );
+
+    if (error) throw error;
+
+    loadPerformanceCriteria();
+  } catch (error) {
+    console.error(error);
+    alert("Leistungsregel konnte nicht gelöscht werden.");
   }
 };
 
@@ -6670,15 +6963,23 @@ onReloadOrders={async () => {
       </button>
     )}
 
-    {order.status === "fertig" && isAdmin && (
-  <button
-    type="button"
-    className="btn btn-primary btn-small"
-    onClick={() => handleCreateInvoice(order.id)}
-  >
-    🧾 Rechnung erstellen
-  </button>
+ {order.status === "fertig" && isAdmin && (
+  <>
+    <button
+      type="button"
+      className="btn btn-primary btn-small"
+      onClick={() => handleCreateInvoice(order.id)}
+    >
+      🧾 Rechnung erstellen
+    </button>
+
+    <PerformanceSimulator
+      orderId={order.id}
+      employees={employees}
+    />
+  </>
 )}
+
 
   </div>
 </td>
@@ -6723,6 +7024,21 @@ onReloadOrders={async () => {
       PDF erstellen
     </button>
   )}
+
+<button
+  type="button"
+  className="btn btn-secondary"
+  onClick={() => {
+    if (!hasFeature("customerPortal")) {
+      setCurrentPage("customer-portal-locked");
+      return;
+    }
+
+    handleCreateCustomerPortalLink();
+  }}
+>
+  Kundenlink erstellen
+</button>
 
   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
   {quoteDetail?.status !== "accepted" && (
@@ -7630,11 +7946,12 @@ const businessAdvisor = generateBusinessInsights();
         <div
   className="bi-module-card"
   onClick={() => {
-    loadPerformanceCriteria();
-    setCurrentPage("performance-criteria");
-  }}
+  loadPerformanceCriteria();
+  loadPerformanceRewards();
+  setCurrentPage("performance-criteria");
+}}
 >
-  <h3>⚙ Bewertungskriterien</h3>
+  <h3>⚙ Leistungsregeln</h3>
   <p>Kriterien wie Pünktlichkeit, Qualität, Dokumentation und Kundenlob.</p>
 </div>
 
@@ -7673,20 +7990,126 @@ const businessAdvisor = generateBusinessInsights();
     <div className="card">
       <div className="page-topbar">
         <div>
-          <h2>⚙ Bewertungskriterien</h2>
+          <h2>⚙ Leistungsregeln</h2>
           <p>
-            Regeln, Kategorien und Standardpunkte für die Leistungsbewertung.
+            Regeln für Leistungsbewertung, Kundenbewertungen und Bonusprogramme.
           </p>
+
         </div>
 
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => setCurrentPage("performance-management")}
-        >
-          Zurück
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => {
+      setEditingCriterionId(null);
+
+      setCriterionCategory("");
+      setCriterionName("");
+      setCriterionDescription("");
+      setCriterionPoints("");
+      setCriterionActive(true);
+
+      setShowCriterionForm(true);
+    }}
+  >
+    ➕ Neue Leistungsregel
+  </button>
+
+  <button
+    type="button"
+    className="btn btn-secondary"
+    onClick={() => setCurrentPage("performance-management")}
+  >
+    Zurück
+  </button>
+</div>
       </div>
+
+      {showCriterionForm && (
+  <div
+    className="card"
+    style={{
+      marginBottom: 20,
+      background: "#f8fbff",
+      border: "2px solid #2563eb",
+    }}
+  >
+    <h4>Leistungsregel bearbeiten</h4>
+
+    <div className="form-grid">
+      <div className="form-group">
+        <label>Kategorie</label>
+        <input
+          value={criterionCategory}
+          onChange={(e) => setCriterionCategory(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Kriterium</label>
+        <input
+          value={criterionName}
+          onChange={(e) => setCriterionName(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Beschreibung</label>
+        <input
+          value={criterionDescription}
+          onChange={(e) => setCriterionDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Punkte</label>
+        <input
+          type="number"
+          value={criterionPoints}
+          onChange={(e) => setCriterionPoints(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Status</label>
+        <select
+          value={criterionActive ? "1" : "0"}
+          onChange={(e) => setCriterionActive(e.target.value === "1")}
+        >
+          <option value="1">🟢 Aktiv</option>
+          <option value="0">⚪ Inaktiv</option>
+        </select>
+      </div>
+    </div>
+
+    <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={savePerformanceCriterion}
+      >
+        Speichern
+      </button>
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => {
+          setShowCriterionForm(false);
+          setEditingCriterionId(null);
+          setCriterionCategory("");
+          setCriterionName("");
+          setCriterionDescription("");
+          setCriterionPoints("");
+          setCriterionActive(true);
+        }}
+      >
+        Abbrechen
+      </button>
+    </div>
+  </div>
+)}
 
       {loadingPerformanceCriteria ? (
         <p>Daten werden geladen...</p>
@@ -7700,6 +8123,7 @@ const businessAdvisor = generateBusinessInsights();
                 <th>Beschreibung</th>
                 <th>Punkte</th>
                 <th>Status</th>
+                <th>Aktionen</th>
               </tr>
             </thead>
 
@@ -7722,21 +8146,250 @@ const businessAdvisor = generateBusinessInsights();
         : "btn-status-inactive"
     }
     onClick={() =>
-      togglePerformanceCriterion(
-        criterion.id,
-        criterion.is_active
-      )
+      togglePerformanceCriterion(criterion.id)
     }
   >
     {criterion.is_active ? "🟢 Aktiv" : "⚪ Inaktiv"}
   </button>
 </td>
+
+    <td>
+  <div
+    style={{
+      display: "flex",
+      gap: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => editPerformanceCriterion(criterion)}
+    >
+      ✏️
+    </button>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => deletePerformanceCriterion(criterion.id)}
+    >
+      🗑️
+    </button>
+  </div>
+</td>
+
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+<div className="card" style={{ marginTop: 30 }}>
+  <div className="page-topbar">
+    <div>
+      <h3>🎁 Bonusregeln</h3>
+      <p>
+        Definieren Sie Bonusstufen auf Basis der erreichten Leistungspunkte.
+      </p>
+    </div>
+
+    <button
+  type="button"
+  className="btn btn-primary"
+  onClick={() => setShowRewardForm(true)}
+>
+  ➕ Neue Bonusregel
+</button>
+  </div>
+
+  {showRewardForm && (
+  <div
+    className="card"
+    style={{
+      marginBottom: 20,
+      background: "#f8fbff",
+      border: "2px solid #2563eb",
+    }}
+  >
+    <h4>Neue Bonusregel</h4>
+
+    <div className="form-grid">
+
+      <div className="form-group">
+        <label>Von Punkten</label>
+        <input
+          type="number"
+          value={rewardMinPoints}
+          onChange={(e) => setRewardMinPoints(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Bis Punkte</label>
+        <input
+          type="number"
+          value={rewardMaxPoints}
+          onChange={(e) => setRewardMaxPoints(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Bonus-Typ</label>
+
+        <select
+          value={rewardType}
+          onChange={(e) => setRewardType(e.target.value)}
+        >
+          <option value="money">💰 Geld</option>
+          <option value="vacation">🏖 Urlaubstag</option>
+          <option value="voucher">🎁 Gutschein</option>
+          <option value="material">🧰 Sachprämie</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Bonuswert</label>
+
+        <input
+          type="number"
+          value={rewardValue}
+          onChange={(e) => setRewardValue(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Beschreibung</label>
+
+        <input
+          value={rewardDescription}
+          onChange={(e) => setRewardDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Status</label>
+
+        <select
+          value={rewardActive ? "1" : "0"}
+          onChange={(e) =>
+            setRewardActive(e.target.value === "1")
+          }
+        >
+          <option value="1">🟢 Aktiv</option>
+          <option value="0">⚪ Inaktiv</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div
+      style={{
+        marginTop: 20,
+        display: "flex",
+        gap: 10,
+      }}
+    >
+      <button
+  type="button"
+  className="btn btn-primary"
+  onClick={savePerformanceReward}
+>
+  Speichern
+</button>
+
+      <button
+        className="btn btn-secondary"
+        onClick={() => setShowRewardForm(false)}
+      >
+        Abbrechen
+      </button>
+    </div>
+  </div>
+)}
+
+    {loadingPerformanceRewards ? (
+  <p>Bonusregeln werden geladen...</p>
+) : performanceRewards.length === 0 ? (
+  <p>Noch keine Bonusregeln vorhanden.</p>
+) : (
+  <div className="table-wrapper">
+  <table className="table">
+    <thead>
+      <tr>
+        <th>Von</th>
+        <th>Bis</th>
+        <th>Typ</th>
+        <th>Wert</th>
+        <th>Beschreibung</th>
+        <th>Status</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {performanceRewards.map((reward: any) => (
+        <tr key={reward.id}>
+          <td>{reward.min_points}</td>
+
+          <td>{reward.max_points ?? "∞"}</td>
+
+          <td>{reward.reward_type}</td>
+
+          <td>{reward.reward_value}</td>
+
+          <td>{reward.description || "-"}</td>
+
+          <td>
+            <button
+              type="button"
+              className={
+                reward.is_active
+                  ? "btn-status-active"
+                  : "btn-status-inactive"
+              }
+              onClick={() => togglePerformanceReward(reward.id)}
+            >
+              {reward.is_active ? "🟢 Aktiv" : "⚪ Inaktiv"}
+            </button>
+          </td>
+
+          <td>
+  <div
+    style={{
+      display: "flex",
+      gap: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => editPerformanceReward(reward)}
+    >
+      ✏️
+    </button>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => deletePerformanceReward(reward.id)}
+    >
+      🗑️
+    </button>
+  </div>
+</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+)}
+</div>
+
     </div>
   </section>
 )}
@@ -7777,7 +8430,17 @@ const businessAdvisor = generateBusinessInsights();
 
             <tbody>
               {employeeRanking.map((employee: any, index: number) => (
-                <tr key={employee.id}>
+                <tr
+  key={employee.id}
+  style={{ cursor: "pointer" }}
+  onClick={() => {
+    setSelectedPerformanceEmployee(employee);
+
+    loadEmployeePerformanceDetails(employee.id);
+
+    setCurrentPage("employee-performance-profile");
+}}
+>
                   <td>
                     {index === 0
                       ? "🥇"
@@ -7802,6 +8465,152 @@ const businessAdvisor = generateBusinessInsights();
     </div>
   </section>
 )}
+
+
+{currentPage === "employee-performance-profile" &&
+  selectedPerformanceEmployee &&
+  (() => {
+    const totalEmployeePoints = employeePerformanceDetails.reduce(
+      (sum: number, entry: any) => sum + Number(entry.points || 0),
+      0
+    );
+
+    const totalEmployeeRatings = employeePerformanceDetails.length;
+
+    const averageEmployeePoints =
+      totalEmployeeRatings > 0
+        ? totalEmployeePoints / totalEmployeeRatings
+        : 0;
+
+    const lastEmployeeRating =
+      employeePerformanceDetails.length > 0
+        ? new Date(employeePerformanceDetails[0].created_at).toLocaleDateString("de-DE")
+        : "-";
+
+    return (
+      <section className="single-page-section">
+        <div className="card">
+          <div className="page-topbar">
+            <div>
+              <h2>👤 Mitarbeiterprofil</h2>
+              <p>Leistungsübersicht und Bewertungshistorie.</p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setCurrentPage("employee-ranking")}
+            >
+              Zurück zum Ranking
+            </button>
+          </div>
+
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <span>👤 Mitarbeiter</span>
+              <strong>{selectedPerformanceEmployee.name}</strong>
+            </div>
+
+            <div className="kpi-card">
+              <span>🏆 Gesamtpunkte</span>
+              <strong>{totalEmployeePoints}</strong>
+            </div>
+
+            <div className="kpi-card">
+              <span>📋 Bewertungen</span>
+              <strong>{totalEmployeeRatings}</strong>
+            </div>
+
+            <div className="kpi-card">
+              <span>📈 Durchschnitt</span>
+              <strong>{averageEmployeePoints.toFixed(1)}</strong>
+            </div>
+
+            <div className="kpi-card">
+              <span>⭐ Sterne</span>
+              <strong>{"⭐".repeat(selectedPerformanceEmployee.stars)}</strong>
+            </div>
+
+            <div className="kpi-card">
+              <span>📅 Letzte Bewertung</span>
+              <strong>{lastEmployeeRating}</strong>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>📋 Bewertungshistorie</h3>
+
+            {loadingEmployeePerformanceDetails ? (
+              <p>Bewertungen werden geladen...</p>
+            ) : employeePerformanceDetails.length === 0 ? (
+              <p>Für diesen Mitarbeiter wurden noch keine Bewertungen erfasst.</p>
+            ) : (
+              <div className="timeline">
+                {employeePerformanceDetails.map((entry: any) => (
+                  <div
+  key={entry.id}
+  className={`timeline-card ${
+    entry.points >= 0
+      ? "timeline-card-positive"
+      : "timeline-card-negative"
+  }`}
+>
+                    <div className="timeline-header">
+                      <strong
+  className={
+    entry.points >= 0
+      ? "timeline-points-positive"
+      : "timeline-points-negative"
+  }
+>
+  {entry.points > 0 ? "+" : ""}
+  {entry.points} Punkte
+</strong>
+
+                      <span>
+                        {new Date(entry.created_at).toLocaleDateString("de-DE")}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: 8 }}>
+                      <strong>{entry.performance_criteria?.name}</strong>
+                    </div>
+
+                    <div className="performance-category-badge">
+  {entry.performance_criteria?.category === "Zeit" && "⏰ "}
+  {entry.performance_criteria?.category === "Qualität" && "🏆 "}
+  {entry.performance_criteria?.category === "Material" && "📦 "}
+  {entry.performance_criteria?.category === "Dokumentation" && "📸 "}
+  {entry.performance_criteria?.category === "Kunde" && "🤝 "}
+  {entry.performance_criteria?.category === "Sicherheit" && "🦺 "}
+  {entry.performance_criteria?.category}
+</div>
+
+                    {entry.orders?.title && (
+                      <div style={{ marginTop: 8 }}>
+                        🏠 Auftrag: {entry.orders.title}
+                      </div>
+                    )}
+
+                    {entry.note && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        "{entry.note}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  })()}
 
                 {currentPage === "employee-performance-entry" && (
   <section className="single-page-section">

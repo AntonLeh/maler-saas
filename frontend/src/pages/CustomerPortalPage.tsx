@@ -11,6 +11,8 @@ type PortalData = {
   invoice?: any;
   customer?: any;
   progress?: any[];
+  assigned_employees?: any[];
+  review_completed?: boolean;
 };
 
 const getPortalStatusLabel = (status?: string) => {
@@ -71,7 +73,19 @@ export default function CustomerPortalPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [overallRating, setOverallRating] = useState("");
+  const [qualityRating, setQualityRating] = useState("");
+  const [punctualityRating, setPunctualityRating] = useState("");
+  const [cleanlinessRating, setCleanlinessRating] = useState("");
+  const [friendlinessRating, setFriendlinessRating] = useState("");
+  const [employeeRatings, setEmployeeRatings] = useState<Record<number, number>>({});
+  const [employeeComments, setEmployeeComments] = useState<Record<number, string>>({});
+  const [recommendation, setRecommendation] = useState("");
+  const [customerComment, setCustomerComment] = useState("");
 
+  const [reviewSent, setReviewSent] = useState(false);
+  const [sendingReview, setSendingReview] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const token = useMemo(() => {
     return new URLSearchParams(window.location.search).get("token") || "";
   }, []);
@@ -100,6 +114,8 @@ export default function CustomerPortalPage() {
 }
 
       setData(data as PortalData);
+      console.log("PortalData:", data);
+      console.log("Progress:", data?.progress);
       setLoading(false);
     };
 
@@ -134,10 +150,69 @@ export default function CustomerPortalPage() {
   const invoice = data.invoice;
   const customer = data.customer;
   const progress = data.progress || [];
+  const assignedEmployees = data.assigned_employees || [];
+  
   const currentStatus = order?.status || quote?.status || "draft";
   const currentStep = getPortalStep(currentStatus);
   const quoteItems = data.quote_items || [];
   const companySettings = data.company_settings || {};
+
+  const submitCustomerReview = async () => {
+  if (!overallRating) {
+    alert("Bitte geben Sie eine Gesamtbewertung ab.");
+    return;
+  }
+
+  setSendingReview(true);
+
+  try {
+    const employeeReviews = assignedEmployees
+      .filter((employee: any) => employeeRatings[employee.id])
+      .map((employee: any) => ({
+        employee_id: employee.id,
+        rating: employeeRatings[employee.id],
+        comment: employeeComments[employee.id] || null,
+      }));
+
+    const { data: result, error } = await supabase.rpc(
+      "submit_customer_review",
+      {
+        p_token: token,
+        p_overall_rating: Number(overallRating),
+        p_quality_rating: qualityRating
+          ? Number(qualityRating)
+          : null,
+        p_punctuality_rating: punctualityRating
+          ? Number(punctualityRating)
+          : null,
+        p_cleanliness_rating: cleanlinessRating
+          ? Number(cleanlinessRating)
+          : null,
+        p_friendliness_rating: friendlinessRating
+          ? Number(friendlinessRating)
+          : null,
+        p_recommendation_score: recommendation
+          ? Number(recommendation)
+          : null,
+        p_comment: customerComment,
+        p_employee_reviews: employeeReviews,
+      }
+    );
+
+    if (error) throw error;
+
+    console.log(result);
+
+    setReviewSent(true);
+    setShowReviewForm(false);
+
+  } catch (error) {
+    console.error(error);
+    alert("Bewertung konnte nicht gespeichert werden.");
+  } finally {
+    setSendingReview(false);
+  }
+};
 
   return (
     <div className="dashboard-page">
@@ -355,6 +430,238 @@ export default function CustomerPortalPage() {
     >
       📄 PDF-Rechnung ansehen
     </button>
+  </section>
+)}
+
+  {(order?.status === "fertig" || order?.status === "abgerechnet") && (
+  <section
+  className="card"
+  style={{
+    marginTop: 40,
+    background: "#f8fbff",
+    border: "2px solid #2563eb",
+    borderRadius: 16,
+    padding: 28,
+    boxShadow: "0 10px 30px rgba(37,99,235,0.08)",
+  }}
+>
+    <h2 style={{ color: "#1d4ed8", marginBottom: 10 }}>
+  🌟 Ihre Meinung ist uns wichtig
+</h2>
+
+<p
+  className="info-text"
+  style={{
+    fontSize: "15px",
+    marginBottom: "24px",
+  }}
+>
+  Vielen Dank, dass Sie uns Ihr Vertrauen geschenkt haben.
+  <br />
+  Mit Ihrer Bewertung helfen Sie uns, unseren Service
+  kontinuierlich zu verbessern.
+</p>
+
+    <p className="info-text">
+      Wie zufrieden waren Sie mit der Ausführung dieses Auftrags?
+    </p>
+
+    {reviewSent && (
+  <div className="message-box success">
+    ✅ Vielen Dank! Ihre Bewertung wurde erfolgreich gespeichert.
+  </div>
+)}
+
+    <div
+  style={{
+    textAlign: "center",
+    marginTop: 25,
+    marginBottom: 15,
+  }}
+>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={() => setShowReviewForm(!showReviewForm)}
+  >
+    {showReviewForm ? "⬆️ Bewertung ausblenden" : "⭐ Bewertung starten"}
+  </button>
+</div>
+
+    {showReviewForm && (
+    <div className="form-stack">
+
+  <div className="form-group">
+    <label>⭐ Gesamtzufriedenheit</label>
+    <select
+      value={overallRating}
+      onChange={(e) => setOverallRating(e.target.value)}
+    >
+      <option value="">Bitte auswählen</option>
+      <option value="5">★★★★★ Sehr zufrieden</option>
+      <option value="4">★★★★☆ Zufrieden</option>
+      <option value="3">★★★☆☆ In Ordnung</option>
+      <option value="2">★★☆☆☆ Verbesserungswürdig</option>
+      <option value="1">★☆☆☆☆ Unzufrieden</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>🎨 Arbeitsqualität</label>
+    <select
+      value={qualityRating}
+      onChange={(e) => setQualityRating(e.target.value)}
+    >
+      <option value="">Bitte auswählen</option>
+      <option value="5">★★★★★</option>
+      <option value="4">★★★★☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="1">★☆☆☆☆</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>😊 Freundlichkeit</label>
+    <select
+      value={friendlinessRating}
+      onChange={(e) => setFriendlinessRating(e.target.value)}
+    >
+      <option value="">Bitte auswählen</option>
+      <option value="5">★★★★★</option>
+      <option value="4">★★★★☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="1">★☆☆☆☆</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>🧹 Sauberkeit</label>
+    <select
+      value={cleanlinessRating}
+      onChange={(e) => setCleanlinessRating(e.target.value)}
+    >
+      <option value="">Bitte auswählen</option>
+      <option value="5">★★★★★</option>
+      <option value="4">★★★★☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="1">★☆☆☆☆</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>⏰ Termintreue</label>
+    <select
+      value={punctualityRating}
+      onChange={(e) => setPunctualityRating(e.target.value)}
+    >
+      <option value="">Bitte auswählen</option>
+      <option value="5">★★★★★</option>
+      <option value="4">★★★★☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="1">★☆☆☆☆</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>💬 Kommentar</label>
+
+    <textarea
+      rows={4}
+      value={customerComment}
+      onChange={(e) => setCustomerComment(e.target.value)}
+      placeholder="Ihre Meinung ist uns wichtig..."
+    />
+  </div>
+
+  <div className="form-group">
+    <label>🤝 Würden Sie uns weiterempfehlen? (0 – 10) 0 = Nein 10 = Ja</label>
+
+    <input
+      type="number"
+      min={0}
+      max={10}
+      value={recommendation}
+      onChange={(e) => setRecommendation(e.target.value)}
+    />
+  </div>
+
+{assignedEmployees.length > 0 && (
+  <div style={{ marginTop: 30 }}>
+    <h3>👷 Mitarbeiter bewerten (optional)</h3>
+
+    <p className="info-text">
+      Wenn Sie möchten, können Sie auch die einzelnen Mitarbeiter bewerten.
+    </p>
+
+    {assignedEmployees.map((employee: any) => (
+      <div
+        key={employee.id}
+        className="card"
+        style={{
+          marginTop: 15,
+          padding: 15,
+          background: "#f8fafc",
+        }}
+      >
+        <strong>
+          {employee.first_name} {employee.last_name}
+        </strong>
+
+        <div className="form-group" style={{ marginTop: 12 }}>
+          <label>Bewertung</label>
+
+          <select
+            value={employeeRatings[employee.id] || ""}
+            onChange={(e) =>
+              setEmployeeRatings({
+                ...employeeRatings,
+                [employee.id]: Number(e.target.value),
+              })
+            }
+          >
+            <option value="">Keine Bewertung</option>
+            <option value="5">★★★★★</option>
+            <option value="4">★★★★☆</option>
+            <option value="3">★★★☆☆</option>
+            <option value="2">★★☆☆☆</option>
+            <option value="1">★☆☆☆☆</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Kommentar (optional)</label>
+
+          <textarea
+            rows={2}
+            value={employeeComments[employee.id] || ""}
+            onChange={(e) =>
+              setEmployeeComments({
+                ...employeeComments,
+                [employee.id]: e.target.value,
+              })
+            }
+          />
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+  <button
+  type="button"
+  className="btn btn-primary"
+  onClick={submitCustomerReview}
+  disabled={sendingReview}
+>
+  {sendingReview ? "Bewertung wird gespeichert..." : "Bewertung absenden"}
+</button>
+
+</div>
+)}
   </section>
 )}
 

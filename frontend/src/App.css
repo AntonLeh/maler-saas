@@ -3424,3 +3424,59 @@ code {
 .btn-status-inactive:hover {
   background: #d1d5db;
 }
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.timeline-card {
+  background: #ffffff;
+  border: 1px solid #dbe4ee;
+  border-left: 5px solid #2563eb;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-card-positive {
+  border-left: 6px solid #22c55e;
+  background: #f0fdf4;
+}
+
+.timeline-card-negative {
+  border-left: 6px solid #ef4444;
+  background: #fef2f2;
+}
+
+.timeline-points-positive {
+  color: #15803d;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.timeline-points-negative {
+  color: #b91c1c;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.performance-category-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 13px;
+  font-weight: 800;
+}
