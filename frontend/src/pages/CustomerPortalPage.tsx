@@ -416,20 +416,21 @@ export default function CustomerPortalPage() {
     </p>
 
     <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={() =>
-        generateInvoicePdf({
-          invoice,
-          order,
-          customer,
-          companySettings,
-          currencySymbol: companySettings.currency_symbol || "CHF",
-        })
-      }
-    >
-      📄 PDF-Rechnung ansehen
-    </button>
+  type="button"
+  className="btn btn-secondary"
+  onClick={() =>
+    generateInvoicePdf({
+      invoice,
+      invoiceItems: quoteItems || [],
+      order,
+      customer,
+      companySettings,
+      currencySymbol: companySettings.currency_symbol || "CHF",
+    })
+  }
+>
+  📄 PDF-Rechnung ansehen
+</button>
   </section>
 )}
 
