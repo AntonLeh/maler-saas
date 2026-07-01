@@ -99,33 +99,46 @@ if (settingsError) {
   console.error("Fehler beim Laden der Firmeneinstellungen:", settingsError);
 }
 
-    const quoteId =
-      order?.accepted_quote_id ??
-      order?.quote_id ??
-      order?.generated_quote_id ??
-      null;
-
-      alert("quoteId = " + quoteId);
-      console.log("Geladener Auftrag:", order);
-
-    console.log("Geladener Auftrag für Rechnung:", order);
-    console.log("Gefundene quoteId:", quoteId);
-
     let quoteItems: any[] = [];
 
-    if (quoteId) {
-      const { data: items, error: itemsError } = await supabase
-        .from("quote_items")
-        .select("*")
-        .eq("quote_id", quoteId)
-        .order("id", { ascending: true });
+// 1. Zuerst versuchen: Quote-ID direkt aus Auftrag/Rechnung lesen
+let quoteId =
+  order?.accepted_quote_id ??
+  order?.quote_id ??
+  order?.generated_quote_id ??
+  null;
 
-      if (itemsError) {
-        console.error("Fehler beim Laden der Rechnungspositionen:", itemsError);
-      } else {
-        quoteItems = items || [];
-      }
-    }
+// 2. Fallback: passende angenommene Quote über order_id suchen
+if (!quoteId) {
+  const { data: quote, error: quoteError } = await supabase
+    .from("quotes")
+    .select("id")
+    .eq("order_id", Number(order.id))
+    .eq("status", "accepted")
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+
+  if (quoteError) {
+    console.error("Fehler beim Suchen des Angebots zur Rechnung:", quoteError);
+  } else {
+    quoteId = quote?.id ?? null;
+  }
+}
+
+// 3. Positionen laden
+if (quoteId) {
+  const { data: items, error: itemsError } = await supabase
+    .from("quote_items")
+    .select("*")
+    .eq("quote_id", quoteId)
+    .order("id", { ascending: true });
+
+  if (itemsError) {
+    console.error("Fehler beim Laden der Rechnungspositionen:", itemsError);
+  } else {
+    quoteItems = items || [];
+  }
+}
 
     generateInvoicePdf({
       invoice,
