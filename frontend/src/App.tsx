@@ -5235,14 +5235,15 @@ onReloadOrders={async () => {
 
             <div className="topbar-right">
               <div className="user-box">
-                <span className="user-label">Eingeloggt als</span>
-                <strong>{session.user.email}</strong>
-                {userProfile && (
-                  <span className="user-meta">
-                    Rolle-ID: {userProfile.role_id} | Tenant: {userProfile.tenant_id}
-                  </span>
-                )}
-              </div>
+  <span className="user-label">Eingeloggt als</span>
+
+  <strong>
+    {userProfile
+      ? `${userProfile.first_name ?? ""} ${userProfile.last_name ?? ""}`.trim() ||
+        session.user.email
+      : session.user.email}
+  </strong>
+</div>
 
               <button onClick={handleLogout} className="btn btn-secondary">
                 Logout

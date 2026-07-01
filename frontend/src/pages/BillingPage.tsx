@@ -8,8 +8,8 @@ type Subscription = {
   currency?: string;
   is_trial?: boolean;
   trial_ends_at?: string | null;
-  stripe_customer_id?: string | null;
-  stripe_subscription_id?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean;
 };
 
 type BillingPageProps = {
@@ -23,6 +23,56 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString("de-DE");
 };
 
+const getStatusLabel = (subscription: Subscription | null) => {
+  if (!subscription) return "Kein Tarif aktiv";
+
+  if (subscription.cancel_at_period_end) {
+    return "🟡 Kündigung vorgemerkt";
+  }
+
+  if (subscription.is_trial || subscription.status === "trialing") {
+    return "🟢 Testphase aktiv";
+  }
+
+  if (subscription.status === "active") {
+    return "🟢 Aktiv";
+  }
+
+  if (subscription.status === "past_due") {
+    return "🟠 Zahlung ausstehend";
+  }
+
+  if (subscription.status === "canceled") {
+    return "🔴 Beendet";
+  }
+
+  return subscription.status || "-";
+};
+
+const getDateLabel = (subscription: Subscription | null) => {
+  if (!subscription) return "Laufzeit";
+
+  if (subscription.cancel_at_period_end) {
+    return "Nutzbar bis";
+  }
+
+  if (subscription.is_trial || subscription.status === "trialing") {
+    return "Testphase endet";
+  }
+
+  return "Nächste Abrechnung";
+};
+
+const getRelevantDate = (subscription: Subscription | null) => {
+  if (!subscription) return null;
+
+  if (subscription.is_trial || subscription.status === "trialing") {
+    return subscription.trial_ends_at;
+  }
+
+  return subscription.current_period_end || subscription.trial_ends_at;
+};
+
 export default function BillingPage({
   subscription,
   onBack,
@@ -32,10 +82,8 @@ export default function BillingPage({
     <section className="single-page-section">
       <div className="page-topbar">
         <div>
-          <h1 style={{ fontSize: "24px" }}>
-  Abrechnung & Abo
-</h1>
-          <p>Verwalten Sie Ihren aktuellen Tarif und Ihre Zahlungsdaten.</p>
+          <h1 style={{ fontSize: "24px" }}>Abrechnung & Abo</h1>
+          <p>Verwalten Sie Ihren Tarif und Ihre Zahlungsdaten.</p>
         </div>
 
         <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -47,81 +95,59 @@ export default function BillingPage({
         <h2>Aktueller Tarif</h2>
 
         <p>
-          <strong>Plan:</strong>{" "}
-          {subscription?.plan ? subscription.plan.toUpperCase() : "-"}
+          <strong>{subscription?.plan ? subscription.plan.toUpperCase() : "-"}</strong>
         </p>
 
-        <p>
-          <strong>Status:</strong> {subscription?.status || "-"}
-        </p>
+        <p>{getStatusLabel(subscription)}</p>
 
         <p>
           <strong>Preis:</strong>{" "}
           {subscription?.monthly_price
-            ? `${subscription.monthly_price} ${subscription.currency || "CHF"} / Monat`
+            ? `${subscription.monthly_price} ${subscription.currency || "EUR"} / Monat`
             : "-"}
         </p>
 
         <p>
-          <strong>Trial:</strong>{" "}
-          {subscription?.is_trial ? "Ja" : "Nein"}
+          <strong>{getDateLabel(subscription)}:</strong>{" "}
+          {formatDate(getRelevantDate(subscription))}
         </p>
 
-        <p>
-          <strong>Trial endet:</strong>{" "}
-          {formatDate(subscription?.trial_ends_at)}
-        </p>
-
-        <p>
-          <strong>Stripe Kunde:</strong>{" "}
-          {subscription?.stripe_customer_id ? "vorhanden" : "noch nicht vorhanden"}
-        </p>
-
-        <p>
-          <strong>Stripe Abo:</strong>{" "}
-          {subscription?.stripe_subscription_id ? "aktiv/verknüpft" : "noch nicht verknüpft"}
-        </p>
-
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "22px" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginTop: "22px",
+          }}
+        >
           <button type="button" className="btn btn-primary" onClick={onOpenPricing}>
             Tarif ändern
           </button>
 
           <button
-  type="button"
-  className="btn btn-secondary"
-  onClick={async () => {
-    const { data, error } =
-      await supabase.functions.invoke(
-        "create-stripe-portal-session"
-      );
+            type="button"
+            className="btn btn-secondary"
+            onClick={async () => {
+              const { data, error } = await supabase.functions.invoke(
+                "create-stripe-portal-session"
+              );
 
-    if (error) {
-      console.error(
-        "Stripe Portal Fehler:",
-        error
-      );
+              if (error) {
+                console.error("Stripe Portal Fehler:", error);
+                alert("Abo-Verwaltung konnte nicht geöffnet werden.");
+                return;
+              }
 
-      alert(
-        "Stripe Kundenportal konnte nicht geöffnet werden."
-      );
+              if (!data?.url) {
+                alert("Keine Portal-URL erhalten.");
+                return;
+              }
 
-      return;
-    }
-
-    if (!data?.url) {
-      alert(
-        "Keine Portal-URL erhalten."
-      );
-
-      return;
-    }
-
-    window.location.href = data.url;
-  }}
->
-  Zahlungsdaten & Rechnungen
-</button>
+              window.location.href = data.url;
+            }}
+          >
+            💳 Abo verwalten
+          </button>
         </div>
       </div>
     </section>
