@@ -26,6 +26,8 @@ import TrialBanner from "./components/TrialBanner";
 import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
 import PerformanceSimulator from "./components/PerformanceSimulator";
+import BusinessCockpit from "./components/BusinessCockpit";
+import BusinessImagesPage from "./pages/BusinessImagesPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -113,6 +115,11 @@ type OrderProgress = {
   status: string | null;
   note: string | null;
   created_at: string;
+
+  images?: {
+    id: number;
+    image_url: string;
+  }[];
 };
 
 type ProgressImage = {
@@ -173,6 +180,11 @@ type ProgressEntry = {
   status: string;
   note: string;
   created_at: string;
+
+  images?: {
+    id: number;
+    image_url: string;
+  }[];
 };
 
 type TimeEntry = {
@@ -392,7 +404,8 @@ type CurrentPage =
   | "performance-criteria"
   | "employee-ranking"
   | "employee-performance-entry"
-  | "employee-performance-profile";
+  | "employee-performance-profile"
+  | "business-images";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -516,6 +529,9 @@ export default function App() {
   const [criterionDescription, setCriterionDescription] = useState("");
   const [criterionPoints, setCriterionPoints] = useState("");
   const [criterionActive, setCriterionActive] = useState(true);
+  const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState<string | null>(null);
+
+  const [showBusinessImages, setShowBusinessImages] = useState(false);
 
   const loadSubscription = async (_tenantId: number) => {
   const { data, error } = await supabase.rpc("get_my_subscription");
@@ -809,6 +825,7 @@ return () => subscription.unsubscribe();
   loadInvoices(profile.tenant_id),
   loadEmployees(profile.tenant_id),
   loadProgressEntries(profile.tenant_id),
+  loadTimeEntries(profile.tenant_id),
 ]);
 
       setCurrentPage("dashboard");
@@ -1713,7 +1730,47 @@ if (existingOrder) {
     return;
   }
 
-  setOrderProgress((data as OrderProgress[]) || []);
+  const progressEntries = (data as OrderProgress[]) || [];
+
+  if (progressEntries.length === 0) {
+    setOrderProgress([]);
+    return;
+  }
+
+  const progressIds = progressEntries.map((entry) => entry.id);
+
+  const { data: imageData, error: imageError } = await supabase
+    .from("order_progress_images")
+    .select("id, progress_id, image_url")
+    .in("progress_id", progressIds);
+
+  if (imageError) {
+    console.error("Fehler beim Laden der Fortschrittsbilder:", imageError);
+    setOrderProgress(progressEntries);
+    return;
+  }
+
+  const imagesByProgressId = new Map<number, { id: number; image_url: string }[]>();
+
+  (imageData || []).forEach((image: any) => {
+    const list = imagesByProgressId.get(image.progress_id) || [];
+    list.push({
+      id: image.id,
+      image_url: image.image_url,
+    });
+    imagesByProgressId.set(image.progress_id, list);
+  });
+
+  const progressWithImages = progressEntries.map((entry) => ({
+    ...entry,
+    images: imagesByProgressId.get(entry.id) || [],
+  }));
+
+  console.log("PROGRESS ENTRIES:", progressEntries);
+  console.log("IMAGE DATA:", imageData);
+  console.log("PROGRESS WITH IMAGES:", progressWithImages);
+
+  setOrderProgress(progressWithImages);
 };
 
 const loadMessages = async (tenantId: number) => {
@@ -2401,20 +2458,74 @@ if (
   };
 
   const loadProgressEntries = async (tenantId: number) => {
-    const { data, error } = await supabase
-      .from("order_progress")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("order_progress")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Fehler beim Laden aller Fortschritte:", error);
-      setProgressEntries([]);
-      return;
-    }
+  if (error) {
+    console.error("Fehler beim Laden aller Fortschritte:", error);
+    setProgressEntries([]);
+    return;
+  }
 
-    setProgressEntries(data || []);
-  };
+  const progress = (data as ProgressEntry[]) || [];
+
+  if (progress.length === 0) {
+    setProgressEntries([]);
+    return;
+  }
+
+  const progressIds = progress.map((entry) => entry.id);
+
+  const { data: images, error: imagesError } = await supabase
+    .from("order_progress_images")
+    .select("id, progress_id, image_url")
+    .in("progress_id", progressIds);
+
+  if (imagesError) {
+    console.error("Fehler beim Laden der Fortschrittsbilder:", imagesError);
+    setProgressEntries(progress);
+    return;
+  }
+
+  const imagesByProgressId = new Map<
+    number,
+    { id: number; image_url: string }[]
+  >();
+
+  (images || []).forEach((image: any) => {
+    const list = imagesByProgressId.get(image.progress_id) || [];
+    list.push({
+      id: image.id,
+      image_url: image.image_url,
+    });
+    imagesByProgressId.set(image.progress_id, list);
+  });
+
+  const progressWithImages = progress.map((entry) => ({
+    ...entry,
+    images: imagesByProgressId.get(entry.id) || [],
+  }));
+
+  setProgressEntries(progressWithImages);
+};
+
+const loadTimeEntries = async (tenantId: number) => {
+  const { data, error } = await supabase
+    .from("time_entries")
+    .select("*")
+    .eq("tenant_id", tenantId);
+
+  if (error) {
+    console.error("Fehler beim Laden der Zeiteinträge:", error);
+    setTimeEntries([]);
+    return;
+  }
+
+  setTimeEntries(data || []);
+};
 
   const loadEmployeeTimeEntries = async (tenantId: number, userId: number) => {
     const { data, error } = await supabase
@@ -5342,6 +5453,133 @@ onReloadOrders={async () => {
 
                   </section>
 
+                  <BusinessCockpit
+  activeEmployees={
+  new Set(
+    timeEntries
+      .filter((entry) => {
+        const todayDateString = new Date().toISOString().slice(0, 10);
+
+        return (
+          entry.work_date === todayDateString &&
+          !entry.ended_at &&
+          (entry.status === "working" || entry.status === "break")
+        );
+      })
+      .map((entry) => entry.user_id)
+  ).size
+}
+  openOrders={
+  orders.filter(
+    (order) =>
+      order.status !== "fertig" &&
+      order.status !== "abgerechnet"
+  ).length
+}
+  openInvoices={0}
+  openReceivables={0}
+  newImages={
+  progressEntries
+    .filter((entry) => {
+      const order = orders.find(
+        (o) => String(o.id) === String(entry.order_id)
+      );
+
+      return (
+        order &&
+        order.status !== "fertig" &&
+        order.status !== "abgerechnet"
+      );
+    })
+    .reduce(
+      (total, entry) => total + (entry.images?.length ?? 0),
+      0
+    )
+}
+  pendingApprovalOrders={0}
+  
+  onOpenImages={() => setCurrentPage("business-images")}
+/>
+
+{showBusinessImages && (
+  <div className="card" style={{ marginTop: "16px", padding: "18px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+      <div>
+        <h3 style={{ margin: 0 }}>📸 Neue Bilder auf aktiven Baustellen</h3>
+        <p style={{ marginTop: "6px", color: "#64748b" }}>
+          Fortschrittsbilder aus offenen Aufträgen.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-secondary btn-small"
+        onClick={() => setShowBusinessImages(false)}
+      >
+        Schließen
+      </button>
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gap: "12px",
+        marginTop: "16px",
+      }}
+    >
+      {progressEntries
+        .filter((entry) => {
+          const order = orders.find(
+            (o) => String(o.id) === String(entry.order_id)
+          );
+
+          return (
+            order &&
+            order.status !== "fertig" &&
+            order.status !== "abgerechnet"
+          );
+        })
+        .flatMap((entry) =>
+          (entry.images ?? []).map((img) => ({
+            ...img,
+            entry,
+            order: orders.find((o) => String(o.id) === String(entry.order_id)),
+          }))
+        )
+        .map((img) => (
+          <button
+            key={img.id}
+            type="button"
+            onClick={() => setSelectedProgressImagePreview(img.image_url)}
+            style={{
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <img
+              src={img.image_url}
+              alt="Fortschrittsbild"
+              style={{
+                width: "100%",
+                height: "130px",
+                objectFit: "cover",
+                borderRadius: "10px",
+                border: "1px solid #ddd",
+              }}
+            />
+            <div style={{ marginTop: "6px", fontSize: "13px", color: "#475569" }}>
+              {img.order?.title || "Auftrag"}
+            </div>
+          </button>
+        ))}
+    </div>
+  </div>
+)}
+
                   <section className="action-bar">
   {canCreateCustomers && (
     <button
@@ -6907,6 +7145,43 @@ onReloadOrders={async () => {
                                                 {formatDateTime(entry.created_at)}
                                               </div>
                                               <div>{entry.note}</div>
+
+{(entry.images?.length ?? 0) > 0 && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+      gap: "10px",
+      marginTop: "10px",
+    }}
+  >
+    {(entry.images ?? []).map((img: any) => (
+      <button
+  key={img.id}
+  type="button"
+  onClick={() => setSelectedProgressImagePreview(img.image_url)}
+  style={{
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+  }}
+>
+  <img
+    src={img.image_url}
+    alt="Fortschrittsbild"
+    style={{
+      width: "100%",
+      height: "120px",
+      objectFit: "cover",
+      borderRadius: "8px",
+      border: "1px solid #ddd",
+    }}
+  />
+</button>
+    ))}
+  </div>
+)}
                                             </div>
                                           ))}
                                         </div>
@@ -10346,6 +10621,16 @@ const businessAdvisor = generateBusinessInsights();
   />
 )}
 
+{currentPage === "business-images" && (
+  <BusinessImagesPage
+    onBack={openDashboard}
+    progressEntries={progressEntries}
+    orders={orders}
+    employeeNameMap={employeeNameMap}
+    onPreviewImage={setSelectedProgressImagePreview}
+  />
+)}
+
 {currentPage === "messages" && (
   <section className="single-page-section">
     <div className="card form-page-card">
@@ -10531,6 +10816,56 @@ const businessAdvisor = generateBusinessInsights();
   userProfile={userProfile}
 />
 )}
+
+{selectedProgressImagePreview && (
+  <div
+    onClick={() => setSelectedProgressImagePreview(null)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.75)",
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "24px",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setSelectedProgressImagePreview(null)}
+      style={{
+        position: "absolute",
+        top: "20px",
+        right: "24px",
+        background: "#fff",
+        border: "none",
+        borderRadius: "999px",
+        width: "38px",
+        height: "38px",
+        fontSize: "24px",
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      ×
+    </button>
+
+    <img
+      src={selectedProgressImagePreview}
+      alt="Fortschrittsbild Vorschau"
+      onClick={(event) => event.stopPropagation()}
+      style={{
+        maxWidth: "95vw",
+        maxHeight: "90vh",
+        objectFit: "contain",
+        borderRadius: "12px",
+        background: "#fff",
+      }}
+    />
+  </div>
+)}
+
             </>
           )}
 
