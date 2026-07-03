@@ -22,6 +22,7 @@ onOpenImages,
       className="card"
       style={{
         marginTop: "24px",
+        marginBottom: "36px",
         padding: "22px",
       }}
     >
@@ -64,7 +65,7 @@ onOpenImages,
 
         <CockpitItem
           icon="💰"
-          label="Offene Forderungen"
+          label="Außenstände"
           value={`${openReceivables.toLocaleString("de-DE")} €`}
         />
 

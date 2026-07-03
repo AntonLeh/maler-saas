@@ -5476,8 +5476,27 @@ onReloadOrders={async () => {
       order.status !== "abgerechnet"
   ).length
 }
-  openInvoices={0}
-  openReceivables={0}
+  openInvoices={
+  invoices.filter(
+    (invoice) =>
+      invoice.status === "offen" ||
+      invoice.status === "open" ||
+      invoice.status === "unpaid"
+  ).length
+}
+  openReceivables={
+  invoices
+    .filter(
+      (invoice) =>
+        invoice.status === "offen" ||
+        invoice.status === "open" ||
+        invoice.status === "unpaid"
+    )
+    .reduce(
+      (sum, invoice) => sum + Number(invoice.total_amount || 0),
+      0
+    )
+}
   newImages={
   progressEntries
     .filter((entry) => {
@@ -5496,7 +5515,13 @@ onReloadOrders={async () => {
       0
     )
 }
-  pendingApprovalOrders={0}
+  pendingApprovalOrders={
+  orders.filter(
+    (order) =>
+      order.status === "zur_pruefung" ||
+      order.status === "zur Prüfung"
+  ).length
+}
   
   onOpenImages={() => setCurrentPage("business-images")}
 />
@@ -8067,7 +8092,7 @@ const businessAdvisor = generateBusinessInsights();
           </div>
 
           <div className="bi-hero-card">
-            <span>📂 Offene Forderungen</span>
+            <span>📂 Außenstände</span>
             <strong>{biOpenAmount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
           </div>
         </div>
