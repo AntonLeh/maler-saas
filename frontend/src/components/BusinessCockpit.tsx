@@ -6,6 +6,7 @@ type BusinessCockpitProps = {
   newImages: number;
   pendingApprovalOrders: number;
   onOpenImages?: () => void;
+  onOpenApprovals?: () => void;
 };
 
 export default function BusinessCockpit({
@@ -15,6 +16,7 @@ export default function BusinessCockpit({
   openReceivables,
   newImages,
   pendingApprovalOrders,
+   onOpenApprovals,
 onOpenImages,
 }: BusinessCockpitProps) {
   return (
@@ -70,10 +72,11 @@ onOpenImages,
         />
 
         <CockpitItem
-          icon="⚠️"
-          label="Warten auf Freigabe"
-          value={pendingApprovalOrders}
-          warning
+        icon="⚠️"
+        label="Warten auf Freigabe"
+        value={pendingApprovalOrders}
+        warning
+        onClick={onOpenApprovals}
         />
       </div>
 

@@ -27,7 +27,8 @@ import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
 import PerformanceSimulator from "./components/PerformanceSimulator";
 import BusinessCockpit from "./components/BusinessCockpit";
-import BusinessImagesPage from "./pages/BusinessImagesPage";
+import BusinessFeedPage from "./pages/BusinessFeedPage";
+import ApprovalCenterPage from "./pages/ApprovalCenterPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -121,6 +122,8 @@ type OrderProgress = {
     image_url: string;
   }[];
 };
+
+
 
 type ProgressImage = {
   id: number;
@@ -405,7 +408,8 @@ type CurrentPage =
   | "employee-ranking"
   | "employee-performance-entry"
   | "employee-performance-profile"
-  | "business-images";
+  | "business-images"
+  | "approval-center";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -2631,6 +2635,31 @@ loadEmployeeTimeEntries(userProfile.tenant_id, userProfile.id);
   }
 
   setOrderMessage("Auftrag wurde freigegeben und abgeschlossen.");
+  await loadOrders(userProfile.tenant_id);
+};
+
+const handleReturnOrderToWork = async (orderId: string | number) => {
+  if (!userProfile) return;
+
+  const confirmed = window.confirm(
+    "Möchtest du diesen Auftrag wirklich zur Nacharbeit zurückgeben?"
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "in_arbeit" })
+    .eq("id", orderId)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (error) {
+    console.error("Fehler beim Zurückgeben zur Nacharbeit:", error);
+    setOrderMessage(`Zurückgeben fehlgeschlagen: ${error.message}`);
+    return;
+  }
+
+  setOrderMessage("Auftrag wurde zur Nacharbeit zurückgegeben.");
   await loadOrders(userProfile.tenant_id);
 };
 
@@ -5524,6 +5553,7 @@ onReloadOrders={async () => {
 }
   
   onOpenImages={() => setCurrentPage("business-images")}
+  onOpenApprovals={() => setCurrentPage("approval-center")}
 />
 
 {showBusinessImages && (
@@ -10647,12 +10677,23 @@ const businessAdvisor = generateBusinessInsights();
 )}
 
 {currentPage === "business-images" && (
-  <BusinessImagesPage
+  <BusinessFeedPage
     onBack={openDashboard}
     progressEntries={progressEntries}
     orders={orders}
     employeeNameMap={employeeNameMap}
     onPreviewImage={setSelectedProgressImagePreview}
+  />
+)}
+
+{currentPage === "approval-center" && (
+  <ApprovalCenterPage
+    onBack={openDashboard}
+    orders={orders}
+    customers={customers}
+    progressEntries={progressEntries}
+    onApproveOrder={handleApproveOrder}
+    onReturnToWork={handleReturnOrderToWork}
   />
 )}
 
