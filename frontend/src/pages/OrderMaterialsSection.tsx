@@ -26,12 +26,7 @@ type Assignment = {
   handover_count?: number;
 };
 
-type Props = {
-  tenantId: number;
-  orderId: number;
-  employees: Employee[];
-  currentUserId: number;
-};
+type Props = { tenantId: number; orderId: number; employees: Employee[]; currentUserId: number; };
 
 export default function OrderMaterialsSection({
   tenantId,
@@ -159,22 +154,57 @@ export default function OrderMaterialsSection({
       return;
     }
 
-    const { error: stockError } = await supabase
-      .from("materials")
-      .update({
-        stock_quantity: Number(material.stock_quantity) - Number(quantity),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", material.id)
-      .eq("tenant_id", tenantId);
+    const { data: projectManagerAssignment, error: projectManagerError } =
+  await supabase
+    .from("order_assignments")
+    .select("user_id")
+    .eq("order_id", orderId)
+    .eq("assignment_role", "project_manager")
+    .maybeSingle();
 
-    if (stockError) {
-      console.error("Fehler beim Aktualisieren des Lagerbestands:", stockError);
-      setMessage(
-        "Material wurde zugewiesen, aber Lagerbestand konnte nicht aktualisiert werden."
-      );
-      return;
-    }
+if (projectManagerError) {
+  console.error(projectManagerError);
+  setMessage("Projektleiter konnte nicht ermittelt werden.");
+  return;
+}
+
+if (!projectManagerAssignment) {
+  setMessage("Diesem Auftrag ist kein Projektleiter zugeordnet.");
+  return;
+}
+
+    const { error: stockError } = await supabase.rpc(
+  "book_material_stock",
+  {
+    p_material_id: material.id,
+    p_movement_type: "assignment",
+
+    p_quantity: Number(quantity),
+
+    p_from_holder_type: "warehouse",
+    p_from_holder_id: null,
+
+    p_to_holder_type: "project_manager",
+    p_to_holder_id: projectManagerAssignment.user_id,
+
+    p_order_id: orderId,
+
+    p_reference_type: "order",
+    p_reference_id: orderId,
+
+    p_note: "Material aus Lager entnommen und Projektleiter übergeben."
+  }
+);
+
+if (stockError) {
+  console.error(stockError);
+
+  setMessage(
+    "Material wurde reserviert, konnte aber nicht aus dem Lager gebucht werden."
+  );
+
+  return;
+}
 
     setMaterialId("");
     setAssignedToUserId("");

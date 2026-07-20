@@ -284,6 +284,23 @@ type SiteVisitFormState = {
   custom_services: SiteVisitCustomServiceForm[];
 };
 
+type MaterialConsumptionLog = {
+  id: number;
+  tenant_id: number;
+  assignment_id: number | null;
+  order_id: number;
+  material_id: number;
+  user_id: number | null;
+  quantity: number;
+  action: string;
+  note: string | null;
+  created_at: string;
+  material_name_at_use: string | null;
+  unit_at_use: string | null;
+  material_supplier_at_use: string | null;
+  material_price_at_use: number | null;
+};
+
 type QuotePricingRule = {
   id: number;
   tenant_id: number;
@@ -475,7 +492,7 @@ export default function App() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   const [selectedCriterionId, setSelectedCriterionId] = useState<number | null>(null);
-
+  const [materialConsumptionLogs, setMaterialConsumptionLogs] = useState<MaterialConsumptionLog[]>([]);
   const [performanceNote, setPerformanceNote] = useState("");
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
@@ -526,14 +543,26 @@ export default function App() {
   const [rewardActive, setRewardActive] = useState(true);
 
   const [showCriterionForm, setShowCriterionForm] = useState(false);
-  const [editingCriterionId, setEditingCriterionId] = useState<number | null>(null);
+const [editingCriterionId, setEditingCriterionId] = useState<number | null>(null);
 
-  const [criterionCategory, setCriterionCategory] = useState("");
-  const [criterionName, setCriterionName] = useState("");
-  const [criterionDescription, setCriterionDescription] = useState("");
-  const [criterionPoints, setCriterionPoints] = useState("");
-  const [criterionActive, setCriterionActive] = useState(true);
-  const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState<string | null>(null);
+const [criterionCategory, setCriterionCategory] = useState("");
+const [criterionName, setCriterionName] = useState("");
+const [criterionDescription, setCriterionDescription] = useState("");
+
+const [criterionType, setCriterionType] = useState<"automatic" | "manual">("automatic");
+
+const [criterionPoints, setCriterionPoints] = useState("");
+const [criterionSuccessPoints, setCriterionSuccessPoints] = useState("");
+const [criterionFailurePoints, setCriterionFailurePoints] = useState("0");
+
+const [criterionEvaluationKey, setCriterionEvaluationKey] = useState("");
+const [criterionOperator, setCriterionOperator] = useState("=");
+const [criterionEvaluationValue, setCriterionEvaluationValue] = useState("");
+
+const [criterionAutoEnabled, setCriterionAutoEnabled] = useState(true);
+const [criterionActive, setCriterionActive] = useState(true);
+
+const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState<string | null>(null);
 
   const [showBusinessImages, setShowBusinessImages] = useState(false);
 
@@ -830,6 +859,7 @@ return () => subscription.unsubscribe();
   loadEmployees(profile.tenant_id),
   loadProgressEntries(profile.tenant_id),
   loadTimeEntries(profile.tenant_id),
+  loadMaterialConsumptionLogs(profile.tenant_id),
 ]);
 
       setCurrentPage("dashboard");
@@ -2158,43 +2188,51 @@ const loadEmployeeRanking = async () => {
 
     if (employeeError) throw employeeError;
 
-    const { data: performance, error: performanceError } = await supabase
-      .from("employee_performance")
-      .select("employee_id, points")
+    const { data: results, error: resultsError } = await supabase
+      .from("employee_performance_results")
+      .select(`
+        employee_id,
+        performance_score,
+        stars,
+        reward_name,
+        reward_value
+      `)
       .eq("tenant_id", userProfile.tenant_id);
 
-    if (performanceError) throw performanceError;
+    if (resultsError) throw resultsError;
 
     const ranking =
       employees?.map((employee: any) => {
-        const entries =
-          performance?.filter(
+
+        const employeeResults =
+          results?.filter(
             (entry: any) => entry.employee_id === employee.id
           ) || [];
 
-        const totalPoints = entries.reduce(
-          (sum: number, entry: any) => sum + Number(entry.points || 0),
+        const totalPoints = employeeResults.reduce(
+          (sum: number, entry: any) =>
+            sum + Number(entry.performance_score || 0),
           0
         );
 
-        let stars = 1;
-
-        if (totalPoints >= 95) stars = 5;
-        else if (totalPoints >= 85) stars = 4;
-        else if (totalPoints >= 70) stars = 3;
-        else if (totalPoints >= 50) stars = 2;
+        const highestStars = employeeResults.reduce(
+          (max: number, entry: any) =>
+            Math.max(max, Number(entry.stars || 1)),
+          1
+        );
 
         return {
           id: employee.id,
           name: `${employee.first_name} ${employee.last_name}`,
           points: totalPoints,
-          stars,
+          stars: highestStars,
         };
       }) || [];
 
     ranking.sort((a: any, b: any) => b.points - a.points);
 
     setEmployeeRanking(ranking);
+
   } catch (error) {
     console.error("Fehler beim Laden des Rankings:", error);
   } finally {
@@ -2272,6 +2310,25 @@ const editPerformanceCriterion = (criterion: any) => {
   setCriterionPoints(String(criterion.default_points ?? ""));
   setCriterionActive(Boolean(criterion.is_active));
   setShowCriterionForm(true);
+};
+
+const handleEvaluationKeyChange = (value: string) => {
+  setCriterionEvaluationKey(value);
+
+  switch (value) {
+    case "order_completed":
+    case "photo_documentation":
+    case "no_complaints":
+    case "safety_compliance":
+      setCriterionOperator("=");
+      setCriterionEvaluationValue("true");
+      break;
+
+    default:
+      setCriterionOperator("=");
+      setCriterionEvaluationValue("");
+      break;
+  }
 };
 
 const savePerformanceCriterion = async () => {
@@ -2514,6 +2571,21 @@ if (
   }));
 
   setProgressEntries(progressWithImages);
+};
+
+const loadMaterialConsumptionLogs = async (tenantId: number) => {
+  const { data, error } = await supabase
+    .from("material_consumption_logs")
+    .select("*")
+    .eq("tenant_id", tenantId);
+
+  if (error) {
+    console.error("Fehler beim Laden der Materialverbrauchsdaten:", error);
+    setMaterialConsumptionLogs([]);
+    return;
+  }
+
+  setMaterialConsumptionLogs((data as MaterialConsumptionLog[]) || []);
 };
 
 const loadTimeEntries = async (tenantId: number) => {
@@ -8393,14 +8465,124 @@ const businessAdvisor = generateBusinessInsights();
         />
       </div>
 
-      <div className="form-group">
-        <label>Punkte</label>
-        <input
-          type="number"
-          value={criterionPoints}
-          onChange={(e) => setCriterionPoints(e.target.value)}
-        />
-      </div>
+      <label>Regeltyp </label>
+
+      {criterionType === "automatic" && (
+  <div className="form-group">
+    <label>Messwert</label>
+
+    <select
+      value={criterionEvaluationKey}
+      onChange={(e) => handleEvaluationKeyChange(e.target.value)}
+    >
+      <option value="">Bitte auswählen...</option>
+
+      <option value="order_completed">
+        Auftrag fertiggestellt
+      </option>
+
+      <option value="photo_documentation">
+        Fotodokumentation vorhanden
+      </option>
+
+      <option value="customer_rating">
+        Kundenbewertung
+      </option>
+
+      <option value="material_usage">
+        Materialverbrauch
+      </option>
+
+      <option value="no_complaints">
+        Keine Reklamation
+      </option>
+
+      <option value="on_time_completion">
+        Termingerecht abgeschlossen
+      </option>
+
+      <option value="safety_compliance">
+        Sicherheitsvorschriften eingehalten
+      </option>
+
+      <option value="punctuality">
+        Pünktlichkeit
+      </option>
+    </select>
+  </div>
+)}
+
+{criterionType === "automatic" && (
+  <>
+    <div className="form-group">
+      <label>Operator</label>
+
+      <select
+        value={criterionOperator}
+        onChange={(e) => setCriterionOperator(e.target.value)}
+      >
+        <option value="=">=</option>
+        <option value="!=">≠</option>
+        <option value=">">&gt;</option>
+        <option value=">=">&gt;=</option>
+        <option value="<">&lt;</option>
+        <option value="<=">&lt;=</option>
+      </select>
+    </div>
+
+    <div className="form-group">
+      <label>Vergleichswert</label>
+
+      <input
+        type="text"
+        value={criterionEvaluationValue}
+        onChange={(e) => setCriterionEvaluationValue(e.target.value)}
+        placeholder="z. B. true, 5 oder 100"
+      />
+    </div>
+  </>
+)}
+
+<select
+  value={criterionType}
+  onChange={(e) =>
+    setCriterionType(e.target.value as "automatic" | "manual")
+  }
+>
+  <option value="automatic"> ⚙ Automatische Regel</option>
+  <option value="manual"> ✋ Manuelle Regel</option>
+</select>
+
+      {criterionType === "manual" ? (
+  <div className="form-group">
+    <label>Punkte</label>
+    <input
+      type="number"
+      value={criterionPoints}
+      onChange={(e) => setCriterionPoints(e.target.value)}
+    />
+  </div>
+) : (
+  <>
+    <div className="form-group">
+      <label>Punkte bei Erfolg</label>
+      <input
+        type="number"
+        value={criterionSuccessPoints}
+        onChange={(e) => setCriterionSuccessPoints(e.target.value)}
+      />
+    </div>
+
+    <div className="form-group">
+      <label>Punkte bei Nichterfolg</label>
+      <input
+        type="number"
+        value={criterionFailurePoints}
+        onChange={(e) => setCriterionFailurePoints(e.target.value)}
+      />
+    </div>
+  </>
+)}
 
       <div className="form-group">
         <label>Status</label>
@@ -10639,33 +10821,35 @@ const businessAdvisor = generateBusinessInsights();
 
 {currentPage === "pricing" && (
   <PricingPage
-    currentPlan={subscription?.plan}
-    onBack={openDashboard}
-    onUpgrade={async (plan) => {
-      const { data, error } = await supabase.functions.invoke(
-        "create-stripe-checkout",
-        {
-          body: {
-            plan,
-          },
-        }
-      );
-
-      if (error) {
-        console.error("Stripe Checkout Fehler:", error);
-        alert("Stripe Checkout konnte nicht gestartet werden.");
-        return;
+  currentPlan={subscription?.plan}
+  isTrial={subscription?.is_trial}
+  subscriptionStatus={subscription?.status}
+  onBack={openDashboard}
+  onUpgrade={async (plan) => {
+    const { data, error } = await supabase.functions.invoke(
+      "create-stripe-checkout",
+      {
+        body: {
+          plan,
+        },
       }
+    );
 
-      if (!data?.url) {
-        console.error("Keine Stripe Checkout URL erhalten:", data);
-        alert("Keine Stripe Checkout URL erhalten.");
-        return;
-      }
+    if (error) {
+      console.error("Stripe Checkout Fehler:", error);
+      alert("Stripe Checkout konnte nicht gestartet werden.");
+      return;
+    }
 
-      window.location.href = data.url;
-    }}
-  />
+    if (!data?.url) {
+      console.error("Keine Stripe Checkout URL erhalten:", data);
+      alert("Keine Stripe Checkout URL erhalten.");
+      return;
+    }
+
+    window.location.href = data.url;
+  }}
+/>
 )}
 
 {currentPage === "billing" && (
@@ -10694,6 +10878,11 @@ const businessAdvisor = generateBusinessInsights();
     progressEntries={progressEntries}
     onApproveOrder={handleApproveOrder}
     onReturnToWork={handleReturnOrderToWork}
+    onPreviewImage={setSelectedProgressImagePreview}
+    employees={employees}
+    orderAssignments={orderAssignments}
+    timeEntries={timeEntries}
+    materialConsumptionLogs={materialConsumptionLogs}
   />
 )}
 

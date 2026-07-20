@@ -2,6 +2,8 @@ import React from "react";
 
 type PricingPageProps = {
   currentPlan?: string;
+  isTrial?: boolean;
+  subscriptionStatus?: string;
   onBack: () => void;
   onUpgrade?: (plan: string) => Promise<void>;
 };
@@ -80,6 +82,8 @@ const plans = [
 
 export default function PricingPage({
   currentPlan,
+  isTrial = false,
+  subscriptionStatus,
   onBack,
   onUpgrade,
 }: PricingPageProps) {
@@ -99,7 +103,11 @@ export default function PricingPage({
     <div className="pricing-grid">
       {plans.map((plan) => {
         const isCurrent = currentPlan?.toLowerCase() === plan.id;
+        const isTrialing =
+  isTrial || subscriptionStatus === "trialing";
 
+const canActivateCurrentTrialPlan =
+  isCurrent && isTrialing;
         return (
           <div
             key={plan.id}
@@ -125,19 +133,30 @@ export default function PricingPage({
               ))}
             </div>
 
-            {isCurrent ? (
-              <button type="button" className="btn btn-secondary" disabled>
-                Aktueller Plan
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => onUpgrade?.(plan.id)}
-              >
-                Plan wählen
-              </button>
-            )}
+            {isCurrent && !canActivateCurrentTrialPlan ? (
+  <button type="button" className="btn btn-secondary" disabled>
+    Aktueller Plan
+  </button>
+) : (
+  <button
+  type="button"
+  className="btn btn-primary"
+  onClick={() => {
+    if (plan.id === "enterprise") {
+      window.location.href = "mailto:info@maler-saas.com?subject=Enterprise-Anfrage";
+      return;
+    }
+
+    onUpgrade?.(plan.id);
+  }}
+>
+  {plan.id === "enterprise"
+    ? "Vertrieb kontaktieren"
+    : canActivateCurrentTrialPlan
+      ? `${plan.name} jetzt aktivieren`
+      : "Plan wählen"}
+</button>
+)}
           </div>
         );
       })}

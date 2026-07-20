@@ -30,11 +30,14 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
   const [unit, setUnit] = useState("Stk");
   const [category, setCategory] = useState("");
   const [stockQuantity, setStockQuantity] = useState("0");
+  const [purchaseQuantity, setPurchaseQuantity] = useState("");
   const [minimumQuantity, setMinimumQuantity] = useState("0");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [supplier, setSupplier] = useState("");
   const [storageLocation, setStorageLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("Alle");
 
   const loadMaterials = async () => {
     setLoading(true);
@@ -61,49 +64,161 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
     loadMaterials();
   }, [tenantId]);
 
-  const handleCreateMaterial = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage("");
+  const handleAddMaterialStock = async () => {
+  setMessage("");
 
-    if (!name.trim()) {
-      setMessage("Bitte Materialname eingeben.");
-      return;
+  if (editingMaterialId === null) {
+    setMessage("Bitte zuerst ein Material auswählen oder speichern.");
+    return;
+  }
+
+  const quantity = Number(purchaseQuantity);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    setMessage("Bitte eine gültige Menge größer als 0 eingeben.");
+    return;
+  }
+
+  const { error: stockError } = await supabase.rpc(
+    "book_material_stock",
+    {
+      p_material_id: editingMaterialId,
+      p_movement_type: "purchase",
+
+      p_quantity: quantity,
+
+      p_from_holder_type: "supplier",
+      p_from_holder_id: null,
+
+      p_to_holder_type: "warehouse",
+      p_to_holder_id: null,
+
+      p_order_id: null,
+
+      p_reference_type: "purchase",
+      p_reference_id: editingMaterialId,
+
+      p_note: "Wareneingang über die Materialverwaltung."
     }
+  );
 
-    const { error } = await supabase.from("materials").insert({
+  if (stockError) {
+    console.error("Fehler beim Wareneingang:", stockError);
+
+    setMessage(
+      `Material konnte nicht hinzugefügt werden: ${stockError.message}`
+    );
+
+    return;
+  }
+
+  const { data: updatedMaterial, error: reloadError } = await supabase
+    .from("materials")
+    .select("stock_quantity")
+    .eq("id", editingMaterialId)
+    .single();
+
+  if (reloadError) {
+    console.error(
+      "Aktualisierter Lagerbestand konnte nicht geladen werden:",
+      reloadError
+    );
+  } else {
+    setStockQuantity(
+      String(Number(updatedMaterial?.stock_quantity ?? 0))
+    );
+  }
+
+  setPurchaseQuantity("");
+  setMessage(`✅ ${quantity} wurden dem Lagerbestand hinzugefügt.`);
+
+  await loadMaterials();
+};
+
+  const handleCreateMaterial = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setMessage("");
+
+  if (!name.trim()) {
+    setMessage("Bitte Materialname eingeben.");
+    return;
+  }
+
+  const materialData = {
+    name: name.trim(),
+    unit: unit.trim() || "Stk",
+    category: category.trim() || null,
+    stock_quantity: Number(stockQuantity || 0),
+    minimum_quantity: Number(minimumQuantity || 0),
+    purchase_price: purchasePrice ? Number(purchasePrice) : null,
+    supplier: supplier.trim() || null,
+    storage_location: storageLocation.trim() || null,
+    description: description.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  let error;
+
+  if (editingMaterialId !== null) {
+    const { stock_quantity, ...updateData } = materialData;
+
+const result = await supabase
+  .from("materials")
+  .update(updateData)
+  .eq("id", editingMaterialId)
+  .eq("tenant_id", tenantId);
+
+    error = result.error;
+  } else {
+    const result = await supabase.from("materials").insert({
+      ...materialData,
       tenant_id: tenantId,
-      name: name.trim(),
-      unit: unit.trim() || "Stk",
-      category: category.trim() || null,
-      stock_quantity: Number(stockQuantity || 0),
-      minimum_quantity: Number(minimumQuantity || 0),
-      purchase_price: purchasePrice ? Number(purchasePrice) : null,
-      supplier: supplier.trim() || null,
-      storage_location: storageLocation.trim() || null,
-      description: description.trim() || null,
       is_active: true,
-      updated_at: new Date().toISOString(),
     });
 
-    if (error) {
-      console.error("Fehler beim Speichern des Materials:", error);
-      setMessage("Material konnte nicht gespeichert werden.");
-      return;
-    }
+    error = result.error;
+  }
 
-    setName("");
-    setUnit("Stk");
-    setCategory("");
-    setStockQuantity("0");
-    setMinimumQuantity("0");
-    setPurchasePrice("");
-    setSupplier("");
-    setStorageLocation("");
-    setDescription("");
+  if (error) {
+    console.error("Fehler beim Speichern des Materials:", error);
 
-    setMessage("Material wurde gespeichert.");
-    await loadMaterials();
-  };
+    setMessage(
+      editingMaterialId !== null
+        ? "Material konnte nicht aktualisiert werden."
+        : "Material konnte nicht gespeichert werden."
+    );
+
+    return;
+  }
+
+  const wasEditing = editingMaterialId !== null;
+
+  setName("");
+  setUnit("Stk");
+  setCategory("");
+  setStockQuantity("0");
+  setMinimumQuantity("0");
+  setPurchasePrice("");
+  setSupplier("");
+  setStorageLocation("");
+  setDescription("");
+  setEditingMaterialId(null);
+
+  setMessage(
+    wasEditing
+      ? "Material wurde aktualisiert."
+      : "Material wurde gespeichert."
+  );
+
+  await loadMaterials();
+};
+
+const filteredMaterials =
+  categoryFilter === "Alle"
+    ? materials
+    : materials.filter(
+        (material) => material.category === categoryFilter
+      );
 
   return (
     <section className="single-page-section">
@@ -122,7 +237,11 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
         {message && <div className="message-box info">{message}</div>}
 
         <form onSubmit={handleCreateMaterial} className="form-stack">
-          <h3>Neues Material anlegen</h3>
+          <h3>
+  {editingMaterialId !== null
+    ? "Material bearbeiten"
+    : "Neues Material anlegen"}
+          </h3>
 
           <div className="form-grid">
             <div className="form-group">
@@ -156,14 +275,20 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
             </div>
 
             <div className="form-group">
-              <label>Lagerbestand</label>
-              <input
-                type="number"
-                step="0.01"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(e.target.value)}
-              />
-            </div>
+  <label>Aktueller Lagerbestand</label>
+  <input
+    type="number"
+    step="0.01"
+    value={stockQuantity}
+    disabled
+    style={{
+      backgroundColor: "#f3f4f6",
+      color: "#6b7280",
+      cursor: "not-allowed",
+    }}
+  />
+</div>
+
 
             <div className="form-group">
               <label>Mindestbestand</label>
@@ -216,12 +341,91 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
             />
           </div>
 
+<hr style={{ margin: "24px 0" }} />
+
+<h3>📦 Wareneingang</h3>
+
+<div className="form-group">
+  <label>Menge hinzufügen</label>
+  <input
+    type="number"
+    step="0.01"
+    min="0"
+    value={purchaseQuantity}
+    onChange={(e) => setPurchaseQuantity(e.target.value)}
+    placeholder="z. B. 10"
+  />
+</div>
+
+<button
+  type="button"
+  className="btn btn-secondary"
+  onClick={handleAddMaterialStock}
+>
+  📦 Material hinzufügen
+</button>
+
+<hr style={{ margin: "24px 0" }} />
+
           <button type="submit" className="btn btn-primary">
-            Material speichern
-          </button>
+  {editingMaterialId !== null
+    ? "💾 Änderungen speichern"
+    : "➕ Material speichern"}
+</button>
+
+{editingMaterialId !== null && (
+  <button
+    type="button"
+    className="btn btn-secondary"
+    style={{ marginLeft: 10 }}
+    onClick={() => {
+      setEditingMaterialId(null);
+
+      setName("");
+      setUnit("Stk");
+      setCategory("");
+      setStockQuantity("0");
+      setMinimumQuantity("0");
+      setPurchasePrice("");
+      setSupplier("");
+      setStorageLocation("");
+      setDescription("");
+
+      setMessage("");
+    }}
+  >
+    Abbrechen
+  </button>
+)}
+
         </form>
 
         <div className="table-wrapper" style={{ marginTop: 28 }}>
+
+<div className="form-row" style={{ marginBottom: 16 }}>
+  <div className="form-group">
+    <label>Kategorie</label>
+    <select
+      value={categoryFilter}
+      onChange={(e) => setCategoryFilter(e.target.value)}
+    >
+      <option value="Alle">Alle</option>
+
+      {[...new Set(
+        materials
+          .map((m) => m.category)
+          .filter((c): c is string => !!c)
+      )]
+        .sort()
+        .map((category) => (
+          <option key={category} value={category}>
+            {category}
+          </option>
+        ))}
+    </select>
+  </div>
+</div>
+
           <table className="orders-table orders-table-wide">
             <thead>
               <tr>
@@ -234,6 +438,7 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
                 <th>Lagerort</th>
                 <th>Preis</th>
                 <th>Status</th>
+                <th>Aktionen</th>
               </tr>
             </thead>
 
@@ -247,10 +452,12 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
                   <td colSpan={9}>Noch keine Materialien vorhanden.</td>
                 </tr>
               ) : (
-                materials.map((material) => {
+                filteredMaterials.map((material) => {
                   const lowStock =
                     Number(material.stock_quantity) <=
                     Number(material.minimum_quantity);
+
+
 
                   return (
                     <tr key={material.id}>
@@ -276,6 +483,34 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
                           : "-"}
                       </td>
                       <td>{material.is_active ? "Aktiv" : "Inaktiv"}</td>
+
+                      <td>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+  setEditingMaterialId(material.id);
+
+  setName(material.name);
+  setCategory(material.category || "");
+  setUnit(material.unit);
+  setStockQuantity(String(material.stock_quantity));
+  setMinimumQuantity(String(material.minimum_quantity));
+  setPurchasePrice(
+    material.purchase_price !== null
+      ? String(material.purchase_price)
+      : ""
+  );
+  setSupplier(material.supplier || "");
+  setStorageLocation(material.storage_location || "");
+  setDescription(material.description || "");
+
+  setMessage("");
+}}
+              >
+                         ✏️ Bearbeiten
+                       </button>
+                    </td>
                     </tr>
                   );
                 })

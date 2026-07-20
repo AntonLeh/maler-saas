@@ -6,10 +6,14 @@ type MaterialAssignment = {
   tenant_id: number;
   order_id: number;
   material_id: number;
+
   assigned_to_user_id: number;
+  assigned_by_user_id: number;
+
   quantity: number;
   unit: string;
   status: string;
+
   materials?: {
     name: string;
   } | null;
@@ -179,16 +183,35 @@ if (quantity > remaining) {
     setLoadingId(assignment.id);
     setMessage("");
 
+    const { data: materialData, error: materialError } = await supabase
+  .from("materials")
+  .select("name, unit, supplier, purchase_price")
+  .eq("id", assignment.material_id)
+  .eq("tenant_id", tenantId)
+  .single();
+
+if (materialError) {
+  console.error("Materialdaten konnten nicht geladen werden:", materialError);
+  setMessage("Materialdaten konnten nicht geladen werden.");
+  setLoadingId(null);
+  return;
+}
+
     const { error } = await supabase.from("material_consumption_logs").insert({
-      tenant_id: tenantId,
-      assignment_id: assignment.id,
-      order_id: Number(orderId),
-      material_id: assignment.material_id,
-      user_id: currentUserId,
-      quantity,
-      action,
-      note: note.trim() || null,
-    });
+  tenant_id: tenantId,
+  assignment_id: assignment.id,
+  order_id: Number(orderId),
+  material_id: assignment.material_id,
+  user_id: currentUserId,
+  quantity,
+  action,
+  note: note.trim() || null,
+
+  material_name_at_use: materialData.name,
+  unit_at_use: materialData.unit,
+  material_supplier_at_use: materialData.supplier,
+  material_price_at_use: materialData.purchase_price,
+});
 
     if (error) {
       console.error("Materialverbrauch konnte nicht gespeichert werden:", error);
@@ -200,32 +223,35 @@ if (quantity > remaining) {
 
 
     if (action === "returned") {
-  const { data: materialData, error: materialLoadError } = await supabase
-    .from("materials")
-    .select("stock_quantity")
-    .eq("id", assignment.material_id)
-    .eq("tenant_id", tenantId)
-    .single();
+  const { error: stockError } = await supabase.rpc(
+    "book_material_stock",
+    {
+      p_material_id: assignment.material_id,
+      p_movement_type: "return",
 
-  if (materialLoadError) {
-    console.error("Materialbestand konnte nicht geladen werden:", materialLoadError);
-    setMessage("Rückgabe wurde gespeichert, aber Lagerbestand konnte nicht geladen werden.");
-    setLoadingId(null);
-    return;
-  }
+      p_quantity: quantity,
 
-  const { error: stockUpdateError } = await supabase
-    .from("materials")
-    .update({
-      stock_quantity: Number(materialData.stock_quantity || 0) + quantity,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", assignment.material_id)
-    .eq("tenant_id", tenantId);
+      p_from_holder_type: "employee",
+      p_from_holder_id: currentUserId,
 
-  if (stockUpdateError) {
-    console.error("Lagerbestand konnte nicht erhöht werden:", stockUpdateError);
-    setMessage("Rückgabe wurde gespeichert, aber Lagerbestand konnte nicht erhöht werden.");
+      p_to_holder_type: "project_manager",
+      p_to_holder_id: assignment.assigned_by_user_id,
+
+      p_order_id: Number(orderId),
+
+      p_reference_type: "order",
+      p_reference_id: Number(orderId),
+
+      p_note: "Restmaterial vom Mitarbeiter an den Projektleiter zurückgegeben."
+    }
+  );
+
+  if (stockError) {
+    console.error("book_material_stock Fehler:");
+    console.error(JSON.stringify(stockError, null, 2));
+    setMessage(
+      "Rückgabe wurde gespeichert, aber die Verantwortungsübergabe konnte nicht gebucht werden."
+    );
     setLoadingId(null);
     return;
   }
