@@ -3480,3 +3480,83 @@ code {
   font-size: 13px;
   font-weight: 800;
 }
+/* =========================================================
+   Mitarbeiterauswahl
+========================================================= */
+
+.employee-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.employee-selection-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    padding: 14px 18px;
+
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    cursor: pointer;
+
+    transition: all .2s ease;
+}
+
+.employee-selection-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.employee-selection-item input[type="checkbox"]{
+    width:20px;
+    height:20px;
+    cursor:pointer;
+}
+
+.employee-name{
+    flex:1;
+    font-size:15px;
+    font-weight:600;
+    color:#1f2937;
+}
+
+.employee-role{
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+}
+
+/* Projektleiter */
+
+.employee-role.project-manager{
+    background:#dbeafe;
+    color:#2563eb;
+}
+
+/* Mitarbeiter */
+
+.employee-role.employee{
+    background:#dcfce7;
+    color:#16a34a;
+}
+
+/* Ausgewählte Mitarbeiter */
+
+.employee-selection-item.selected{
+    border-color:#22c55e;
+    background:#f0fdf4;
+}
+
+/* Wenn Projektleiter ausgewählt */
+
+.employee-selection-item.selected:has(.project-manager){
+    border-color:#3b82f6;
+    background:#eff6ff;
+}

@@ -575,7 +575,18 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
     return;
   }
 
-  setSubscription(data as Subscription);
+  const subscriptionData = data as Subscription;
+
+  setSubscription(subscriptionData);
+  console.log("Subscription:", subscriptionData);
+  if (subscriptionData.status === "blocked") {
+  console.log("➡️ Trial gesperrt – Wechsel zur PricingPage");
+  setCurrentPage("pricing");
+}
+
+  if (subscriptionData.status === "blocked") {
+    setCurrentPage("pricing");
+  }
 };
 
   const hasFeature = (featureKey: string) => {
@@ -5482,7 +5493,8 @@ onReloadOrders={async () => {
           {!loadingData && userProfile && (
             <>
 
-{subscription?.status === "payment_required" &&
+{(subscription?.status === "payment_required" ||
+  subscription?.status === "blocked") &&
   currentPage !== "pricing" && (
     <div
       style={{
@@ -10283,22 +10295,15 @@ const businessAdvisor = generateBusinessInsights();
 <div className="form-group">
   <label>Mitarbeiter zuweisen</label>
 
-  <div
-    style={{
-      display: "grid",
-      gap: "8px",
-      marginTop: "10px",
-    }}
-  >
+  <div className="employee-selection-list">
     {employees.map((employee) => (
       <label
         key={employee.id}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          cursor: "pointer",
-        }}
+        className={`employee-selection-item ${
+          selectedEmployeeIds.includes(String(employee.id))
+            ? "selected"
+            : ""
+        }`}
       >
         <input
           type="checkbox"
@@ -10319,7 +10324,21 @@ const businessAdvisor = generateBusinessInsights();
           }}
         />
 
-        {employee.first_name || ""} {employee.last_name || ""}
+        <span className="employee-name">
+          {employee.first_name || ""} {employee.last_name || ""}
+        </span>
+
+        <span
+          className={`employee-role ${
+            String(employee.id) === String(selectedProjectManagerId)
+              ? "project-manager"
+              : "employee"
+          }`}
+        >
+          {String(employee.id) === String(selectedProjectManagerId)
+            ? "Projektleiter"
+            : "Mitarbeiter"}
+        </span>
       </label>
     ))}
   </div>

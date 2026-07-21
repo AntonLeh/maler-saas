@@ -102,7 +102,9 @@ export default function PricingPage({
 
     <div className="pricing-grid">
       {plans.map((plan) => {
-        const isCurrent = currentPlan?.toLowerCase() === plan.id;
+        const isCurrent =
+  currentPlan?.toLowerCase() === plan.id &&
+  ["active", "trialing"].includes(subscriptionStatus ?? "");
         const isTrialing =
   isTrial || subscriptionStatus === "trialing";
 
