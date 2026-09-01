@@ -9,6 +9,7 @@ type CompanySettings = {
   currency: string;
   currency_symbol: string | null;
   tax_rate_default: number;
+  payment_term_days: number;
   default_hourly_rate: number | null;
   default_internal_hourly_rate: number | null;
   default_customer_hourly_rate: number | null;
@@ -58,7 +59,8 @@ type GlobalSettingsProps = {
 export default function GlobalSettings({
   tenantId,
   onBack,
-}: GlobalSettingsProps) {
+}: 
+GlobalSettingsProps) {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [currency, setCurrency] = useState("EUR");
   const [currencySymbol, setCurrencySymbol] = useState("€");
@@ -67,6 +69,7 @@ export default function GlobalSettings({
   const [defaultCustomerHourlyRate, setDefaultCustomerHourlyRate] = useState("0");
   const [defaultSpecialHourlyRate, setDefaultSpecialHourlyRate] = useState("0");
   const [taxRateDefault, setTaxRateDefault] = useState("19");
+  const [paymentTermDays, setPaymentTermDays] = useState("14");
   const [companyName, setCompanyName] = useState("");
   const [companyStreet, setCompanyStreet] = useState("");
   const [companyZip, setCompanyZip] = useState("");
@@ -156,6 +159,15 @@ setTaxRateDefault(
     ? String(loadedSettings.tax_rate_default)
     : "19"
 );
+
+setPaymentTermDays(
+  loadedSettings.payment_term_days !== null &&
+    loadedSettings.payment_term_days !== undefined
+    ? String(loadedSettings.payment_term_days)
+    : "14"
+);
+
+
 setCompanyName(loadedSettings.company_name || "");
 setCompanyStreet(loadedSettings.street || "");
 setCompanyZip(loadedSettings.zip || "");
@@ -341,6 +353,16 @@ const handleLogoUpload = async (file: File) => {
     const customerHourlyRateValue = Number(defaultCustomerHourlyRate);
     const specialHourlyRateValue = Number(defaultSpecialHourlyRate);
     const taxRateValue = Number(taxRateDefault);
+    const paymentTermDaysValue = Number(paymentTermDays);
+
+    if (
+  !Number.isInteger(paymentTermDaysValue) ||
+  paymentTermDaysValue < 1 ||
+  paymentTermDaysValue > 365
+) {
+  setErrorMessage("Das Zahlungsziel muss zwischen 1 und 365 Tagen liegen.");
+  return;
+}
 
     if (Number.isNaN(hourlyRateValue) || hourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen bisherigen Standard-Stundensatz eingeben.");
@@ -376,6 +398,7 @@ const handleLogoUpload = async (file: File) => {
       default_customer_hourly_rate: customerHourlyRateValue,
       default_special_hourly_rate: specialHourlyRateValue,
       tax_rate_default: taxRateValue,
+      payment_term_days: paymentTermDaysValue,
       company_name: companyName.trim(),
       street: companyStreet.trim(),
       zip: companyZip.trim(),
@@ -578,6 +601,19 @@ const handleLogoUpload = async (file: File) => {
     value={taxRateDefault}
     onChange={(e) => setTaxRateDefault(e.target.value)}
     placeholder="19"
+  />
+</div>
+<div className="form-group">
+  <label htmlFor="paymentTermDays">Zahlungsziel (Tage)</label>
+  <input
+    id="paymentTermDays"
+    type="number"
+    step="1"
+    min="1"
+    max="365"
+    value={paymentTermDays}
+    onChange={(e) => setPaymentTermDays(e.target.value)}
+    placeholder="14"
   />
 </div>
           </div>

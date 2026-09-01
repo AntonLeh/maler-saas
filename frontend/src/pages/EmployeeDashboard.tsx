@@ -285,9 +285,21 @@ setFinishNoteErrorOrderId(null);
         file_path: filePath,
       });
 
-    if (imageInsertError) {
+        if (imageInsertError) {
       throw imageInsertError;
     }
+  }
+
+  const { error: businessEventError } = await supabase.rpc(
+    "create_progress_images_business_event",
+    {
+      p_order_id: Number(orderId),
+      p_image_count: imageFiles.length,
+    }
+  );
+
+  if (businessEventError) {
+    throw businessEventError;
   }
 }
 

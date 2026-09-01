@@ -8,7 +8,7 @@ type Subscription = {
   currency?: string;
   is_trial?: boolean;
   trial_ends_at?: string | null;
-  current_period_end?: string | null;
+  expires_at?: string | null;
   cancel_at_period_end?: boolean;
 };
 
@@ -20,7 +20,16 @@ type BillingPageProps = {
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("de-DE");
+
+  return (
+    new Date(value).toLocaleString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }) + " Uhr"
+  );
 };
 
 const getStatusLabel = (subscription: Subscription | null) => {
@@ -70,7 +79,7 @@ const getRelevantDate = (subscription: Subscription | null) => {
     return subscription.trial_ends_at;
   }
 
-  return subscription.current_period_end || subscription.trial_ends_at;
+  return subscription.expires_at || subscription.trial_ends_at;
 };
 
 export default function BillingPage({

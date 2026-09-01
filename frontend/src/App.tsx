@@ -211,6 +211,7 @@ type CompanySettings = {
   currency: string;
   currency_symbol: string | null;
   tax_rate_default: number;
+  payment_term_days: number;
   default_hourly_rate: number | null;
   default_internal_hourly_rate: number | null;
   default_customer_hourly_rate: number | null;
@@ -439,6 +440,21 @@ export default function App() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  type BusinessEvent = {
+  id: number;
+  tenant_id: number;
+  event_type: string;
+  message: string;
+  icon: string | null;
+  severity: "info" | "success" | "warning";
+  order_id: number | null;
+  created_at: string;
+};
+
+  const [businessEvents, setBusinessEvents] = useState<BusinessEvent[]>([]);
+  const [selectedBusinessDate, setSelectedBusinessDate] = useState(
+  new Date().toLocaleDateString("sv-SE")
+);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [customerAnalysis, setCustomerAnalysis] = useState<any[]>([]);
   const [orderAnalysis, setOrderAnalysis] = useState<any[]>([]);
@@ -509,6 +525,39 @@ export default function App() {
   const [selectedPerformanceEmployee, setSelectedPerformanceEmployee] = useState<any | null>(null);
   const [employeePerformanceDetails, setEmployeePerformanceDetails] = useState<any[]>([]);
   const [loadingEmployeePerformanceDetails, setLoadingEmployeePerformanceDetails] = useState(false);
+
+  const loadBusinessEvents = async (
+  _tenantId: number,
+  selectedDate: string
+) => {
+  const browserTimezone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  console.log("Business Events laden:", {
+    selectedDate,
+    browserTimezone,
+  });
+
+  const { data, error } = await supabase.rpc(
+    "get_my_business_events",
+    {
+      p_date: selectedDate,
+      p_timezone: browserTimezone,
+      p_limit: 50,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Fehler beim Laden der Business Events:",
+      error
+    );
+    setBusinessEvents([]);
+    return;
+  }
+
+  setBusinessEvents((data as BusinessEvent[]) || []);
+};
 
   const [loginEmail, setLoginEmail] = useState("admin@test-malerfirma.de");
   const [loginPassword, setLoginPassword] = useState("");
@@ -2632,15 +2681,15 @@ const loadTimeEntries = async (tenantId: number) => {
   };
 
   useEffect(() => {
-    if (!userProfile) return;
+  if (!userProfile) return;
 
-    if (userProfile.tenant_id) {
-      loadCompanySettings(userProfile.tenant_id);
-      loadPricingRules(userProfile.tenant_id);
-      loadQuotes(userProfile.tenant_id);
-      loadMessages(userProfile.tenant_id);
-      loadMessageRecipients();
-}
+  if (userProfile.tenant_id) {
+    loadCompanySettings(userProfile.tenant_id);
+    loadPricingRules(userProfile.tenant_id);
+    loadQuotes(userProfile.tenant_id);
+    loadMessages(userProfile.tenant_id);
+    loadMessageRecipients();
+  }
 
     const canUseEmployeeDashboard =
   userProfile.role_id === EMPLOYEE_ROLE_ID || userProfile.role_id === 3;
@@ -2653,6 +2702,14 @@ loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
 loadEmployeeTimeEntries(userProfile.tenant_id, userProfile.id);
 }, [userProfile]);
 
+useEffect(() => {
+  if (!userProfile?.tenant_id) return;
+
+  loadBusinessEvents(
+    userProfile.tenant_id,
+    selectedBusinessDate
+  );
+}, [userProfile?.tenant_id, selectedBusinessDate]);
 
   const handleEmployeeUpdateOrderStatus = async (
     orderId: string,
@@ -5567,6 +5624,10 @@ onReloadOrders={async () => {
                   </section>
 
                   <BusinessCockpit
+                  businessEvents={businessEvents}
+                  selectedDate={selectedBusinessDate}
+                  onDateChange={setSelectedBusinessDate}
+                  
   activeEmployees={
   new Set(
     timeEntries
