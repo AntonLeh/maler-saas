@@ -45,7 +45,7 @@ serve(async (req) => {
     );
 
     // =====================================================
-    // CHECKOUT SUCCESS
+    // CHECKOUT ERFOLGREICH
     // =====================================================
 
     if (event.type === "checkout.session.completed") {
@@ -63,10 +63,6 @@ serve(async (req) => {
         );
       }
 
-      // =====================================================
-      // PLAN AKTIVIEREN
-      // =====================================================
-
       const { error: activateError } =
         await supabase.rpc(
           "activate_subscription_plan",
@@ -80,60 +76,169 @@ serve(async (req) => {
         throw activateError;
       }
 
-      // =====================================================
-      // STRIPE DATEN SPEICHERN
-      // =====================================================
+      if (!session.subscription) {
+        throw new Error(
+          "Stripe Subscription-ID fehlt im Checkout."
+        );
+      }
 
-      await supabase
-        .from("subscriptions")
-        .update({
-          stripe_customer_id:
-            session.customer?.toString() || null,
+      const stripeSubscription =
+        await stripe.subscriptions.retrieve(
+          session.subscription.toString()
+        );
 
-          stripe_subscription_id:
-            session.subscription?.toString() || null,
+      const currentPeriodEnd =
+        stripeSubscription.items.data[0]
+          ?.current_period_end;
 
-          stripe_price_id:
-            session.line_items?.[0]?.price?.id || null,
-        })
-        .eq("tenant_id", tenantId);
+      if (!currentPeriodEnd) {
+        throw new Error(
+          "current_period_end fehlt in der Stripe Subscription."
+        );
+      }
 
-      // =====================================================
-      // BILLING EVENT
-      // =====================================================
+      console.log(
+        "=== STRIPE SUBSCRIPTION ==="
+      );
+      console.log(
+        JSON.stringify(stripeSubscription, null, 2)
+      );
+      console.log(
+        "==========================="
+      );
 
-      await supabase
-        .from("billing_events")
-        .insert({
-          tenant_id: tenantId,
-          event_type: "payment_received",
-          new_plan: plan,
-          amount:
-            session.amount_total
-              ? session.amount_total / 100
-              : null,
-          currency:
-            session.currency?.toUpperCase() || "CHF",
+      const { error: subscriptionUpdateError } =
+        await supabase
+          .from("subscriptions")
+          .update({
+            stripe_customer_id:
+              session.customer?.toString() || null,
 
-          description:
-            "Stripe Zahlung erfolgreich.",
+            stripe_subscription_id:
+              session.subscription.toString(),
 
-          metadata: session,
-        });
+            stripe_price_id:
+              stripeSubscription.items.data[0]
+                ?.price.id || null,
+
+            expires_at: new Date(
+              currentPeriodEnd * 1000
+            ).toISOString(),
+          })
+          .eq("tenant_id", tenantId);
+
+      if (subscriptionUpdateError) {
+        throw subscriptionUpdateError;
+      }
+
+      const { error: billingEventError } =
+        await supabase
+          .from("billing_events")
+          .insert({
+            tenant_id: tenantId,
+            event_type: "payment_received",
+            new_plan: plan,
+
+            amount:
+              session.amount_total
+                ? session.amount_total / 100
+                : null,
+
+            currency:
+              session.currency?.toUpperCase() ||
+              "CHF",
+
+            description:
+              "Stripe Zahlung erfolgreich.",
+
+            metadata: session,
+          });
+
+      if (billingEventError) {
+        throw billingEventError;
+      }
+    }
+
+    // =====================================================
+    // SUBSCRIPTION AKTUALISIERT
+    // z. B. monatliche Verlängerung
+    // =====================================================
+
+    if (
+      event.type ===
+      "customer.subscription.updated"
+    ) {
+      const subscription =
+        event.data.object as Stripe.Subscription;
+
+      if (!subscription.id) {
+        throw new Error(
+          "Subscription-ID fehlt."
+        );
+      }
+
+      const currentPeriodEnd =
+        subscription.items.data[0]
+          ?.current_period_end;
+
+      if (!currentPeriodEnd) {
+        throw new Error(
+          "current_period_end fehlt in der aktualisierten Subscription."
+        );
+      }
+
+      console.log(
+        "=== SUBSCRIPTION UPDATED ==="
+      );
+
+      console.log(
+        JSON.stringify(subscription, null, 2)
+      );
+
+      const { error: subscriptionUpdateError } =
+        await supabase
+          .from("subscriptions")
+          .update({
+            stripe_price_id:
+              subscription.items.data[0]
+                ?.price.id ?? null,
+
+            status: subscription.status,
+
+            expires_at: new Date(
+              currentPeriodEnd * 1000
+            ).toISOString(),
+          })
+          .eq(
+            "stripe_subscription_id",
+            subscription.id
+          );
+
+      if (subscriptionUpdateError) {
+        throw subscriptionUpdateError;
+      }
     }
 
     return new Response(
-      JSON.stringify({ received: true }),
+      JSON.stringify({
+        received: true,
+      }),
       {
         status: 200,
       }
     );
   } catch (error) {
-    console.error("Webhook Fehler:", error);
+    console.error(
+      "Webhook Fehler:",
+      error
+    );
 
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
       }),
       {
         status: 400,

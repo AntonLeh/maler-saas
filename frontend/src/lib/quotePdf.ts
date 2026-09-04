@@ -365,11 +365,69 @@ y += introLines.length * 4.2 + 3;
     align: "right",
   });
 
+if (quoteDetail?.deposit_enabled) {
+  const depositType = quoteDetail?.deposit_type;
+  const depositValue = Number(quoteDetail?.deposit_value ?? 0);
+
+  const depositAmount =
+    depositType === "percent"
+      ? totalAmount * (depositValue / 100)
+      : depositValue;
+
+  y += 16;
+
+  if (y > 240) {
+    doc.addPage();
+    y = 30;
+  }
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Zahlungsvereinbarung", marginLeft, y);
+
+  y += 7;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  const depositText =
+    depositType === "percent"
+      ? `Abschlagszahlung: ${depositValue.toFixed(2)} % der Auftragssumme`
+      : `Abschlagszahlung: ${formatMoney(
+          depositAmount,
+          currencySymbol
+        )}`;
+
+  doc.text(depositText, marginLeft, y);
+
+  y += 6;
+
+  doc.text(
+    `Voraussichtlicher Abschlag: ${formatMoney(
+      depositAmount,
+      currencySymbol
+    )}`,
+    marginLeft,
+    y
+  );
+
+  y += 6;
+
+  const depositNote =
+    "Der Abschlag wird vor Beginn der Arbeiten in Rechnung gestellt.";
+
+  const depositNoteLines = doc.splitTextToSize(depositNote, 180);
+
+  doc.text(depositNoteLines, marginLeft, y);
+
+  y += depositNoteLines.length * 5;
+}
+
   // Hinweis unten
   // Texte unter dem Angebot
 y += 18;
 
-if (y > 245) {
+if (y > 270) {
   doc.addPage();
   y = 30;
 }

@@ -22,6 +22,9 @@ type Invoice = {
   id: number;
   invoice_number: string;
   invoice_date: string;
+  invoice_type?: "final" | "partial";
+  partial_type?: "percent" | "fixed" | null;
+  partial_value?: number | null;
   due_date: string;
   customer_id: number;
   order_id: number;
@@ -173,14 +176,40 @@ if (quoteId) {
   }
 }
 
+let partialInvoices: any[] = [];
+
+if (invoice.invoice_type === "final") {
+  const { data: partialInvoiceData, error: partialInvoiceError } =
+    await supabase
+      .from("invoices")
+      .select(
+        "id, invoice_number, invoice_date, subtotal, tax_amount, total_amount, status, paid_at, partial_type, partial_value"
+      )
+      .eq("tenant_id", userProfile.tenant_id)
+      .eq("order_id", invoice.order_id)
+      .eq("invoice_type", "partial")
+      .neq("status", "cancelled")
+      .order("invoice_date", { ascending: true });
+
+  if (partialInvoiceError) {
+    console.error(
+      "Fehler beim Laden der Abschlagsrechnungen:",
+      partialInvoiceError
+    );
+  } else {
+    partialInvoices = partialInvoiceData || [];
+  }
+}
+
     generateInvoicePdf({
-      invoice,
-      invoiceItems: quoteItems,
-      order,
-      customer,
-      companySettings,
-      currencySymbol: companySettings?.currency_symbol || "€",
-    });
+  invoice,
+  invoiceItems: quoteItems,
+  order,
+  customer,
+  companySettings,
+  partialInvoices,
+  currencySymbol: companySettings?.currency_symbol || "€",
+});
   };
 
 const handleCreateReminder = async (invoice: Invoice) => {
@@ -380,11 +409,26 @@ const getInvoiceReminders = (invoiceId: number) => {
                 {invoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
-                      <strong>{invoice.invoice_number}</strong>
-                      <div className="table-subtitle">
-                        Auftrag #{invoice.order_id}
-                      </div>
-                    </td>
+  <strong>{invoice.invoice_number}</strong>
+
+  {invoice.invoice_type === "partial" && (
+  <div>
+    <span className="invoice-partial-badge">
+      Abschlagsrechnung
+      {invoice.partial_type === "percent" &&
+      invoice.partial_value != null
+        ? ` · ${Number(invoice.partial_value).toLocaleString("de-DE", {
+            maximumFractionDigits: 2,
+          })} %`
+        : ""}
+    </span>
+  </div>
+)}
+
+  <div className="table-subtitle">
+    Auftrag #{invoice.order_id}
+  </div>
+</td>
 
                     <td>{formatDate(invoice.invoice_date)}</td>
 
@@ -418,11 +462,19 @@ const getInvoiceReminders = (invoiceId: number) => {
                     </td>
 
                     <td>
-  <span className="status-badge status-geplant">
+  <span
+    className={`status-badge ${
+      invoice.status === "paid"
+        ? "status-paid"
+        : "status-geplant"
+    }`}
+  >
     {invoice.status === "open"
       ? "Offen"
       : invoice.status === "paid"
       ? "Bezahlt"
+      : invoice.status === "credited"
+      ? "In Schlussrechnung übernommen"
       : invoice.status}
   </span>
 

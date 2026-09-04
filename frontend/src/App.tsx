@@ -212,6 +212,7 @@ type CompanySettings = {
   currency_symbol: string | null;
   tax_rate_default: number;
   payment_term_days: number;
+  partial_payment_term_days: number;
   default_hourly_rate: number | null;
   default_internal_hourly_rate: number | null;
   default_customer_hourly_rate: number | null;
@@ -342,6 +343,9 @@ type QuoteDetail = {
   discount_value?: number | null;
   discount_amount?: number | null;
   subtotal_after_discount?: number | null;
+  deposit_enabled: boolean;
+  deposit_type: "percent" | "fixed" | null;
+  deposit_value: number | null;
   notes: string | null;
   customer_id: number;
   address_street: string | null;
@@ -533,11 +537,6 @@ export default function App() {
   const browserTimezone =
     Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  console.log("Business Events laden:", {
-    selectedDate,
-    browserTimezone,
-  });
-
   const { data, error } = await supabase.rpc(
     "get_my_business_events",
     {
@@ -578,6 +577,11 @@ export default function App() {
   const [pricingRulesMessage, setPricingRulesMessage] = useState("");
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+
+  const [depositEnabled, setDepositEnabled] = useState(false);
+  const [depositType, setDepositType] = useState<"percent" | "fixed">("percent");
+  const [depositValue, setDepositValue] = useState("");
+
   const [showLoginPage, setShowLoginPage] = useState(false);
   const [performanceRewards, setPerformanceRewards] = useState<any[]>([]);
   const [loadingPerformanceRewards, setLoadingPerformanceRewards] = useState(false);
@@ -1415,6 +1419,9 @@ const loadOrderAnalysis = async () => {
         discount_value,
         discount_amount,
         subtotal_after_discount,
+        deposit_enabled,
+        deposit_type,
+        deposit_value,
         tax_rate,
         tax_amount,
         total_amount,
@@ -1464,7 +1471,20 @@ const loadOrderAnalysis = async () => {
       }
 
       setQuoteDetail(quoteData as QuoteDetail);
-      setQuoteItems((itemsData as QuoteItemDetail[]) || []);
+
+setDepositEnabled(Boolean(quoteData.deposit_enabled));
+setDepositType(
+  quoteData.deposit_type === "fixed" ? "fixed" : "percent"
+);
+setDepositValue(
+  quoteData.deposit_value !== null &&
+    quoteData.deposit_value !== undefined
+    ? String(quoteData.deposit_value)
+    : ""
+);
+
+setQuoteItems((itemsData as QuoteItemDetail[]) || []);
+
     } catch (error: any) {
       console.error("Fehler beim Laden der Angebotsdetails:", error);
       setQuoteDetailMessage(
@@ -1495,6 +1515,71 @@ const handleSaveValidUntil = async () => {
 
   await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
   setEditingValidUntil(false);
+};
+
+const handleSaveDeposit = async () => {
+  if (!quoteDetail || !userProfile?.tenant_id) return;
+
+  if (subscription?.plan !== "business") {
+    alert(
+      "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar."
+    );
+    return;
+  }
+
+  const value = Number(depositValue);
+
+  if (depositEnabled) {
+    if (!Number.isFinite(value) || value <= 0) {
+      alert("Bitte geben Sie einen gültigen Abschlagswert ein.");
+      return;
+    }
+
+    if (depositType === "percent" && value > 100) {
+      alert("Der Abschlag darf nicht mehr als 100 % betragen.");
+      return;
+    }
+
+    if (
+      depositType === "fixed" &&
+      value > Number(quoteDetail.total_amount || 0)
+    ) {
+      alert(
+        "Der Abschlag darf die aktuelle Angebotssumme nicht überschreiten."
+      );
+      return;
+    }
+  }
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({
+      deposit_enabled: depositEnabled,
+      deposit_type: depositEnabled ? depositType : null,
+      deposit_value: depositEnabled ? value : null,
+    })
+    .eq("id", quoteDetail.id)
+    .eq("tenant_id", userProfile.tenant_id);
+
+  if (error) {
+    console.error(
+      "Fehler beim Speichern der Abschlagsvereinbarung:",
+      error
+    );
+
+    alert(
+      error.message ||
+        "Die Abschlagsvereinbarung konnte nicht gespeichert werden."
+    );
+    return;
+  }
+
+  await loadQuoteDetail(
+    quoteDetail.id,
+    userProfile.tenant_id
+  );
+
+  alert("Die Zahlungsvereinbarung wurde gespeichert.");
 };
 
   const handleAddAdditionalPositionToQuote = async () => {
@@ -2889,6 +2974,68 @@ const handleCreateInvoice = async (orderId: string | number) => {
 
   setOrderMessage(`Rechnung wurde erstellt. Rechnungs-ID: ${data}`);
   await loadOrders(userProfile.tenant_id);
+};
+
+const handleCreatePartialInvoice = async (
+  orderId: string | number
+) => {
+  if (!userProfile) return;
+
+  if (subscription?.plan !== "business") {
+  alert(
+    "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen."
+  );
+  return;
+}
+
+  const confirmCreate = window.confirm(
+    "Möchtest du für diesen Auftrag jetzt die vereinbarte Abschlagsrechnung erstellen?"
+  );
+
+  if (!confirmCreate) return;
+
+  const { data, error } = await supabase.rpc(
+    "create_partial_invoice_from_order",
+    {
+      p_order_id: Number(orderId),
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Fehler beim Erstellen der Abschlagsrechnung:",
+      error
+    );
+
+    setOrderMessage(
+      `Abschlagsrechnung konnte nicht erstellt werden: ${error.message}`
+    );
+
+    return;
+  }
+
+  const { data: createdInvoice, error: invoiceLoadError } =
+  await supabase
+    .from("invoices")
+    .select("invoice_number")
+    .eq("id", Number(data))
+    .eq("tenant_id", userProfile.tenant_id)
+    .single();
+
+if (invoiceLoadError) {
+  console.error(
+    "Rechnungsnummer konnte nicht geladen werden:",
+    invoiceLoadError
+  );
+
+  setOrderMessage("Abschlagsrechnung wurde erstellt.");
+} else {
+  setOrderMessage(
+    `Abschlagsrechnung ${createdInvoice.invoice_number} wurde erstellt.`
+  );
+}
+
+await loadOrders(userProfile.tenant_id);
 };
 
 const handleDeleteProgressImage = async (
@@ -7439,7 +7586,18 @@ onReloadOrders={async () => {
       </button>
     )}
 
- {order.status === "fertig" && isAdmin && (
+ {isAdmin &&
+  order.status !== "abgerechnet" && (
+    <button
+      type="button"
+      className="btn btn-secondary btn-small"
+      onClick={() => handleCreatePartialInvoice(order.id)}
+    >
+      💶 Abschlagsrechnung erstellen
+    </button>
+  )}
+
+{order.status === "fertig" && isAdmin && (
   <>
     <button
       type="button"
@@ -7868,6 +8026,120 @@ onReloadOrders={async () => {
       </button>
     </div>
   </div>
+</div>
+
+<div className="settings-section">
+  <h3>Zahlungsvereinbarung</h3>
+
+  <div className="form-group">
+    <label>
+      <input
+        type="checkbox"
+        checked={depositEnabled}
+        onChange={(e) => {
+          if (subscription?.plan !== "business") {
+            alert(
+              "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen."
+            );
+            return;
+          }
+
+          setDepositEnabled(e.target.checked);
+        }}
+      />
+
+      {" "}Abschlagszahlung vereinbaren
+    </label>
+  </div>
+
+  {depositEnabled && subscription?.plan === "business" && (
+    <>
+      <div className="form-row two-cols">
+        <div className="form-group">
+          <label>Art der Abschlagszahlung</label>
+
+          <select
+            value={depositType}
+            onChange={(e) =>
+              setDepositType(
+                e.target.value as "percent" | "fixed"
+              )
+            }
+          >
+            <option value="percent">Prozentual</option>
+            <option value="fixed">Festbetrag</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>
+            {depositType === "percent"
+              ? "Abschlag in %"
+              : `Abschlag in ${currencySymbol}`}
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            max={depositType === "percent" ? "100" : undefined}
+            step="0.01"
+            value={depositValue}
+            onChange={(e) => setDepositValue(e.target.value)}
+            placeholder={
+              depositType === "percent"
+                ? "z. B. 30"
+                : "z. B. 5000"
+            }
+          />
+        </div>
+      </div>
+
+      {depositValue &&
+        Number(depositValue) > 0 && (
+          <div className="quote-summary-mini">
+            <span>Voraussichtlicher Abschlag</span>
+
+            <strong>
+              {(
+                depositType === "percent"
+                  ? Number(quoteDetail.total_amount || 0) *
+                    (Number(depositValue) / 100)
+                  : Number(depositValue)
+              ).toFixed(2)}{" "}
+              {currencySymbol}
+            </strong>
+          </div>
+        )}
+
+      {depositType === "percent" &&
+        Number(depositValue) > 100 && (
+          <div className="form-error">
+            Der Abschlag darf nicht mehr als 100 % betragen.
+          </div>
+        )}
+
+      {depositType === "fixed" &&
+  Number(depositValue) >
+    Number(quoteDetail.total_amount || 0) && (
+    <div className="form-error">
+      Der Abschlag darf die aktuelle Angebotssumme von{" "}
+      {Number(quoteDetail.total_amount || 0).toFixed(2)}{" "}
+      {currencySymbol} nicht überschreiten.
+    </div>
+  )}
+
+<div className="form-group" style={{ marginTop: "12px" }}>
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={handleSaveDeposit}
+  >
+    Zahlungsvereinbarung speichern
+  </button>
+</div>
+        
+    </>
+  )}
 </div>
 
                           <div className="quote-summary-card">

@@ -10,6 +10,7 @@ type CompanySettings = {
   currency_symbol: string | null;
   tax_rate_default: number;
   payment_term_days: number;
+  partial_payment_term_days: number;
   default_hourly_rate: number | null;
   default_internal_hourly_rate: number | null;
   default_customer_hourly_rate: number | null;
@@ -70,6 +71,7 @@ GlobalSettingsProps) {
   const [defaultSpecialHourlyRate, setDefaultSpecialHourlyRate] = useState("0");
   const [taxRateDefault, setTaxRateDefault] = useState("19");
   const [paymentTermDays, setPaymentTermDays] = useState("14");
+  const [partialPaymentTermDays, setPartialPaymentTermDays] = useState("14");
   const [companyName, setCompanyName] = useState("");
   const [companyStreet, setCompanyStreet] = useState("");
   const [companyZip, setCompanyZip] = useState("");
@@ -167,6 +169,12 @@ setPaymentTermDays(
     : "14"
 );
 
+setPartialPaymentTermDays(
+  loadedSettings.partial_payment_term_days !== null &&
+    loadedSettings.partial_payment_term_days !== undefined
+    ? String(loadedSettings.partial_payment_term_days)
+    : "14"
+);
 
 setCompanyName(loadedSettings.company_name || "");
 setCompanyStreet(loadedSettings.street || "");
@@ -364,6 +372,19 @@ const handleLogoUpload = async (file: File) => {
   return;
 }
 
+const partialPaymentTermDaysValue = Number(partialPaymentTermDays);
+
+if (
+  !Number.isInteger(partialPaymentTermDaysValue) ||
+  partialPaymentTermDaysValue < 1 ||
+  partialPaymentTermDaysValue > 365
+) {
+  setErrorMessage(
+    "Das Zahlungsziel für Abschlagsrechnungen muss zwischen 1 und 365 Tagen liegen."
+  );
+  return;
+}
+
     if (Number.isNaN(hourlyRateValue) || hourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen bisherigen Standard-Stundensatz eingeben.");
       return;
@@ -399,6 +420,7 @@ const handleLogoUpload = async (file: File) => {
       default_special_hourly_rate: specialHourlyRateValue,
       tax_rate_default: taxRateValue,
       payment_term_days: paymentTermDaysValue,
+      partial_payment_term_days: partialPaymentTermDaysValue,
       company_name: companyName.trim(),
       street: companyStreet.trim(),
       zip: companyZip.trim(),
@@ -616,6 +638,23 @@ const handleLogoUpload = async (file: File) => {
     placeholder="14"
   />
 </div>
+
+<div className="form-group">
+  <label htmlFor="partialPaymentTermDays">
+    Zahlungsziel Abschlagsrechnungen (Tage)
+  </label>
+  <input
+    id="partialPaymentTermDays"
+    type="number"
+    step="1"
+    min="1"
+    max="365"
+    value={partialPaymentTermDays}
+    onChange={(e) => setPartialPaymentTermDays(e.target.value)}
+    placeholder="14"
+  />
+</div>
+
           </div>
 
           <div className="settings-actions">

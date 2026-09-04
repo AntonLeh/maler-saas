@@ -38,7 +38,7 @@ export default function MaterialsPage({ tenantId, onBack }: Props) {
   const [description, setDescription] = useState("");
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("Alle");
-
+  const [searchTerm, setSearchTerm] = useState("");
   const loadMaterials = async () => {
     setLoading(true);
 
@@ -213,12 +213,21 @@ const result = await supabase
   await loadMaterials();
 };
 
-const filteredMaterials =
-  categoryFilter === "Alle"
-    ? materials
-    : materials.filter(
-        (material) => material.category === categoryFilter
-      );
+const filteredMaterials = materials.filter((material) => {
+  const matchesCategory =
+    categoryFilter === "Alle" ||
+    material.category === categoryFilter;
+
+  const search = searchTerm.trim().toLowerCase();
+
+  const matchesSearch =
+    !search ||
+    material.name.toLowerCase().includes(search) ||
+    (material.supplier || "").toLowerCase().includes(search) ||
+    (material.storage_location || "").toLowerCase().includes(search);
+
+  return matchesCategory && matchesSearch;
+});
 
   return (
     <section className="single-page-section">
@@ -375,10 +384,9 @@ const filteredMaterials =
 
 {editingMaterialId !== null && (
   <button
-    type="button"
-    className="btn btn-secondary"
-    style={{ marginLeft: 10 }}
-    onClick={() => {
+  type="button"
+  className="btn btn-secondary"
+  onClick={() => {
       setEditingMaterialId(null);
 
       setName("");
@@ -402,7 +410,25 @@ const filteredMaterials =
 
         <div className="table-wrapper" style={{ marginTop: 28 }}>
 
-<div className="form-row" style={{ marginBottom: 16 }}>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: 16,
+    marginBottom: 16,
+  }}
+>
+  <div className="form-group">
+    <label>Material suchen</label>
+    <input
+  type="text"
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  placeholder="Material, Lieferant oder Lagerort suchen …"
+  style={{ height: "100%" }}
+/>
+  </div>
+
   <div className="form-group">
     <label>Kategorie</label>
     <select

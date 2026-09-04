@@ -7,6 +7,7 @@ type InvoicePdfParams = {
   order?: any;
   customer?: any;
   companySettings?: any;
+  partialInvoices?: any[];
   currencySymbol?: string;
 };
 
@@ -44,12 +45,14 @@ const getInvoiceNumber = (invoice: any) => {
   );
 };
 
+
 export function generateInvoicePdf({
   invoice,
   invoiceItems = [],
   order = null,
   customer = null,
   companySettings = {},
+  partialInvoices = [],
   currencySymbol = "€",
 }: InvoicePdfParams) {
   const doc = new jsPDF("p", "mm", "a4");
@@ -89,10 +92,29 @@ export function generateInvoicePdf({
   }
 
   // Dokumenttitel rechts
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text("RECHNUNG", pageWidth - marginRight, 18, { align: "right" });
+const isPartialInvoice = invoice?.invoice_type === "partial";
+const isFinalInvoiceWithPartials =
+  invoice?.invoice_type === "final" &&
+  (
+    Number(invoice?.paid_partial_amount ?? 0) > 0 ||
+    Number(invoice?.open_partial_amount ?? 0) > 0
+  );
 
+doc.setFontSize(isPartialInvoice || isFinalInvoiceWithPartials ? 20 : 24);
+doc.setFont("helvetica", "bold");
+
+const documentTitle = isPartialInvoice
+  ? "ABSCHLAGSRECHNUNG"
+  : isFinalInvoiceWithPartials
+  ? "SCHLUSSRECHNUNG"
+  : "RECHNUNG";
+
+doc.text(
+  documentTitle,
+  pageWidth - marginRight,
+  18,
+  { align: "right" }
+);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(`Nr.: ${invoiceNumber}`, pageWidth - marginRight, 27, {
@@ -167,15 +189,42 @@ export function generateInvoicePdf({
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text(`Rechnung ${invoiceNumber}`, marginLeft, y);
+  const invoiceHeading = isPartialInvoice
+  ? "Abschlagsrechnung"
+  : isFinalInvoiceWithPartials
+  ? "Schlussrechnung"
+  : "Rechnung";
+
+doc.text(
+  `${invoiceHeading} ${invoiceNumber}`,
+  marginLeft,
+  y
+);
 
   y += 8;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
 
-  const introText =
-    companySettings?.invoice_intro_text ||
+  const introText = isPartialInvoice
+  ? `Gemäß der vereinbarten Zahlungsregelung berechnen wir mit dieser Abschlagsrechnung ${
+      invoice?.partial_type === "percent"
+        ? `${Number(invoice?.partial_value ?? 0).toLocaleString("de-DE", {
+            maximumFractionDigits: 2,
+          })} %`
+        : formatMoney(invoice?.partial_value, currencySymbol)
+    } des vereinbarten Auftragswertes von ${formatMoney(
+      invoice?.base_amount,
+      currencySymbol
+    )}. Die nachfolgenden Positionen zeigen den zugrunde liegenden Auftragsumfang.`
+  : isFinalInvoiceWithPartials
+? Number(invoice?.open_partial_amount ?? 0) > 0 &&
+  Number(invoice?.paid_partial_amount ?? 0) > 0
+  ? "Mit dieser Schlussrechnung rechnen wir den Auftrag vollständig ab. Bereits geleistete Abschlagszahlungen werden vom Gesamtauftragswert abgezogen. Noch offene Abschlagsrechnungen gehen in dieser Schlussrechnung auf."
+  : Number(invoice?.open_partial_amount ?? 0) > 0
+  ? "Mit dieser Schlussrechnung rechnen wir den Auftrag vollständig ab. Die noch offene Abschlagsrechnung geht in dieser Schlussrechnung auf und wird nicht zusätzlich zur Schlussrechnung fällig."
+  : "Mit dieser Schlussrechnung rechnen wir den Auftrag vollständig ab. Die bereits geleistete Abschlagszahlung wird vom Gesamtauftragswert abgezogen."
+: companySettings?.invoice_intro_text ||
     "Vielen Dank für Ihren Auftrag. Wir stellen Ihnen folgende Leistungen in Rechnung.";
 
   const introLines = doc.splitTextToSize(
@@ -256,47 +305,170 @@ export function generateInvoicePdf({
   }
 
   const labelX = 120;
-  const valueX = 196;
+const valueX = 196;
 
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
+doc.setFontSize(9);
+doc.setFont("helvetica", "normal");
 
-  doc.text("Netto:", labelX, y);
-  doc.text(formatMoney(invoice?.subtotal, currencySymbol), valueX, y, {
+if (isPartialInvoice) {
+  const baseAmount = Number(invoice?.base_amount ?? 0);
+  const partialAmount = Number(invoice?.total_amount ?? 0);
+  const remainingAmount = Math.max(baseAmount - partialAmount, 0);
+
+  doc.text("Auftragswert:", labelX, y);
+  doc.text(formatMoney(baseAmount, currencySymbol), valueX, y, {
     align: "right",
   });
 
   y += 7;
-  doc.text(`MwSt. ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`, labelX, y);
-  doc.text(formatMoney(invoice?.tax_amount, currencySymbol), valueX, y, {
-    align: "right",
-  });
 
-  y += 9;
-  doc.setFontSize(12);
+  const partialLabel =
+    invoice?.partial_type === "percent"
+      ? `Abschlag ${Number(invoice?.partial_value ?? 0).toLocaleString(
+          "de-DE",
+          {
+            maximumFractionDigits: 2,
+          }
+        )} %:`
+      : "Abschlag:";
+
+  doc.text(partialLabel, labelX, y);
+  doc.text(
+    `- ${formatMoney(partialAmount, currencySymbol)}`,
+    valueX,
+    y,
+    {
+      align: "right",
+    }
+  );
+
+  y += 7;
+
   doc.setFont("helvetica", "bold");
-  doc.text("Zu zahlen:", labelX, y);
-  doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
+  doc.text("Verbleibender Auftragswert:", labelX, y);
+  doc.text(formatMoney(remainingAmount, currencySymbol), valueX, y, {
     align: "right",
   });
 
-  // Fußtext
-  y += 18;
+  y += 12;
+  doc.setFont("helvetica", "normal");
+}
 
-  if (y > 245) {
-    doc.addPage();
-    y = 30;
+if (isFinalInvoiceWithPartials) {
+  const baseAmount = Number(invoice?.base_amount ?? 0);
+  const paidPartialAmount = Number(invoice?.paid_partial_amount ?? 0);
+  const openPartialAmount = Number(invoice?.open_partial_amount ?? 0);
+
+  doc.text("Gesamt-Auftragswert:", labelX, y);
+  doc.text(formatMoney(baseAmount, currencySymbol), valueX, y, {
+    align: "right",
+  });
+
+  y += 7;
+
+  const paidPartials = partialInvoices.filter(
+    (partial: any) => partial.status === "paid"
+  );
+
+  for (const partial of paidPartials) {
+    doc.text(
+      `Bezahlt ${partial.invoice_number}:`,
+      labelX,
+      y
+    );
+
+    doc.text(
+      `- ${formatMoney(partial.total_amount, currencySymbol)}`,
+      valueX,
+      y,
+      { align: "right" }
+    );
+
+    y += 7;
   }
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  const includedPartials = partialInvoices.filter(
+    (partial: any) => partial.status === "credited"
+  );
 
-  const footerText =
-    companySettings?.invoice_footer_text ||
-    "Bitte überweisen Sie den Rechnungsbetrag innerhalb der angegebenen Zahlungsfrist.";
+  for (const partial of includedPartials) {
+    doc.text(
+  `${partial.invoice_number} (übernommen):`,
+  labelX,
+  y
+);
 
-  const footerTextLines = doc.splitTextToSize(footerText, 180);
-  doc.text(footerTextLines, marginLeft, y);
+    doc.text(
+      formatMoney(partial.total_amount, currencySymbol),
+      valueX,
+      y,
+      { align: "right" }
+    );
+
+    y += 7;
+  }
+
+  if (paidPartials.length === 0 && paidPartialAmount > 0) {
+    doc.text("Bereits bezahlt:", labelX, y);
+    doc.text(
+      `- ${formatMoney(paidPartialAmount, currencySymbol)}`,
+      valueX,
+      y,
+      { align: "right" }
+    );
+    y += 7;
+  }
+
+  if (includedPartials.length === 0 && openPartialAmount > 0) {
+    doc.text(
+      "Offener Abschlag – in Schlussrechnung übernommen:",
+      labelX,
+      y
+    );
+    doc.text(
+      formatMoney(openPartialAmount, currencySymbol),
+      valueX,
+      y,
+      { align: "right" }
+    );
+    y += 7;
+  }
+
+  y += 5;
+}
+
+doc.text(
+  isPartialInvoice ? "Netto Abschlagsrechnung:" : "Netto:",
+  labelX,
+  y
+);
+
+doc.text(formatMoney(invoice?.subtotal, currencySymbol), valueX, y, {
+  align: "right",
+});
+
+y += 7;
+
+doc.text(
+  `MwSt. ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`,
+  labelX,
+  y
+);
+
+doc.text(formatMoney(invoice?.tax_amount, currencySymbol), valueX, y, {
+  align: "right",
+});
+
+y += 9;
+
+doc.setFontSize(12);
+doc.setFont("helvetica", "bold");
+
+doc.text("Zu zahlen:", labelX, y);
+
+doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
+  align: "right",
+});
 
   // Seitenfuß
   const pageCount = doc.getNumberOfPages();
