@@ -72,13 +72,15 @@ export default function PerformanceSimulator({
   return (
     <div style={{ marginTop: "10px" }}>
       <button
-        type="button"
-        className="btn btn-secondary btn-small"
-        onClick={calculatePerformance}
-        disabled={loading}
-      >
-        {loading ? "⭐ Bewertung läuft..." : "⭐ Leistungsbewertung"}
-      </button>
+  type="button"
+  className="btn btn-secondary btn-small"
+  onClick={calculatePerformance}
+  disabled={loading}
+  title={loading ? "Bewertung läuft..." : "Leistungsbewertung"}
+  aria-label={loading ? "Bewertung läuft..." : "Leistungsbewertung"}
+>
+  {loading ? "⏳" : "⭐"}
+</button>
 
       {isOpen && results.length > 0 && (
         <div

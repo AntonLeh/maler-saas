@@ -7,15 +7,42 @@ type LandingPageProps = {
 };
 
 const features = [
-  "Aufmaß & Angebote",
-  "Aufträge & Planung",
-  "Materialverwaltung",
-  "Zeiterfassung",
-  "Kundenportal",
-  "Rechnungen & PDF",
-  "Statistiken",
-  "KI-Assistent",
-  "Website & digitale Sichtbarkeit",
+  {
+    title: "Aufmaß & Angebote",
+    text: "Aufmaße digital erfassen, Leistungen kalkulieren und professionelle Angebote direkt aus den erfassten Daten erstellen.",
+  },
+  {
+    title: "Aufträge & Planung",
+    text: "Aufträge zentral planen, Mitarbeiter zuweisen, Termine koordinieren und den aktuellen Projektstatus jederzeit verfolgen.",
+  },
+  {
+    title: "Materialverwaltung",
+    text: "Bestände, Materialausgaben, Rückgaben und Verbrauch dokumentieren und Materialbewegungen je Auftrag nachvollziehen.",
+  },
+  {
+    title: "Zeiterfassung",
+    text: "Arbeitszeiten mobil auf der Baustelle erfassen und projektbezogen für Auswertungen und Nachkalkulation bereitstellen.",
+  },
+  {
+    title: "Kundenportal",
+    text: "Kunden erhalten transparenten Zugriff auf Projektfortschritt, Bilder, Angebote, Rechnungen und wichtige Statusinformationen.",
+  },
+  {
+    title: "Rechnungen & PDF",
+    text: "Rechnungen, Abschlagsrechnungen und Schlussrechnungen erstellen und professionell als PDF an den Kunden ausgeben.",
+  },
+  {
+    title: "Statistiken",
+    text: "Umsatz, Aufträge, Auslastung, Leistung und weitere Betriebskennzahlen zentral auswerten und Entwicklungen erkennen.",
+  },
+  {
+    title: "KI-Assistent",
+    text: "Texte, Kundenkommunikation, Arbeitsbeschreibungen und betriebliche Auswertungen mit KI schneller vorbereiten.",
+  },
+  {
+    title: "Website & digitale Sichtbarkeit",
+    text: "Den eigenen Malerbetrieb professionell online präsentieren und digitale Sichtbarkeit als Bestandteil der Unternehmensentwicklung ausbauen.",
+  },
 ];
 
 export default function LandingPage({
@@ -42,30 +69,38 @@ export default function LandingPage({
 </div>
 
         <nav className="landing-nav">
-          <a href="#solution">Lösung</a>
-          <a href="#growth">Wachstum</a>
-          <a href="#contact">Kontakt</a>
-          <button type="button" className="landing-login-btn" onClick={onLogin}>
-            Login
-          </button>
-        </nav>
+  <a href="/maler-software">Software</a>
+  <a href="#solution">Lösung</a>
+  <a href="#growth">Wachstum</a>
+  <a href="#contact">Kontakt</a>
+  <button
+    type="button"
+    className="landing-login-btn"
+    onClick={onLogin}
+  >
+    Login
+  </button>
+</nav>
       </header>
 
       <main>
         <section className="landing-hero landing-hero-premium">
           <div className="landing-hero-content">
-            <p className="landing-badge">Digitale Komplettlösung für Malerbetriebe</p>
+            <p className="landing-badge">
+  Software für Malerbetriebe – digital, mobil und praxisnah
+</p>
 
-            <h1>
-              Das digitale Betriebssystem für moderne Malerbetriebe.
-            </h1>
+<h1>
+  Das digitale Betriebssystem für moderne Malerbetriebe.
+</h1>
 
-            <p className="landing-hero-text">
-              Von Aufmaß, Angebot und Auftrag bis Material, Mitarbeiter,
-              Zeiterfassung, Rechnung, Kundenportal, Statistiken, KI und
-              digitalem Wachstum – MalerSaaS bündelt deinen Betrieb in einer
-              professionellen Plattform.
-            </p>
+<p className="landing-hero-text">
+  MalerSaaS ist die Software für Malerbetriebe, die Aufmaß, Angebote,
+  Aufträge, Mitarbeiter, Zeiterfassung, Materialverwaltung und Rechnungen
+  in einer Plattform verbindet. Vom ersten Kundenkontakt bis zur fertigen
+  Rechnung steuerst du deinen Betrieb digital und behältst jederzeit den
+  Überblick.
+</p>
 
             <div className="landing-hero-actions">
               <button type="button" className="landing-primary-btn" onClick={onRegister}>
@@ -147,24 +182,39 @@ export default function LandingPage({
 
   <div className="how-grid">
     {[
-      "Firma registrieren",
-      "Mitarbeiter anlegen",
-      "Aufmaß erfassen",
-      "Angebot erstellen",
-      "Auftrag steuern",
-      "Rechnung erzeugen",
-    ].map((step, index) => (
-      <article key={step}>
-        <span>{index + 1}</span>
+  {
+    title: "Firma registrieren",
+    text: "MalerSaaS einrichten und die wichtigsten Firmendaten für Angebote, Aufträge und Rechnungen hinterlegen.",
+  },
+  {
+    title: "Mitarbeiter anlegen",
+    text: "Mitarbeiter und Projektleiter erfassen und die Zusammenarbeit im Betrieb digital organisieren.",
+  },
+  {
+    title: "Aufmaß erfassen",
+    text: "Maße und Leistungen direkt beim Kunden aufnehmen und als Grundlage für die Kalkulation verwenden.",
+  },
+  {
+    title: "Angebot erstellen",
+    text: "Aus dem erfassten Aufmaß ein professionelles Angebot erstellen und dem Kunden bereitstellen.",
+  },
+  {
+    title: "Auftrag steuern",
+    text: "Aufträge planen, Arbeitsfortschritt verfolgen, Zeiten erfassen und Materialbewegungen dokumentieren.",
+  },
+  {
+    title: "Rechnung erzeugen",
+    text: "Aus abgeschlossenen Aufträgen Rechnungen erstellen und den Zahlungsstatus zentral im Blick behalten.",
+  },
+].map((step, index) => (
+  <article key={step.title}>
+    <span>{index + 1}</span>
 
-        <h3>{step}</h3>
+    <h3>{step.title}</h3>
 
-        <p>
-          Schritt für Schritt digitalisiert MalerSaaS deinen gesamten
-          Betriebsablauf.
-        </p>
-      </article>
-    ))}
+    <p>{step.text}</p>
+  </article>
+))}
   </div>
 </section>
 
@@ -174,15 +224,12 @@ export default function LandingPage({
 
           <div className="landing-feature-grid premium-grid">
             {features.map((feature, index) => (
-              <article key={feature}>
-                <div className="feature-icon">{index + 1}</div>
-                <h3>{feature}</h3>
-                <p>
-                  Klar strukturiert, mobil nutzbar und auf die Abläufe eines
-                  echten Malerbetriebs ausgerichtet.
-                </p>
-              </article>
-            ))}
+  <article key={feature.title}>
+    <div className="feature-icon">{index + 1}</div>
+    <h3>{feature.title}</h3>
+    <p>{feature.text}</p>
+  </article>
+))}
           </div>
         </section>
 
@@ -223,9 +270,12 @@ export default function LandingPage({
               <p>Umsatz, offene Angebote, Auslastung, Produktivität und Materialbewegungen klar auswerten.</p>
             </article>
             <article>
-              <h3>Buchhaltung & Rechnungswesen</h3>
-              <p>Rechnungen, Zahlungskontrolle und betriebswirtschaftliche Übersicht als nächste Ausbaustufe.</p>
-            </article>
+  <h3>Rechnungen & Zahlungsmanagement</h3>
+  <p>
+    Rechnungen, Abschlagsrechnungen und Schlussrechnungen erstellen,
+    Zahlungsstatus überwachen und Mahnungen strukturiert verwalten.
+  </p>
+</article>
             <article>
               <h3>KI-Unterstützung</h3>
               <p>Angebotstexte, Kundenantworten, Arbeitsbeschreibungen und Auswertungen schneller erstellen.</p>
@@ -249,7 +299,7 @@ export default function LandingPage({
         
       </main>
 
-      <footer className="landing-footer">
+      <footer id="contact" className="landing-footer">
   <div>
     <strong>MalerSaaS</strong>
     <span>Digitale Komplettlösung für Malerbetriebe</span>

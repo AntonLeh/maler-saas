@@ -69,6 +69,24 @@ const getPortalStep = (status?: string) => {
 };
 
 export default function CustomerPortalPage() {
+    useEffect(() => {
+    const robotsMeta = document.querySelector(
+      'meta[name="robots"]'
+    ) as HTMLMetaElement | null;
+
+    const previousContent = robotsMeta?.content;
+
+    if (robotsMeta) {
+      robotsMeta.content = "noindex, nofollow";
+    }
+
+    return () => {
+      if (robotsMeta && previousContent) {
+        robotsMeta.content = previousContent;
+      }
+    };
+  }, []);
+
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");

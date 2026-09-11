@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
@@ -25,10 +25,18 @@ import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
 import TrialBanner from "./components/TrialBanner";
 import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
+import MalerSoftwarePage from "./pages/MalerSoftwarePage";
+import AufmassAngebotePage from "./pages/AufmassAngebotePage";
 import PerformanceSimulator from "./components/PerformanceSimulator";
 import BusinessCockpit from "./components/BusinessCockpit";
 import BusinessFeedPage from "./pages/BusinessFeedPage";
 import ApprovalCenterPage from "./pages/ApprovalCenterPage";
+import AuftragsverwaltungPage from "./pages/AuftragsverwaltungPage";
+import ZeiterfassungPage from "./pages/ZeiterfassungPage";
+import MaterialverwaltungPage from "./pages/MaterialverwaltungPage";
+import RechnungenPage from "./pages/RechnungenPage";
+import KundenportalPage from "./pages/KundenportalPage";
+import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -454,6 +462,10 @@ export default function App() {
   order_id: number | null;
   created_at: string;
 };
+
+const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<string>>(
+  new Set()
+);
 
   const [businessEvents, setBusinessEvents] = useState<BusinessEvent[]>([]);
   const [selectedBusinessDate, setSelectedBusinessDate] = useState(
@@ -5289,7 +5301,6 @@ const totalEmployees = employees.length;
   return (
     <AgbPage
       onBack={() => {
-        setShowCompanyRegister(true);
         setCurrentPage("dashboard");
       }}
     />
@@ -5300,7 +5311,6 @@ if (currentPage === "datenschutz") {
   return (
     <DatenschutzPage
       onBack={() => {
-        setShowCompanyRegister(true);
         setCurrentPage("dashboard");
       }}
     />
@@ -5310,7 +5320,10 @@ if (currentPage === "datenschutz") {
 if (showCompanyRegister) {
   return (
     <CompanyRegisterPage
-  onBackToLogin={() => setShowCompanyRegister(false)}
+  onBackToLogin={() => {
+  setShowCompanyRegister(false);
+  setShowLoginPage(true);
+}}
   onOpenAgb={() => setCurrentPage("agb")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
 />
@@ -5374,6 +5387,137 @@ if (showResetPassword) {
 }
 
     if (!session) {
+      if (showCompanyRegister) {
+  return (
+    <CompanyRegisterPage
+      onBackToLogin={() => setShowCompanyRegister(false)}
+      onOpenAgb={() => setCurrentPage("agb")}
+      onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+    />
+  );
+}
+
+      if (
+  window.location.pathname === "/maler-software" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+  <MalerSoftwarePage
+  onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+);
+}
+
+if (
+  window.location.pathname === "/aufmass-angebote" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <AufmassAngebotePage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
+if (
+  window.location.pathname === "/auftragsverwaltung" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <AuftragsverwaltungPage
+      onRegister={() => setShowCompanyRegister(true)}
+      onOpenImpressum={() => setCurrentPage("impressum")}
+      onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+      onOpenAgb={() => setCurrentPage("agb")}
+    />
+  );
+}
+
+if (
+  window.location.pathname === "/zeiterfassung" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <ZeiterfassungPage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
+if (
+  window.location.pathname === "/materialverwaltung" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <MaterialverwaltungPage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
+if (
+  window.location.pathname === "/rechnungen" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <RechnungenPage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
+if (
+  window.location.pathname === "/kundenportal" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <KundenportalPage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
+if (
+  window.location.pathname === "/leistungsbewertung" &&
+  !showLoginPage &&
+  !showCompanyRegister
+) {
+  return (
+    <LeistungsbewertungPage
+  onRegister={() => setShowCompanyRegister(true)}
+  onOpenImpressum={() => setCurrentPage("impressum")}
+  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+  onOpenAgb={() => setCurrentPage("agb")}
+/>
+  );
+}
+
       if (!showLoginPage && !showCompanyRegister) {
   return (
     <LandingPage
@@ -7456,168 +7600,283 @@ onReloadOrders={async () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredOrders.map((order) => {
+                            {filteredOrders.map((order, index) => {
                               const orderProgressEntries = getProgressEntriesForOrder(order.id);
 
                               return (
-                                <tr key={order.id}>
-                                  <td>
-                                    <div className="table-title">{order.title}</div>
-                                    <div className="table-subtitle">
-                                      {order.description || "Keine Beschreibung"}
-                                    </div>
+  <Fragment key={order.id}>
+  <tr className={index % 2 === 1 ? "order-row-alternate" : ""}>
+    <td data-label="Titel">
+      <div className="table-title">{order.title}</div>
+      <div className="table-subtitle">
+        {order.description || "Keine Beschreibung"}
+      </div>
+    </td>
 
-                                    <div style={{ marginTop: "0.75rem" }}>
-                                      <strong>Fortschrittsverlauf:</strong>
+    <td data-label="Kunde">
+      {customerNameMap.get(order.customer_id) || order.customer_id}
+    </td>
 
-                                      {orderProgressEntries.length === 0 ? (
-                                        <div className="table-subtitle" style={{ marginTop: "0.35rem" }}>
-                                          Noch keine Fortschrittsnotizen vorhanden.
-                                        </div>
-                                      ) : (
-                                        <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.5rem" }}>
-                                          {orderProgressEntries.map((entry) => (
-                                            <div
-                                              key={entry.id}
-                                              style={{
-                                                padding: "0.6rem",
-                                                border: "1px solid #e5e7eb",
-                                                borderRadius: "8px",
-                                                background: "#fafafa",
-                                              }}
-                                            >
-                                              <div className="table-subtitle" style={{ marginBottom: "0.25rem" }}>
-                                                {employeeNameMap.get(entry.user_id) ||
-                                                  `Mitarbeiter #${entry.user_id}`}{" "}
-                                                {formatDateTime(entry.created_at)}
-                                              </div>
-                                              <div>{entry.note}</div>
+    <td data-label="Mitarbeiter">
+  {orderAssignments.filter(
+    (assignment) => String(assignment.order_id) === String(order.id)
+  ).length === 0 ? (
+    "Nicht zugewiesen"
+  ) : (
+    <div className="order-employee-list">
+      {orderAssignments
+        .filter(
+          (assignment) =>
+            String(assignment.order_id) === String(order.id)
+        )
+        .map((assignment, assignmentIndex) => {
+          const personName =
+            employeeNameMap.get(Number(assignment.user_id)) ||
+            `Mitarbeiter #${assignment.user_id}`;
 
-{(entry.images?.length ?? 0) > 0 && (
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-      gap: "10px",
-      marginTop: "10px",
-    }}
-  >
-    {(entry.images ?? []).map((img: any) => (
-      <button
-  key={img.id}
-  type="button"
-  onClick={() => setSelectedProgressImagePreview(img.image_url)}
-  style={{
-    padding: 0,
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-  }}
->
-  <img
-    src={img.image_url}
-    alt="Fortschrittsbild"
-    style={{
-      width: "100%",
-      height: "120px",
-      objectFit: "cover",
-      borderRadius: "8px",
-      border: "1px solid #ddd",
-    }}
-  />
-</button>
-    ))}
-  </div>
-)}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </td>
+          return (
+            <div
+              key={`${order.id}-${assignment.user_id}-${assignment.assignment_role}-${assignmentIndex}`}
+              className="order-employee-item"
+            >
+              <span className="order-employee-icon">
+                {assignment.assignment_role === "project_manager"
+                  ? "🟦"
+                  : "🟩"}
+              </span>
 
-                                  <td>
-                                    {customerNameMap.get(order.customer_id) || order.customer_id}
-                                  </td>
+              <span>
+                {assignment.assignment_role === "project_manager"
+                  ? `Projektleiter: ${personName}`
+                  : personName}
+              </span>
+            </div>
+          );
+        })}
+    </div>
+  )}
+</td>
 
-                                  <td
-  dangerouslySetInnerHTML={{
-    __html: orderEmployeeNamesMap.get(String(order.id)) || "Nicht zugewiesen",
-  }}
-/>
+    <td data-label="Status">
+      <span className={getStatusClass(order.status)}>
+        {order.status === "zur_pruefung"
+          ? "🔎 Zur Prüfung"
+          : order.status.replaceAll("_", " ")}
+      </span>
+    </td>
 
-                                  <td>
-                                    <span className={getStatusClass(order.status)}>
-  {order.status === "zur_pruefung"
-    ? "🔎 Zur Prüfung"
-    : order.status.replaceAll("_", " ")}
-</span>
-                                  </td>
+    <td data-label="Ort">
+      {[order.address_street, order.address_zip, order.address_city]
+        .filter(Boolean)
+        .join(", ") || "-"}
+    </td>
 
-                                  <td>
-                                    {[order.address_street, order.address_zip, order.address_city]
-                                      .filter(Boolean)
-                                      .join(", ") || "-"}
-                                  </td>
+    <td data-label="Zeitraum">
+      {formatDateOnly(order.start_date)} bis{" "}
+      {formatDateOnly(order.end_date)}
+    </td>
 
-                                  <td>
-                                    {formatDateOnly(order.start_date)} bis {formatDateOnly(order.end_date)}
-                                  </td>
-
-                                  <td>
-  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-    {canEditOrders && (
-      <button
-        type="button"
-        className="btn btn-secondary btn-small"
-        onClick={() => openEditOrderPage(order)}
+    <td data-label="Aktion">
+      <div
+      className="order-actions"
+        style={{
+          display: "flex",
+          gap: "8px",
+          flexWrap: "wrap",
+        }}
       >
-        Bearbeiten
-      </button>
-    )}
+        {canEditOrders && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            onClick={() => openEditOrderPage(order)}
+            title="Auftrag bearbeiten"
+            aria-label="Auftrag bearbeiten"
+          >
+            ✏️
+          </button>
+        )}
 
-    {order.status === "zur_pruefung" && (
-      <button
-        type="button"
-        className="btn btn-primary btn-small"
-        onClick={() => handleApproveOrder(order.id)}
-      >
-        Freigeben
-      </button>
-    )}
+        {order.status === "zur_pruefung" && (
+          <button
+            type="button"
+            className="btn btn-primary btn-small"
+            onClick={() => handleApproveOrder(order.id)}
+            title="Auftrag freigeben"
+            aria-label="Auftrag freigeben"
+          >
+            ✓
+          </button>
+        )}
 
- {isAdmin &&
-  order.status !== "abgerechnet" && (
-    <button
-      type="button"
-      className="btn btn-secondary btn-small"
-      onClick={() => handleCreatePartialInvoice(order.id)}
+        {isAdmin && order.status !== "abgerechnet" && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            onClick={() => handleCreatePartialInvoice(order.id)}
+            title="Abschlagsrechnung erstellen"
+            aria-label="Abschlagsrechnung erstellen"
+          >
+            💶
+          </button>
+        )}
+
+        {order.status === "fertig" && isAdmin && (
+          <>
+            <button
+              type="button"
+              className="btn btn-primary btn-small"
+              onClick={() => handleCreateInvoice(order.id)}
+              title="Rechnung erstellen"
+              aria-label="Rechnung erstellen"
+            >
+              🧾
+            </button>
+
+            <PerformanceSimulator
+              orderId={order.id}
+              employees={employees}
+            />
+          </>
+        )}
+      </div>
+    </td>
+  </tr>
+
+<tr className={index % 2 === 1 ? "order-row-alternate" : ""}>
+  <td colSpan={7}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        flexWrap: "wrap",
+        padding: "0.5rem 0",
+      }}
     >
-      💶 Abschlagsrechnung erstellen
-    </button>
+      <strong>Fortschrittsverlauf:</strong>
+
+      {orderProgressEntries.length > 0 ? (
+        <button
+          type="button"
+          className={
+            expandedProgressOrderIds.has(String(order.id))
+              ? "btn btn-primary btn-small"
+              : "btn btn-secondary btn-small"
+          }
+          onClick={() => {
+            const orderId = String(order.id);
+
+            setExpandedProgressOrderIds((current) => {
+              const next = new Set(current);
+
+              if (next.has(orderId)) {
+                next.delete(orderId);
+              } else {
+                next.add(orderId);
+              }
+
+              return next;
+            });
+          }}
+        >
+          {expandedProgressOrderIds.has(String(order.id))
+            ? "Fortschritt ausblenden"
+            : `Fortschritt anzeigen (${orderProgressEntries.length})`}
+        </button>
+      ) : (
+        <span className="table-subtitle">
+          Noch keine Fortschrittsnotizen vorhanden.
+        </span>
+      )}
+    </div>
+
+{expandedProgressOrderIds.has(String(order.id)) &&
+  orderProgressEntries.length > 0 && (
+    <div
+      style={{
+        display: "grid",
+        gap: "10px",
+        marginTop: "8px",
+        marginBottom: "8px",
+      }}
+    >
+      {orderProgressEntries.map((entry) => (
+        <div
+          key={entry.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "20px",
+            padding: "7px 10px",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            background: "#fafafa",
+          }}
+        >
+          <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+            <div
+              className="table-subtitle"
+              style={{ marginBottom: "4px" }}
+            >
+              {employeeNameMap.get(entry.user_id) ||
+                `Mitarbeiter #${entry.user_id}`}{" "}
+              {formatDateTime(entry.created_at)}
+            </div>
+
+            <div>{entry.note}</div>
+          </div>
+
+          {(entry.images?.length ?? 0) > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                justifyContent: "flex-end",
+                flex: "0 0 auto",
+              }}
+            >
+              {(entry.images ?? []).map((img: any) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedProgressImagePreview(img.image_url)
+                  }
+                  style={{
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                  }}
+                >
+                  <img
+                    src={img.image_url}
+                    alt="Fortschrittsbild"
+                    style={{
+                      display: "block",
+                      width: "100px",
+                      height: "75px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                      border: "1px solid #ddd",
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   )}
 
-{order.status === "fertig" && isAdmin && (
-  <>
-    <button
-      type="button"
-      className="btn btn-primary btn-small"
-      onClick={() => handleCreateInvoice(order.id)}
-    >
-      🧾 Rechnung erstellen
-    </button>
+  </td>
+</tr>
 
-    <PerformanceSimulator
-      orderId={order.id}
-      employees={employees}
-    />
-  </>
-)}
-
-
-  </div>
-</td>
-                                </tr>
+                                </Fragment>
                               );
                             })}
                           </tbody>

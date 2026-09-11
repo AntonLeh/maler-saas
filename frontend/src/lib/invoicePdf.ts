@@ -85,7 +85,7 @@ export function generateInvoicePdf({
   // Logo oben links
   if (companySettings?.logo_url) {
     try {
-      doc.addImage(companySettings.logo_url, "PNG", marginLeft, 8, 75, 28);
+      doc.addImage(companySettings.logo_url, "PNG", marginLeft, 8, 60, 38);
     } catch (error) {
       console.warn("Logo konnte nicht in die PDF eingefügt werden:", error);
     }

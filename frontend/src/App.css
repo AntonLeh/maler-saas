@@ -3071,8 +3071,10 @@ code {
 }
 
 .card:has(.orders-table-wide) .orders-table-wide {
-  min-width: 1100px;
+  width: 100%;
+  min-width: 0;
 }
+
 /* =========================
    Project Manager Work Orders View
    ========================= */
@@ -3579,4 +3581,151 @@ code {
 .employee-selection-item.selected:has(.project-manager){
     border-color:#3b82f6;
     background:#eff6ff;
+}
+
+@media (max-width: 1200px) {
+  .orders-table-wide {
+    min-width: 820px;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    padding: 10px 8px;
+  }
+}
+
+.orders-table-wide tr.order-row-alternate > td {
+  background-color: #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .card:has(.orders-table-wide) .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: visible;
+  }
+
+  .card:has(.orders-table-wide) .orders-table-wide {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100%;
+  table-layout: auto;
+}
+
+  .orders-table-wide thead {
+    display: none;
+  }
+
+  .orders-table-wide tbody {
+  display: block;
+  width: 100% !important;
+}
+
+  .orders-table-wide tr {
+  display: block;
+  width: 100% !important;
+  border-bottom: 0;
+}
+
+  .orders-table-wide td {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border-bottom: 0;
+  box-sizing: border-box;
+
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
+}
+
+  .orders-table-wide td[data-label]::before {
+  content: attr(data-label);
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+  .orders-table-wide td[data-label="Titel"] {
+    padding-top: 14px;
+  }
+
+  .orders-table-wide td[data-label="Aktion"] {
+    padding-bottom: 12px;
+  }
+
+  .orders-table-wide tr.order-row-alternate > td {
+    background-color: #f1f5f9;
+  }
+
+  .orders-table-wide td[colspan] {
+    display: block;
+    width: 100%;
+    padding: 8px 10px 14px;
+    box-sizing: border-box;
+
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+  .orders-table-wide td:nth-child(1) {
+  width: 100% !important;
+}
+
+.orders-table-wide td:nth-child(2) {
+  width: 100% !important;
+}
+
+.orders-table-wide td:nth-child(3) {
+  width: 100% !important;
+}
+
+.orders-table-wide td:nth-child(5) {
+  width: 100% !important;
+}
+
+.orders-table-wide td[data-label="Mitarbeiter"] {
+  font-size: 16px;
+  line-height: 1.4;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.orders-table-wide td[data-label="Aktion"] .order-actions {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px !important;
+  flex-wrap: wrap;
+}
+
+.orders-table-wide td[data-label="Aktion"] .order-actions .btn {
+  width: auto;
+  min-width: 44px;
+  height: 44px;
+  padding: 8px 12px;
+  flex: 0 0 auto;
+}
+
+}
+
+.order-employee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-employee-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.order-employee-icon {
+  flex: 0 0 auto;
 }
