@@ -1,3 +1,6 @@
+import { useState } from "react";
+import "./LandingPage.css";
+
 type LandingPageProps = {
   onLogin: () => void;
   onRegister: () => void;
@@ -52,36 +55,73 @@ export default function LandingPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: LandingPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <div className="landing-page">
-      <header className="landing-header">
-        <div className="landing-logo">
-  <img
-    src="/images/logo.png"
-    alt="MalerSaaS Logo"
-    className="landing-logo-image"
-  />
+  <header className="landing-header">
+    <div className="landing-logo">
+      <img
+        src="/images/logo.png"
+        alt="MalerSaaS Logo"
+        className="landing-logo-image"
+      />
 
-  <div className="landing-logo-text">
-    <strong>MalerSaaS</strong>
-    <span>Digitale Komplettlösung</span>
-  </div>
-</div>
+      <div className="landing-logo-text">
+        <strong>MalerSaaS</strong>
+        <span>Digitale Komplettlösung</span>
+      </div>
+    </div>
 
-        <nav className="landing-nav">
-  <a href="/maler-software">Software</a>
-  <a href="#solution">Lösung</a>
-  <a href="#growth">Wachstum</a>
-  <a href="#contact">Kontakt</a>
-  <button
-    type="button"
-    className="landing-login-btn"
-    onClick={onLogin}
-  >
-    Login
-  </button>
-</nav>
-      </header>
+    <button
+      type="button"
+      className="landing-menu-toggle"
+      aria-label="Menü öffnen"
+      aria-expanded={mobileMenuOpen}
+      onClick={() => setMobileMenuOpen((prev) => !prev)}
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav
+      className={`landing-nav ${mobileMenuOpen ? "is-open" : ""}`}
+    >
+      <a href="/maler-software">Software</a>
+
+      <a
+        href="#solution"
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        Lösung
+      </a>
+
+      <a
+        href="#growth"
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        Wachstum
+      </a>
+
+      <a
+        href="#contact"
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        Kontakt
+      </a>
+
+      <button
+        type="button"
+        className="landing-login-btn"
+        onClick={() => {
+          setMobileMenuOpen(false);
+          onLogin();
+        }}
+      >
+        Login
+      </button>
+    </nav>
+  </header>
 
       <main>
         <section className="landing-hero landing-hero-premium">

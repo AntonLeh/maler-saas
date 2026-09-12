@@ -713,13 +713,24 @@
 @media (max-width: 700px) {
   .maler-software-footer {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 18px;
+    padding: 28px 18px 36px;
+  }
+
+  .maler-software-footer > div:first-child {
+    text-align: center;
   }
 
   .maler-software-footer-links {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 14px 20px;
+    gap: 12px 20px;
   }
 }
 
