@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./ZeiterfassungPage.css";
 
@@ -14,6 +15,7 @@ export default function ZeiterfassungPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: ZeiterfassungPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -24,24 +26,48 @@ export default function ZeiterfassungPage({
 
       <div className="zeiterfassung-page">
         <header className="zeiterfassung-header">
-          <a href="/" className="zeiterfassung-logo">
-            <img
-              src="/images/logo.png"
-              alt="MalerSaaS"
-              className="zeiterfassung-logo-image"
-            />
+  <a href="/" className="zeiterfassung-logo">
+    <img
+      src="/images/logo.png"
+      alt="MalerSaaS"
+      className="zeiterfassung-logo-image"
+    />
 
-            <div className="zeiterfassung-logo-text">
-              <strong>MalerSaaS</strong>
-              <span>Digitale Komplettlösung</span>
-            </div>
-          </a>
+    <div className="zeiterfassung-logo-text">
+      <strong>MalerSaaS</strong>
+      <span>Digitale Komplettlösung</span>
+    </div>
+  </a>
 
-          <nav className="zeiterfassung-nav">
-            <a href="/">Startseite</a>
-            <a href="/maler-software">Software</a>
-          </nav>
-        </header>
+  <button
+    type="button"
+    className="zeiterfassung-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav
+    className={`zeiterfassung-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a href="/" onClick={() => setMobileMenuOpen(false)}>
+      Startseite
+    </a>
+
+    <a
+      href="/maler-software"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Software
+    </a>
+  </nav>
+</header>
 
         <main>
           <section className="zeiterfassung-hero">

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./AuftragsverwaltungPage.css";
 
@@ -14,6 +15,7 @@ export default function AuftragsverwaltungPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: AuftragsverwaltungPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -24,24 +26,48 @@ export default function AuftragsverwaltungPage({
 
       <div className="auftragsverwaltung-page">
   <header className="auftragsverwaltung-header">
-    <a href="/" className="auftragsverwaltung-logo">
-      <img
-        src="/images/logo.png"
-        alt="MalerSaaS"
-        className="auftragsverwaltung-logo-image"
-      />
+  <a href="/" className="auftragsverwaltung-logo">
+    <img
+      src="/images/logo.png"
+      alt="MalerSaaS"
+      className="auftragsverwaltung-logo-image"
+    />
 
-      <div className="auftragsverwaltung-logo-text">
-        <strong>MalerSaaS</strong>
-        <span>Digitale Komplettlösung</span>
-      </div>
+    <div className="auftragsverwaltung-logo-text">
+      <strong>MalerSaaS</strong>
+      <span>Digitale Komplettlösung</span>
+    </div>
+  </a>
+
+  <button
+    type="button"
+    className="auftragsverwaltung-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav
+    className={`auftragsverwaltung-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a href="/" onClick={() => setMobileMenuOpen(false)}>
+      Startseite
     </a>
 
-    <nav className="auftragsverwaltung-nav">
-      <a href="/">Startseite</a>
-      <a href="/maler-software">Software</a>
-    </nav>
-  </header>
+    <a
+      href="/maler-software"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Software
+    </a>
+  </nav>
+</header>
 
   <main>
   <section className="auftragsverwaltung-hero">

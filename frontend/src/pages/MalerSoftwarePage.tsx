@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./MalerSoftwarePage.css";
 
@@ -14,6 +15,7 @@ export default function MalerSoftwarePage({
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
   <SeoMeta
@@ -24,32 +26,62 @@ export default function MalerSoftwarePage({
 
   <div className="maler-software-page">
     <header className="maler-software-header">
-      <a href="/" className="maler-software-logo">
-        <img
-          src="/images/logo.png"
-          alt="MalerSaaS"
-          className="maler-software-logo-image"
-        />
+  <a href="/" className="maler-software-logo">
+    <img
+      src="/images/logo.png"
+      alt="MalerSaaS"
+      className="maler-software-logo-image"
+    />
 
-        <div className="maler-software-logo-text">
-          <strong>MalerSaaS</strong>
-          <span>Digitale Komplettlösung</span>
-        </div>
-      </a>
+    <div className="maler-software-logo-text">
+      <strong>MalerSaaS</strong>
+      <span>Digitale Komplettlösung</span>
+    </div>
+  </a>
 
-      <nav className="maler-software-nav">
-        <a href="/">Startseite</a>
-        <a href="#funktionen">Funktionen</a>
+  <button
+    type="button"
+    className="maler-software-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
 
-        <button
-          type="button"
-          className="maler-software-login-btn"
-          onClick={onLogin}
-        >
-          Login
-        </button>
-      </nav>
-    </header>
+  <nav
+    className={`maler-software-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a
+      href="/"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Startseite
+    </a>
+
+    <a
+      href="#funktionen"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Funktionen
+    </a>
+
+    <button
+      type="button"
+      className="maler-software-login-btn"
+      onClick={() => {
+        setMobileMenuOpen(false);
+        onLogin();
+      }}
+    >
+      Login
+    </button>
+  </nav>
+</header>
 
     <main>
     <section className="maler-software-hero">

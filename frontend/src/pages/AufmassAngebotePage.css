@@ -140,8 +140,13 @@
   color: #23875d;
 }
 
+.aufmass-angebote-menu-toggle {
+  display: none;
+}
+
 @media (max-width: 700px) {
   .aufmass-angebote-header {
+    position: relative;
     padding: 12px 20px;
   }
 
@@ -149,8 +154,56 @@
     display: none;
   }
 
+  .aufmass-angebote-menu-toggle {
+    display: block;
+    margin-left: auto;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .aufmass-angebote-menu-toggle span {
+    display: block;
+    width: 25px;
+    height: 2px;
+    margin: 5px 0;
+    border-radius: 999px;
+    background: #17211b;
+  }
+
   .aufmass-angebote-nav {
-    gap: 14px;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    z-index: 1000;
+
+    width: auto;
+    padding: 8px;
+
+    background: #ffffff;
+    border: 1px solid #dce8e1;
+    border-radius: 18px;
+    box-shadow: 0 18px 45px rgba(25, 60, 43, 0.16);
+  }
+
+  .aufmass-angebote-nav.is-open {
+    display: block;
+  }
+
+  .aufmass-angebote-nav a {
+    display: block;
+    margin: 0;
+    padding: 7px 14px;
+
+    color: #425048;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    white-space: nowrap;
   }
 }
 
@@ -539,19 +592,29 @@
 @media (max-width: 800px) {
   .aufmass-angebote-footer {
     grid-template-columns: 1fr;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+    gap: 18px;
+    padding: 28px 18px 36px;
   }
 
   .aufmass-angebote-footer-brand {
     align-items: center;
+    text-align: center;
   }
 
   .aufmass-angebote-footer-links {
+    width: 100%;
+    display: flex;
     justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
+    gap: 12px 20px;
   }
 
   .aufmass-angebote-footer-copy {
     justify-self: center;
+    text-align: center;
   }
 }

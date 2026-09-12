@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./AufmassAngebotePage.css";
 
@@ -12,6 +13,7 @@ export default function AufmassAngebotePage({
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -35,9 +37,36 @@ export default function AufmassAngebotePage({
     </div>
   </a>
 
-  <nav className="aufmass-angebote-nav">
-    <a href="/">Startseite</a>
-    <a href="/maler-software">Software</a>
+  <button
+    type="button"
+    className="aufmass-angebote-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav
+    className={`aufmass-angebote-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a
+      href="/"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Startseite
+    </a>
+
+    <a
+      href="/maler-software"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Software
+    </a>
   </nav>
 </header>
         <main>

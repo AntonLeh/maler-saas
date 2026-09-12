@@ -145,8 +145,13 @@
   }
 }
 
+.rechnungen-menu-toggle {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .rechnungen-header {
+    position: relative;
     padding: 14px 18px;
   }
 
@@ -154,8 +159,53 @@
     display: none;
   }
 
+  .rechnungen-menu-toggle {
+    display: block;
+    margin-left: auto;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .rechnungen-menu-toggle span {
+    display: block;
+    width: 25px;
+    height: 2px;
+    margin: 5px 0;
+    border-radius: 999px;
+    background: #0f172a;
+  }
+
   .rechnungen-nav {
-    gap: 14px;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    z-index: 1000;
+    width: auto;
+    padding: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+  }
+
+  .rechnungen-nav.is-open {
+    display: block;
+  }
+
+  .rechnungen-nav a {
+    display: block;
+    margin: 0;
+    padding: 7px 14px;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    white-space: nowrap;
   }
 
   .rechnungen-hero {
@@ -629,13 +679,28 @@
     padding: 64px 18px;
   }
 
+  .rechnungen-footer {
+    text-align: center;
+  }
+
   .rechnungen-footer-content {
     flex-direction: column;
-    align-items: flex-start;
-    padding: 28px 18px;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 28px 18px 36px;
+    text-align: center;
+  }
+
+  .rechnungen-footer-content > div:first-child {
+    text-align: center;
   }
 
   .rechnungen-footer-links {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
+    gap: 12px 20px;
   }
 }

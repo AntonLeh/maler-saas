@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./LeistungsbewertungPage.css";
 
@@ -14,6 +15,7 @@ export default function LeistungsbewertungPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: LeistungsbewertungPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -24,24 +26,48 @@ export default function LeistungsbewertungPage({
 
       <div className="leistungsbewertung-page">
         <header className="leistungsbewertung-header">
-          <a href="/" className="leistungsbewertung-logo">
-            <img
-              src="/images/logo.png"
-              alt="MalerSaaS"
-              className="leistungsbewertung-logo-image"
-            />
+  <a href="/" className="leistungsbewertung-logo">
+    <img
+      src="/images/logo.png"
+      alt="MalerSaaS"
+      className="leistungsbewertung-logo-image"
+    />
 
-            <div className="leistungsbewertung-logo-text">
-              <strong>MalerSaaS</strong>
-              <span>Digitale Komplettlösung</span>
-            </div>
-          </a>
+    <div className="leistungsbewertung-logo-text">
+      <strong>MalerSaaS</strong>
+      <span>Digitale Komplettlösung</span>
+    </div>
+  </a>
 
-          <nav className="leistungsbewertung-nav">
-            <a href="/">Startseite</a>
-            <a href="/maler-software">Software</a>
-          </nav>
-        </header>
+  <button
+    type="button"
+    className="leistungsbewertung-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav
+    className={`leistungsbewertung-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a href="/" onClick={() => setMobileMenuOpen(false)}>
+      Startseite
+    </a>
+
+    <a
+      href="/maler-software"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Software
+    </a>
+  </nav>
+</header>
 
         <main>
           <section className="leistungsbewertung-hero">

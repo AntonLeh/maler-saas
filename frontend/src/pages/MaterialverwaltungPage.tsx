@@ -1,3 +1,4 @@
+import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./MaterialverwaltungPage.css";
 
@@ -14,6 +15,7 @@ export default function MaterialverwaltungPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: MaterialverwaltungPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -24,24 +26,48 @@ export default function MaterialverwaltungPage({
 
       <div className="materialverwaltung-page">
         <header className="materialverwaltung-header">
-          <a href="/" className="materialverwaltung-logo">
-            <img
-              src="/images/logo.png"
-              alt="MalerSaaS"
-              className="materialverwaltung-logo-image"
-            />
+  <a href="/" className="materialverwaltung-logo">
+    <img
+      src="/images/logo.png"
+      alt="MalerSaaS"
+      className="materialverwaltung-logo-image"
+    />
 
-            <div className="materialverwaltung-logo-text">
-              <strong>MalerSaaS</strong>
-              <span>Digitale Komplettlösung</span>
-            </div>
-          </a>
+    <div className="materialverwaltung-logo-text">
+      <strong>MalerSaaS</strong>
+      <span>Digitale Komplettlösung</span>
+    </div>
+  </a>
 
-          <nav className="materialverwaltung-nav">
-            <a href="/">Startseite</a>
-            <a href="/maler-software">Software</a>
-          </nav>
-        </header>
+  <button
+    type="button"
+    className="materialverwaltung-menu-toggle"
+    aria-label="Menü öffnen"
+    aria-expanded={mobileMenuOpen}
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav
+    className={`materialverwaltung-nav ${
+      mobileMenuOpen ? "is-open" : ""
+    }`}
+  >
+    <a href="/" onClick={() => setMobileMenuOpen(false)}>
+      Startseite
+    </a>
+
+    <a
+      href="/maler-software"
+      onClick={() => setMobileMenuOpen(false)}
+    >
+      Software
+    </a>
+  </nav>
+</header>
 
         <main>
           <section className="materialverwaltung-hero">
