@@ -3782,15 +3782,36 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
           continue;
         }
 
-        const { error: imageInsertError } = await supabase.from("site_visit_images").insert({
-          tenant_id: userProfile.tenant_id,
-          site_visit_id: siteVisitId,
-          room_temp_id: realRoomId,
-          file_path: filePath,
-          file_name: file.name,
-          file_type: file.type,
-          created_by: session?.user.id,
-        });
+                let imageInsertError: any = null;
+
+        if (userProfile.role_id === PROJECT_MANAGER_ROLE_ID) {
+          const { error } = await supabase.rpc(
+            "add_site_visit_image",
+            {
+              p_site_visit_id: siteVisitId,
+              p_room_id: realRoomId,
+              p_file_path: filePath,
+              p_file_name: file.name,
+              p_file_type: file.type,
+            }
+          );
+
+          imageInsertError = error;
+        } else {
+          const { error } = await supabase
+            .from("site_visit_images")
+            .insert({
+              tenant_id: userProfile.tenant_id,
+              site_visit_id: siteVisitId,
+              room_temp_id: realRoomId,
+              file_path: filePath,
+              file_name: file.name,
+              file_type: file.type,
+              created_by: session?.user.id,
+            });
+
+          imageInsertError = error;
+        }
 
         if (imageInsertError) {
           console.error("Bilddatenbank Fehler:", imageInsertError);
@@ -3916,6 +3937,98 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
     try {
       setSavingSiteVisit(true);
       setSiteVisitMessage("");
+
+      if (userProfile.role_id === PROJECT_MANAGER_ROLE_ID) {
+        const { data: secureResult, error: secureError } =
+          await supabase.rpc("create_site_visit_and_quote", {
+            p_customer_id: Number(siteVisitForm.customer_id),
+            p_title: siteVisitForm.title.trim(),
+            p_object_street:
+              siteVisitForm.object_street.trim() || null,
+            p_object_zip:
+              siteVisitForm.object_zip.trim() || null,
+            p_object_city:
+              siteVisitForm.object_city.trim() || null,
+            p_visit_date:
+              siteVisitForm.visit_date || null,
+            p_notes:
+              siteVisitForm.notes.trim() || null,
+            p_rooms: siteVisitForm.rooms,
+            p_windows: siteVisitForm.windows,
+            p_doors: siteVisitForm.doors,
+            p_radiators: siteVisitForm.radiators,
+            p_custom_services: siteVisitForm.custom_services,
+          });
+
+        if (secureError) {
+          throw secureError;
+        }
+
+        const result = secureResult as {
+          site_visit_id: number | string;
+          quote_id: number | string;
+          room_id_map: Record<string, number | string>;
+        };
+
+        const siteVisitId = Number(result.site_visit_id);
+
+        const roomIdMap = Object.fromEntries(
+          Object.entries(result.room_id_map || {}).map(
+            ([temporaryId, realId]) => [
+              Number(temporaryId),
+              Number(realId),
+            ]
+          )
+        ) as Record<number, number>;
+
+        await uploadRoomImages(siteVisitId, roomIdMap);
+
+        setSiteVisitMessage(
+          "Aufmaß wurde erfolgreich übermittelt. Das Angebot wurde dem Admin bereitgestellt."
+        );
+
+        setSelectedSiteVisitId(null);
+        setEditingSiteVisitId(null);
+        setRoomImages({});
+        setSavedRoomImages({});
+
+        setOpenSections({
+          general: false,
+          rooms: false,
+          windows: false,
+          doors: false,
+          radiators: false,
+          custom: false,
+        });
+
+        setSiteVisitForm({
+          customer_id: "",
+          title: "",
+          object_street: "",
+          object_zip: "",
+          object_city: "",
+          visit_date: new Date().toISOString().slice(0, 10),
+          notes: "",
+          rooms: [
+            {
+              temp_id: Date.now(),
+              room_name: "",
+              length_m: "",
+              width_m: "",
+              height_m: "",
+              notes: "",
+              paint_ceiling: true,
+              manual_wall_area_sqm: "",
+            },
+          ],
+          windows: [],
+          doors: [],
+          radiators: [],
+          custom_services: [],
+        });
+
+        return;
+      }
 
       const siteVisitPayload = {
         tenant_id: userProfile.tenant_id,
