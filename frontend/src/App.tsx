@@ -3938,98 +3938,6 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
       setSavingSiteVisit(true);
       setSiteVisitMessage("");
 
-      if (userProfile.role_id === PROJECT_MANAGER_ROLE_ID) {
-        const { data: secureResult, error: secureError } =
-          await supabase.rpc("create_site_visit_and_quote", {
-            p_customer_id: Number(siteVisitForm.customer_id),
-            p_title: siteVisitForm.title.trim(),
-            p_object_street:
-              siteVisitForm.object_street.trim() || null,
-            p_object_zip:
-              siteVisitForm.object_zip.trim() || null,
-            p_object_city:
-              siteVisitForm.object_city.trim() || null,
-            p_visit_date:
-              siteVisitForm.visit_date || null,
-            p_notes:
-              siteVisitForm.notes.trim() || null,
-            p_rooms: siteVisitForm.rooms,
-            p_windows: siteVisitForm.windows,
-            p_doors: siteVisitForm.doors,
-            p_radiators: siteVisitForm.radiators,
-            p_custom_services: siteVisitForm.custom_services,
-          });
-
-        if (secureError) {
-          throw secureError;
-        }
-
-        const result = secureResult as {
-          site_visit_id: number | string;
-          quote_id: number | string;
-          room_id_map: Record<string, number | string>;
-        };
-
-        const siteVisitId = Number(result.site_visit_id);
-
-        const roomIdMap = Object.fromEntries(
-          Object.entries(result.room_id_map || {}).map(
-            ([temporaryId, realId]) => [
-              Number(temporaryId),
-              Number(realId),
-            ]
-          )
-        ) as Record<number, number>;
-
-        await uploadRoomImages(siteVisitId, roomIdMap);
-
-        setSiteVisitMessage(
-          "Aufmaß wurde erfolgreich übermittelt. Das Angebot wurde dem Admin bereitgestellt."
-        );
-
-        setSelectedSiteVisitId(null);
-        setEditingSiteVisitId(null);
-        setRoomImages({});
-        setSavedRoomImages({});
-
-        setOpenSections({
-          general: false,
-          rooms: false,
-          windows: false,
-          doors: false,
-          radiators: false,
-          custom: false,
-        });
-
-        setSiteVisitForm({
-          customer_id: "",
-          title: "",
-          object_street: "",
-          object_zip: "",
-          object_city: "",
-          visit_date: new Date().toISOString().slice(0, 10),
-          notes: "",
-          rooms: [
-            {
-              temp_id: Date.now(),
-              room_name: "",
-              length_m: "",
-              width_m: "",
-              height_m: "",
-              notes: "",
-              paint_ceiling: true,
-              manual_wall_area_sqm: "",
-            },
-          ],
-          windows: [],
-          doors: [],
-          radiators: [],
-          custom_services: [],
-        });
-
-        return;
-      }
-
       const siteVisitPayload = {
         tenant_id: userProfile.tenant_id,
         customer_id: Number(siteVisitForm.customer_id),
@@ -4236,7 +4144,7 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
 
       if (createQuoteAfterSave) {
         const { data: quoteId, error: quoteError } = await supabase.rpc(
-          "generate_quote_from_site_visit",
+          "submit_site_visit_and_create_quote",
           {
             p_site_visit_id: siteVisitId,
           }
@@ -4246,10 +4154,14 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
           throw quoteError;
         }
 
-        await loadQuotes(userProfile.tenant_id);
+                if (userProfile.role_id !== PROJECT_MANAGER_ROLE_ID) {
+          await loadQuotes(userProfile.tenant_id);
+        }
 
         setSiteVisitMessage(
-          `Aufmaß gespeichert und Angebot erfolgreich erzeugt. Angebots-ID: ${quoteId}`
+          userProfile.role_id === PROJECT_MANAGER_ROLE_ID
+            ? "Aufmaß wurde erfolgreich übermittelt. Das Angebot wurde dem Admin bereitgestellt."
+            : `Aufmaß gespeichert und Angebot erfolgreich erzeugt. Angebots-ID: ${quoteId}`
         );
       } else {
         setSiteVisitMessage("Aufmaß erfolgreich gespeichert.");
@@ -7480,16 +7392,15 @@ onReloadOrders={async () => {
                                   + Sonderleistung
                                 </button>
 
-                                {(userProfile?.role_id === 1 ||
-                                  userProfile?.role_id === 2) && (
-                                    <button
-                                      type="submit"
-                                      className="btn btn-secondary"
-                                      onClick={() => setCreateQuoteAfterSave(true)}
-                                    >
-                                      Angebot
-                                    </button>
-                                  )}
+                                {(isAdmin || isProjectManager) && (
+  <button
+    type="submit"
+    className="btn btn-secondary"
+    onClick={() => setCreateQuoteAfterSave(true)}
+  >
+    Angebot
+  </button>
+)}
 
                                 {editingSiteVisitId && (
                                   <button
