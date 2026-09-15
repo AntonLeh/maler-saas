@@ -195,6 +195,24 @@ type ProgressEntry = {
   images?: {
     id: number;
     image_url: string;
+    created_at: string;
+  }[];
+};
+
+type SiteVisitFeedEntry = {
+  id: number;
+  tenant_id: number;
+  title: string;
+  object_street: string | null;
+  object_zip: string | null;
+  object_city: string | null;
+  measured_by: number | null;
+  created_at: string;
+  images: {
+    id: string;
+    file_name: string | null;
+    signed_url: string;
+    created_at: string;
   }[];
 };
 
@@ -500,6 +518,8 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [messageRecipients, setMessageRecipients] = useState<any[]>([]);
 
   const [progressEntries, setProgressEntries] = useState<ProgressEntry[]>([]);
+  const [siteVisitFeedEntries, setSiteVisitFeedEntries] =
+  useState<SiteVisitFeedEntry[]>([]);
   const [progressImages, setProgressImages] = useState<ProgressImage[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
 
@@ -936,6 +956,9 @@ return () => subscription.unsubscribe();
   loadProgressEntries(profile.tenant_id),
   loadTimeEntries(profile.tenant_id),
   loadMaterialConsumptionLogs(profile.tenant_id),
+  profile.role_id === 1 || profile.role_id === 2
+    ? loadSiteVisitFeedEntries(profile.tenant_id)
+    : Promise.resolve(setSiteVisitFeedEntries([])),
 ]);
 
       setCurrentPage("dashboard");
@@ -2683,7 +2706,10 @@ if (
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Fehler beim Laden aller Fortschritte:", error);
+    console.error(
+      "Fehler beim Laden aller Fortschritte:",
+      error
+    );
     setProgressEntries([]);
     return;
   }
@@ -2697,37 +2723,178 @@ if (
 
   const progressIds = progress.map((entry) => entry.id);
 
-  const { data: images, error: imagesError } = await supabase
-    .from("order_progress_images")
-    .select("id, progress_id, image_url")
-    .in("progress_id", progressIds);
+  const { data: images, error: imagesError } =
+    await supabase
+      .from("order_progress_images")
+      .select(
+        "id, progress_id, image_url, created_at"
+      )
+      .in("progress_id", progressIds);
 
   if (imagesError) {
-    console.error("Fehler beim Laden der Fortschrittsbilder:", imagesError);
+    console.error(
+      "Fehler beim Laden der Fortschrittsbilder:",
+      imagesError
+    );
     setProgressEntries(progress);
     return;
   }
 
   const imagesByProgressId = new Map<
     number,
-    { id: number; image_url: string }[]
+    {
+      id: number;
+      image_url: string;
+      created_at: string;
+    }[]
   >();
 
   (images || []).forEach((image: any) => {
-    const list = imagesByProgressId.get(image.progress_id) || [];
+    const list =
+      imagesByProgressId.get(image.progress_id) || [];
+
     list.push({
       id: image.id,
       image_url: image.image_url,
+      created_at: image.created_at,
     });
+
     imagesByProgressId.set(image.progress_id, list);
   });
 
-  const progressWithImages = progress.map((entry) => ({
-    ...entry,
-    images: imagesByProgressId.get(entry.id) || [],
-  }));
+  const progressWithImages: ProgressEntry[] =
+    progress.map((entry) => ({
+      ...entry,
+      images:
+        imagesByProgressId.get(entry.id) || [],
+    }));
 
   setProgressEntries(progressWithImages);
+};
+
+const loadSiteVisitFeedEntries = async (tenantId: number) => {
+  const { data: siteVisits, error: siteVisitsError } = await supabase
+    .from("site_visits")
+    .select(
+      "id, tenant_id, title, object_street, object_zip, object_city, measured_by, created_at"
+    )
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false });
+
+  if (siteVisitsError) {
+    console.error(
+      "Fehler beim Laden der Aufmaße für den Unternehmens-Feed:",
+      siteVisitsError
+    );
+    setSiteVisitFeedEntries([]);
+    return;
+  }
+
+  const siteVisitIds = (siteVisits || []).map((siteVisit) =>
+    Number(siteVisit.id)
+  );
+
+  if (siteVisitIds.length === 0) {
+    setSiteVisitFeedEntries([]);
+    return;
+  }
+
+  const { data: images, error: imagesError } = await supabase
+    .from("site_visit_images")
+    .select(
+      "id, site_visit_id, file_path, file_name, created_at"
+    )
+    .eq("tenant_id", tenantId)
+    .in("site_visit_id", siteVisitIds)
+    .order("created_at", { ascending: false });
+
+  if (imagesError) {
+    console.error(
+      "Fehler beim Laden der Aufmaßbilder für den Unternehmens-Feed:",
+      imagesError
+    );
+    setSiteVisitFeedEntries([]);
+    return;
+  }
+
+  const imagesBySiteVisitId = new Map<
+    number,
+    {
+      id: string;
+      file_name: string | null;
+      signed_url: string;
+      created_at: string;
+    }[]
+  >();
+
+  for (const image of images || []) {
+    const cleanFilePath = String(image.file_path || "").replace(
+      /^site-visit-images\//,
+      ""
+    );
+
+    const { data: signedData, error: signedError } =
+      await supabase.storage
+        .from("site-visit-images")
+        .createSignedUrl(cleanFilePath, 3600);
+
+    if (signedError || !signedData?.signedUrl) {
+      console.error(
+        "Signierte URL für Aufmaßbild konnte nicht erstellt werden:",
+        signedError
+      );
+      continue;
+    }
+
+    const siteVisitId = Number(image.site_visit_id);
+    const existingImages =
+      imagesBySiteVisitId.get(siteVisitId) || [];
+
+    existingImages.push({
+      id: String(image.id),
+      file_name: image.file_name || null,
+      signed_url: signedData.signedUrl,
+      created_at: image.created_at,
+    });
+
+    imagesBySiteVisitId.set(siteVisitId, existingImages);
+  }
+
+  const feedEntries: SiteVisitFeedEntry[] = (siteVisits || [])
+    .map((siteVisit) => {
+      const siteVisitImages =
+        imagesBySiteVisitId.get(Number(siteVisit.id)) || [];
+
+      return {
+        id: Number(siteVisit.id),
+        tenant_id: Number(siteVisit.tenant_id),
+        title: siteVisit.title,
+        object_street: siteVisit.object_street || null,
+        object_zip: siteVisit.object_zip || null,
+        object_city: siteVisit.object_city || null,
+        measured_by:
+          siteVisit.measured_by === null
+            ? null
+            : Number(siteVisit.measured_by),
+        created_at:
+          siteVisitImages[0]?.created_at ||
+          siteVisit.created_at,
+        images: siteVisitImages.map((image) => ({
+  id: image.id,
+  file_name: image.file_name,
+  signed_url: image.signed_url,
+  created_at: image.created_at,
+})),
+      };
+    })
+    .filter((siteVisit) => siteVisit.images.length > 0)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+    );
+
+  setSiteVisitFeedEntries(feedEntries);
 };
 
 const loadMaterialConsumptionLogs = async (tenantId: number) => {
@@ -3576,6 +3743,8 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
     if (!siteVisitId) return;
 
     setEditingSiteVisitId(siteVisitId);
+    setRoomImages({});
+    setSavedRoomImages({});
 
     try {
       setLoadingSiteVisit(true);
@@ -3776,10 +3945,12 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
             contentType: file.type,
           });
 
-        if (uploadError) {
+                if (uploadError) {
           console.error("Upload Fehler:", uploadError);
-          alert("Upload Fehler: " + uploadError.message);
-          continue;
+          throw new Error(
+            "Bild konnte nicht hochgeladen werden: " +
+              uploadError.message
+          );
         }
 
                 let imageInsertError: any = null;
@@ -3813,9 +3984,15 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
           imageInsertError = error;
         }
 
-        if (imageInsertError) {
-          console.error("Bilddatenbank Fehler:", imageInsertError);
-          alert("Bilddatenbank Fehler: " + imageInsertError.message);
+                if (imageInsertError) {
+          console.error(
+            "Bilddatenbank Fehler:",
+            imageInsertError
+          );
+          throw new Error(
+            "Bild konnte nicht gespeichert werden: " +
+              imageInsertError.message
+          );
         }
       }
     }
@@ -4168,7 +4345,8 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
       }
       setSelectedSiteVisitId(null);
       setEditingSiteVisitId(null);
-
+      setRoomImages({});
+      setSavedRoomImages({});
       setOpenSections({
         general: false,
         rooms: false,
@@ -5940,7 +6118,57 @@ onReloadOrders={async () => {
                   </section>
 
                   <BusinessCockpit
-                  businessEvents={businessEvents}
+                  businessEvents={[
+  ...businessEvents,
+  ...siteVisitFeedEntries.flatMap(
+    (entry): BusinessEvent[] => {
+      const imagesForSelectedDate = entry.images.filter(
+        (image) =>
+          new Date(image.created_at).toLocaleDateString(
+            "sv-SE"
+          ) === selectedBusinessDate
+      );
+
+      if (imagesForSelectedDate.length === 0) {
+        return [];
+      }
+
+      const employeeName =
+        entry.measured_by !== null
+          ? employeeNameMap.get(entry.measured_by)
+          : null;
+
+      const newestImageDate = imagesForSelectedDate.reduce(
+        (newest, image) =>
+          new Date(image.created_at).getTime() >
+          new Date(newest).getTime()
+            ? image.created_at
+            : newest,
+        imagesForSelectedDate[0].created_at
+      );
+
+      const imageText =
+        imagesForSelectedDate.length === 1
+          ? "1 neues Aufmaßbild"
+          : `${imagesForSelectedDate.length} neue Aufmaßbilder`;
+
+      return [
+        {
+          id: -entry.id,
+          tenant_id: entry.tenant_id,
+          event_type: "site_visit_image",
+          message: employeeName
+            ? `${employeeName} hat ${imageText} zu „${entry.title}“ hochgeladen.`
+            : `${imageText} zu „${entry.title}“ wurden hochgeladen.`,
+          icon: "📐",
+          severity: "info",
+          order_id: null,
+          created_at: newestImageDate,
+        },
+      ];
+    }
+  ),
+]}
                   selectedDate={selectedBusinessDate}
                   onDateChange={setSelectedBusinessDate}
                   
@@ -5988,22 +6216,30 @@ onReloadOrders={async () => {
     )
 }
   newImages={
-  progressEntries
-    .filter((entry) => {
-      const order = orders.find(
-        (o) => String(o.id) === String(entry.order_id)
-      );
-
-      return (
-        order &&
-        order.status !== "fertig" &&
-        order.status !== "abgerechnet"
-      );
-    })
-    .reduce(
-      (total, entry) => total + (entry.images?.length ?? 0),
-      0
-    )
+  progressEntries.reduce(
+    (total, entry) =>
+      total +
+      (entry.images ?? []).filter(
+        (image) =>
+          new Date(image.created_at).toLocaleDateString(
+            "sv-SE"
+          ) ===
+          new Date().toLocaleDateString("sv-SE")
+      ).length,
+    0
+  ) +
+  siteVisitFeedEntries.reduce(
+    (total, entry) =>
+      total +
+      entry.images.filter(
+        (image) =>
+          new Date(image.created_at).toLocaleDateString(
+            "sv-SE"
+          ) ===
+          new Date().toLocaleDateString("sv-SE")
+      ).length,
+    0
+  )
 }
   pendingApprovalOrders={
   orders.filter(
@@ -11497,12 +11733,13 @@ const businessAdvisor = generateBusinessInsights();
 
 {currentPage === "business-images" && (
   <BusinessFeedPage
-    onBack={openDashboard}
-    progressEntries={progressEntries}
-    orders={orders}
-    employeeNameMap={employeeNameMap}
-    onPreviewImage={setSelectedProgressImagePreview}
-  />
+  onBack={openDashboard}
+  progressEntries={progressEntries}
+  siteVisitFeedEntries={siteVisitFeedEntries}
+  orders={orders}
+  employeeNameMap={employeeNameMap}
+  onPreviewImage={setSelectedProgressImagePreview}
+/>
 )}
 
 {currentPage === "approval-center" && (

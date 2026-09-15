@@ -1,5 +1,6 @@
 export type FeedEventType =
   | "progress"
+  | "site-visit"
   | "invoice"
   | "order"
   | "material"

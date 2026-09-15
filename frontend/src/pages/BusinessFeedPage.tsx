@@ -12,6 +12,23 @@ type ProgressEntry = {
   images?: {
     id: number;
     image_url: string;
+    created_at: string;
+  }[];
+};
+
+type SiteVisitFeedEntry = {
+  id: number;
+  tenant_id: number;
+  title: string;
+  object_street: string | null;
+  object_zip: string | null;
+  object_city: string | null;
+  measured_by: number | null;
+  created_at: string;
+  images: {
+    id: string;
+    file_name: string | null;
+    signed_url: string;
   }[];
 };
 
@@ -24,6 +41,7 @@ type Order = {
 type BusinessFeedPageProps = {
   onBack: () => void;
   progressEntries: ProgressEntry[];
+  siteVisitFeedEntries: SiteVisitFeedEntry[];
   orders: Order[];
   employeeNameMap: Map<number, string>;
   onPreviewImage: (url: string) => void;
@@ -33,6 +51,9 @@ function getFeedIcon(type: FeedEvent["type"]) {
   switch (type) {
     case "progress":
       return "📸";
+
+    case "site-visit":
+      return "📐";
 
     case "invoice":
       return "🧾";
@@ -54,22 +75,24 @@ function getFeedIcon(type: FeedEvent["type"]) {
 export default function BusinessFeedPage({
   onBack,
   progressEntries,
+  siteVisitFeedEntries,
   orders,
   employeeNameMap,
   onPreviewImage,
 }: BusinessFeedPageProps) {
   const feed = buildProgressFeed(
-    progressEntries,
-    orders,
-    employeeNameMap
-  );
+  progressEntries,
+  siteVisitFeedEntries,
+  orders,
+  employeeNameMap
+);
 
   return (
     <section className="single-page-section">
       <div className="page-topbar">
         <div>
           <h1 style={{ fontSize: "24px" }}>🏗️ Unternehmens-Feed</h1>
-          <p>Aktuelle Fortschritte und Bilder von aktiven Baustellen.</p>
+          <p>Aktuelle Baustellen- und Aufmaßbilder des Unternehmens.</p>
         </div>
 
         <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -140,7 +163,11 @@ export default function BusinessFeedPage({
                       >
                         <img
                           src={url}
-                          alt="Fortschrittsbild"
+                          alt={
+  event.type === "site-visit"
+    ? "Aufmaßbild"
+    : "Fortschrittsbild"
+}
                           style={{
                             width: "100%",
                             height: "150px",
