@@ -1995,30 +1995,92 @@ const loadMessages = async (tenantId: number) => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Fehler beim Laden der Nachrichten:", error);
+    console.error(
+      "Fehler beim Laden der Nachrichten:",
+      error
+    );
     setMessages([]);
     return;
   }
 
-  const loadedMessages = data || [];
+  const loadedMessages = await Promise.all(
+    (data || []).map(async (message) => {
+      if (!message.image_url) {
+        return message;
+      }
 
-setMessages(loadedMessages);
+      const storedImageValue = String(
+        message.image_url
+      );
 
-const unread = loadedMessages.filter((msg) => {
-  if (!userProfile) return false;
+      const publicPathMarker =
+        "/storage/v1/object/public/message-images/";
 
-  const isOwn = Number(msg.sender_id) === Number(userProfile.id);
+      const signedPathMarker =
+        "/storage/v1/object/sign/message-images/";
 
-  if (isOwn) return false;
+      let filePath = storedImageValue;
 
-  const isForMe =
-    msg.recipient_id === null ||
-    Number(msg.recipient_id) === Number(userProfile.id);
+      if (storedImageValue.includes(publicPathMarker)) {
+        filePath =
+          storedImageValue.split(publicPathMarker)[1];
+      } else if (
+        storedImageValue.includes(signedPathMarker)
+      ) {
+        filePath =
+          storedImageValue
+            .split(signedPathMarker)[1]
+            .split("?")[0];
+      }
 
-  return isForMe && !msg.read_at;
-}).length;
+      filePath = decodeURIComponent(filePath).replace(
+        /^message-images\//,
+        ""
+      );
 
-setUnreadMessages(unread);
+      const { data: signedData, error: signedError } =
+        await supabase.storage
+          .from("message-images")
+          .createSignedUrl(filePath, 3600);
+
+      if (signedError || !signedData?.signedUrl) {
+        console.error(
+          "Nachrichtenbild konnte nicht sicher geladen werden:",
+          signedError
+        );
+
+        return {
+          ...message,
+          image_url: null,
+        };
+      }
+
+      return {
+        ...message,
+        image_url: signedData.signedUrl,
+      };
+    })
+  );
+
+  setMessages(loadedMessages);
+
+  const unread = loadedMessages.filter((msg) => {
+    if (!userProfile) return false;
+
+    const isOwn =
+      Number(msg.sender_id) === Number(userProfile.id);
+
+    if (isOwn) return false;
+
+    const isForMe =
+      msg.recipient_id === null ||
+      Number(msg.recipient_id) ===
+        Number(userProfile.id);
+
+    return isForMe && !msg.read_at;
+  }).length;
+
+  setUnreadMessages(unread);
 };
 
 const handleSendMessage = async () => {
@@ -2028,7 +2090,7 @@ const handleSendMessage = async () => {
 
   if (!cleanMessage && !messageImage) return;
 
-  let imageUrl: string | null = null;
+  let imagePath: string | null = null;
 
   if (messageImage) {
     const fileExt = messageImage.name.split(".").pop();
@@ -2043,11 +2105,7 @@ const handleSendMessage = async () => {
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("message-images")
-      .getPublicUrl(fileName);
-
-    imageUrl = publicUrlData.publicUrl;
+    imagePath = fileName;
   }
 
   const { error } = await supabase
@@ -2060,7 +2118,7 @@ const handleSendMessage = async () => {
         order_id: null,
         message_type: messageRecipientId ? "direct" : "broadcast",
         message: cleanMessage || "Bildnachricht",
-        image_url: imageUrl,
+        image_url: imagePath,
       },
     ]);
 
