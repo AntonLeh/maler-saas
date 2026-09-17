@@ -1944,7 +1944,56 @@ if (existingOrder) {
   setInvoices(data || []);
 };
 
-  const loadOrderProgress = async (
+  const createProgressImageSignedUrl = async (
+  filePathValue: string | null,
+  imageUrlValue: string | null
+) => {
+  const storedValue = String(
+    filePathValue || imageUrlValue || ""
+  );
+
+  if (!storedValue) {
+    return null;
+  }
+
+  const publicPathMarker =
+    "/storage/v1/object/public/order-progress-images/";
+
+  const signedPathMarker =
+    "/storage/v1/object/sign/order-progress-images/";
+
+  let filePath = storedValue;
+
+  if (storedValue.includes(publicPathMarker)) {
+    filePath = storedValue.split(publicPathMarker)[1];
+  } else if (storedValue.includes(signedPathMarker)) {
+    filePath = storedValue
+      .split(signedPathMarker)[1]
+      .split("?")[0];
+  }
+
+  filePath = decodeURIComponent(filePath).replace(
+    /^order-progress-images\//,
+    ""
+  );
+
+  const { data, error } = await supabase.storage
+    .from("order-progress-images")
+    .createSignedUrl(filePath, 3600);
+
+  if (error || !data?.signedUrl) {
+    console.error(
+      "Signierte URL für Fortschrittsbild konnte nicht erstellt werden:",
+      error
+    );
+
+    return null;
+  }
+
+  return data.signedUrl;
+};
+
+const loadOrderProgress = async (
   orderId: string,
   tenantId: number
 ) => {
@@ -1956,7 +2005,10 @@ if (existingOrder) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Fehler beim Laden des Auftragsverlaufs:", error);
+    console.error(
+      "Fehler beim Laden des Auftragsverlaufs:",
+      error
+    );
     setOrderProgress([]);
     return;
   }
@@ -1968,38 +2020,77 @@ if (existingOrder) {
     return;
   }
 
-  const progressIds = progressEntries.map((entry) => entry.id);
+  const progressIds = progressEntries.map(
+    (entry) => entry.id
+  );
 
-  const { data: imageData, error: imageError } = await supabase
-    .from("order_progress_images")
-    .select("id, progress_id, image_url")
-    .in("progress_id", progressIds);
+  const { data: imageData, error: imageError } =
+    await supabase
+      .from("order_progress_images")
+      .select("id, progress_id, image_url, file_path")
+      .in("progress_id", progressIds);
 
   if (imageError) {
-    console.error("Fehler beim Laden der Fortschrittsbilder:", imageError);
+    console.error(
+      "Fehler beim Laden der Fortschrittsbilder:",
+      imageError
+    );
     setOrderProgress(progressEntries);
     return;
   }
 
-  const imagesByProgressId = new Map<number, { id: number; image_url: string }[]>();
+  const signedImages = await Promise.all(
+    (imageData || []).map(async (image) => {
+      const signedUrl =
+        await createProgressImageSignedUrl(
+          image.file_path,
+          image.image_url
+        );
 
-  (imageData || []).forEach((image: any) => {
-    const list = imagesByProgressId.get(image.progress_id) || [];
+      if (!signedUrl) {
+        return null;
+      }
+
+      return {
+        id: Number(image.id),
+        progress_id: Number(image.progress_id),
+        image_url: signedUrl,
+      };
+    })
+  );
+
+  const imagesByProgressId = new Map<
+    number,
+    {
+      id: number;
+      image_url: string;
+    }[]
+  >();
+
+  for (const image of signedImages) {
+    if (!image) continue;
+
+    const list =
+      imagesByProgressId.get(image.progress_id) || [];
+
     list.push({
       id: image.id,
       image_url: image.image_url,
     });
-    imagesByProgressId.set(image.progress_id, list);
-  });
 
-  const progressWithImages = progressEntries.map((entry) => ({
-    ...entry,
-    images: imagesByProgressId.get(entry.id) || [],
-  }));
+    imagesByProgressId.set(
+      image.progress_id,
+      list
+    );
+  }
 
-  console.log("PROGRESS ENTRIES:", progressEntries);
-  console.log("IMAGE DATA:", imageData);
-  console.log("PROGRESS WITH IMAGES:", progressWithImages);
+  const progressWithImages = progressEntries.map(
+    (entry) => ({
+      ...entry,
+      images:
+        imagesByProgressId.get(entry.id) || [],
+    })
+  );
 
   setOrderProgress(progressWithImages);
 };
@@ -2253,7 +2344,10 @@ const loadMessageRecipients = async () => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Fehler beim Laden der Fortschritte:", error);
+    console.error(
+      "Fehler beim Laden der Fortschritte:",
+      error
+    );
     setProgressEntries([]);
     setProgressImages([]);
     return;
@@ -2261,26 +2355,59 @@ const loadMessageRecipients = async () => {
 
   setProgressEntries(data || []);
 
-  const progressIds = (data || []).map((entry) => entry.id);
+  const progressIds = (data || []).map(
+    (entry) => entry.id
+  );
 
   if (progressIds.length === 0) {
     setProgressImages([]);
     return;
   }
 
-  const { data: imageData, error: imageError } = await supabase
-    .from("order_progress_images")
-    .select("*")
-    .in("progress_id", progressIds)
-    .order("created_at", { ascending: false });
+  const { data: imageData, error: imageError } =
+    await supabase
+      .from("order_progress_images")
+      .select("*")
+      .in("progress_id", progressIds)
+      .order("created_at", { ascending: false });
 
   if (imageError) {
-    console.error("Fehler beim Laden der Fortschrittsbilder:", imageError);
+    console.error(
+      "Fehler beim Laden der Fortschrittsbilder:",
+      imageError
+    );
     setProgressImages([]);
     return;
   }
 
-  setProgressImages((imageData as ProgressImage[]) || []);
+  const signedResults = await Promise.all(
+    (imageData || []).map(async (image) => {
+      const signedUrl =
+        await createProgressImageSignedUrl(
+          image.file_path,
+          image.image_url
+        );
+
+      if (!signedUrl) {
+        return null;
+      }
+
+      return {
+        ...image,
+        image_url: signedUrl,
+      };
+    })
+  );
+
+  const signedImages: ProgressImage[] = [];
+
+  for (const image of signedResults) {
+    if (!image) continue;
+
+    signedImages.push(image as ProgressImage);
+  }
+
+  setProgressImages(signedImages);
 };
 
 const loadPerformanceCriteria = async () => {
@@ -2773,7 +2900,9 @@ if (
     }
   };
 
-  const loadProgressEntries = async (tenantId: number) => {
+  const loadProgressEntries = async (
+  tenantId: number
+) => {
   const { data, error } = await supabase
     .from("order_progress")
     .select("*")
@@ -2796,13 +2925,15 @@ if (
     return;
   }
 
-  const progressIds = progress.map((entry) => entry.id);
+  const progressIds = progress.map(
+    (entry) => entry.id
+  );
 
   const { data: images, error: imagesError } =
     await supabase
       .from("order_progress_images")
       .select(
-        "id, progress_id, image_url, created_at"
+        "id, progress_id, image_url, file_path, created_at"
       )
       .in("progress_id", progressIds);
 
@@ -2815,6 +2946,27 @@ if (
     return;
   }
 
+  const signedResults = await Promise.all(
+    (images || []).map(async (image) => {
+      const signedUrl =
+        await createProgressImageSignedUrl(
+          image.file_path,
+          image.image_url
+        );
+
+      if (!signedUrl) {
+        return null;
+      }
+
+      return {
+        id: Number(image.id),
+        progress_id: Number(image.progress_id),
+        image_url: signedUrl,
+        created_at: image.created_at,
+      };
+    })
+  );
+
   const imagesByProgressId = new Map<
     number,
     {
@@ -2824,7 +2976,9 @@ if (
     }[]
   >();
 
-  (images || []).forEach((image: any) => {
+  for (const image of signedResults) {
+    if (!image) continue;
+
     const list =
       imagesByProgressId.get(image.progress_id) || [];
 
@@ -2834,8 +2988,11 @@ if (
       created_at: image.created_at,
     });
 
-    imagesByProgressId.set(image.progress_id, list);
-  });
+    imagesByProgressId.set(
+      image.progress_id,
+      list
+    );
+  }
 
   const progressWithImages: ProgressEntry[] =
     progress.map((entry) => ({

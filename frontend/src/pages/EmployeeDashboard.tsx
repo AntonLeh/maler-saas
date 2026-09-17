@@ -261,18 +261,14 @@ setFinishNoteErrorOrderId(null);
       .from("order-progress-images")
       .upload(filePath, imageFile, {
         cacheControl: "3600",
-        upsert: true,
+        upsert: false,
       });
 
     if (uploadError) {
       throw uploadError;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("order-progress-images")
-      .getPublicUrl(filePath);
-
-    const imageUrl = publicUrlData.publicUrl;
+    const imageUrl = filePath;
 
     const { error: imageInsertError } = await supabase
       .from("order_progress_images")
