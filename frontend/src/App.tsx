@@ -1,4 +1,10 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Pencil } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
@@ -462,6 +468,7 @@ type CurrentPage =
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
   const [session, setSession] = useState<Session | null>(null);
+  const initializedUserIdRef = useRef<string | null>(null);
   const [userProfile, setUserProfile] = useState<AppUser | null>(null);
 
   const [loadingApp, setLoadingApp] = useState(true);
@@ -892,6 +899,7 @@ return () => subscription.unsubscribe();
   useEffect(() => {
     const initData = async () => {
       if (!session?.user) {
+        initializedUserIdRef.current = null;
         setUserProfile(null);
         setCustomers([]);
         setOrders([]);
@@ -910,11 +918,20 @@ return () => subscription.unsubscribe();
         return;
       }
 
+      if (
+  initializedUserIdRef.current === session.user.id
+) {
+  return;
+}
+
+initializedUserIdRef.current = session.user.id;
+
       setLoadingData(true);
 
       const profile = await loadUserProfile(session.user.id);
 
       if (!profile) {
+        initializedUserIdRef.current = null;
         setCustomers([]);
         setOrders([]);
         setInvoices([]);
@@ -2885,7 +2902,8 @@ const loadSiteVisitFeedEntries = async (tenantId: number) => {
     }[]
   >();
 
-  for (const image of images || []) {
+  const signedImages = await Promise.all(
+  (images || []).map(async (image) => {
     const cleanFilePath = String(image.file_path || "").replace(
       /^site-visit-images\//,
       ""
@@ -2901,22 +2919,38 @@ const loadSiteVisitFeedEntries = async (tenantId: number) => {
         "Signierte URL für Aufmaßbild konnte nicht erstellt werden:",
         signedError
       );
-      continue;
+
+      return null;
     }
 
-    const siteVisitId = Number(image.site_visit_id);
-    const existingImages =
-      imagesBySiteVisitId.get(siteVisitId) || [];
-
-    existingImages.push({
+    return {
       id: String(image.id),
+      site_visit_id: Number(image.site_visit_id),
       file_name: image.file_name || null,
       signed_url: signedData.signedUrl,
       created_at: image.created_at,
-    });
+    };
+  })
+);
 
-    imagesBySiteVisitId.set(siteVisitId, existingImages);
-  }
+for (const image of signedImages) {
+  if (!image) continue;
+
+  const existingImages =
+    imagesBySiteVisitId.get(image.site_visit_id) || [];
+
+  existingImages.push({
+    id: image.id,
+    file_name: image.file_name,
+    signed_url: image.signed_url,
+    created_at: image.created_at,
+  });
+
+  imagesBySiteVisitId.set(
+    image.site_visit_id,
+    existingImages
+  );
+}
 
   const feedEntries: SiteVisitFeedEntry[] = (siteVisits || [])
     .map((siteVisit) => {
