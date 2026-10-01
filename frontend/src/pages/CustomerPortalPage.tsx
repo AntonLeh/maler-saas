@@ -224,9 +224,31 @@ export default function CustomerPortalPage() {
     setReviewSent(true);
     setShowReviewForm(false);
 
-  } catch (error) {
-    console.error(error);
-    alert("Bewertung konnte nicht gespeichert werden.");
+    } catch (error: any) {
+    console.error("Fehler beim Speichern der Kundenbewertung:", error);
+
+    const errorMessage = String(error?.message || "");
+
+    if (
+      errorMessage.includes(
+        "Für diesen Auftrag wurde bereits eine Bewertung abgegeben"
+      )
+    ) {
+      alert(
+        "Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben."
+      );
+    } else if (
+      errorMessage.includes("Ungültiger oder abgelaufener Kundenlink") ||
+      errorMessage.includes("Ungültiger Kundenlink")
+    ) {
+      alert(
+        "Dieser Kundenlink ist nicht mehr gültig. Bitte wenden Sie sich an den ausführenden Betrieb."
+      );
+    } else {
+      alert(
+        "Ihre Bewertung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es später noch einmal."
+      );
+    }
   } finally {
     setSendingReview(false);
   }
