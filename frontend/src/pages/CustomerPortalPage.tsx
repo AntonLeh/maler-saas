@@ -234,6 +234,9 @@ export default function CustomerPortalPage() {
         "Für diesen Auftrag wurde bereits eine Bewertung abgegeben"
       )
     ) {
+      setReviewSent(true);
+      setShowReviewForm(false);
+
       alert(
         "Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben."
       );
@@ -507,29 +510,33 @@ export default function CustomerPortalPage() {
       Wie zufrieden waren Sie mit der Ausführung dieses Auftrags?
     </p>
 
-    {reviewSent && (
-  <div className="message-box success">
-    ✅ Vielen Dank! Ihre Bewertung wurde erfolgreich gespeichert.
-  </div>
-)}
+        {(reviewSent || data.review_completed) && (
+      <div className="message-box success">
+        ✅ Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben.
+      </div>
+    )}
 
-    <div
-  style={{
-    textAlign: "center",
-    marginTop: 25,
-    marginBottom: 15,
-  }}
->
-  <button
-    type="button"
-    className="btn btn-primary"
-    onClick={() => setShowReviewForm(!showReviewForm)}
-  >
-    {showReviewForm ? "⬆️ Bewertung ausblenden" : "⭐ Bewertung starten"}
-  </button>
-</div>
+        {!data.review_completed && !reviewSent && (
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: 25,
+          marginBottom: 15,
+        }}
+      >
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setShowReviewForm(!showReviewForm)}
+        >
+          {showReviewForm
+            ? "⬆️ Bewertung ausblenden"
+            : "⭐ Bewertung starten"}
+        </button>
+      </div>
+    )}
 
-    {showReviewForm && (
+    {!data.review_completed && !reviewSent && showReviewForm && (
     <div className="form-stack">
 
   <div className="form-group">
