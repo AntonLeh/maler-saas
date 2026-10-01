@@ -1699,45 +1699,27 @@ const handleCreateCustomerPortalLink = async () => {
     return;
   }
 
-  const { data: existingOrder, error: orderError } = await supabase
-    .from("orders")
-    .select("id")
-    .eq("tenant_id", userProfile.tenant_id)
-    .eq("customer_id", quote.customer_id)
-.order("id", { ascending: false })
-.limit(1)
-.maybeSingle();
-
-  if (orderError) {
-    console.error("Fehler beim Laden des Auftrags:", orderError);
-  }
-
-  const customerEmail = Array.isArray((quote as any).customers)
-    ? (quote as any).customers[0]?.email
-    : (quote as any).customers?.email;
-
-  if (!customerEmail) {
-    alert("Beim Kunden ist keine E-Mail-Adresse hinterlegt.");
-    return;
-  }
-
-  const token =
-    crypto.randomUUID() + "-" + Math.random().toString(36).slice(2);
-
-  const { error } = await supabase
-    .from("customer_portal_access")
-    .insert({
-      tenant_id: userProfile.tenant_id,
-      quote_id: quote.id,
-      order_id: existingOrder?.id || null,
-      customer_id: quote.customer_id,
-      customer_email: customerEmail,
-      access_token: token,
-      is_active: true,
-    });
+    const { data: token, error } = await supabase.rpc(
+    "create_customer_portal_link",
+    {
+      p_quote_id: Number(quote.id),
+    }
+  );
 
   if (error) {
     console.error("Kundenlink konnte nicht erstellt werden:", error);
+    alert(
+      error.message ||
+        "Kundenlink konnte nicht erstellt werden."
+    );
+    return;
+  }
+
+  if (typeof token !== "string" || !token.trim()) {
+    console.error(
+      "Kundenlink-RPC hat keinen gültigen Token zurückgegeben:",
+      token
+    );
     alert("Kundenlink konnte nicht erstellt werden.");
     return;
   }
