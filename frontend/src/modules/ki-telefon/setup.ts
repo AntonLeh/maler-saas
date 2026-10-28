@@ -11,17 +11,13 @@ export function setupUrls(key: string, provider: Provider): SetupUrl[] {
   const base = baseUrl(key, provider);
   if (provider === "elevenlabs") {
     return [
+      { label: "Werkzeug get_company_info", where: "Agent → Tools → Add tool → Webhook (POST)", url: `${base}&tool=get_company_info` },
+      { label: "Werkzeug get_free_slots", where: "Agent → Tools → Add tool → Webhook (POST)", url: `${base}&tool=get_free_slots` },
+      { label: "Werkzeug book_appointment", where: "Agent → Tools → Add tool → Webhook (POST)", url: `${base}&tool=book_appointment` },
+      { label: "Werkzeug create_callback", where: "Agent → Tools → Add tool → Webhook (POST)", url: `${base}&tool=create_callback` },
       {
-        label: "Gesprächsbeginn (Betriebsdaten)",
-        where: "Agent → Security → „Fetch conversation initiation data“ / Conversation initiation webhook",
-        url: `${base}&action=context`,
-      },
-      { label: "Werkzeug get_free_slots", where: "Agent → Tools → Server tool (POST)", url: `${base}&tool=get_free_slots` },
-      { label: "Werkzeug book_appointment", where: "Agent → Tools → Server tool (POST)", url: `${base}&tool=book_appointment` },
-      { label: "Werkzeug create_callback", where: "Agent → Tools → Server tool (POST)", url: `${base}&tool=create_callback` },
-      {
-        label: "Gesprächsende",
-        where: "Agents → Settings → Post-call webhook (Transcription)",
+        label: "Gesprächsende (später, für Zusammenfassungen und Minuten)",
+        where: "Einstellungen → Webhooks → Post-call webhook",
         url: `${base}&action=call-ended`,
       },
     ];
@@ -45,6 +41,17 @@ export function setupUrls(key: string, provider: Provider): SetupUrl[] {
   ];
 }
 
+export const COMPANY_INFO_TOOL = {
+  name: "get_company_info",
+  description:
+    "Liefert Firmenname, heutiges Datum, Uhrzeit und Besichtigungszeiten. Zu Beginn jedes Gesprächs einmal aufrufen.",
+  parameters: { type: "object", properties: {}, required: [] as string[] },
+};
+
+export function toolsFor(provider: Provider) {
+  return provider === "retell" ? TOOL_DEFINITIONS : [COMPANY_INFO_TOOL, ...TOOL_DEFINITIONS];
+}
+
 export const TOOL_DEFINITIONS = [
   {
     name: "get_free_slots",
@@ -56,7 +63,7 @@ export const TOOL_DEFINITIONS = [
         from_date: { type: "string", description: "Frühestes Datum im Format JJJJ-MM-TT, optional" },
         daypart: { type: "string", enum: ["vormittag", "nachmittag"], description: "Bevorzugte Tageszeit, optional" },
       },
-      required: [],
+      required: [] as string[],
     },
   },
   {
@@ -104,9 +111,10 @@ export const DYNAMIC_VARIABLES = [
 ];
 
 export function systemPrompt(provider: Provider): string {
-  const v = (name: string) => (provider === "vapi" ? `(siehe get_company_info: ${name})` : `{{${name}}}`);
+  const viaTool = provider !== "retell";
+  const v = (name: string) => (viaTool ? `(siehe get_company_info: ${name})` : `{{${name}}}`);
   const intro =
-    provider === "vapi"
+    viaTool
       ? "Rufe zu Beginn des Gesprächs einmal das Werkzeug get_company_info auf und nutze die Angaben daraus.\n\n"
       : "";
   return `${intro}Du bist der freundliche telefonische KI-Assistent von ${v("company_name")}, einem Malerbetrieb. Heute ist ${v(
@@ -143,8 +151,15 @@ ${v("extra_instructions")}
 Verabschiede dich zum Schluss freundlich.`;
 }
 
-export function firstMessage(provider: Provider): string {
-  return provider === "vapi"
-    ? "Guten Tag, Sie sprechen mit dem digitalen KI-Assistenten. Wie kann ich Ihnen helfen?"
-    : "{{greeting}}";
+export function firstMessage(
+  provider: Provider,
+  settings: { greeting: string | null; company_name: string | null }
+): string {
+  if (provider === "retell") return "{{greeting}}";
+  return (
+    settings.greeting ||
+    `Guten Tag, Sie sprechen mit dem digitalen KI-Assistenten von ${
+      settings.company_name || "[Firmenname]"
+    }. Wie kann ich Ihnen helfen?`
+  );
 }

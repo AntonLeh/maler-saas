@@ -349,6 +349,41 @@
   border-radius: 5px;
 }
 
+.kt-tool {
+  border-top: 1px solid var(--tk-border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.kt-params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.kt-params th,
+.kt-params td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--tk-border);
+  vertical-align: top;
+}
+
+.kt-params th {
+  font-size: 12px;
+  color: var(--tk-muted);
+  font-weight: 700;
+}
+
+.kt-json summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tk-primary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
 .kt-danger-zone {
   border-color: #fecaca;
 }
@@ -367,6 +402,11 @@
     align-items: flex-start;
     flex-direction: row;
     gap: 8px;
+  }
+
+  .kt-params {
+    display: block;
+    overflow-x: auto;
   }
 
   .kt-day {

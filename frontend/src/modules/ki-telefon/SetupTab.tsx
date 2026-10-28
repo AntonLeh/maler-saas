@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AiPhoneSettings, Provider } from "./types";
-import { DYNAMIC_VARIABLES, TOOL_DEFINITIONS, firstMessage, setupUrls, systemPrompt } from "./setup";
+import { DYNAMIC_VARIABLES, firstMessage, setupUrls, systemPrompt, toolsFor } from "./setup";
 
 type Props = {
   settings: AiPhoneSettings;
@@ -91,26 +91,26 @@ export default function SetupTab({ settings, busy, onRegenerateKey }: Props) {
         ))}
         {provider === "elevenlabs" && (
           <p className="tk-muted">
-            Lege im Agent diese dynamischen Variablen an: {DYNAMIC_VARIABLES.map((v) => `{{${v}}}`).join(", ")}. Als erste
-            Nachricht trägst du <code>{"{{greeting}}"}</code> ein.
+            Für den Test im Browser reichen die vier Werkzeuge. Die Adresse „Gesprächsende“ trägst du erst ein, wenn die KI
+            eine echte Telefonnummer hat.
           </p>
         )}
         {provider === "retell" && (
           <p className="tk-muted">
+            Lege im Agent diese dynamischen Variablen an: {DYNAMIC_VARIABLES.map((v) => `{{${v}}}`).join(", ")}.
             Bei jeder Custom Function: Methode POST, „Payload: args only“ <strong>ausgeschaltet</strong> lassen.
           </p>
         )}
         {provider === "vapi" && (
           <p className="tk-muted">
-            Lege zusätzlich das Werkzeug <code>get_company_info</code> ohne Parameter an. Den Firmennamen trägst du bei Vapi
-            selbst in die erste Nachricht ein.
+            Lege zusätzlich das Werkzeug <code>get_company_info</code> ohne Parameter an.
           </p>
         )}
       </section>
 
       <section className="kt-panel">
         <h3>3. Anweisungen für die KI (System-Prompt)</h3>
-        <CopyBlock label="Erste Nachricht" value={firstMessage(provider)} />
+        <CopyBlock label="Erste Nachricht" value={firstMessage(provider, settings)} mono={false} />
         <CopyBlock label="System-Prompt" value={systemPrompt(provider)} mono={false} />
       </section>
 
@@ -120,11 +120,44 @@ export default function SetupTab({ settings, busy, onRegenerateKey }: Props) {
           Für jedes Werkzeug Name, Beschreibung und Parameter übernehmen. Die meisten Anbieter erlauben, die JSON-Beschreibung
           direkt einzufügen.
         </p>
-        {(provider === "vapi"
-          ? [{ name: "get_company_info", description: "Liefert Firmenname, Datum und Besichtigungszeiten. Zu Beginn des Gesprächs einmal aufrufen.", parameters: { type: "object", properties: {}, required: [] } }, ...TOOL_DEFINITIONS]
-          : TOOL_DEFINITIONS
-        ).map((t) => (
-          <CopyBlock key={t.name} label={t.name} value={JSON.stringify(t, null, 2)} />
+        {toolsFor(provider).map((t) => (
+          <div key={t.name} className="kt-tool">
+            <p className="kt-url-where">
+              <strong>{t.name}</strong> – {t.description}
+            </p>
+            {Object.keys(t.parameters.properties).length === 0 ? (
+              <p className="tk-muted">Keine Parameter.</p>
+            ) : (
+              <table className="kt-params">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Typ</th>
+                    <th>Pflicht</th>
+                    <th>Beschreibung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(t.parameters.properties as Record<string, { type: string; description: string }>).map(
+                    ([name, p]) => (
+                      <tr key={name}>
+                        <td>
+                          <code>{name}</code>
+                        </td>
+                        <td>{p.type}</td>
+                        <td>{t.parameters.required.includes(name) ? "ja" : "nein"}</td>
+                        <td>{p.description}</td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            )}
+            <details className="kt-json">
+              <summary>Als JSON anzeigen</summary>
+              <CopyBlock label={t.name} value={JSON.stringify(t, null, 2)} />
+            </details>
+          </div>
         ))}
       </section>
 
