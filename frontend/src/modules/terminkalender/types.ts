@@ -34,6 +34,10 @@ export type Appointment = {
   responded_at: string | null;
   created_at: string;
   updated_at: string;
+  // ab Modul KI-Telefon (optional, falls Spalten noch fehlen)
+  source?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
 };
 
 export type AppointmentInput = {

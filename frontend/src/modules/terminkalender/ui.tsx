@@ -70,7 +70,10 @@ export function AppointmentChip({
       title={appointment.title}
     >
       <span className="tk-chip-time">{formatTime(appointment.starts_at)}</span>
-      <span className="tk-chip-title">{appointment.title}</span>
+      <span className="tk-chip-title">
+        {appointment.source === "ki_telefon" && <span title="Vom KI-Telefon gebucht">🤖 </span>}
+        {appointment.title}
+      </span>
       {!compact && assigneeName && <span className="tk-chip-meta">{assigneeName}</span>}
     </button>
   );

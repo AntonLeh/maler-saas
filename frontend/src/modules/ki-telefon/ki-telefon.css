@@ -1,0 +1,398 @@
+/* KI-Telefon-Modul – baut auf den tk-Grundstilen des Terminkalenders auf, eigene Klassen mit Präfix "kt-" */
+
+.kt-tabs {
+  margin-bottom: 18px;
+}
+
+.kt-section {
+  margin-top: 26px;
+}
+
+.kt-section h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.kt-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kt-section-head h2 {
+  margin-bottom: 4px;
+}
+
+.kt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.kt-callback {
+  border: 1px solid var(--tk-border);
+  border-left: 4px solid #f59e0b;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--tk-surface);
+}
+
+.kt-done {
+  border-left-color: #22c55e;
+  background: var(--tk-surface-2);
+}
+
+.kt-callback-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.kt-callback-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kt-call-btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.kt-concern {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.kt-callback-foot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.kt-callback-foot input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.kt-link {
+  border: none;
+  background: none;
+  color: var(--tk-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+  text-decoration: none;
+}
+
+.kt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kt-list-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--tk-surface);
+}
+
+.kt-when {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.kt-main,
+.kt-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kt-side {
+  align-items: flex-end;
+}
+
+.kt-summary {
+  font-size: 14px;
+  color: #334155;
+}
+
+/* Einstellungen */
+.kt-settings,
+.kt-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kt-panel {
+  border: 1px solid var(--tk-border);
+  border-radius: 16px;
+  padding: 18px;
+  background: var(--tk-surface);
+}
+
+.kt-panel h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.kt-panel p {
+  margin: 0 0 8px;
+}
+
+.kt-subhead {
+  margin: 20px 0 4px;
+  font-size: 15px;
+}
+
+.kt-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kt-warn {
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.kt-switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.kt-switch > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.kt-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.kt-switch-track {
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.kt-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.kt-switch input:checked + .kt-switch-track {
+  background: #22c55e;
+}
+
+.kt-switch input:checked + .kt-switch-track::after {
+  transform: translateX(20px);
+}
+
+.kt-switch input:focus-visible + .kt-switch-track {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+.kt-week {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.kt-day {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--tk-border);
+}
+
+.kt-day-windows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.kt-window {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--tk-surface-2);
+  border-radius: 10px;
+  padding: 4px 6px;
+}
+
+.kt-root .kt-window input {
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.kt-small-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.kt-add {
+  margin-top: 0;
+  padding: 6px 10px;
+}
+
+.kt-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0;
+  background: linear-gradient(to top, var(--tk-surface) 70%, transparent);
+}
+
+/* Einrichtung */
+.kt-url {
+  margin-bottom: 14px;
+}
+
+.kt-url-where {
+  font-size: 14px;
+}
+
+.kt-copy {
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.kt-copy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: var(--tk-surface-2);
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.kt-copy-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.kt-pre {
+  margin: 0;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--tk-surface);
+}
+
+.kt-pre-text {
+  font-family: inherit;
+  font-size: 14px;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.kt-root code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--tk-surface-2);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.kt-danger-zone {
+  border-color: #fecaca;
+}
+
+@media (max-width: 760px) {
+  .kt-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .kt-list-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .kt-side {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .kt-day {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .kt-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .kt-callback-head {
+    flex-direction: column;
+  }
+
+  .kt-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .kt-tabs button {
+    flex: 1;
+    padding: 8px 6px;
+  }
+
+  .kt-save-bar .btn {
+    width: 100%;
+  }
+}

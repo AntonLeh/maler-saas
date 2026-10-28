@@ -44,6 +44,7 @@ import RechnungenPage from "./pages/RechnungenPage";
 import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
+import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -466,7 +467,8 @@ type CurrentPage =
   | "business-images"
   | "approval-center"
   | "terminkalender"
-  | "meine-termine";
+  | "meine-termine"
+  | "ki-telefon";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -6689,6 +6691,12 @@ onReloadOrders={async () => {
   📊 Business Intelligence
 </button>
 
+<KiTelefonButton
+  tenantId={userProfile.tenant_id}
+  hasAccess={hasAiPhoneAccess(subscription?.plan)}
+  onOpen={() => setCurrentPage("ki-telefon")}
+/>
+
 </section>
                 </>
               )}
@@ -11998,6 +12006,25 @@ const businessAdvisor = generateBusinessInsights();
     currentUserId={userProfile.id}
     onBack={openDashboard}
   />
+)}
+
+{currentPage === "ki-telefon" && isAdmin && userProfile?.tenant_id && (
+  hasAiPhoneAccess(subscription?.plan) ? (
+    <KiTelefonPage
+      tenantId={userProfile.tenant_id}
+      currentUserId={userProfile.id}
+      onBack={openDashboard}
+      onOpenCalendar={() => setCurrentPage("terminkalender")}
+    />
+  ) : (
+    <LockedFeatureCard
+      feature="KI-Telefon"
+      requiredPlan="Business"
+      description="Ein KI-Assistent nimmt Anrufe an, wenn niemand abhebt, vergibt Besichtigungstermine direkt in Ihren Terminkalender und notiert Rückrufwünsche."
+      onUpgradeClick={() => setCurrentPage("pricing")}
+      onBackClick={openDashboard}
+    />
+  )
 )}
 
 {currentPage === "approval-center" && (

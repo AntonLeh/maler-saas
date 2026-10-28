@@ -122,7 +122,10 @@ export function ListView({ appointments, nameFor, onSelect }: Omit<ViewProps, "a
                 {formatTime(a.starts_at)}–{formatTime(a.ends_at)}
               </span>
               <span className="tk-list-main">
-                <strong>{a.title}</strong>
+                <strong>
+                  {a.source === "ki_telefon" && "🤖 "}
+                  {a.title}
+                </strong>
                 {a.location && <span className="tk-muted">{a.location}</span>}
               </span>
               <span className="tk-list-side">

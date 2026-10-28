@@ -1,0 +1,152 @@
+import { supabase } from "../../lib/supabase";
+import type { AiAppointment, AiCall, AiPhoneSettings, CallbackRequest } from "./types";
+
+function fail(context: string, error: { message: string } | null): never {
+  const msg = error?.message ?? "Unbekannter Fehler";
+  if (
+    (msg.includes("ai_phone_settings") || msg.includes("ai_calls") || msg.includes("ai_callback_requests") || msg.includes("source")) &&
+    (msg.includes("does not exist") || msg.includes("schema cache"))
+  ) {
+    throw new Error(
+      "Die Tabellen für das KI-Telefon fehlen noch. Bitte die SQL-Datei supabase/migrations/20261028140000_ki_telefon.sql im Supabase SQL-Editor ausführen."
+    );
+  }
+  throw new Error(`${context}: ${msg}`);
+}
+
+/** Einstellungen laden – legt beim ersten Aufruf einen Datensatz mit Standardwerten an */
+export async function loadOrCreateSettings(tenantId: number): Promise<AiPhoneSettings> {
+  const { data, error } = await supabase
+    .from("ai_phone_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) fail("Einstellungen konnten nicht geladen werden", error);
+  if (data) return data as AiPhoneSettings;
+
+  const { data: created, error: insertError } = await supabase
+    .from("ai_phone_settings")
+    .insert([{ tenant_id: tenantId }])
+    .select("*")
+    .single();
+  if (insertError) fail("Einstellungen konnten nicht angelegt werden", insertError);
+  return created as AiPhoneSettings;
+}
+
+export async function saveSettings(
+  tenantId: number,
+  values: Partial<Omit<AiPhoneSettings, "tenant_id" | "webhook_key">>
+): Promise<AiPhoneSettings> {
+  const { data, error } = await supabase
+    .from("ai_phone_settings")
+    .update({ ...values, updated_at: new Date().toISOString() })
+    .eq("tenant_id", tenantId)
+    .select("*")
+    .single();
+  if (error) fail("Einstellungen konnten nicht gespeichert werden", error);
+  return data as AiPhoneSettings;
+}
+
+function randomKey(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Neuen geheimen Schlüssel erzeugen – alte Adressen funktionieren danach nicht mehr */
+export async function regenerateKey(tenantId: number): Promise<AiPhoneSettings> {
+  const { data, error } = await supabase
+    .from("ai_phone_settings")
+    .update({ webhook_key: randomKey(), updated_at: new Date().toISOString() })
+    .eq("tenant_id", tenantId)
+    .select("*")
+    .single();
+  if (error) fail("Schlüssel konnte nicht erneuert werden", error);
+  return data as AiPhoneSettings;
+}
+
+export async function loadCallbacks(tenantId: number): Promise<CallbackRequest[]> {
+  const { data, error } = await supabase
+    .from("ai_callback_requests")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) fail("Rückrufe konnten nicht geladen werden", error);
+  return (data ?? []) as CallbackRequest[];
+}
+
+export async function markCallbackDone(id: number, userId: number, note: string): Promise<void> {
+  const { error } = await supabase
+    .from("ai_callback_requests")
+    .update({ status: "erledigt", handled_by: userId, handled_at: new Date().toISOString(), note: note.trim() || null })
+    .eq("id", id);
+  if (error) fail("Rückruf konnte nicht gespeichert werden", error);
+}
+
+export async function reopenCallback(id: number): Promise<void> {
+  const { error } = await supabase
+    .from("ai_callback_requests")
+    .update({ status: "offen", handled_by: null, handled_at: null })
+    .eq("id", id);
+  if (error) fail("Rückruf konnte nicht gespeichert werden", error);
+}
+
+export async function loadCalls(tenantId: number): Promise<AiCall[]> {
+  const { data, error } = await supabase
+    .from("ai_calls")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) fail("Anrufe konnten nicht geladen werden", error);
+  return (data ?? []) as AiCall[];
+}
+
+/** Minuten im laufenden Monat (für die Abrechnung) */
+export async function loadMonthSeconds(tenantId: number): Promise<{ seconds: number; calls: number }> {
+  const start = new Date();
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from("ai_calls")
+    .select("duration_seconds")
+    .eq("tenant_id", tenantId)
+    .gte("created_at", start.toISOString());
+  if (error) fail("Minuten konnten nicht geladen werden", error);
+  const rows = (data ?? []) as { duration_seconds: number | null }[];
+  return { seconds: rows.reduce((sum, r) => sum + (r.duration_seconds ?? 0), 0), calls: rows.length };
+}
+
+/** Von der KI gebuchte Termine, die noch keinem Projektleiter zugewiesen sind */
+export async function loadAiAppointmentsToReview(tenantId: number): Promise<AiAppointment[]> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, title, starts_at, ends_at, location, contact_name, contact_phone, status")
+    .eq("tenant_id", tenantId)
+    .eq("source", "ki_telefon")
+    .eq("status", "geplant")
+    .gte("ends_at", new Date().toISOString())
+    .order("starts_at", { ascending: true });
+  if (error) fail("KI-Termine konnten nicht geladen werden", error);
+  return (data ?? []) as AiAppointment[];
+}
+
+/** Zahl für das Dashboard: offene Rückrufe + zu prüfende KI-Termine */
+export async function loadOpenCount(tenantId: number): Promise<number> {
+  const [cb, ap] = await Promise.all([
+    supabase
+      .from("ai_callback_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("status", "offen"),
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("source", "ki_telefon")
+      .eq("status", "geplant")
+      .gte("ends_at", new Date().toISOString()),
+  ]);
+  return (cb.error ? 0 : cb.count ?? 0) + (ap.error ? 0 : ap.count ?? 0);
+}
