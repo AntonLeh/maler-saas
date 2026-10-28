@@ -1,4 +1,5 @@
 import AdminTimeEvaluation from "../components/AdminTimeEvaluation";
+import { MeineTermineButton } from "../modules/terminkalender";
 
 type ProjectManagerDashboardProps = {
   userName: string;
@@ -11,6 +12,9 @@ type ProjectManagerDashboardProps = {
   onOpenMaterials: () => void;
   onOpenMessages: () => void;
   unreadMessages: number;
+  // Terminkalender-Modul (optional)
+  currentUserId?: number;
+  onOpenAppointments?: () => void;
 };
 
 export default function ProjectManagerDashboard({
@@ -24,6 +28,8 @@ export default function ProjectManagerDashboard({
   onOpenMaterials,
   onOpenMessages,
   unreadMessages,
+  currentUserId,
+  onOpenAppointments,
 }: ProjectManagerDashboardProps) {
   return (
     <div className="dashboard-page">
@@ -97,6 +103,10 @@ export default function ProjectManagerDashboard({
   >
     Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
   </button>
+
+  {onOpenAppointments && currentUserId !== undefined && (
+    <MeineTermineButton userId={currentUserId} onOpen={onOpenAppointments} />
+  )}
 </section>
 
       </div>

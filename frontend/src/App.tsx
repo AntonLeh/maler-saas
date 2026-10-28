@@ -43,6 +43,7 @@ import MaterialverwaltungPage from "./pages/MaterialverwaltungPage";
 import RechnungenPage from "./pages/RechnungenPage";
 import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
+import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -463,7 +464,9 @@ type CurrentPage =
   | "employee-performance-entry"
   | "employee-performance-profile"
   | "business-images"
-  | "approval-center";
+  | "approval-center"
+  | "terminkalender"
+  | "meine-termine";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -6146,6 +6149,15 @@ onReloadOrders={async () => {
   );
 }
 
+    if (!loadingData && userProfile && isProjectManager && currentPage === "meine-termine") {
+      return (
+        <MeineTerminePage
+          currentUserId={userProfile.id}
+          onBack={() => setCurrentPage("dashboard")}
+        />
+      );
+    }
+
     if (!loadingData && userProfile && isProjectManager && currentPage === "dashboard") {
       const fullName =
         `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() ||
@@ -6164,6 +6176,8 @@ onReloadOrders={async () => {
   onOpenMaterials={() => setCurrentPage("materials")}
   onOpenMessages={openMessagesPage}
   unreadMessages={unreadMessages}
+  currentUserId={userProfile.id}
+  onOpenAppointments={() => setCurrentPage("meine-termine")}
 />
       );
     }
@@ -6345,6 +6359,11 @@ onReloadOrders={async () => {
                       <span className="stat-label">Rechnungen</span>
                       <strong className="stat-value">{stats.totalInvoices}</strong>
                     </button>
+
+                    <TermineStatCard
+                      tenantId={userProfile.tenant_id}
+                      onOpen={() => setCurrentPage("terminkalender")}
+                    />
 
                   </section>
 
@@ -11971,6 +11990,14 @@ const businessAdvisor = generateBusinessInsights();
   employeeNameMap={employeeNameMap}
   onPreviewImage={setSelectedProgressImagePreview}
 />
+)}
+
+{currentPage === "terminkalender" && isAdmin && userProfile?.tenant_id && (
+  <TerminkalenderPage
+    tenantId={userProfile.tenant_id}
+    currentUserId={userProfile.id}
+    onBack={openDashboard}
+  />
 )}
 
 {currentPage === "approval-center" && (
