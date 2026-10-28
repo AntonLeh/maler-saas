@@ -220,6 +220,20 @@ export function parseStart(value: string, tz: string): Date | null {
   return zonedToUtc(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), tz);
 }
 
+/** Ländervorwahl passend zur Zeitzone des Betriebs (für Nummern ohne +) */
+export function countryCodeForTimezone(tz: string | null | undefined): string {
+  switch (tz) {
+    case "Europe/Vienna":
+      return "43";
+    case "Europe/Zurich":
+      return "41";
+    case "Europe/Madrid":
+      return "34";
+    default:
+      return "49";
+  }
+}
+
 /** Telefonnummern vergleichbar machen (Standard: Deutschland) */
 export function normalizePhone(raw: string | null | undefined, defaultCountry = "49"): string {
   if (!raw) return "";

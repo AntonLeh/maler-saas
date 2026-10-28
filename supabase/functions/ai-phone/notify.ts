@@ -8,7 +8,7 @@
 //   BREVO_SMS_SENDER     SMS-Absender, max. 11 Zeichen ohne Leerzeichen (Standard: "MalerSaaS")
 //   APP_URL              Link in der E-Mail (Standard: https://maler-saas.com)
 
-import { normalizePhone } from "./slots.ts";
+import { countryCodeForTimezone, normalizePhone } from "./slots.ts";
 
 export type NotifyEvent =
   | { kind: "callback"; name: string; phone: string; concern: string; preferredTime: string }
@@ -19,6 +19,7 @@ export type NotifyResult = { email: string; sms: string };
 
 type Settings = {
   company_name?: string | null;
+  timezone?: string | null;
   notify_email?: string | null;
   notify_phone?: string | null;
   notify_callback_email?: boolean;
@@ -114,8 +115,8 @@ ${msg.lines.map((l) => `<p style="margin:4px 0">${esc(l)}</p>`).join("\n")}
   });
 }
 
-async function sendSms(to: string, text: string): Promise<string> {
-  const recipient = normalizePhone(to);
+async function sendSms(to: string, text: string, country: string): Promise<string> {
+  const recipient = normalizePhone(to, country);
   if (recipient.length < 8) return "ungültige Handynummer";
   const sender = (env("BREVO_SMS_SENDER") || "MalerSaaS").replace(/[^A-Za-z0-9]/g, "").slice(0, 11) || "MalerSaaS";
   return brevo("/transactionalSMS/send", {
@@ -153,7 +154,7 @@ export async function notify(settings: Settings, event: NotifyEvent, companyName
     if (!settings.notify_phone) result.sms = event.kind === "test" ? "keine Handynummer hinterlegt" : "aus";
     else
       jobs.push(
-        sendSms(settings.notify_phone, msg.sms)
+        sendSms(settings.notify_phone, msg.sms, countryCodeForTimezone(settings.timezone))
           .then((r) => void (result.sms = r))
           .catch((e) => void (result.sms = `Fehler: ${String(e?.message ?? e)}`))
       );

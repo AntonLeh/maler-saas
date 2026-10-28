@@ -16,6 +16,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import {
   computeFreeSlots,
+  countryCodeForTimezone,
   isBookable,
   normalizePhone,
   parseStart,
@@ -187,13 +188,13 @@ async function firstAdminId(tenantId: number): Promise<number | null> {
   return active?.id ?? null;
 }
 
-async function matchCustomer(tenantId: number, phone: string): Promise<number | null> {
-  const wanted = normalizePhone(phone);
+async function matchCustomer(tenantId: number, phone: string, country: string): Promise<number | null> {
+  const wanted = normalizePhone(phone, country);
   if (wanted.length < 8) return null;
   const { data } = await db.from("customers").select("id, phone").eq("tenant_id", tenantId).not("phone", "is", null);
   const tail = wanted.slice(-9);
   const hit = (data ?? []).find((c: any) => {
-    const n = normalizePhone(c.phone);
+    const n = normalizePhone(c.phone, country);
     return n.length >= 8 && (n === wanted || n.slice(-9) === tail);
   });
   return hit?.id ?? null;
@@ -282,7 +283,7 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
   }
 
   const end = new Date(start.getTime() + s.visit_duration_minutes * 60_000);
-  const [adminId, customerId] = await Promise.all([firstAdminId(s.tenant_id), matchCustomer(s.tenant_id, phone)]);
+  const [adminId, customerId] = await Promise.all([firstAdminId(s.tenant_id), matchCustomer(s.tenant_id, phone, countryCodeForTimezone(s.timezone))]);
   const description = [
     concern && `Anliegen: ${concern}`,
     `Telefon: ${phone}`,
