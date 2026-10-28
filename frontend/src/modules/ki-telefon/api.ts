@@ -29,8 +29,19 @@ export async function loadOrCreateSettings(tenantId: number): Promise<AiPhoneSet
     .insert([{ tenant_id: tenantId }])
     .select("*")
     .single();
-  if (insertError) fail("Einstellungen konnten nicht angelegt werden", insertError);
-  return created as AiPhoneSettings;
+  if (!insertError) return created as AiPhoneSettings;
+
+  // Gleichzeitig schon angelegt (z. B. doppeltes Laden) -> einfach den vorhandenen Datensatz nehmen
+  if ((insertError as { code?: string }).code === "23505") {
+    const { data: existing, error: againError } = await supabase
+      .from("ai_phone_settings")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .single();
+    if (againError) fail("Einstellungen konnten nicht geladen werden", againError);
+    return existing as AiPhoneSettings;
+  }
+  fail("Einstellungen konnten nicht angelegt werden", insertError);
 }
 
 export async function saveSettings(
