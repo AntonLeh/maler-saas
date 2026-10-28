@@ -22,6 +22,7 @@ import {
   slotLabel,
   zonedParts,
 } from "./slots.ts";
+import { notify } from "./notify.ts";
 
 const ALLOWED_PLANS = ["business", "enterprise"];
 const ALLOWED_STATUS = ["active", "trialing"];
@@ -39,6 +40,13 @@ const JSON_HEADERS = {
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
+}
+
+/** Arbeit nach der Antwort erledigen (Supabase Edge Runtime), sonst abwarten */
+async function inBackground(p: Promise<unknown>) {
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(p);
+  else await p;
 }
 
 function str(v: unknown, max = 500): string {
@@ -313,6 +321,12 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
     caller_number: ctx.callerNumber || phone,
   });
 
+  await inBackground(
+    companyName(s).then((company) =>
+      notify(s, { kind: "appointment", name, phone, address, when: slotLabel(start, s.timezone), concern }, company)
+    )
+  );
+
   return {
     ok: true,
     appointment_id: appt.id,
@@ -349,6 +363,16 @@ async function toolCreateCallback(args: any, ctx: ToolCtx) {
     callback_id: data.id,
     caller_number: ctx.callerNumber || phone,
   });
+
+  await inBackground(
+    companyName(s).then((company) =>
+      notify(
+        s,
+        { kind: "callback", name, phone, concern, preferredTime: str(args.preferred_time, 200) },
+        company
+      )
+    )
+  );
 
   return {
     ok: true,
@@ -486,6 +510,13 @@ serve(async (req) => {
     if (action === "ignore") return json({ ok: true, ignored: true });
 
     const access = await checkAccess(settings);
+
+    // ---------- Test-Benachrichtigung (Knopf in der App) ----------
+    if (action === "test-notify") {
+      if (!access.ok && access.reason === "plan") return json({ ok: false, error: "Nur im Business-Tarif verfügbar." }, 403);
+      const result = await notify(settings, { kind: "test" }, await companyName(settings));
+      return json({ ok: true, result });
+    }
 
     // ---------- Gesprächsbeginn ----------
     if (action === "context") {

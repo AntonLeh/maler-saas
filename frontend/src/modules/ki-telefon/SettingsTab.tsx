@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sendTestNotification } from "./api";
 import type { AiPhoneSettings, WeekAvailability } from "./types";
 import { TIMEZONES, WEEKDAYS } from "./types";
 
@@ -28,6 +29,38 @@ export default function SettingsTab({ settings, saving, onSave }: Props) {
     return copy;
   });
   const [error, setError] = useState("");
+
+  // Benachrichtigungen (nur wenn die Spalten in der Datenbank schon existieren)
+  const notifySupported = settings.notify_callback_email !== undefined;
+  const [notifyEmail, setNotifyEmail] = useState(settings.notify_email ?? "");
+  const [notifyPhone, setNotifyPhone] = useState(settings.notify_phone ?? "");
+  const [cbEmail, setCbEmail] = useState(settings.notify_callback_email ?? true);
+  const [cbSms, setCbSms] = useState(settings.notify_callback_sms ?? false);
+  const [apEmail, setApEmail] = useState(settings.notify_appointment_email ?? true);
+  const [apSms, setApSms] = useState(settings.notify_appointment_sms ?? false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState("");
+
+  const notifyDirty =
+    notifyEmail !== (settings.notify_email ?? "") ||
+    notifyPhone !== (settings.notify_phone ?? "") ||
+    cbEmail !== (settings.notify_callback_email ?? true) ||
+    cbSms !== (settings.notify_callback_sms ?? false) ||
+    apEmail !== (settings.notify_appointment_email ?? true) ||
+    apSms !== (settings.notify_appointment_sms ?? false);
+
+  const runTest = async () => {
+    setTesting(true);
+    setTestResult("");
+    try {
+      const r = await sendTestNotification(settings.webhook_key);
+      setTestResult(`E-Mail: ${r.email} · SMS: ${r.sms}`);
+    } catch (e) {
+      setTestResult((e as Error).message);
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const greetingMissingHint = greeting.trim() !== "" && !KI_HINT.test(greeting);
 
@@ -64,6 +97,14 @@ export default function SettingsTab({ settings, saving, onSave }: Props) {
     if (enabled && !Object.values(availability).some((w) => w.length > 0)) {
       return setError("Bitte mindestens ein Zeitfenster für Besichtigungen eintragen.");
     }
+    if (notifySupported) {
+      if ((cbEmail || apEmail) && notifyEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notifyEmail.trim())) {
+        return setError("Bitte eine gültige E-Mail-Adresse für Benachrichtigungen eintragen.");
+      }
+      if ((cbSms || apSms) && notifyPhone.replace(/[^\d]/g, "").length < 8) {
+        return setError("Für SMS-Benachrichtigungen bitte eine Handynummer eintragen.");
+      }
+    }
     onSave({
       enabled,
       company_name: companyName.trim() || null,
@@ -77,6 +118,16 @@ export default function SettingsTab({ settings, saving, onSave }: Props) {
       booking_horizon_days: horizon,
       slot_step_minutes: step,
       availability,
+      ...(notifySupported
+        ? {
+            notify_email: notifyEmail.trim() || null,
+            notify_phone: notifyPhone.trim() || null,
+            notify_callback_email: cbEmail,
+            notify_callback_sms: cbSms,
+            notify_appointment_email: apEmail,
+            notify_appointment_sms: apSms,
+          }
+        : {}),
     });
   };
 
@@ -130,6 +181,67 @@ export default function SettingsTab({ settings, saving, onSave }: Props) {
             />
           </label>
         </div>
+      </section>
+
+      <section className="kt-panel">
+        <h3>Benachrichtigungen</h3>
+        {!notifySupported ? (
+          <p className="tk-muted">
+            Für Benachrichtigungen per E-Mail und SMS bitte zuerst die SQL-Datei
+            <code>20261028180000_ki_telefon_benachrichtigung.sql</code> im Supabase SQL-Editor ausführen.
+          </p>
+        ) : (
+          <>
+            <p className="tk-muted">Sofort Bescheid bekommen, wenn die KI etwas für dich aufgenommen hat.</p>
+            <div className="tk-form">
+              <label className="tk-field">
+                <span>E-Mail-Adresse</span>
+                <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="chef@betrieb.de" />
+              </label>
+              <label className="tk-field">
+                <span>Handynummer für SMS</span>
+                <input type="tel" value={notifyPhone} onChange={(e) => setNotifyPhone(e.target.value)} placeholder="0151 …" />
+              </label>
+            </div>
+            <table className="kt-notify-table">
+              <thead>
+                <tr>
+                  <th>Ereignis</th>
+                  <th>E-Mail</th>
+                  <th>SMS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Rückrufwunsch</td>
+                  <td>
+                    <input type="checkbox" checked={cbEmail} onChange={(e) => setCbEmail(e.target.checked)} aria-label="Rückrufwunsch per E-Mail" />
+                  </td>
+                  <td>
+                    <input type="checkbox" checked={cbSms} onChange={(e) => setCbSms(e.target.checked)} aria-label="Rückrufwunsch per SMS" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Neuer KI-Termin</td>
+                  <td>
+                    <input type="checkbox" checked={apEmail} onChange={(e) => setApEmail(e.target.checked)} aria-label="Neuer Termin per E-Mail" />
+                  </td>
+                  <td>
+                    <input type="checkbox" checked={apSms} onChange={(e) => setApSms(e.target.checked)} aria-label="Neuer Termin per SMS" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="tk-muted">Eine SMS kostet rund 9 Cent, E-Mails sind kostenlos.</p>
+            <div className="kt-test-row">
+              <button type="button" className="btn btn-secondary btn-small" onClick={runTest} disabled={testing || notifyDirty}>
+                {testing ? "Sende…" : "Test-Benachrichtigung senden"}
+              </button>
+              {notifyDirty && <span className="tk-muted">Bitte zuerst speichern.</span>}
+              {testResult && <span className="kt-test-result">{testResult}</span>}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="kt-panel">

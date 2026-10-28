@@ -1,8 +1,13 @@
-import { supabase } from "../../lib/supabase";
+import { supabase, supabaseUrl } from "../../lib/supabase";
 import type { AiAppointment, AiCall, AiPhoneSettings, CallbackRequest } from "./types";
 
 function fail(context: string, error: { message: string } | null): never {
   const msg = error?.message ?? "Unbekannter Fehler";
+  if (msg.includes("notify_")) {
+    throw new Error(
+      "Für die Benachrichtigungen fehlt noch die SQL-Datei supabase/migrations/20261028180000_ki_telefon_benachrichtigung.sql. Bitte im Supabase SQL-Editor ausführen."
+    );
+  }
   if (
     (msg.includes("ai_phone_settings") || msg.includes("ai_calls") || msg.includes("ai_callback_requests") || msg.includes("source")) &&
     (msg.includes("does not exist") || msg.includes("schema cache"))
@@ -160,4 +165,21 @@ export async function loadOpenCount(tenantId: number): Promise<number> {
       .gte("ends_at", new Date().toISOString()),
   ]);
   return (cb.error ? 0 : cb.count ?? 0) + (ap.error ? 0 : ap.count ?? 0);
+}
+
+/** Test-Benachrichtigung über die Schnittstelle auslösen (nutzt die gespeicherten Einstellungen) */
+export async function sendTestNotification(webhookKey: string): Promise<{ email: string; sms: string }> {
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/ai-phone?key=${webhookKey}&action=test-notify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+  } catch {
+    throw new Error("Die Schnittstelle ist nicht erreichbar. Ist die Funktion ai-phone veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.result) throw new Error(data.error || `Test fehlgeschlagen (Status ${res.status}).`);
+  return data.result;
 }

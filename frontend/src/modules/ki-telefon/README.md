@@ -50,3 +50,19 @@ die Werkzeug-Definitionen zeigt die App unter *KI-Telefon → Einrichtung*.
 ## Benachrichtigung
 
 Neue Rückrufe und KI-Termine erscheinen als Zähler am Button *KI-Telefon* im Admin-Dashboard.
+
+Zusätzlich per **E-Mail und/oder SMS** über [Brevo](https://www.brevo.com) (EU-Anbieter, Server in FR/DE),
+pro Betrieb einstellbar unter *KI-Telefon → Einstellungen → Benachrichtigungen*.
+
+Einrichtung:
+1. SQL-Datei `supabase/migrations/20261028180000_ki_telefon_benachrichtigung.sql` ausführen.
+2. Brevo-Konto anlegen, Absender-E-Mail bestätigen, API-Schlüssel erzeugen. Für SMS: SMS-Guthaben kaufen.
+3. Secrets setzen und Schnittstelle neu veröffentlichen:
+   ```bash
+   npx supabase secrets set BREVO_API_KEY=<schlüssel> BREVO_SENDER_EMAIL=<absender@domain.de> --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   ```
+   Optional: `BREVO_SENDER_NAME`, `BREVO_SMS_SENDER` (max. 11 Zeichen), `APP_URL`.
+4. In der App E-Mail/Handynummer eintragen, speichern, „Test-Benachrichtigung senden“.
+
+Schlägt der Versand fehl, wird der Rückruf/Termin trotzdem gespeichert (Fehler stehen im Log der Edge Function).

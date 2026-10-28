@@ -15,6 +15,13 @@ export type AiPhoneSettings = {
   booking_horizon_days: number;
   slot_step_minutes: number;
   availability: WeekAvailability;
+  // Benachrichtigung (ab Migration 20261028180000)
+  notify_email?: string | null;
+  notify_phone?: string | null;
+  notify_callback_email?: boolean;
+  notify_callback_sms?: boolean;
+  notify_appointment_email?: boolean;
+  notify_appointment_sms?: boolean;
   updated_at?: string;
 };
 
