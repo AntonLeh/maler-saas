@@ -1,5 +1,5 @@
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { AiAppointment, AiCall, AiPhoneSettings, CallbackRequest } from "./types";
+import type { AiAppointment, AiCall, AiPhoneAgent, AiPhoneSettings, CallbackRequest } from "./types";
 
 function fail(context: string, error: { message: string } | null): never {
   const msg = error?.message ?? "Unbekannter Fehler";
@@ -182,4 +182,31 @@ export async function sendTestNotification(webhookKey: string): Promise<{ email:
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.result) throw new Error(data.error || `Test fehlgeschlagen (Status ${res.status}).`);
   return data.result;
+}
+
+/** Status des automatisch angelegten KI-Agenten (null = noch nicht aktiviert oder Tabelle fehlt) */
+export async function loadAgent(tenantId: number): Promise<AiPhoneAgent | null> {
+  const { data, error } = await supabase.from("ai_phone_agents").select("*").eq("tenant_id", tenantId).maybeSingle();
+  if (error) return null;
+  return (data as AiPhoneAgent) ?? null;
+}
+
+/** KI-Agent bei ElevenLabs anlegen bzw. aktualisieren (läuft über die Schnittstelle) */
+export async function provisionAgent(): Promise<{ created: boolean }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/ai-phone?action=provision-agent`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: "{}",
+    });
+  } catch {
+    throw new Error("Die Schnittstelle ist nicht erreichbar. Ist die Funktion ai-phone veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `Aktivierung fehlgeschlagen (Status ${res.status}).`);
+  return { created: !!data.created };
 }

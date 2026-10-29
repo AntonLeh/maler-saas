@@ -29,6 +29,27 @@ die Werkzeug-Definitionen zeigt die App unter *KI-Telefon → Einrichtung*.
 4. *Einrichtung*: Adressen, Prompt und Werkzeuge beim Anbieter eintragen.
 5. Rufumleitung der Betriebsnummer auf die KI-Nummer.
 
+## Automatische Einrichtung (empfohlen)
+
+Alle KI-Assistenten laufen zentral über **ein** ElevenLabs-Konto des Plattform-Betreibers.
+Der Kunde klickt unter *KI-Telefon → Einrichtung* auf **„KI-Telefon aktivieren“**; die Schnittstelle legt dann
+Agent und Werkzeuge per ElevenLabs-API an (bzw. aktualisiert sie beim Speichern der Einstellungen).
+
+Einmalig einrichten:
+1. SQL-Datei `supabase/migrations/20261029120000_ki_telefon_agent.sql` ausführen.
+2. Secrets setzen und Schnittstelle neu veröffentlichen:
+   ```bash
+   npx supabase secrets set ELEVENLABS_API_KEY=<schlüssel> ELEVENLABS_TEMPLATE_AGENT_ID=<agent-id-der-vorlage> AI_PHONE_HOOK_TOKEN=<zufällig, min. 24 Zeichen> --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   ```
+   - Der **Vorlage-Agent** liefert Stimme und KI-Modell. Ändert man dort die Stimme, übernehmen alle Kunden sie beim nächsten „Aktualisieren“.
+   - Alternativ ohne Vorlage: `ELEVENLABS_VOICE_ID` und optional `ELEVENLABS_LLM` (Standard `gemini-2.5-flash`).
+3. In ElevenLabs einmalig den **Post-Call-Webhook** (Workspace-Einstellungen) auf
+   `https://udzgxfjmpeygylgrcdsc.supabase.co/functions/v1/ai-phone?hook=<AI_PHONE_HOOK_TOKEN>` setzen.
+   Der Betrieb wird über die `agent_id` erkannt (Tabelle `ai_phone_agents`).
+
+Der ElevenLabs-API-Schlüssel braucht Schreibrechte für Agents/ElevenAgents (Agents und Tools).
+
 ## Werkzeuge der KI
 
 | Werkzeug | Zweck |

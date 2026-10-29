@@ -9,6 +9,12 @@
 //   action=call-ended  -> Gesprächsende mit Zusammenfassung und Dauer
 // Der webhook_key identifiziert den Betrieb (Tabelle ai_phone_settings).
 //
+// Ohne webhook_key:
+//   action=provision-agent             -> Agent bei ElevenLabs anlegen/aktualisieren
+//                                         (eingeloggter Admin, Authorization: Bearer <Supabase-Token>)
+//   action=call-ended&hook=<TOKEN>     -> zentraler Post-Call-Webhook von ElevenLabs;
+//                                         Betrieb wird über die agent_id erkannt (Secret AI_PHONE_HOOK_TOKEN)
+//
 // Deploy:  npx supabase functions deploy ai-phone --no-verify-jwt
 // =====================================================================
 
@@ -24,6 +30,7 @@ import {
   zonedParts,
 } from "./slots.ts";
 import { notify } from "./notify.ts";
+import { provisionAgent } from "./agent.ts";
 
 const ALLOWED_PLANS = ["business", "enterprise"];
 const ALLOWED_STATUS = ["active", "trialing"];
@@ -481,11 +488,108 @@ function parseCallEnded(body: any, provider: string) {
 // ---------------------------------------------------------------------
 // Einstieg
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Agent automatisch anlegen / aktualisieren (vom Admin in der App ausgelöst)
+// ---------------------------------------------------------------------
+async function handleProvision(req: Request): Promise<Response> {
+  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token) return json({ ok: false, error: "Nicht angemeldet." }, 401);
+  const { data: authData, error: authErr } = await db.auth.getUser(token);
+  if (authErr || !authData?.user) return json({ ok: false, error: "Nicht angemeldet." }, 401);
+
+  const { data: user } = await db
+    .from("app_users")
+    .select("id, tenant_id, role_id")
+    .eq("auth_user_id", authData.user.id)
+    .maybeSingle();
+  if (!user || ![1, 2].includes(Number(user.role_id))) {
+    return json({ ok: false, error: "Nur Admins dürfen das KI-Telefon aktivieren." }, 403);
+  }
+
+  const { data: settings } = await db.from("ai_phone_settings").select("*").eq("tenant_id", user.tenant_id).maybeSingle();
+  if (!settings) return json({ ok: false, error: "Bitte zuerst die KI-Telefon-Einstellungen speichern." }, 400);
+
+  const access = await checkAccess({ ...settings, enabled: true });
+  if (!access.ok) return json({ ok: false, error: "Das KI-Telefon ist nur im Business-Tarif verfügbar." }, 403);
+
+  const { data: existing } = await db.from("ai_phone_agents").select("*").eq("tenant_id", user.tenant_id).maybeSingle();
+  const now = new Date().toISOString();
+  try {
+    const result = await provisionAgent({
+      settings,
+      company: await companyName(settings),
+      functionUrl: `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-phone`,
+      existing,
+    });
+    await db.from("ai_phone_agents").upsert(
+      {
+        tenant_id: user.tenant_id,
+        provider: "elevenlabs",
+        agent_id: result.agentId,
+        tool_ids: result.toolIds,
+        status: existing?.phone_number ? "aktiv" : "agent_bereit",
+        last_error: null,
+        synced_at: now,
+        updated_at: now,
+      },
+      { onConflict: "tenant_id" }
+    );
+    return json({ ok: true, agent_id: result.agentId, created: result.created });
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? e).slice(0, 500);
+    console.error("provision-agent", msg);
+    await db.from("ai_phone_agents").upsert(
+      { tenant_id: user.tenant_id, status: existing?.agent_id ? existing.status : "fehler", last_error: msg, updated_at: now },
+      { onConflict: "tenant_id" }
+    );
+    return json({ ok: false, error: msg }, 502);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: JSON_HEADERS });
 
   try {
     const url = new URL(req.url);
+
+    if (url.searchParams.get("action") === "provision-agent") {
+      return await handleProvision(req);
+    }
+
+    // Zentraler Post-Call-Webhook: Betrieb über agent_id ermitteln
+    const hook = url.searchParams.get("hook");
+    const hookToken = Deno.env.get("AI_PHONE_HOOK_TOKEN") ?? "";
+    if (hook) {
+      if (!hookToken || hookToken.length < 24 || hook !== hookToken) return json({ error: "unauthorized" }, 401);
+      const raw = await req.text();
+      let body: any = {};
+      try {
+        body = raw ? JSON.parse(raw) : {};
+      } catch {
+        body = {};
+      }
+      const agentId = body?.data?.agent_id;
+      if (body?.type !== "post_call_transcription" || !agentId) return json({ ok: true, ignored: true });
+      const { data: agent } = await db.from("ai_phone_agents").select("tenant_id").eq("agent_id", agentId).maybeSingle();
+      if (!agent) return json({ ok: true, ignored: true });
+      const c = parseCallEnded(body, "elevenlabs");
+      if (!c.callId) return json({ ok: true, ignored: true });
+      await logCall(agent.tenant_id, "elevenlabs", c.callId, {
+        caller_number: c.caller,
+        started_at: c.started_at,
+        ended_at: c.ended_at,
+        duration_seconds: c.duration_seconds,
+        summary: c.summary ? String(c.summary).slice(0, 4000) : null,
+      });
+      await db
+        .from("ai_calls")
+        .update({ outcome: "info" })
+        .eq("tenant_id", agent.tenant_id)
+        .eq("provider_call_id", c.callId)
+        .is("outcome", null);
+      return json({ ok: true });
+    }
+
     const bearer = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
     const key = url.searchParams.get("key") || req.headers.get("x-ai-phone-key") || bearer;
     if (!key || key.length < 32) return json({ error: "unauthorized" }, 401);

@@ -1,12 +1,71 @@
 import { useState } from "react";
-import type { AiPhoneSettings, Provider } from "./types";
+import type { AiPhoneAgent, AiPhoneSettings, Provider } from "./types";
 import { DYNAMIC_VARIABLES, firstMessage, setupUrls, systemPrompt, toolsFor } from "./setup";
 
 type Props = {
   settings: AiPhoneSettings;
+  agent: AiPhoneAgent | null;
   busy: boolean;
+  onActivate: () => void;
   onRegenerateKey: () => void;
 };
+
+function formatDateTime(iso: string | null) {
+  if (!iso) return "–";
+  return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function ActivationPanel({ agent, busy, onActivate }: { agent: AiPhoneAgent | null; busy: boolean; onActivate: () => void }) {
+  const hasAgent = !!agent?.agent_id;
+  const steps = [
+    { label: "KI-Assistent angelegt", done: hasAgent },
+    { label: "Telefonnummer verbunden", done: !!agent?.phone_number },
+  ];
+  return (
+    <section className="kt-panel kt-activate">
+      <h3>KI-Assistent</h3>
+      {!hasAgent ? (
+        <>
+          <p>
+            Mit einem Klick wird dein persönlicher KI-Assistent eingerichtet – mit deinem Firmennamen, deiner Begrüßung,
+            deutscher Stimme und Zugriff auf deinen Terminkalender.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={onActivate} disabled={busy}>
+            {busy ? "Wird eingerichtet … (bis zu 30 Sek.)" : "KI-Telefon aktivieren"}
+          </button>
+        </>
+      ) : (
+        <>
+          <ul className="kt-steps">
+            {steps.map((st) => (
+              <li key={st.label} className={st.done ? "kt-step-done" : "kt-step-open"}>
+                <span aria-hidden="true">{st.done ? "✓" : "○"}</span> {st.label}
+                {st.label.startsWith("Telefon") && agent?.phone_number && <strong> {agent.phone_number}</strong>}
+              </li>
+            ))}
+          </ul>
+          {!agent?.phone_number && (
+            <p className="tk-muted">
+              Die Telefonnummer wird im nächsten Schritt automatisch beantragt. Bis dahin kann der Assistent im Browser
+              getestet werden.
+            </p>
+          )}
+          <div className="kt-test-row">
+            <button type="button" className="btn btn-secondary btn-small" onClick={onActivate} disabled={busy}>
+              {busy ? "Wird aktualisiert …" : "Assistent jetzt aktualisieren"}
+            </button>
+            <span className="tk-muted">Zuletzt aktualisiert: {formatDateTime(agent?.synced_at ?? null)}</span>
+          </div>
+        </>
+      )}
+      {agent?.last_error && (
+        <div className="tk-notice tk-notice-error kt-activate-error">
+          <span>Letzter Versuch fehlgeschlagen: {agent.last_error}</span>
+        </div>
+      )}
+    </section>
+  );
+}
 
 const PROVIDERS: { value: Provider; label: string }[] = [
   { value: "elevenlabs", label: "ElevenLabs" },
@@ -47,13 +106,18 @@ function CopyBlock({ label, value, mono = true, secret = false }: { label: strin
   );
 }
 
-export default function SetupTab({ settings, busy, onRegenerateKey }: Props) {
+export default function SetupTab({ settings, agent, busy, onActivate, onRegenerateKey }: Props) {
   const [provider, setProvider] = useState<Provider>("elevenlabs");
   const [confirmRegen, setConfirmRegen] = useState(false);
   const urls = setupUrls(settings.webhook_key, provider);
 
   return (
     <div className="kt-setup">
+      <ActivationPanel agent={agent} busy={busy} onActivate={onActivate} />
+
+      <details className="kt-manual">
+        <summary>Technische Details / manuelle Einrichtung (nur für Experten)</summary>
+        <div className="kt-manual-body">
       <div className="tk-notice tk-notice-info">
         <span>
           Die Adressen enthalten einen geheimen Schlüssel für deinen Betrieb. Gib sie nur im Konto deines KI-Anbieters ein
@@ -169,10 +233,14 @@ export default function SetupTab({ settings, busy, onRegenerateKey }: Props) {
         </p>
       </section>
 
+        </div>
+      </details>
+
       <section className="kt-panel kt-danger-zone">
         <h3>Schlüssel erneuern</h3>
         <p className="tk-muted">
-          Falls eine Adresse in falsche Hände geraten ist. Danach musst du alle Adressen beim Anbieter neu eintragen.
+          Falls eine Adresse in falsche Hände geraten ist. Ein automatisch eingerichteter Assistent wird danach von selbst
+          aktualisiert.
         </p>
         {confirmRegen ? (
           <div className="tk-pm-buttons" style={{ justifyContent: "flex-start" }}>

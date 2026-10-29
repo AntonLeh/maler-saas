@@ -25,6 +25,16 @@ export type AiPhoneSettings = {
   updated_at?: string;
 };
 
+export type AiPhoneAgent = {
+  tenant_id: number;
+  provider: string;
+  agent_id: string | null;
+  phone_number: string | null;
+  status: "neu" | "agent_bereit" | "aktiv" | "fehler" | string;
+  last_error: string | null;
+  synced_at: string | null;
+};
+
 export type CallbackRequest = {
   id: number;
   tenant_id: number;

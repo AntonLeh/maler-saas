@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import "../terminkalender/terminkalender.css";
 import "./ki-telefon.css";
-import type { AiAppointment, AiCall, AiPhoneSettings, CallbackRequest } from "./types";
+import type { AiAppointment, AiCall, AiPhoneAgent, AiPhoneSettings, CallbackRequest } from "./types";
 import { OUTCOME_LABELS } from "./types";
 import * as api from "./api";
 import SettingsTab from "./SettingsTab";
@@ -95,6 +95,7 @@ function CallbackCard({
 export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenCalendar }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
   const [settings, setSettings] = useState<AiPhoneSettings | null>(null);
+  const [agent, setAgent] = useState<AiPhoneAgent | null>(null);
   const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
   const [calls, setCalls] = useState<AiCall[]>([]);
   const [aiAppointments, setAiAppointments] = useState<AiAppointment[]>([]);
@@ -108,13 +109,15 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, cb, cl, ap, m] = await Promise.all([
+      const [s, cb, cl, ap, m, ag] = await Promise.all([
         api.loadOrCreateSettings(tenantId),
         api.loadCallbacks(tenantId),
         api.loadCalls(tenantId),
         api.loadAiAppointmentsToReview(tenantId),
         api.loadMonthSeconds(tenantId),
+        api.loadAgent(tenantId),
       ]);
+      setAgent(ag);
       setSettings(s);
       setCallbacks(cb);
       setCalls(cl);
@@ -207,17 +210,47 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
             onSave={(values) =>
               run(async () => {
                 setSettings(await api.saveSettings(tenantId, values));
+                // Firmenname/Begrüßung beim KI-Assistenten nachziehen
+                if (agent?.agent_id) {
+                  try {
+                    await api.provisionAgent();
+                  } catch (e) {
+                    setAgent(await api.loadAgent(tenantId));
+                    throw new Error(`Gespeichert, aber der KI-Assistent konnte nicht aktualisiert werden: ${(e as Error).message}`);
+                  }
+                  setAgent(await api.loadAgent(tenantId));
+                }
               }, "Einstellungen gespeichert.")
             }
           />
         ) : tab === "setup" ? (
           <SetupTab
             settings={settings}
+            agent={agent}
             busy={busy}
+            onActivate={() =>
+              run(async () => {
+                if (!settings.enabled) {
+                  setSettings(await api.saveSettings(tenantId, { enabled: true }));
+                }
+                try {
+                  const r = await api.provisionAgent();
+                  setAgent(await api.loadAgent(tenantId));
+                  setSuccess(r.created ? "Dein KI-Assistent ist eingerichtet." : "KI-Assistent aktualisiert.");
+                } catch (e) {
+                  setAgent(await api.loadAgent(tenantId));
+                  throw e;
+                }
+              })
+            }
             onRegenerateKey={() =>
               run(async () => {
                 setSettings(await api.regenerateKey(tenantId));
-              }, "Neuer Schlüssel erzeugt. Bitte die Adressen beim Anbieter aktualisieren.")
+                if (agent?.agent_id) {
+                  await api.provisionAgent();
+                  setAgent(await api.loadAgent(tenantId));
+                }
+              }, agent?.agent_id ? "Neuer Schlüssel erzeugt, KI-Assistent aktualisiert." : "Neuer Schlüssel erzeugt.")
             }
           />
         ) : (
