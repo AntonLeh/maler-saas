@@ -265,6 +265,8 @@ export async function provisionAgent(input: ProvisionInput): Promise<ProvisionRe
       turn: { turn_eagerness: "patient", speculative_turn: false },
       conversation: { max_duration_seconds: 900 },
     },
+    // Zusammenfassungen nach dem Gespräch auf Deutsch (sonst oft Englisch)
+    platform_settings: { summary_language: "de" },
   };
 
   const agentId = input.existing?.agent_id;
