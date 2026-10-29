@@ -6,6 +6,10 @@
 // Alternativ zur Vorlage:
 //   ELEVENLABS_VOICE_ID           Stimme
 //   ELEVENLABS_LLM                KI-Modell (Standard: gemini-2.5-flash)
+// Sprachausgabe (optional, sonst feste, ruhige Standardwerte):
+//   ELEVENLABS_TTS_MODEL          Standard eleven_flash_v2_5 (stabil, gleichmäßiges Tempo)
+//   ELEVENLABS_TTS_STABILITY      Standard 0.6  (höher = gleichmäßiger)
+//   ELEVENLABS_TTS_SPEED          Standard 1.0
 
 const env = (k: string) => (globalThis as any).Deno?.env?.get(k) ?? "";
 const apiBase = () => env("ELEVENLABS_API_URL") || "https://api.elevenlabs.io";
@@ -30,13 +34,16 @@ export function systemPrompt(): string {
   const v = (name: string) => `(siehe get_company_info: ${name})`;
   return `Rufe zu Beginn des Gesprächs einmal das Werkzeug get_company_info auf und nutze die Angaben daraus.
 
-Du bist der freundliche telefonische KI-Assistent von ${v("company_name")}, einem Malerbetrieb. Heute ist ${v("today")}, ${v(
+Du bist der telefonische KI-Assistent von ${v("company_name")}, einem Malerbetrieb. Heute ist ${v("today")}, ${v(
     "current_time"
   )}.
 
 GRUNDREGELN
 - Du hast dich in der Begrüßung als KI-Assistent vorgestellt. Wenn jemand fragt, bestätige ehrlich, dass du eine KI bist.
-- Sprich Deutsch, sieze die Anrufer, antworte kurz und natürlich – wie eine freundliche Bürokraft.
+- Die Begrüßung ist bereits erfolgt. Grüße nicht noch einmal (kein "Guten Tag", kein "Hallo") und komm direkt zur Sache.
+- Sprich Deutsch und sieze die Anrufer. Dein Ton ist sachlich und höflich – wie eine erfahrene Bürokraft in einem Handwerksbetrieb. Keine Floskeln und keine Begeisterung wie "Schön, dass Sie anrufen", "Wunderbar!" oder "Sehr gerne!".
+- Antworte kurz: höchstens zwei Sätze und immer nur eine Frage auf einmal.
+- Du sprichst am Telefon: Schreibe nur den Text, der gesprochen wird. Keine Anweisungen oder Gefühlsangaben in eckigen Klammern (z. B. [freundlich]), keine Emojis, keine Aufzählungen.
 - Lass den Anrufer immer ausreden. Warte bei Adressen, Namen und Telefonnummern geduldig, auch wenn er kurz überlegt, und unterbrich nicht.
 - Nenne keine Preise, keine Kostenschätzungen und keine Ausführungstermine. Dafür ist die Besichtigung bzw. ein Rückruf da.
 - Erfinde nie Termine oder Informationen. Wenn du etwas nicht weißt, biete einen Rückruf an.
@@ -62,7 +69,7 @@ Frage nach Name, Rückrufnummer, Anliegen und wann es zeitlich passt. Rufe dann 
 ZUSÄTZLICHE HINWEISE DES BETRIEBS
 ${v("extra_instructions")}
 
-Verabschiede dich zum Schluss freundlich und beende dann das Gespräch.`;
+Verabschiede dich zum Schluss kurz und höflich und beende dann das Gespräch.`;
 }
 
 const str = (description: string) => ({ type: "string", description });
@@ -188,12 +195,10 @@ async function el(method: string, path: string, body?: unknown) {
 async function voiceAndModel() {
   const templateId = env("ELEVENLABS_TEMPLATE_AGENT_ID");
   let voiceId = env("ELEVENLABS_VOICE_ID");
-  let ttsModel = "";
   let llm = env("ELEVENLABS_LLM");
   if (templateId) {
     const tpl = await el("GET", `/v1/convai/agents/${encodeURIComponent(templateId)}`);
     voiceId = voiceId || tpl?.conversation_config?.tts?.voice_id || "";
-    ttsModel = tpl?.conversation_config?.tts?.model_id || "";
     llm = llm || tpl?.conversation_config?.agent?.prompt?.llm || "";
   }
   if (!voiceId) {
@@ -201,6 +206,9 @@ async function voiceAndModel() {
       "Keine Stimme festgelegt. Bitte ELEVENLABS_TEMPLATE_AGENT_ID (Vorlage-Agent) oder ELEVENLABS_VOICE_ID als Secret hinterlegen."
     );
   }
+  // Sprachmodell bewusst fest: "v3"-Modelle aus der Vorlage sprechen mit wechselndem Tempo
+  // und brechen Sätze teils ab. Flash v2.5 ist für Telefonie gedacht und klingt gleichmäßig.
+  const ttsModel = env("ELEVENLABS_TTS_MODEL") || "eleven_flash_v2_5";
   return { voiceId, ttsModel, llm: llm || "gemini-2.5-flash" };
 }
 
@@ -242,8 +250,17 @@ export async function provisionAgent(input: ProvisionInput): Promise<ProvisionRe
   const { voiceId, ttsModel, llm } = await voiceAndModel();
   const toolIds = await syncTools(input.existing?.tool_ids ?? {}, toolConfigs(input.functionUrl, input.settings.webhook_key));
 
-  const tts: Record<string, unknown> = { voice_id: voiceId };
-  if (ttsModel) tts.model_id = ttsModel;
+  const num = (k: string, d: number) => {
+    const n = Number(env(k));
+    return env(k) && Number.isFinite(n) ? n : d;
+  };
+  const tts: Record<string, unknown> = {
+    voice_id: voiceId,
+    model_id: ttsModel,
+    stability: num("ELEVENLABS_TTS_STABILITY", 0.6),
+    similarity_boost: 0.8,
+    speed: num("ELEVENLABS_TTS_SPEED", 1.0),
+  };
 
   const agentBody = {
     name: `MalerSaaS – ${input.company} (#${input.settings.tenant_id})`.slice(0, 120),
