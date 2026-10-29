@@ -113,19 +113,79 @@ function detectAction(body: any, url: URL, provider: string): string {
 // ---------------------------------------------------------------------
 // Zugriff: Business-Tarif, aktiv, vom Admin eingeschaltet
 // ---------------------------------------------------------------------
-async function checkAccess(settings: any): Promise<{ ok: boolean; reason?: string }> {
-  if (!settings.enabled) return { ok: false, reason: "disabled" };
+const LOW_BALANCE_SECONDS = 50 * 60;
+
+async function loadBilling(tenantId: number) {
+  const { data } = await db.from("ai_phone_billing").select("*").eq("tenant_id", tenantId).maybeSingle();
+  return data ?? { tenant_id: tenantId, setup_paid_at: null, balance_seconds: 0 };
+}
+
+/** Tarif prüfen (Business/Enterprise, aktiv) */
+async function checkPlan(tenantId: number): Promise<boolean> {
   const { data: sub } = await db
     .from("subscriptions")
     .select("plan, status")
-    .eq("tenant_id", settings.tenant_id)
+    .eq("tenant_id", tenantId)
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!sub || !ALLOWED_PLANS.includes(String(sub.plan)) || !ALLOWED_STATUS.includes(String(sub.status))) {
-    return { ok: false, reason: "plan" };
-  }
+  return !!sub && ALLOWED_PLANS.includes(String(sub.plan)) && ALLOWED_STATUS.includes(String(sub.status));
+}
+
+async function checkAccess(settings: any): Promise<{ ok: boolean; reason?: string }> {
+  if (!settings.enabled) return { ok: false, reason: "disabled" };
+  if (!(await checkPlan(settings.tenant_id))) return { ok: false, reason: "plan" };
+  const billing = await loadBilling(settings.tenant_id);
+  if (!billing.setup_paid_at) return { ok: false, reason: "setup" };
+  if (Number(billing.balance_seconds) <= 0) return { ok: false, reason: "guthaben" };
   return { ok: true };
+}
+
+/** Gesprächsdauer vom Guthaben abbuchen (einmal pro Gespräch) und ggf. warnen */
+async function chargeCall(tenantId: number, callId: string, seconds: number | null) {
+  const secs = Math.max(0, Math.round(Number(seconds) || 0));
+  if (!secs) return;
+  const { data, error } = await db.rpc("ai_minutes_apply", {
+    p_tenant_id: tenantId,
+    p_delta: -secs,
+    p_reason: "gespraech",
+    p_reference: `call:${callId}`,
+  });
+  if (error) {
+    console.error("ai_minutes_apply", error);
+    return;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.applied) return;
+
+  const balance = Number(row.balance_seconds);
+  let kind: "low_balance" | "empty_balance" | null = null;
+  if (balance <= 0 && !row.empty_warning_sent) kind = "empty_balance";
+  else if (balance <= LOW_BALANCE_SECONDS && balance > 0 && !row.low_warning_sent) kind = "low_balance";
+  if (!kind) return;
+
+  await db
+    .from("ai_phone_billing")
+    .update(kind === "empty_balance" ? { empty_warning_sent: true, low_warning_sent: true } : { low_warning_sent: true })
+    .eq("tenant_id", tenantId);
+
+  const { data: settings } = await db.from("ai_phone_settings").select("*").eq("tenant_id", tenantId).maybeSingle();
+  if (!settings) return;
+  let target = settings;
+  if (!settings.notify_email) {
+    const { data: admins } = await db
+      .from("app_users")
+      .select("email, role_id, is_active")
+      .eq("tenant_id", tenantId)
+      .eq("role_id", ADMIN_ROLE_ID);
+    const admin = (admins ?? []).find((a: any) => a.is_active !== false && a.email);
+    target = { ...settings, notify_email: admin?.email ?? null };
+  }
+  await notify(
+    target,
+    kind === "empty_balance" ? { kind } : { kind, minutes: Math.floor(balance / 60) },
+    await companyName(settings)
+  );
 }
 
 // ---------------------------------------------------------------------
@@ -403,6 +463,14 @@ async function runTool(name: string, args: any, ctx: ToolCtx, access: { ok: bool
 
 async function runToolUnsafe(name: string, args: any, ctx: ToolCtx, access: { ok: boolean }) {
   if (!access.ok) {
+    if (name === "get_company_info") {
+      const vars = await contextVariables(ctx.settings, access);
+      return {
+        ok: false,
+        ...vars,
+        message: `Der Telefonassistent von ${vars.company_name} ist gerade nicht verfügbar. Entschuldige dich kurz, bitte den Anrufer, es später erneut zu versuchen, und beende das Gespräch.`,
+      };
+    }
     return {
       ok: false,
       message:
@@ -509,8 +577,13 @@ async function handleProvision(req: Request): Promise<Response> {
   const { data: settings } = await db.from("ai_phone_settings").select("*").eq("tenant_id", user.tenant_id).maybeSingle();
   if (!settings) return json({ ok: false, error: "Bitte zuerst die KI-Telefon-Einstellungen speichern." }, 400);
 
-  const access = await checkAccess({ ...settings, enabled: true });
-  if (!access.ok) return json({ ok: false, error: "Das KI-Telefon ist nur im Business-Tarif verfügbar." }, 403);
+  if (!(await checkPlan(user.tenant_id))) {
+    return json({ ok: false, error: "Das KI-Telefon ist nur im Business-Tarif verfügbar." }, 403);
+  }
+  const billing = await loadBilling(user.tenant_id);
+  if (!billing.setup_paid_at) {
+    return json({ ok: false, error: "Bitte zuerst die Einrichtung (49 € zzgl. MwSt.) bezahlen.", code: "setup_required" }, 402);
+  }
 
   const { data: existing } = await db.from("ai_phone_agents").select("*").eq("tenant_id", user.tenant_id).maybeSingle();
   const now = new Date().toISOString();
@@ -581,6 +654,7 @@ serve(async (req) => {
         duration_seconds: c.duration_seconds,
         summary: c.summary ? String(c.summary).slice(0, 4000) : null,
       });
+      await chargeCall(agent.tenant_id, c.callId, c.duration_seconds);
       await db
         .from("ai_calls")
         .update({ outcome: "info" })
@@ -618,7 +692,7 @@ serve(async (req) => {
 
     // ---------- Test-Benachrichtigung (Knopf in der App) ----------
     if (action === "test-notify") {
-      if (!access.ok && access.reason === "plan") return json({ ok: false, error: "Nur im Business-Tarif verfügbar." }, 403);
+      if (!(await checkPlan(settings.tenant_id))) return json({ ok: false, error: "Nur im Business-Tarif verfügbar." }, 403);
       const result = await notify(settings, { kind: "test" }, await companyName(settings));
       return json({ ok: true, result });
     }
@@ -646,6 +720,7 @@ serve(async (req) => {
         duration_seconds: c.duration_seconds,
         summary: c.summary ? String(c.summary).slice(0, 4000) : null,
       });
+      await chargeCall(settings.tenant_id, c.callId, c.duration_seconds);
       // Ergebnis "info", falls während des Gesprächs nichts gebucht wurde
       await db
         .from("ai_calls")

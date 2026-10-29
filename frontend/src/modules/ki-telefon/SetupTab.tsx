@@ -1,11 +1,13 @@
 import { useState } from "react";
-import type { AiPhoneAgent, AiPhoneSettings, Provider } from "./types";
+import type { AiPhoneAgent, AiPhoneBilling, AiPhoneSettings, Provider } from "./types";
 import { DYNAMIC_VARIABLES, firstMessage, setupUrls, systemPrompt, toolsFor } from "./setup";
 
 type Props = {
   settings: AiPhoneSettings;
   agent: AiPhoneAgent | null;
+  billing: AiPhoneBilling | null;
   busy: boolean;
+  onBuySetup: () => void;
   onActivate: () => void;
   onRegenerateKey: () => void;
 };
@@ -15,8 +17,21 @@ function formatDateTime(iso: string | null) {
   return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function ActivationPanel({ agent, busy, onActivate }: { agent: AiPhoneAgent | null; busy: boolean; onActivate: () => void }) {
+function ActivationPanel({
+  agent,
+  billing,
+  busy,
+  onBuySetup,
+  onActivate,
+}: {
+  agent: AiPhoneAgent | null;
+  billing: AiPhoneBilling | null;
+  busy: boolean;
+  onBuySetup: () => void;
+  onActivate: () => void;
+}) {
   const hasAgent = !!agent?.agent_id;
+  const setupPaid = !!billing?.setup_paid_at;
   const steps = [
     { label: "KI-Assistent angelegt", done: hasAgent },
     { label: "Telefonnummer verbunden", done: !!agent?.phone_number },
@@ -24,8 +39,34 @@ function ActivationPanel({ agent, busy, onActivate }: { agent: AiPhoneAgent | nu
   return (
     <section className="kt-panel kt-activate">
       <h3>KI-Assistent</h3>
-      {!hasAgent ? (
+      {!hasAgent && !setupPaid ? (
         <>
+          <p>
+            Dein persönlicher KI-Assistent nimmt Anrufe an, wenn ihr nicht abheben könnt, vergibt Besichtigungstermine und
+            notiert Rückrufwünsche.
+          </p>
+          <div className="kt-offer">
+            <div className="kt-offer-price">
+              <strong>49 €</strong>
+              <span>einmalig, zzgl. MwSt.</span>
+            </div>
+            <ul>
+              <li>✓ Einrichtung deines KI-Assistenten mit deutscher Stimme</li>
+              <li>✓ eigene Telefonnummer (laufende Kosten sind im Business-Tarif enthalten)</li>
+              <li>✓ 300 Gesprächsminuten inklusive</li>
+            </ul>
+            <p className="tk-muted">
+              Danach Minuten nach Bedarf: 300 Minuten für 45 € oder 1.000 Minuten für 135 € (jeweils zzgl. MwSt.).
+              Minuten verfallen nicht. Für die Telefonnummer wird später ein Gewerbenachweis benötigt.
+            </p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={onBuySetup} disabled={busy}>
+            {busy ? "Bezahlseite wird geöffnet …" : "Zahlungspflichtig aktivieren – 49 € zzgl. MwSt."}
+          </button>
+        </>
+      ) : !hasAgent ? (
+        <>
+          <p className="kt-paid-note">✓ Einrichtung bezahlt – 300 Minuten sind gutgeschrieben.</p>
           <p>
             Mit einem Klick wird dein persönlicher KI-Assistent eingerichtet – mit deinem Firmennamen, deiner Begrüßung,
             deutscher Stimme und Zugriff auf deinen Terminkalender.
@@ -106,14 +147,14 @@ function CopyBlock({ label, value, mono = true, secret = false }: { label: strin
   );
 }
 
-export default function SetupTab({ settings, agent, busy, onActivate, onRegenerateKey }: Props) {
+export default function SetupTab({ settings, agent, billing, busy, onBuySetup, onActivate, onRegenerateKey }: Props) {
   const [provider, setProvider] = useState<Provider>("elevenlabs");
   const [confirmRegen, setConfirmRegen] = useState(false);
   const urls = setupUrls(settings.webhook_key, provider);
 
   return (
     <div className="kt-setup">
-      <ActivationPanel agent={agent} busy={busy} onActivate={onActivate} />
+      <ActivationPanel agent={agent} billing={billing} busy={busy} onBuySetup={onBuySetup} onActivate={onActivate} />
 
       <details className="kt-manual">
         <summary>Technische Details / manuelle Einrichtung (nur für Experten)</summary>

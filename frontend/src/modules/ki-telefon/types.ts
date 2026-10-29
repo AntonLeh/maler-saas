@@ -35,6 +35,32 @@ export type AiPhoneAgent = {
   synced_at: string | null;
 };
 
+export type AiPhoneBilling = {
+  tenant_id: number;
+  setup_paid_at: string | null;
+  balance_seconds: number;
+};
+
+export type MinuteLedgerEntry = {
+  id: number;
+  delta_seconds: number;
+  reason: "einrichtung" | "kauf" | "gespraech" | "korrektur" | string;
+  amount_net: number | null;
+  currency: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type MinutePackage = "setup" | "m300" | "m1000";
+
+export const MINUTE_PACKAGES: { key: MinutePackage; minutes: number; net: number; label: string }[] = [
+  { key: "setup", minutes: 300, net: 49, label: "Einrichtung inkl. Telefonnummer und 300 Minuten" },
+  { key: "m300", minutes: 300, net: 45, label: "300 Minuten" },
+  { key: "m1000", minutes: 1000, net: 135, label: "1.000 Minuten" },
+];
+
+export const LOW_BALANCE_MINUTES = 50;
+
 export type CallbackRequest = {
   id: number;
   tenant_id: number;

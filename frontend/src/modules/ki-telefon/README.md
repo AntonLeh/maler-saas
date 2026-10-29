@@ -50,6 +50,39 @@ Einmalig einrichten:
 
 Der ElevenLabs-API-Schlüssel braucht Schreibrechte für Agents/ElevenAgents (Agents und Tools).
 
+## Preise und Minuten-Guthaben
+
+| Paket | Preis (netto) | Inhalt |
+| --- | --- | --- |
+| Einrichtung (einmalig) | 49 € | Assistent, Telefonnummer, 300 Minuten |
+| 300 Minuten | 45 € | |
+| 1.000 Minuten | 135 € | |
+
+- Bezahlung über Stripe Checkout (Funktion `ai-phone-billing`, eigener Webhook-Endpunkt).
+- Guthaben in `ai_phone_billing`, jede Bewegung in `ai_minute_ledger` (doppelte Buchungen ausgeschlossen).
+- Abbuchung sekundengenau nach jedem Gespräch (Post-Call-Webhook). Minuten verfallen nicht.
+- Ohne bezahlte Einrichtung oder bei Guthaben ≤ 0: KI entschuldigt sich kurz und legt auf.
+- E-Mail an den Betrieb bei 50 Restminuten und bei 0.
+- Der bestehende `stripe-webhook` überspringt Zahlungen mit `metadata.kind = "ai_minutes"` (eine ergänzte Abfrage).
+
+Einrichtung:
+1. SQL-Datei `supabase/migrations/20261029140000_ki_telefon_guthaben.sql` ausführen.
+2. In Stripe drei Preise anlegen (einmalig, EUR, netto) und einen Webhook-Endpunkt
+   `https://udzgxfjmpeygylgrcdsc.supabase.co/functions/v1/ai-phone-billing?action=webhook`
+   für `checkout.session.completed` und `checkout.session.async_payment_succeeded`.
+3. Secrets setzen und veröffentlichen:
+   ```bash
+   npx supabase secrets set STRIPE_PRICE_AI_SETUP=price_… STRIPE_PRICE_AI_300=price_… STRIPE_PRICE_AI_1000=price_… STRIPE_AI_WEBHOOK_SECRET=whsec_… --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy stripe-webhook --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone-billing --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   ```
+   Optional `STRIPE_AUTOMATIC_TAX=true`, wenn Stripe Tax genutzt wird.
+4. Gutschrift von Hand (z. B. Kulanz, Test):
+   ```sql
+   select * from ai_minutes_apply(<tenant_id>, 300*60, 'korrektur', 'gutschrift-<datum>-1', 0, 'EUR', false, 'Kulanz');
+   ```
+
 ## Werkzeuge der KI
 
 | Werkzeug | Zweck |

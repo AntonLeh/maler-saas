@@ -470,6 +470,126 @@
   padding: 0 14px 14px;
 }
 
+.kt-offer {
+  border: 1px solid var(--tk-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 6px 0 14px;
+  background: var(--tk-surface);
+}
+
+.kt-offer-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.kt-offer-price strong {
+  font-size: 28px;
+}
+
+.kt-offer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kt-paid-note {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.kt-billing {
+  margin-top: 4px;
+}
+
+.kt-billing-low {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.kt-billing-empty {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.kt-billing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.kt-billing-head > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.kt-billing-label {
+  font-size: 13px;
+  color: var(--tk-muted);
+  font-weight: 600;
+}
+
+.kt-billing-value {
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kt-packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.kt-pack {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--tk-surface);
+}
+
+.kt-pack > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.kt-billing-note {
+  margin-top: 10px;
+}
+
+.kt-purchases summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  color: #334155;
+}
+
+.kt-purchases ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.kt-purchases li {
+  display: grid;
+  grid-template-columns: 90px 1fr auto auto;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--tk-border);
+}
+
 .kt-danger-zone {
   border-color: #fecaca;
 }
@@ -488,6 +608,15 @@
     align-items: flex-start;
     flex-direction: row;
     gap: 8px;
+  }
+
+  .kt-pack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kt-purchases li {
+    grid-template-columns: 1fr auto;
   }
 
   .kt-params {

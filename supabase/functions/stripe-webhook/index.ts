@@ -51,6 +51,11 @@ serve(async (req) => {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
+      // KI-Telefon-Minutenkäufe werden von der Funktion ai-phone-billing verbucht
+      if (session.metadata?.kind === "ai_minutes") {
+        return new Response(JSON.stringify({ received: true, skipped: "ai_minutes" }), { status: 200 });
+      }
+
       const tenantId = Number(
         session.metadata?.tenant_id
       );

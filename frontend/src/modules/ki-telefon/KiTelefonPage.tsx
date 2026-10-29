@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import "../terminkalender/terminkalender.css";
 import "./ki-telefon.css";
-import type { AiAppointment, AiCall, AiPhoneAgent, AiPhoneSettings, CallbackRequest } from "./types";
+import type {
+  AiAppointment,
+  AiCall,
+  AiPhoneAgent,
+  AiPhoneBilling,
+  AiPhoneSettings,
+  CallbackRequest,
+  MinuteLedgerEntry,
+  MinutePackage,
+} from "./types";
 import { OUTCOME_LABELS } from "./types";
 import * as api from "./api";
 import SettingsTab from "./SettingsTab";
 import SetupTab from "./SetupTab";
+import BillingPanel from "./BillingPanel";
 
 type Tab = "overview" | "settings" | "setup";
 
@@ -96,6 +106,8 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
   const [tab, setTab] = useState<Tab>("overview");
   const [settings, setSettings] = useState<AiPhoneSettings | null>(null);
   const [agent, setAgent] = useState<AiPhoneAgent | null>(null);
+  const [billing, setBilling] = useState<AiPhoneBilling | null>(null);
+  const [purchases, setPurchases] = useState<MinuteLedgerEntry[]>([]);
   const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
   const [calls, setCalls] = useState<AiCall[]>([]);
   const [aiAppointments, setAiAppointments] = useState<AiAppointment[]>([]);
@@ -109,15 +121,19 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, cb, cl, ap, m, ag] = await Promise.all([
+      const [s, cb, cl, ap, m, ag, bi, pu] = await Promise.all([
         api.loadOrCreateSettings(tenantId),
         api.loadCallbacks(tenantId),
         api.loadCalls(tenantId),
         api.loadAiAppointmentsToReview(tenantId),
         api.loadMonthSeconds(tenantId),
         api.loadAgent(tenantId),
+        api.loadBilling(tenantId),
+        api.loadPurchases(tenantId),
       ]);
       setAgent(ag);
+      setBilling(bi);
+      setPurchases(pu);
       setSettings(s);
       setCallbacks(cb);
       setCalls(cl);
@@ -147,6 +163,65 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
       setBusy(false);
     }
   };
+
+  const buy = (pkg: MinutePackage) =>
+    run(async () => {
+      await api.startCheckout(pkg);
+    });
+
+  // Rückkehr von der Stripe-Bezahlseite
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("ki_kauf");
+    if (!result) return;
+    const pkg = params.get("paket");
+    params.delete("ki_kauf");
+    params.delete("paket");
+    const rest = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+
+    if (result !== "erfolg") {
+      setError("Der Kauf wurde abgebrochen. Es wurde nichts berechnet.");
+      return;
+    }
+    if (pkg === "setup") setTab("setup");
+    setSuccess("Danke für deine Zahlung! Das Guthaben wird gerade verbucht …");
+
+    let cancelled = false;
+    (async () => {
+      // Stripe meldet die Zahlung meist innerhalb weniger Sekunden
+      const before = await api.loadBilling(tenantId);
+      let current = before;
+      for (let i = 0; i < 15 && !cancelled; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        current = await api.loadBilling(tenantId);
+        if (pkg === "setup" ? current?.setup_paid_at : (current?.balance_seconds ?? 0) !== (before?.balance_seconds ?? 0)) break;
+      }
+      if (cancelled) return;
+      setBilling(current);
+      setPurchases(await api.loadPurchases(tenantId));
+      if (pkg === "setup" && current?.setup_paid_at) {
+        // Einrichtung bezahlt -> Assistent sofort anlegen
+        setBusy(true);
+        try {
+          await api.provisionAgent();
+          setSuccess("Zahlung erhalten – dein KI-Assistent ist eingerichtet und 300 Minuten sind gutgeschrieben.");
+        } catch (e) {
+          setError(`Zahlung erhalten, aber der Assistent konnte noch nicht angelegt werden: ${(e as Error).message}`);
+        } finally {
+          setAgent(await api.loadAgent(tenantId));
+          setBusy(false);
+        }
+      } else if (current && (pkg === "setup" ? current.setup_paid_at : true)) {
+        setSuccess("Zahlung erhalten – die Minuten sind gutgeschrieben.");
+      } else {
+        setSuccess("Zahlung erhalten. Die Gutschrift kann noch einen Moment dauern – bitte die Seite gleich neu laden.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const openCallbacks = callbacks.filter((c) => c.status === "offen");
   const doneCallbacks = callbacks.filter((c) => c.status === "erledigt");
@@ -227,7 +302,9 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
           <SetupTab
             settings={settings}
             agent={agent}
+            billing={billing}
             busy={busy}
+            onBuySetup={() => buy("setup")}
             onActivate={() =>
               run(async () => {
                 if (!settings.enabled) {
@@ -269,6 +346,17 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
                 <strong>{minutes}</strong> Minuten diesen Monat
               </span>
             </div>
+
+            {billing?.setup_paid_at ? (
+              <BillingPanel billing={billing} purchases={purchases} busy={busy} onBuy={buy} />
+            ) : billing ? (
+              <div className="tk-notice tk-notice-info">
+                <span>Das KI-Telefon ist noch nicht aktiviert. Unter „Einrichtung“ kannst du es freischalten.</span>
+                <button type="button" className="btn btn-primary btn-small" onClick={() => setTab("setup")}>
+                  Zur Einrichtung
+                </button>
+              </div>
+            ) : null}
 
             <section className="kt-section">
               <h2>Rückrufwünsche</h2>

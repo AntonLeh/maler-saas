@@ -17,6 +17,13 @@ export function KiTelefonButton({
 }) {
   const [open, setOpen] = useState(0);
 
+  // Rückkehr von der Stripe-Bezahlseite (?ki_kauf=...) -> direkt zum KI-Telefon
+  useEffect(() => {
+    if (hasAccess && new URLSearchParams(window.location.search).has("ki_kauf")) onOpen();
+    // nur einmal beim Laden
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAccess]);
+
   useEffect(() => {
     if (!hasAccess) return;
     let cancelled = false;

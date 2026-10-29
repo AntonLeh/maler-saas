@@ -13,7 +13,9 @@ import { countryCodeForTimezone, normalizePhone } from "./slots.ts";
 export type NotifyEvent =
   | { kind: "callback"; name: string; phone: string; concern: string; preferredTime: string }
   | { kind: "appointment"; name: string; phone: string; address: string; when: string; concern: string }
-  | { kind: "test" };
+  | { kind: "test" }
+  | { kind: "low_balance"; minutes: number }
+  | { kind: "empty_balance" };
 
 export type NotifyResult = { email: string; sms: string };
 
@@ -42,6 +44,28 @@ function cut(s: string, max: number): string {
 /** Inhalte der Nachricht – reine Funktion, damit testbar */
 export function buildMessage(event: NotifyEvent, company: string) {
   const appUrl = env("APP_URL") || "https://maler-saas.com";
+  if (event.kind === "low_balance") {
+    return {
+      subject: `⚠️ KI-Telefon: nur noch ${event.minutes} Minuten Guthaben`,
+      lines: [
+        `Dein KI-Telefon hat nur noch ${event.minutes} Minuten Guthaben.`,
+        "Bitte rechtzeitig Minuten nachkaufen (KI-Telefon → Übersicht), damit keine Anrufe verloren gehen.",
+      ],
+      sms: `KI-Telefon (${company}): nur noch ${event.minutes} Minuten Guthaben. Bitte nachkaufen.`,
+      appUrl,
+    };
+  }
+  if (event.kind === "empty_balance") {
+    return {
+      subject: "❗ KI-Telefon: Guthaben aufgebraucht – Anrufe werden nicht mehr angenommen",
+      lines: [
+        "Das Minuten-Guthaben deines KI-Telefons ist aufgebraucht.",
+        "Anrufer hören jetzt nur noch eine kurze Ansage. Bitte Minuten nachkaufen (KI-Telefon → Übersicht).",
+      ],
+      sms: `KI-Telefon (${company}): Guthaben aufgebraucht, Anrufe werden nicht mehr angenommen. Bitte nachkaufen.`,
+      appUrl,
+    };
+  }
   if (event.kind === "test") {
     return {
       subject: `Test: Benachrichtigung vom KI-Telefon (${company})`,
@@ -131,11 +155,14 @@ async function sendSms(to: string, text: string, country: string): Promise<strin
 /** Je nach Einstellungen E-Mail und/oder SMS verschicken. Wirft nie. */
 export async function notify(settings: Settings, event: NotifyEvent, companyName: string): Promise<NotifyResult> {
   const result: NotifyResult = { email: "aus", sms: "aus" };
+  const isBalance = event.kind === "low_balance" || event.kind === "empty_balance";
   const wantEmail =
     event.kind === "test" ||
+    isBalance ||
     (event.kind === "callback" ? settings.notify_callback_email : settings.notify_appointment_email) === true;
   const wantSms =
     event.kind === "test" ||
+    (isBalance && settings.notify_callback_sms === true) ||
     (event.kind === "callback" ? settings.notify_callback_sms : settings.notify_appointment_sms) === true;
 
   const msg = buildMessage(event, companyName);

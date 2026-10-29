@@ -1,5 +1,14 @@
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { AiAppointment, AiCall, AiPhoneAgent, AiPhoneSettings, CallbackRequest } from "./types";
+import type {
+  AiAppointment,
+  AiCall,
+  AiPhoneAgent,
+  AiPhoneBilling,
+  AiPhoneSettings,
+  CallbackRequest,
+  MinuteLedgerEntry,
+  MinutePackage,
+} from "./types";
 
 function fail(context: string, error: { message: string } | null): never {
   const msg = error?.message ?? "Unbekannter Fehler";
@@ -209,4 +218,44 @@ export async function provisionAgent(): Promise<{ created: boolean }> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) throw new Error(data.error || `Aktivierung fehlgeschlagen (Status ${res.status}).`);
   return { created: !!data.created };
+}
+
+/** Kontostand (null = Tabelle fehlt noch) */
+export async function loadBilling(tenantId: number): Promise<AiPhoneBilling | null> {
+  const { data, error } = await supabase.from("ai_phone_billing").select("*").eq("tenant_id", tenantId).maybeSingle();
+  if (error) return null;
+  return (data as AiPhoneBilling) ?? { tenant_id: tenantId, setup_paid_at: null, balance_seconds: 0 };
+}
+
+/** Letzte Käufe (Gespräche werden in der Anrufliste gezeigt) */
+export async function loadPurchases(tenantId: number): Promise<MinuteLedgerEntry[]> {
+  const { data, error } = await supabase
+    .from("ai_minute_ledger")
+    .select("id, delta_seconds, reason, amount_net, currency, note, created_at")
+    .eq("tenant_id", tenantId)
+    .in("reason", ["einrichtung", "kauf", "korrektur"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (error) return [];
+  return (data ?? []) as MinuteLedgerEntry[];
+}
+
+/** Stripe-Bezahlseite öffnen */
+export async function startCheckout(pkg: MinutePackage): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/ai-phone-billing?action=checkout`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ package: pkg }),
+    });
+  } catch {
+    throw new Error("Die Bezahlfunktion ist nicht erreichbar. Ist die Funktion ai-phone-billing veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.url) throw new Error(data.error || `Bezahlung konnte nicht gestartet werden (Status ${res.status}).`);
+  window.location.href = data.url;
 }
