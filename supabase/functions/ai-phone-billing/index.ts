@@ -125,6 +125,8 @@ async function handleCheckout(req: Request): Promise<Response> {
   if (Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true") {
     params.automatic_tax = { enabled: true };
     params.tax_id_collection = { enabled: true };
+    // Vollständige Rechnungsadresse (Pflichtangabe auf Rechnungen an Firmen)
+    params.billing_address_collection = "required";
   }
 
   const session = await stripeClient().checkout.sessions.create(params);
