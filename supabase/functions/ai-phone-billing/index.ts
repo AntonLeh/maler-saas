@@ -49,6 +49,21 @@ function stripeClient() {
   return new Stripe(key, { apiVersion: "2024-06-20" });
 }
 
+/**
+ * Stripe-Kunde nur verwenden, wenn es ihn im aktuellen Modus (live/test) gibt.
+ * Test-Betriebe haben teils eine Kunden-ID aus dem Testmodus oder einen gelöschten Kunden.
+ */
+async function existingCustomer(id: string | null | undefined): Promise<string | null> {
+  if (!id) return null;
+  try {
+    const c: any = await stripeClient().customers.retrieve(id);
+    return c && !c.deleted ? id : null;
+  } catch (e: any) {
+    if (e?.code === "resource_missing" || e?.statusCode === 404) return null;
+    throw e;
+  }
+}
+
 // ---------------------------------------------------------------------
 // Checkout starten
 // ---------------------------------------------------------------------
@@ -99,8 +114,9 @@ async function handleCheckout(req: Request): Promise<Response> {
     success_url: `${origin}/?ki_kauf=erfolg&paket=${key}`,
     cancel_url: `${origin}/?ki_kauf=abbruch`,
   };
-  if (sub.stripe_customer_id) {
-    params.customer = sub.stripe_customer_id;
+  const customerId = await existingCustomer(sub.stripe_customer_id);
+  if (customerId) {
+    params.customer = customerId;
     params.customer_update = { address: "auto", name: "auto" };
   } else {
     params.customer_email = authData.user.email || user.email;
