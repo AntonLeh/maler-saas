@@ -63,8 +63,8 @@ export default function BillingPanel({
             {purchases.map((e) => (
               <li key={e.id}>
                 <span>{formatDate(e.created_at)}</span>
-                <span>{e.note || (e.reason === "korrektur" ? "Gutschrift" : "Kauf")}</span>
-                <span>+{Math.round(e.delta_seconds / 60)} Min.</span>
+                <span>{e.note || (e.reason === "korrektur" ? (e.delta_seconds < 0 ? "Korrektur" : "Gutschrift") : "Kauf")}</span>
+                <span>{e.delta_seconds > 0 ? "+" : ""}{Math.round(e.delta_seconds / 60)} Min.</span>
                 <span>{e.amount_net != null ? `${euro(Number(e.amount_net))} netto` : "–"}</span>
               </li>
             ))}
