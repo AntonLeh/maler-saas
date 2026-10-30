@@ -30,7 +30,7 @@ import {
   zonedParts,
 } from "./slots.ts";
 import { notify } from "./notify.ts";
-import { provisionAgent } from "./agent.ts";
+import { assignPhoneNumber, provisionAgent } from "./agent.ts";
 
 const ALLOWED_PLANS = ["business", "enterprise"];
 const ALLOWED_STATUS = ["active", "trialing"];
@@ -607,6 +607,19 @@ async function handleProvision(req: Request): Promise<Response> {
       },
       { onConflict: "tenant_id" }
     );
+    // Agent wurde neu angelegt (z. B. bei ElevenLabs gelöscht) -> vorhandene Telefonnummer umhängen
+    if (result.created) {
+      const { data: num } = await db
+        .from("ai_phone_numbers")
+        .select("elevenlabs_phone_number_id")
+        .eq("tenant_id", user.tenant_id)
+        .maybeSingle();
+      if (num?.elevenlabs_phone_number_id) {
+        await assignPhoneNumber(num.elevenlabs_phone_number_id, result.agentId).catch((e) =>
+          console.error("assignPhoneNumber", String(e?.message ?? e))
+        );
+      }
+    }
     return json({ ok: true, agent_id: result.agentId, created: result.created });
   } catch (e) {
     const msg = String((e as Error)?.message ?? e).slice(0, 500);

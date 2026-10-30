@@ -35,6 +35,47 @@ export type AiPhoneAgent = {
   synced_at: string | null;
 };
 
+export type AiPhoneNumberStatus = "entwurf" | "eingereicht" | "abgelehnt" | "freigegeben" | "aktiv" | "fehler";
+
+export type AiPhoneNumber = {
+  tenant_id: number;
+  status: AiPhoneNumberStatus | string;
+  business_name: string | null;
+  registration_number: string | null;
+  rep_first_name: string | null;
+  rep_last_name: string | null;
+  rep_email: string | null;
+  website: string | null;
+  street: string | null;
+  postal_code: string | null;
+  city: string | null;
+  region: string | null;
+  area_code: string | null;
+  document_issue_date: string | null;
+  bundle_status: string | null;
+  failure_reason: string | null;
+  phone_number: string | null;
+  last_error: string | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  activated_at: string | null;
+  updated_at: string | null;
+};
+
+export type NumberDocKind = "handelsregister" | "gewerbe" | "steuer";
+
+export const NUMBER_DOC_KINDS: { value: NumberDocKind; label: string }[] = [
+  { value: "handelsregister", label: "Handelsregisterauszug (nicht älter als 3 Monate)" },
+  { value: "gewerbe", label: "Gewerbeanmeldung / Gewerbeummeldung" },
+  { value: "steuer", label: "Schreiben vom Finanzamt mit Steuernummer" },
+];
+
+export const BUNDESLAENDER = [
+  "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen",
+  "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland",
+  "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen",
+];
+
 export type AiPhoneBilling = {
   tenant_id: number;
   setup_paid_at: string | null;

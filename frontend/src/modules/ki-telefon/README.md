@@ -83,6 +83,35 @@ Einrichtung:
    select * from ai_minutes_apply(<tenant_id>, 300*60, 'korrektur', 'gutschrift-<datum>-1', 0, 'EUR', false, 'Kulanz');
    ```
 
+## Telefonnummer (Twilio, Deutschland)
+
+Jeder Betrieb bekommt eine **Ortsnummer mit seiner eigenen Vorwahl**. Der Admin beantragt sie unter
+*KI-Telefon → Einrichtung → Telefonnummer* (Betriebsdaten + Nachweis hochladen). Die Funktion `ai-phone-number`
+reicht alles bei Twilio ein; nach der Freigabe (meist 1–3 Werktage) wird automatisch eine passende Nummer gekauft,
+bei ElevenLabs importiert und dem Assistenten zugeordnet. Der Betrieb bekommt eine E-Mail und sieht in der App eine
+Anleitung zur Rufumleitung.
+
+- Nachweise: Handelsregisterauszug (≤ 3 Monate) **oder** Gewerbeanmeldung + Schreiben vom Finanzamt mit Steuernummer.
+  Die Adresse muss im Ortsnetz der Vorwahl liegen und genau mit dem Nachweis übereinstimmen.
+- Die Dateien werden **nicht** in Supabase gespeichert, sondern direkt an Twilio übergeben.
+- Pflichtfelder liest die Funktion zur Laufzeit aus dem Twilio-Regelwerk (DE/local/business). Vor dem Einreichen prüft
+  Twilio die Unterlagen automatisch (Evaluation); fehlt etwas, sieht der Admin die Meldung und kann korrigieren.
+- Plattform-Inhaber (role_id 1) kann das aktuelle Regelwerk abrufen: `ai-phone-number?action=requirements`.
+
+Voraussetzung: Twilio-Konto mit **freigegebenem** Primary Business Profile (ISV) und Guthaben.
+
+Einrichtung:
+1. SQL-Datei `supabase/migrations/20261030120000_ki_telefon_nummer.sql` ausführen.
+2. Secrets setzen und veröffentlichen:
+   ```bash
+   npx supabase secrets set TWILIO_ACCOUNT_SID=AC… TWILIO_AUTH_TOKEN=… TWILIO_NOTIFY_EMAIL=<deine E-Mail> --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone-number --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   npx supabase functions deploy ai-phone --no-verify-jwt --project-ref udzgxfjmpeygylgrcdsc
+   ```
+   `AI_PHONE_HOOK_TOKEN` (vorhanden) schützt den Status-Callback von Twilio.
+
+Kosten: Ortsnummer ca. 1,35 $/Monat bei Twilio (im Business-Tarif enthalten), Gespräche laufen über ElevenLabs.
+
 ## Werkzeuge der KI
 
 | Werkzeug | Zweck |

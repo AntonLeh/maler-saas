@@ -651,3 +651,91 @@
     width: 100%;
   }
 }
+
+
+/* ---------- Telefonnummer ---------- */
+.kt-number h4 {
+  margin: 18px 0 8px;
+  font-size: 0.95rem;
+}
+.kt-number-form > p {
+  margin: 0 0 10px;
+}
+.kt-doc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.kt-doc-row select {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.kt-doc-row input[type="file"] {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.kt-issue-date {
+  max-width: 320px;
+  margin-top: 10px;
+}
+.kt-confirm {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 16px 0 12px;
+  font-size: 0.9rem;
+}
+.kt-root .kt-confirm input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.kt-number-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.kt-number-wait {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.kt-number-wait p {
+  margin: 0;
+  flex: 1 1 320px;
+}
+.kt-number-active {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  margin-bottom: 12px;
+}
+.kt-number-active strong {
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+.kt-forward summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.kt-forward ol {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+.kt-forward li {
+  margin-bottom: 6px;
+}
+.kt-forward code {
+  white-space: nowrap;
+}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { AiPhoneAgent, AiPhoneBilling, AiPhoneSettings, Provider } from "./types";
 import { DYNAMIC_VARIABLES, firstMessage, setupUrls, systemPrompt, toolsFor } from "./setup";
+import NumberPanel from "./NumberPanel";
 
 type Props = {
   settings: AiPhoneSettings;
@@ -87,8 +88,8 @@ function ActivationPanel({
           </ul>
           {!agent?.phone_number && (
             <p className="tk-muted">
-              Die Telefonnummer wird im nächsten Schritt automatisch beantragt. Bis dahin kann der Assistent im Browser
-              getestet werden.
+              Als Nächstes beantragst du unten deine eigene Telefonnummer. Bis dahin kann der Assistent im Browser getestet
+              werden.
             </p>
           )}
           <div className="kt-test-row">
@@ -155,6 +156,14 @@ export default function SetupTab({ settings, agent, billing, busy, onBuySetup, o
   return (
     <div className="kt-setup">
       <ActivationPanel agent={agent} billing={billing} busy={busy} onBuySetup={onBuySetup} onActivate={onActivate} />
+      {!!agent?.agent_id && (
+        <NumberPanel
+          tenantId={settings.tenant_id}
+          enabled={!!agent?.agent_id}
+          defaultCompany={settings.company_name ?? ""}
+          defaultEmail={settings.notify_email ?? ""}
+        />
+      )}
 
       <details className="kt-manual">
         <summary>Technische Details / manuelle Einrichtung (nur für Experten)</summary>

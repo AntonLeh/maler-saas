@@ -4,6 +4,7 @@ import type {
   AiCall,
   AiPhoneAgent,
   AiPhoneBilling,
+  AiPhoneNumber,
   AiPhoneSettings,
   CallbackRequest,
   MinuteLedgerEntry,
@@ -258,4 +259,48 @@ export async function startCheckout(pkg: MinutePackage): Promise<void> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.url) throw new Error(data.error || `Bezahlung konnte nicht gestartet werden (Status ${res.status}).`);
   window.location.href = data.url;
+}
+
+// ---------------------------------------------------------------------
+// Telefonnummer (Antrag über die Funktion ai-phone-number)
+// ---------------------------------------------------------------------
+
+/** Antrag lesen (null = noch keiner oder Tabelle fehlt) */
+export async function loadNumberRequest(tenantId: number): Promise<AiPhoneNumber | null> {
+  const { data, error } = await supabase.from("ai_phone_numbers").select("*").eq("tenant_id", tenantId).maybeSingle();
+  if (error) return null;
+  return (data as AiPhoneNumber) ?? null;
+}
+
+async function callNumberFunction(action: string, body?: FormData): Promise<{ number: AiPhoneNumber | null }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/ai-phone-number?action=${action}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: body ?? null,
+    });
+  } catch {
+    throw new Error("Die Schnittstelle ist nicht erreichbar. Ist die Funktion ai-phone-number veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    const err = new Error(data.error || `Fehler (Status ${res.status}).`) as Error & { number?: AiPhoneNumber | null };
+    err.number = data.number ?? null;
+    throw err;
+  }
+  return { number: data.number ?? null };
+}
+
+/** Antrag mit Nachweisen einreichen */
+export function submitNumberRequest(form: FormData) {
+  return callNumberFunction("submit", form);
+}
+
+/** Status bei Twilio abfragen (und nach Freigabe Nummer einrichten) */
+export function refreshNumberRequest() {
+  return callNumberFunction("refresh");
 }

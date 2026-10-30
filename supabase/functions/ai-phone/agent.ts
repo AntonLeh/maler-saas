@@ -299,3 +299,8 @@ export async function provisionAgent(input: ProvisionInput): Promise<ProvisionRe
   const created = await el("POST", "/v1/convai/agents/create", agentBody);
   return { agentId: created.agent_id, toolIds, created: true };
 }
+
+/** Bereits importierte Telefonnummer einem (neu angelegten) Agenten zuordnen */
+export async function assignPhoneNumber(phoneNumberId: string, agentId: string) {
+  await el("PATCH", `/v1/convai/phone-numbers/${encodeURIComponent(phoneNumberId)}`, { agent_id: agentId });
+}
