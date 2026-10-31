@@ -39,6 +39,7 @@ const plans = [
       "Materialverwaltung",
       "Projektleiter",
       "Bilder & Baudokumentation",
+      "Eigene Website mit Kontaktformular",
       "Premium-Support",
     ],
   },
