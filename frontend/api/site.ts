@@ -157,6 +157,7 @@ nav.main a:hover{color:var(--accent)}
 .top .call{margin-left:8px;padding:9px 16px;font-size:.95rem}
 .hero{position:relative;padding:72px 0 64px;background:var(--soft)}
 .hero .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.hero:not(.has-img) .grid{grid-template-columns:1fr;max-width:820px}
 .hero p.lead{font-size:1.2rem;color:var(--muted);margin:0 0 26px;max-width:36em}
 .hero .actions{display:flex;flex-wrap:wrap;gap:12px}
 .hero .pic{border-radius:calc(var(--radius) * 1.6);overflow:hidden;aspect-ratio:4/3;background:#dfe3e8;box-shadow:0 18px 40px rgba(20,30,45,.15)}
