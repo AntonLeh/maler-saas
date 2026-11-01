@@ -2,10 +2,11 @@
 
 export type WebsiteTheme = "klassisch" | "modern" | "frisch";
 
-export type WebsiteService = { title: string; text: string };
+export type WebsiteService = { title: string; text: string; icon?: string };
 
 export type WebsiteSections = {
   services: boolean;
+  process: boolean;
   references: boolean;
   reviews: boolean;
   about: boolean;
@@ -68,7 +69,56 @@ export type WebsiteLead = {
   message: string;
   status: "neu" | "erledigt";
   created_at: string;
+  services?: string[] | null;
+  photo_count?: number | null;
 };
+
+/** Symbole für Leistungen – Schlüssel müssen zu SERVICE_ICONS in frontend/api/site.ts passen */
+export const SERVICE_ICON_KEYS = [
+  ["rolle", "Farbrolle"],
+  ["pinsel", "Pinsel / Lack"],
+  ["haus", "Haus / Fassade"],
+  ["tapete", "Tapete"],
+  ["spachtel", "Spachtel / Putz"],
+  ["boden", "Boden"],
+  ["tuer", "Türen / Fenster"],
+  ["schutz", "Schutz / Schimmel"],
+  ["daemmung", "Dämmung"],
+  ["mauer", "Mauerwerk"],
+  ["spray", "Spritztechnik"],
+  ["palette", "Farbberatung"],
+  ["gewerbe", "Gewerbe"],
+  ["holz", "Holz / Zaun"],
+  ["wasser", "Wasserschaden"],
+  ["werkzeug", "Reparatur"],
+  ["stern", "Sonstiges"],
+] as const;
+export type ServiceIconKey = (typeof SERVICE_ICON_KEYS)[number][0];
+
+const ICON_RULES: [RegExp, ServiceIconKey][] = [
+  [/fassad|außen|aussen|wdvs/, "haus"],
+  [/dämm|daemm|wärme|waerme/, "daemmung"],
+  [/tapez|tapete/, "tapete"],
+  [/spachtel|putz|trockenbau|q[1-4]\b/, "spachtel"],
+  [/boden|vinyl|laminat|parkett|teppich|designbelag/, "boden"],
+  [/tür|tuer|fenster/, "tuer"],
+  [/lack|heizkörper|heizkoerper|treppe|pinsel/, "pinsel"],
+  [/schimmel|schutz|imprägn|impraegn|beschicht/, "schutz"],
+  [/mauer|klinker|stein|sandstrahl/, "mauer"],
+  [/graffiti|spritz|airless|spray/, "spray"],
+  [/beratung|gestalt|design|dekor|kreativ|farbkonzept|akzent/, "palette"],
+  [/gewerbe|büro|buero|objekt|hotel|praxis|industrie/, "gewerbe"],
+  [/holz|zaun|carport|lasur|gartenhaus/, "holz"],
+  [/wasser|feucht|nässe|naesse/, "wasser"],
+  [/reparatur|sanier|renovier|ausbesser/, "werkzeug"],
+];
+
+/** Automatisch gewähltes Symbol (gleiche Regeln wie auf der Website) */
+export function guessServiceIcon(title: string): ServiceIconKey {
+  const t = title.toLowerCase();
+  for (const [re, key] of ICON_RULES) if (re.test(t)) return key;
+  return "rolle";
+}
 
 /** Bewertung aus dem Kundenportal, für die der Kunde der Veröffentlichung zugestimmt hat */
 export type WebsiteReview = {
@@ -130,7 +180,7 @@ export const DEFAULT_SERVICES: WebsiteService[] = [
 
 export const DEFAULT_HIGHLIGHTS = ["Meisterbetrieb", "Kostenlose Besichtigung", "Festpreis-Angebot", "Saubere Baustelle"];
 
-export const DEFAULT_SECTIONS: WebsiteSections = { services: true, references: true, reviews: true, about: true, area: true, contact: true };
+export const DEFAULT_SECTIONS: WebsiteSections = { services: true, process: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Website für Starter-Tarif gesperrt (Professional, Business, Enterprise) */
 export function hasWebsiteAccess(plan: string | null | undefined): boolean {

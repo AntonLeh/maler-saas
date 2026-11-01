@@ -21,7 +21,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_N23R8SIVVw7_qmH3w-JPrw_w9YBpgyH";
 const env = (k: string): string =>
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[k] ?? "";
 
-export type Service = { title?: string; text?: string };
+export type Service = { title?: string; text?: string; icon?: string };
 export type RefImage = { url?: string; alt?: string };
 export type Reference = { id: number; title: string; text?: string | null; city?: string | null; images?: RefImage[]; published_at?: string };
 export type ReviewItem = { rating: number; text?: string | null; name?: string | null; city?: string | null; date?: string | null };
@@ -138,7 +138,56 @@ export function areaList(area: unknown): string[] {
     .slice(0, 40);
 }
 
-const SECTION_DEFAULTS = { services: true, references: true, reviews: true, about: true, area: true, contact: true };
+const SECTION_DEFAULTS = { services: true, process: true, references: true, reviews: true, about: true, area: true, contact: true };
+
+/** Symbole für Leistungen (aus Lucide, ISC-Lizenz), als SVG-Innenleben */
+export const SERVICE_ICONS: Record<string, string> = {
+  rolle: "<rect width=\"16\" height=\"6\" x=\"2\" y=\"2\" rx=\"2\"></rect><path d=\"M10 16v-2a2 2 0 0 1 2-2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2\"></path><rect width=\"4\" height=\"6\" x=\"8\" y=\"16\" rx=\"1\"></rect>",
+  pinsel: "<path d=\"m14.622 17.897-10.68-2.913\"></path><path d=\"M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z\"></path><path d=\"M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15\"></path>",
+  haus: "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"></path><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path>",
+  tapete: "<path d=\"M19 17V5a2 2 0 0 0-2-2H4\"></path><path d=\"M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3\"></path>",
+  spachtel: "<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\"></path><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\"></path><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\"></path>",
+  boden: "<path d=\"M12 3v18\"></path><path d=\"M3 12h18\"></path><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect>",
+  tuer: "<path d=\"M11 20H2\"></path><path d=\"M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z\"></path><path d=\"M11 4H8a2 2 0 0 0-2 2v14\"></path><path d=\"M14 12h.01\"></path><path d=\"M22 20h-3\"></path>",
+  schutz: "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"></path><path d=\"m9 12 2 2 4-4\"></path>",
+  daemmung: "<path d=\"M12 2v2\"></path><path d=\"M12 8a4 4 0 0 0-1.645 7.647\"></path><path d=\"M2 12h2\"></path><path d=\"M20 14.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z\"></path><path d=\"m4.93 4.93 1.41 1.41\"></path><path d=\"m6.34 17.66-1.41 1.41\"></path>",
+  mauer: "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"></rect><path d=\"M12 9v6\"></path><path d=\"M16 15v6\"></path><path d=\"M16 3v6\"></path><path d=\"M3 15h18\"></path><path d=\"M3 9h18\"></path><path d=\"M8 15v6\"></path><path d=\"M8 3v6\"></path>",
+  spray: "<path d=\"M3 3h.01\"></path><path d=\"M7 5h.01\"></path><path d=\"M11 7h.01\"></path><path d=\"M3 7h.01\"></path><path d=\"M7 9h.01\"></path><path d=\"M3 11h.01\"></path><rect width=\"4\" height=\"4\" x=\"15\" y=\"5\"></rect><path d=\"m19 9 2 2v10c0 .6-.4 1-1 1h-6c-.6 0-1-.4-1-1V11l2-2\"></path><path d=\"m13 14 8-2\"></path><path d=\"m13 19 8-2\"></path>",
+  palette: "<path d=\"M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z\"></path><circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\"></circle><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\"></circle><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\"></circle><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"></circle>",
+  gewerbe: "<path d=\"M10 12h4\"></path><path d=\"M10 8h4\"></path><path d=\"M14 21v-3a2 2 0 0 0-4 0v3\"></path><path d=\"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2\"></path><path d=\"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16\"></path>",
+  holz: "<path d=\"M4 3 2 5v15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V5Z\"></path><path d=\"M6 8h4\"></path><path d=\"M6 18h4\"></path><path d=\"m12 3-2 2v15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V5Z\"></path><path d=\"M14 8h4\"></path><path d=\"M14 18h4\"></path><path d=\"m20 3-2 2v15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V5Z\"></path>",
+  wasser: "<path d=\"M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z\"></path><path d=\"M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97\"></path>",
+  werkzeug: "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z\"></path>",
+  stern: "<path d=\"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z\"></path><path d=\"M20 2v4\"></path><path d=\"M22 4h-4\"></path><circle cx=\"4\" cy=\"20\" r=\"2\"></circle>",
+};
+
+/** Passendes Symbol anhand des Leistungsnamens (gleiche Regeln wie im Editor: src/modules/website/types.ts) */
+const ICON_RULES: [RegExp, string][] = [
+  [/fassad|außen|aussen|wdvs/, "haus"],
+  [/dämm|daemm|wärme|waerme/, "daemmung"],
+  [/tapez|tapete/, "tapete"],
+  [/spachtel|putz|trockenbau|q[1-4]\b/, "spachtel"],
+  [/boden|vinyl|laminat|parkett|teppich|designbelag/, "boden"],
+  [/tür|tuer|fenster/, "tuer"],
+  [/lack|heizkörper|heizkoerper|treppe|pinsel/, "pinsel"],
+  [/schimmel|schutz|imprägn|impraegn|beschicht/, "schutz"],
+  [/mauer|klinker|stein|sandstrahl/, "mauer"],
+  [/graffiti|spritz|airless|spray/, "spray"],
+  [/beratung|gestalt|design|dekor|kreativ|farbkonzept|akzent/, "palette"],
+  [/gewerbe|büro|buero|objekt|hotel|praxis|industrie/, "gewerbe"],
+  [/holz|zaun|carport|lasur|gartenhaus/, "holz"],
+  [/wasser|feucht|nässe|naesse/, "wasser"],
+  [/reparatur|sanier|renovier|ausbesser/, "werkzeug"],
+];
+export function serviceIcon(sv: Service): string {
+  if (sv.icon && SERVICE_ICONS[sv.icon]) return sv.icon;
+  const t = String(sv.title ?? "").toLowerCase();
+  for (const [re, key] of ICON_RULES) if (re.test(t)) return key;
+  return "rolle";
+}
+function iconSvg(key: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SERVICE_ICONS[key] ?? SERVICE_ICONS.rolle}</svg>`;
+}
 
 /** Bewertungen nur zeigen, wenn es freigegebene Zitate oder mindestens 3 Bewertungen gibt */
 export function reviewSummary(d: SiteData): { count: number; avg: number; items: ReviewItem[] } | null {
@@ -162,6 +211,17 @@ function monthYear(iso: unknown): string {
   const t = new Date(String(iso ?? ""));
   return isNaN(t.getTime()) ? "" : t.toLocaleDateString("de-DE", { month: "long", year: "numeric", timeZone: "Europe/Berlin" });
 }
+
+/**
+ * Fotos im Browser verkleinern (max. 1600 px, JPEG) und als Base64 in versteckte Felder legen.
+ * Dabei gehen Standortdaten (EXIF/GPS) verloren. Ohne JavaScript wird das Formular ohne Fotos gesendet.
+ */
+const FORM_SCRIPT = `(function(){var f=document.querySelector("form.lead");if(!f)return;var inp=document.getElementById("fotos"),pv=document.getElementById("foto-vorschau"),busy=false;
+function pick(){return inp&&inp.files?Array.prototype.slice.call(inp.files,0,3):[]}
+if(inp)inp.addEventListener("change",function(){pv.innerHTML="";if(inp.files.length>3)alert("Bitte höchstens 3 Fotos auswählen – es werden die ersten 3 gesendet.");pick().forEach(function(file){var i=document.createElement("img");i.alt="";i.src=URL.createObjectURL(file);pv.appendChild(i)})});
+function shrink(file){return new Promise(function(res){var img=new Image();img.onload=function(){var m=1600,w=img.naturalWidth,h=img.naturalHeight,r=Math.min(1,m/Math.max(w,h));var c=document.createElement("canvas");c.width=Math.round(w*r);c.height=Math.round(h*r);c.getContext("2d").drawImage(img,0,0,c.width,c.height);var q=.8,u=c.toDataURL("image/jpeg",q);while(u.length>1900000&&q>.4){q-=.15;u=c.toDataURL("image/jpeg",q)}URL.revokeObjectURL(img.src);res(u.split(",")[1]||"")};img.onerror=function(){res("")};img.src=URL.createObjectURL(file)})}
+f.addEventListener("submit",function(e){var files=pick();if(!files.length||busy)return;e.preventDefault();busy=true;var b=f.querySelector("button[type=submit]");b.disabled=true;b.textContent="Fotos werden vorbereitet …";
+Promise.all(files.map(shrink)).then(function(list){list.filter(Boolean).forEach(function(d){var h=document.createElement("input");h.type="hidden";h.name="foto";h.value=d;f.appendChild(h)});b.textContent="Wird gesendet …";HTMLFormElement.prototype.submit.call(f)})})})();`;
 
 // ---------------------------------------------------------------------
 // Layout
@@ -222,7 +282,21 @@ section.alt{background:var(--soft)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
 .card h3{margin-bottom:.35em}.card p{margin:0;color:var(--muted)}
-.card .ico{width:42px;height:42px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;font-weight:800;margin-bottom:14px}
+.card .ico{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;font-weight:800;margin-bottom:14px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;list-style:none;margin:0;padding:0;counter-reset:st}
+.steps li{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px 22px 22px}
+.steps li::before{counter-increment:st;content:counter(st);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;margin-bottom:14px}
+.steps h3{font-size:1.08rem;margin-bottom:.3em}.steps p{margin:0;color:var(--muted);font-size:.97rem}
+fieldset.svc{border:0;margin:0;padding:0;display:grid;gap:8px}
+fieldset.svc legend{font-weight:600;font-size:.95rem;margin-bottom:6px;padding:0}
+.svc .opts{display:flex;flex-wrap:wrap;gap:8px}
+.svc .opt{position:relative}
+.svc .opt input{position:absolute;opacity:0;width:1px;height:1px}
+.svc .opt span{display:inline-block;border:1px solid #c9ced6;border-radius:999px;padding:7px 14px;font-weight:500;font-size:.93rem;cursor:pointer;background:#fff;user-select:none}
+.svc .opt input:checked+span{background:var(--accent);border-color:var(--accent);color:#fff}
+.svc .opt input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.photos input[type=file]{padding:10px;background:#fafbfc}
+.photo-prev{display:flex;gap:8px;flex-wrap:wrap}.photo-prev img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 .refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
 .ref{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
 .ref .main{aspect-ratio:4/3;background:#e6e9ed}.ref .main img{width:100%;height:100%;object-fit:cover}
@@ -274,6 +348,7 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  nav.main{display:none}
  .hero{padding:44px 0 40px}.theme-modern .hero{padding:72px 0 64px}
  .hero .grid,.about,.contact{grid-template-columns:1fr;gap:28px}
+ .steps{grid-template-columns:1fr 1fr}
  section.block{padding:52px 0}
  form.lead .two{grid-template-columns:1fr}
  .top .call{display:none}
@@ -281,6 +356,7 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  .callbar a{padding:15px 10px;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--accent)}
  .callbar a+a{background:var(--accent-dark)}
 }
+@media (max-width:520px){.steps{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 `;
 }
@@ -365,6 +441,14 @@ ${opts.home ? `<script>document.addEventListener("click",function(e){var b=e.tar
 // ---------------------------------------------------------------------
 // Seiten
 // ---------------------------------------------------------------------
+/** Abwechselnd heller und getönter Hintergrund – unabhängig davon, welche Bereiche angezeigt werden */
+function alternate(blocks: string[]): string {
+  return blocks
+    .filter(Boolean)
+    .map((b, i) => (i % 2 === 1 ? b.replace('<section class="block"', '<section class="block alt"') : b))
+    .join("");
+}
+
 export function renderHome(d: SiteData, ctx: Ctx): string {
   const c = d.company;
   const city = c.city?.trim() || "";
@@ -396,13 +480,24 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
       ? `<section class="block" id="leistungen"><div class="wrap">
 <div class="sec-head"><h2>Unsere Leistungen</h2><p>Alles aus einer Hand${city ? ` – für Privat- und Gewerbekunden in ${esc(city)} und Umgebung` : ""}.</p></div>
 <div class="cards">${services
-          .map((sv, i) => `<article class="card"><div class="ico" aria-hidden="true">${i + 1}</div><h3>${esc(sv.title)}</h3>${sv.text ? `<p>${esc(sv.text)}</p>` : ""}</article>`)
+          .map((sv) => `<article class="card"><div class="ico">${iconSvg(serviceIcon(sv))}</div><h3>${esc(sv.title)}</h3>${sv.text ? `<p>${esc(sv.text)}</p>` : ""}</article>`)
           .join("")}</div></div></section>`
       : "";
 
+  const processHtml = s.process
+    ? `<section class="block" id="ablauf"><div class="wrap">
+<div class="sec-head"><h2>So läuft's ab</h2><p>In vier Schritten zum fertigen Ergebnis – unkompliziert und transparent.</p></div>
+<ol class="steps">
+<li><h3>Anfrage</h3><p>${phone ? "Rufen Sie an oder schreiben" : "Schreiben"} Sie uns${s.contact && d.contact_form !== false ? " über das Formular – gern mit Fotos" : ""}.</p></li>
+<li><h3>Kostenlose Besichtigung</h3><p>Wir schauen uns alles vor Ort an und beraten Sie zu Farben und Materialien.</p></li>
+<li><h3>Verbindliches Angebot</h3><p>Sie erhalten ein schriftliches Angebot – klar aufgeschlüsselt und ohne versteckte Kosten.</p></li>
+<li><h3>Saubere Ausführung</h3><p>Termingerecht, mit sauber abgedeckten Flächen und gemeinsamer Abnahme zum Schluss.</p></li>
+</ol></div></section>`
+    : "";
+
   const refsHtml =
     s.references && refs.length
-      ? `<section class="block alt" id="referenzen"><div class="wrap">
+      ? `<section class="block" id="referenzen"><div class="wrap">
 <div class="sec-head"><h2>Aktuelle Projekte</h2><p>Ein Auszug aus unseren zuletzt abgeschlossenen Arbeiten.</p></div>
 <div class="refs">${refs
           .map((r) => {
@@ -456,7 +551,7 @@ ${highlights.length ? `<ul class="facts">${highlights.map((h) => `<li>${esc(h)}<
 
   const areaHtml =
     s.area && area.length
-      ? `<section class="block alt" id="einzugsgebiet"><div class="wrap">
+      ? `<section class="block" id="einzugsgebiet"><div class="wrap">
 <div class="sec-head"><h2>Hier sind wir für Sie da</h2><p>Unser Einsatzgebiet rund um ${esc(city || "unseren Standort")}:</p></div>
 <ul class="area">${area.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div></section>`
       : "";
@@ -474,12 +569,23 @@ ${notice}
 <div class="two"><label>Ihr Name *<input name="name" required maxlength="120" autocomplete="name"></label>
 <label>Telefon<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label></div>
 <label>E-Mail<input name="email" type="email" maxlength="160" autocomplete="email"></label>
-<label>Ihr Anliegen *<textarea name="message" required rows="5" maxlength="3000" placeholder="z. B. Wohnzimmer und Flur streichen, ca. 60 m², gewünschter Zeitraum …"></textarea></label>
+${
+  services.length
+    ? `<fieldset class="svc"><legend>Worum geht es? <small>(mehrere möglich)</small></legend><div class="opts">${services
+        .slice(0, 12)
+        .map((sv) => `<label class="opt"><input type="checkbox" name="leistung" value="${esc(sv.title)}"><span>${esc(sv.title)}</span></label>`)
+        .join("")}</div></fieldset>`
+    : ""
+}
+<label>Ihr Anliegen${services.length ? "" : " *"}<textarea name="message"${services.length ? "" : " required"} rows="5" maxlength="3000" placeholder="z. B. Wohnzimmer und Flur streichen, ca. 60 m², gewünschter Zeitraum …"></textarea></label>
+<label class="photos">Fotos <small>(optional, bis zu 3 – z. B. von Wand, Fassade oder Schaden)</small><input type="file" id="fotos" accept="image/*" multiple></label>
+<div class="photo-prev" id="foto-vorschau"></div>
 <div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
 <input type="hidden" name="t" value="${Date.now()}">
 <small>Bitte Telefon oder E-Mail angeben. Ihre Angaben verwenden wir nur zur Bearbeitung Ihrer Anfrage, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
 <button class="btn" type="submit">Anfrage senden</button>
-</form>`
+</form>
+<script>${FORM_SCRIPT}</script>`
       : "";
   const contactHtml = s.contact
     ? `<section class="block" id="kontakt"><div class="wrap contact">
@@ -496,7 +602,7 @@ ${formHtml || "<div></div>"}
   const description =
     d.seo_description?.trim() ||
     `${name}${city ? ` in ${city}` : ""}: ${services.length ? services.slice(0, 4).map((x) => x.title).join(", ") : "Malerarbeiten innen und außen"}. Jetzt kostenlos anfragen.`;
-  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), hero + servicesHtml + refsHtml + reviewsHtml + aboutHtml + areaHtml + contactHtml, {
+  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), hero + alternate([servicesHtml, processHtml, refsHtml, reviewsHtml, aboutHtml, areaHtml, contactHtml]), {
     home: true,
     index: !ctx.preview,
   });
@@ -543,7 +649,7 @@ export function renderPrivacy(d: SiteData, ctx: Ctx): string {
 <h2>3. Hosting und Server-Protokolle</h2><p>Die Website wird über die Software „Maler-SaaS“ bereitgestellt und bei Vercel Inc. (USA) gehostet; die Inhalte werden bei Supabase gespeichert. Beim Aufruf werden technisch notwendige Daten (z. B. IP-Adresse, Datum und Uhrzeit, aufgerufene Seite, Browsertyp) kurzzeitig in Server-Protokollen verarbeitet, um die Website sicher und stabil auszuliefern. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren Betrieb). Mit den Dienstleistern bestehen Verträge zur Auftragsverarbeitung; Übermittlungen in die USA erfolgen auf Grundlage des EU-US Data Privacy Framework bzw. von Standardvertragsklauseln.</p>
 ${
   d.contact_form !== false
-    ? `<h2>4. Kontaktformular, E-Mail und Telefon</h2><p>Wenn Sie uns über das Kontaktformular, per E-Mail oder telefonisch kontaktieren, verarbeiten wir Ihre Angaben (Name, Kontaktdaten, Anliegen) zur Bearbeitung Ihrer Anfrage und für mögliche Anschlussfragen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags) bzw. lit. f DSGVO. Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
+    ? `<h2>4. Kontaktformular, E-Mail und Telefon</h2><p>Wenn Sie uns über das Kontaktformular, per E-Mail oder telefonisch kontaktieren, verarbeiten wir Ihre Angaben (Name, Kontaktdaten, Anliegen, gewünschte Leistungen und ggf. mitgesendete Fotos) zur Bearbeitung Ihrer Anfrage und für mögliche Anschlussfragen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags) bzw. lit. f DSGVO. Fotos werden bereits in Ihrem Browser verkleinert; dabei werden eingebettete Zusatzdaten wie Standortangaben entfernt. Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
     : ""
 }
 <h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten und Kundenbewertungen</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift. Kundenbewertungen (Sterne, Kommentar, Vorname mit Anfangsbuchstabe des Nachnamens bzw. Firmenname und Ort) veröffentlichen wir nur, wenn die Kundin oder der Kunde beim Bewerten ausdrücklich eingewilligt hat (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden; eine kurze Nachricht an die oben genannten Kontaktdaten genügt. In den angezeigten Durchschnittswert fließen alle Bewertungen ohne Namen ein.</p>
@@ -573,17 +679,21 @@ async function rpc(fn: string, args: Record<string, unknown>): Promise<any> {
     headers: { apikey: SUPABASE_ANON_KEY, authorization: `Bearer ${SUPABASE_ANON_KEY}`, "content-type": "application/json" },
     body: JSON.stringify(args),
   });
-  if (!res.ok) throw new Error(`rpc ${fn} → ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(`rpc ${fn} → ${res.status}`), { status: res.status });
   return res.json();
 }
 
-async function sendLeadMail(to: string, company: string, lead: Record<string, string>, siteUrl: string) {
+type Lead = { name: string; email: string; phone: string; message: string; services: string[]; photos: string[] };
+
+async function sendLeadMail(to: string, company: string, lead: Lead, siteUrl: string) {
   const key = env("BREVO_API_KEY");
   const sender = env("BREVO_SENDER_EMAIL");
   if (!key || !sender || !to) return;
   const html = `<p>Neue Anfrage über Ihre Website:</p>
 <p><strong>${esc(lead.name)}</strong><br>${lead.phone ? `Telefon: ${esc(lead.phone)}<br>` : ""}${lead.email ? `E-Mail: ${esc(lead.email)}` : ""}</p>
+${lead.services.length ? `<p><strong>Gewünschte Leistungen:</strong> ${lead.services.map(esc).join(", ")}</p>` : ""}
 <p>${esc(lead.message).replace(/\n/g, "<br>")}</p>
+${lead.photos.length ? `<p>${lead.photos.length} Foto${lead.photos.length > 1 ? "s" : ""} im Anhang.</p>` : ""}
 <p>Alle Anfragen finden Sie in Maler-SaaS unter <em>Website → Anfragen</em>.</p><p style="color:#888">${esc(siteUrl)}</p>`;
   await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -594,6 +704,7 @@ async function sendLeadMail(to: string, company: string, lead: Record<string, st
       replyTo: lead.email ? { email: lead.email, name: lead.name } : undefined,
       subject: `Neue Website-Anfrage von ${lead.name}`,
       htmlContent: html,
+      attachment: lead.photos.length ? lead.photos.map((content, i) => ({ name: `foto-${i + 1}.jpg`, content })) : undefined,
     }),
   }).catch(() => undefined);
 }
@@ -619,13 +730,39 @@ export async function handle(request: Request): Promise<Response> {
     const started = Number(get("t"));
     // Spam-Schutz: verstecktes Feld ausgefüllt oder Formular in < 3 Sekunden abgeschickt -> still verwerfen
     if (get("website") || !started || Date.now() - started < 3000) return back("gesendet=1");
-    const lead = { name: get("name"), email: get("email"), phone: get("phone"), message: get("message") };
+    const services = form
+      .getAll("leistung")
+      .map((v) => String(v).trim().slice(0, 60))
+      .filter(Boolean)
+      .slice(0, 12);
+    // Fotos: im Browser verkleinerte JPEGs als Base64 (beginnen mit "/9j/"), max. 3 und je ca. 1,5 MB
+    const photos = form
+      .getAll("foto")
+      .map((v) => String(v).replace(/\s/g, ""))
+      .filter((v) => v.startsWith("/9j/") && v.length <= 2_100_000 && /^[A-Za-z0-9+/=]+$/.test(v))
+      .slice(0, 3);
+    const lead: Lead = { name: get("name"), email: get("email"), phone: get("phone"), message: get("message"), services, photos };
     try {
-      const r = await rpc("website_submit_lead", { p_slug: slug, p_name: lead.name, p_email: lead.email, p_phone: lead.phone, p_message: lead.message });
+      let r;
+      try {
+        r = await rpc("website_submit_lead2", {
+          p_slug: slug, p_name: lead.name, p_email: lead.email, p_phone: lead.phone, p_message: lead.message, p_services: services, p_photos: photos,
+        });
+      } catch (e) {
+        // Datenbank-Update noch nicht eingespielt -> alte Funktion, Leistungen in den Text, ohne Fotos
+        if ((e as { status?: number }).status !== 404) throw e;
+        const msg = [services.length ? `Gewünschte Leistungen: ${services.join(", ")}` : "", lead.message].filter(Boolean).join("\n\n");
+        r = await rpc("website_submit_lead", { p_slug: slug, p_name: lead.name, p_email: lead.email, p_phone: lead.phone, p_message: msg });
+        lead.message = msg;
+        lead.services = [];
+        lead.photos = [];
+      }
       if (!r?.ok) {
-        const err = r?.error === "invalid_email" ? "email" : r?.error === "rate_limited" ? "spaeter" : "angaben";
+        const err = r?.error === "invalid_email" ? "email" : r?.error === "rate_limited" ? "spaeter" : r?.error === "photos" ? "fotos" : "angaben";
         return back(`fehler=${err}`);
       }
+      if (!lead.message && services.length) lead.message = `Anfrage zu: ${services.join(", ")}`;
+      if (typeof r.photos === "number" && r.photos < lead.photos.length) lead.photos = lead.photos.slice(0, r.photos);
       await sendLeadMail(r.notify_email, r.company, lead, `${origin}${base}`);
       return back("gesendet=1");
     } catch {
@@ -650,6 +787,7 @@ export async function handle(request: Request): Promise<Response> {
     spaeter: "Gerade gehen sehr viele Anfragen ein. Bitte versuchen Sie es später noch einmal oder rufen Sie uns an.",
     angaben: "Bitte geben Sie Ihren Namen, Ihr Anliegen und Telefon oder E-Mail an.",
     formular: "Das Formular konnte nicht gelesen werden. Bitte erneut versuchen.",
+    fotos: "Die Fotos konnten nicht verarbeitet werden. Bitte senden Sie die Anfrage ohne Fotos oder mit anderen Bildern.",
     server: "Die Anfrage konnte gerade nicht gesendet werden. Bitte rufen Sie uns an.",
   };
   const ctx: Ctx = {

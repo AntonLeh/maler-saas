@@ -216,12 +216,32 @@ export async function copyOrderImage(tenantId: number, signedUrl: string): Promi
 export async function loadLeads(tenantId: number): Promise<WebsiteLead[]> {
   const { data, error } = await supabase
     .from("website_leads")
-    .select("id, name, email, phone, message, status, created_at")
+    .select("*") // "*" statt fester Spalten: funktioniert auch vor dem Datenbank-Update mit Leistungen/Fotos
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) fail("Anfragen laden", error);
   return (data ?? []) as WebsiteLead[];
+}
+
+/** Fotos einer Anfrage laden (als Bild-Adressen für die Anzeige im Browser) */
+export async function loadLeadPhotos(tenantId: number, leadId: number): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("website_lead_photos")
+    .select("id, mime, data")
+    .eq("tenant_id", tenantId)
+    .eq("lead_id", leadId)
+    .order("id");
+  if (error) fail("Fotos laden", error);
+  return ((data ?? []) as { mime: string; data: string }[]).map((p) => URL.createObjectURL(new Blob([hexToBytes(p.data)], { type: p.mime || "image/jpeg" })));
+}
+
+/** Postgres liefert bytea als "\x0a1b…" */
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  const h = hex.startsWith("\\x") ? hex.slice(2) : hex;
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i * 2, 2), 16);
+  return out;
 }
 
 export async function setLeadStatus(tenantId: number, id: number, status: "neu" | "erledigt") {

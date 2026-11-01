@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
-import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, THEMES, siteUrl, slugError } from "./types";
+import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, siteUrl, slugError } from "./types";
+import { ServiceIcon } from "./ServiceIcon";
 import { processImage, uploadImage } from "./api";
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
 
 const SECTION_LABELS: [keyof WebsiteSections, string][] = [
   ["services", "Leistungen"],
+  ["process", "So läuft's ab (4 Schritte)"],
   ["references", "Referenzen / Aktuelle Projekte"],
   ["reviews", "Kundenbewertungen"],
   ["about", "Über uns"],
@@ -84,7 +86,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
         .map((h) => h.trim())
         .filter(Boolean)
         .slice(0, 8),
-      services: services.map((s) => ({ title: s.title.trim(), text: s.text.trim() })).filter((s) => s.title),
+      services: services.map((s) => ({ title: s.title.trim(), text: s.text.trim(), ...(s.icon ? { icon: s.icon } : {}) })).filter((s) => s.title),
       about_title: aboutTitle.trim() || null,
       about_text: aboutText.trim() || null,
       service_area: area.trim() || null,
@@ -184,9 +186,21 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       <section className="ws-panel">
         <h3>Leistungen</h3>
         {services.length === 0 && <p className="tk-muted">Noch keine Leistungen eingetragen.</p>}
+        {services.length > 0 && <p className="tk-muted">Tipp: Auf das Symbol links klicken, um ein anderes zu wählen.</p>}
         <div className="ws-services">
           {services.map((s, i) => (
             <div key={i} className="ws-service">
+              <label className="ws-service-icon" title="Symbol wählen">
+                <ServiceIcon name={s.icon || guessServiceIcon(s.title)} />
+                <select value={s.icon ?? ""} onChange={(e) => updateService(i, { icon: e.target.value || undefined })} aria-label="Symbol">
+                  <option value="">Automatisch</option>
+                  {SERVICE_ICON_KEYS.map(([k, label]) => (
+                    <option key={k} value={k}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="ws-service-fields">
                 <input value={s.title} onChange={(e) => updateService(i, { title: e.target.value })} placeholder="z. B. Fassadenanstrich" maxLength={60} aria-label="Leistung" />
                 <textarea rows={2} value={s.text} onChange={(e) => updateService(i, { text: e.target.value })} placeholder="Ein bis zwei Sätze zur Leistung" maxLength={240} aria-label="Beschreibung" />

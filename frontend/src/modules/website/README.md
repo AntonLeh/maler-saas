@@ -8,6 +8,7 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 | --- | --- |
 | Datenbank, öffentliche Funktionen, Bildspeicher | `supabase/migrations/20261031120000_website.sql` |
 | Kundenbewertungen auf der Website | `supabase/migrations/20261101120000_website_bewertungen.sql` |
+| Kontaktformular mit Leistungen und Fotos | `supabase/migrations/20261102120000_website_anfragen_fotos.sql` |
 | Öffentliche Seite (Server-HTML) | `frontend/api/site.ts` + Rewrites in `frontend/vercel.json` |
 | Editor in der App | `frontend/src/modules/website/` |
 
@@ -24,8 +25,14 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
   Wortlaut wird gespeichert). Der Betrieb gibt einzelne Bewertungen frei, kann Texte aber nicht ändern. Der Durchschnitt
   wird immer aus allen Bewertungen berechnet. Mitarbeiterbewertungen sind nie öffentlich. Bereich erscheint ab einer
   freigegebenen Bewertung oder ab 3 Bewertungen.
-- **Anfragen:** Kontaktformular → Tabelle `website_leads` (Spam-Schutz: verstecktes Feld, Mindestzeit, max. 30/Stunde),
-  optional E-Mail an den Betrieb über Brevo.
+- **Leistungen mit Symbolen:** Symbol wird anhand des Namens gewählt oder im Editor festgelegt (`services[].icon`).
+  Die Symbol-Liste steht doppelt: `SERVICE_ICONS` in `frontend/api/site.ts` und `ServiceIcon.tsx` (gleiche Schlüssel).
+- **So läuft's ab:** fester Bereich mit 4 Schritten, abschaltbar (`sections.process`).
+- **Anfragen:** Kontaktformular → Tabelle `website_leads`, Leistungen zum Anklicken (`services`), bis zu 3 Fotos
+  (im Browser auf 1600 px verkleinert, ohne EXIF/GPS; Tabelle `website_lead_photos`, werden mit der Anfrage gelöscht;
+  hängen auch an der E-Mail). Ohne das Datenbank-Update fällt das Formular automatisch
+  auf die alte Funktion zurück (ohne Fotos). Spam-Schutz: verstecktes Feld, Mindestzeit, max. 30/Stunde.
+  Optional E-Mail an den Betrieb über Brevo.
 - **Impressum und Datenschutz** werden erzeugt (Vorlage, ohne Gewähr). Keine Cookies, kein Tracking, keine externen Schriften.
 - **SEO:** Server-HTML, Titel/Beschreibung, Canonical, Open Graph, JSON-LD `HousePainter`, `sitemap.xml`, `robots.txt`.
 - Unveröffentlichte Website nur per Vorschau-Link (`?vorschau=<token>`, `noindex`). Ohne aktives Abo ist die Seite offline.
@@ -37,7 +44,7 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 
 ## Einrichtung
 
-1. SQL-Dateien `supabase/migrations/20261031120000_website.sql` und `20261101120000_website_bewertungen.sql` im Supabase SQL-Editor ausführen.
+1. SQL-Dateien `supabase/migrations/20261031120000_website.sql` und `20261101120000_website_bewertungen.sql` und `20261102120000_website_anfragen_fotos.sql` im Supabase SQL-Editor ausführen.
 2. Optional in Vercel (Project → Settings → Environment Variables) für E-Mails bei neuen Anfragen:
    `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`.
 3. Branch pushen → Vercel erstellt eine Vorschau-Version, dort `/w/<slug>?vorschau=…` testen.

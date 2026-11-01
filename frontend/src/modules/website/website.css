@@ -607,3 +607,74 @@
 .ws-root .ws-rv-actions {
   margin-top: 10px;
 }
+
+/* Symbol je Leistung */
+.ws-root .ws-service-icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tk-surface-2);
+  color: var(--tk-primary);
+  cursor: pointer;
+  border: 1px solid var(--tk-border);
+}
+
+.ws-root .ws-service-icon:hover,
+.ws-root .ws-service-icon:focus-within {
+  border-color: var(--tk-primary);
+}
+
+/* Unsichtbare Auswahl über dem Symbol: Klick öffnet die Liste */
+.ws-root .ws-service-icon select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+/* Anfragen: Leistungen und Fotos */
+.ws-root .ws-lead-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.ws-root .ws-lead-services span {
+  background: var(--tk-surface-2);
+  border: 1px solid var(--tk-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ws-root .ws-lead-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ws-root .ws-lead-photos a {
+  display: block;
+  line-height: 0;
+}
+
+.ws-root .ws-lead-photos img {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--tk-border);
+}
+
+.ws-root .ws-lead-photo-btn {
+  margin-top: 10px;
+}

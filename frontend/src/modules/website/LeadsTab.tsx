@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WebsiteLead } from "./types";
 import * as api from "./api";
 
@@ -19,6 +19,32 @@ export default function LeadsTab({
 }) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const [photos, setPhotos] = useState<Record<number, string[] | "loading">>({});
+
+  // Bild-Adressen beim Verlassen wieder freigeben
+  useEffect(
+    () => () =>
+      Object.values(photos).forEach((list) => {
+        if (Array.isArray(list)) list.forEach((u) => URL.revokeObjectURL(u));
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Verlassen
+    []
+  );
+
+  const showPhotos = async (id: number) => {
+    setPhotos((p) => ({ ...p, [id]: "loading" }));
+    try {
+      const urls = await api.loadLeadPhotos(tenantId, id);
+      setPhotos((p) => ({ ...p, [id]: urls }));
+    } catch (e) {
+      setPhotos((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+      onError((e as Error).message);
+    }
+  };
 
   const run = async (id: number, fn: () => Promise<void>) => {
     setBusyId(id);
@@ -68,7 +94,28 @@ export default function LeadsTab({
                   </a>
                 )}
               </div>
+              {(l.services?.length ?? 0) > 0 && (
+                <div className="ws-lead-services" aria-label="Gewünschte Leistungen">
+                  {l.services!.map((s) => (
+                    <span key={s}>{s}</span>
+                  ))}
+                </div>
+              )}
               <p className="ws-lead-msg">{l.message}</p>
+              {(l.photo_count ?? 0) > 0 &&
+                (Array.isArray(photos[l.id]) ? (
+                  <div className="ws-lead-photos">
+                    {(photos[l.id] as string[]).map((u, i) => (
+                      <a key={u} href={u} target="_blank" rel="noreferrer" title="In voller Größe öffnen">
+                        <img src={u} alt={`Foto ${i + 1} zur Anfrage`} />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <button type="button" className="btn btn-secondary btn-small ws-lead-photo-btn" disabled={photos[l.id] === "loading"} onClick={() => showPhotos(l.id)}>
+                    {photos[l.id] === "loading" ? "Fotos werden geladen …" : `📷 ${l.photo_count} Foto${(l.photo_count ?? 0) > 1 ? "s" : ""} ansehen`}
+                  </button>
+                ))}
               <div className="ws-row">
                 {l.status === "neu" ? (
                   <button type="button" className="btn btn-secondary btn-small" disabled={busyId === l.id} onClick={() => run(l.id, () => api.setLeadStatus(tenantId, l.id, "erledigt"))}>
