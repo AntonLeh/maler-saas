@@ -104,6 +104,9 @@ export default function CustomerPortalPage() {
   const [reviewSent, setReviewSent] = useState(false);
   const [sendingReview, setSendingReview] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  // Einwilligung: Bewertung auf der Website des Betriebs zeigen (nur wenn der Betrieb eine Website hat)
+  const [publishInfo, setPublishInfo] = useState<{ available: boolean; consent_text?: string } | null>(null);
+  const [publishConsent, setPublishConsent] = useState(false);
   const token = useMemo(() => {
     return new URLSearchParams(window.location.search).get("token") || "";
   }, []);
@@ -138,6 +141,16 @@ export default function CustomerPortalPage() {
     };
 
     loadPortalData();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    supabase
+      .rpc("website_review_consent_info", { p_token: token })
+      .then(({ data, error }) => {
+        // Fehlt das Datenbank-Update oder hat der Betrieb keine Website, bleibt das Häkchen einfach weg
+        if (!error && data?.available) setPublishInfo(data);
+      });
   }, [token]);
 
   if (loading) {
@@ -220,6 +233,15 @@ export default function CustomerPortalPage() {
     if (error) throw error;
 
     console.log(result);
+
+    // Einwilligung zur Veröffentlichung separat speichern (Fehler hier dürfen die Bewertung nicht stören)
+    if (publishConsent && publishInfo?.available && result?.review_id) {
+      const { error: consentError } = await supabase.rpc("website_review_consent", {
+        p_token: token,
+        p_review_id: result.review_id,
+      });
+      if (consentError) console.error("Einwilligung konnte nicht gespeichert werden:", consentError);
+    }
 
     setReviewSent(true);
     setShowReviewForm(false);
@@ -636,6 +658,37 @@ export default function CustomerPortalPage() {
       onChange={(e) => setRecommendation(e.target.value)}
     />
   </div>
+
+{publishInfo?.available && publishInfo.consent_text && (
+  <div className="form-group">
+    <label
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        fontWeight: 400,
+        textAlign: "left",
+        cursor: "pointer",
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: 10,
+        padding: "12px 14px",
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={publishConsent}
+        onChange={(e) => setPublishConsent(e.target.checked)}
+        style={{ marginTop: 4, width: 18, height: 18, flex: "0 0 auto" }}
+      />
+      <span>
+        {publishInfo.consent_text}
+        <br />
+        <small style={{ color: "#64748b" }}>Freiwillig – ohne Häkchen bleibt Ihre Bewertung intern.</small>
+      </span>
+    </label>
+  </div>
+)}
 
 {assignedEmployees.length > 0 && (
   <div style={{ marginTop: 30 }}>

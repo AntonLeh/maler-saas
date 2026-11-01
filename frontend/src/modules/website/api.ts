@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabase";
-import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference } from "./types";
+import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
 import { DEFAULT_HIGHLIGHTS, DEFAULT_SECTIONS, DEFAULT_SERVICES } from "./types";
 
 const BUCKET = "website-media";
@@ -7,6 +7,7 @@ const BUCKET = "website-media";
 function fail(context: string, error: { message: string; code?: string } | null): never {
   const msg = error?.message ?? "Unbekannter Fehler";
   if ((msg.includes("websites") || msg.includes("website_")) && (msg.includes("does not exist") || msg.includes("schema cache"))) {
+    if (msg.includes("review")) throw new Error("Für die Kundenbewertungen fehlt noch ein Datenbank-Update. Bitte die SQL-Datei supabase/migrations/20261101120000_website_bewertungen.sql im Supabase SQL-Editor ausführen.");
     throw new Error("Die Tabellen für die Website fehlen noch. Bitte die SQL-Datei supabase/migrations/20261031120000_website.sql im Supabase SQL-Editor ausführen.");
   }
   if (error?.code === "23505" && msg.includes("slug")) throw new Error("Diese Web-Adresse ist schon vergeben. Bitte eine andere wählen.");
@@ -241,4 +242,29 @@ export async function countNewLeads(tenantId: number): Promise<number> {
     .eq("status", "neu");
   if (error) return 0;
   return count ?? 0;
+}
+
+// ---------------------------------------------------------------------
+// Kundenbewertungen (aus dem Kundenportal)
+// ---------------------------------------------------------------------
+export async function loadReviews(tenantId: number): Promise<WebsiteReviewOverview> {
+  const { data, error } = await supabase.rpc("website_admin_reviews", { p_tenant_id: tenantId });
+  if (error) fail("Bewertungen laden", error);
+  const d = (data ?? {}) as Partial<WebsiteReviewOverview>;
+  return { count: d.count ?? 0, average: d.average ?? null, without_consent: d.without_consent ?? 0, items: d.items ?? [] };
+}
+
+export async function setReviewApproved(tenantId: number, reviewId: number, approved: boolean) {
+  const { error } = await supabase
+    .from("website_review_consents")
+    .update({ approved, approved_at: approved ? new Date().toISOString() : null })
+    .eq("review_id", reviewId)
+    .eq("tenant_id", tenantId);
+  if (error) fail("Bewertung aktualisieren", error);
+}
+
+/** Einwilligung entfernen (z. B. wenn der Kunde widerruft). Die Bewertung selbst bleibt intern erhalten. */
+export async function removeReviewConsent(tenantId: number, reviewId: number) {
+  const { error } = await supabase.from("website_review_consents").delete().eq("review_id", reviewId).eq("tenant_id", tenantId);
+  if (error) fail("Einwilligung entfernen", error);
 }

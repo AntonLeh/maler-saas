@@ -7,6 +7,7 @@ export type WebsiteService = { title: string; text: string };
 export type WebsiteSections = {
   services: boolean;
   references: boolean;
+  reviews: boolean;
   about: boolean;
   area: boolean;
   contact: boolean;
@@ -69,6 +70,25 @@ export type WebsiteLead = {
   created_at: string;
 };
 
+/** Bewertung aus dem Kundenportal, für die der Kunde der Veröffentlichung zugestimmt hat */
+export type WebsiteReview = {
+  review_id: number;
+  overall_rating: number;
+  comment: string | null;
+  display_name: string;
+  city: string | null;
+  created_at: string;
+  approved: boolean;
+  order_title: string | null;
+};
+
+export type WebsiteReviewOverview = {
+  count: number;
+  average: number | null;
+  without_consent: number;
+  items: WebsiteReview[];
+};
+
 export type CompanyInfo = {
   company_name: string | null;
   street: string | null;
@@ -110,7 +130,7 @@ export const DEFAULT_SERVICES: WebsiteService[] = [
 
 export const DEFAULT_HIGHLIGHTS = ["Meisterbetrieb", "Kostenlose Besichtigung", "Festpreis-Angebot", "Saubere Baustelle"];
 
-export const DEFAULT_SECTIONS: WebsiteSections = { services: true, references: true, about: true, area: true, contact: true };
+export const DEFAULT_SECTIONS: WebsiteSections = { services: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Website für Starter-Tarif gesperrt (Professional, Business, Enterprise) */
 export function hasWebsiteAccess(plan: string | null | undefined): boolean {

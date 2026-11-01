@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
-import { ACCENT_PRESETS, DEFAULT_SERVICES, THEMES, siteUrl, slugError } from "./types";
+import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, THEMES, siteUrl, slugError } from "./types";
 import { processImage, uploadImage } from "./api";
 
 type Props = {
@@ -14,6 +14,7 @@ type Props = {
 const SECTION_LABELS: [keyof WebsiteSections, string][] = [
   ["services", "Leistungen"],
   ["references", "Referenzen / Aktuelle Projekte"],
+  ["reviews", "Kundenbewertungen"],
   ["about", "Über uns"],
   ["area", "Einsatzgebiet"],
   ["contact", "Kontakt"],
@@ -32,7 +33,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const [area, setArea] = useState(website.service_area ?? "");
   const [hours, setHours] = useState(website.opening_hours ?? "");
   const [contactForm, setContactForm] = useState(website.contact_form);
-  const [sections, setSections] = useState<WebsiteSections>({ ...website.sections });
+  const [sections, setSections] = useState<WebsiteSections>({ ...DEFAULT_SECTIONS, ...website.sections });
   const [seoTitle, setSeoTitle] = useState(website.seo_title ?? "");
   const [seoDescription, setSeoDescription] = useState(website.seo_description ?? "");
   const [slug, setSlug] = useState(website.slug);

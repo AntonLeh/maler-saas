@@ -24,6 +24,8 @@ const env = (k: string): string =>
 export type Service = { title?: string; text?: string };
 export type RefImage = { url?: string; alt?: string };
 export type Reference = { id: number; title: string; text?: string | null; city?: string | null; images?: RefImage[]; published_at?: string };
+export type ReviewItem = { rating: number; text?: string | null; name?: string | null; city?: string | null; date?: string | null };
+export type Reviews = { count: number; average: number | string | null; items: ReviewItem[] };
 export type SiteData = {
   slug: string;
   published: boolean;
@@ -61,6 +63,7 @@ export type SiteData = {
     logo_url?: string | null;
   };
   references?: Reference[];
+  reviews?: Reviews;
 };
 
 // ---------------------------------------------------------------------
@@ -135,7 +138,30 @@ export function areaList(area: unknown): string[] {
     .slice(0, 40);
 }
 
-const SECTION_DEFAULTS = { services: true, references: true, about: true, area: true, contact: true };
+const SECTION_DEFAULTS = { services: true, references: true, reviews: true, about: true, area: true, contact: true };
+
+/** Bewertungen nur zeigen, wenn es freigegebene Zitate oder mindestens 3 Bewertungen gibt */
+export function reviewSummary(d: SiteData): { count: number; avg: number; items: ReviewItem[] } | null {
+  const r = d.reviews;
+  const count = Number(r?.count ?? 0);
+  const avg = Number(r?.average ?? 0);
+  const items = (r?.items ?? []).filter((i) => Number(i?.rating) >= 1 && Number(i?.rating) <= 5);
+  if (!count || !(avg >= 1 && avg <= 5)) return null;
+  if (items.length === 0 && count < 3) return null;
+  return { count, avg, items };
+}
+
+function stars(n: number): string {
+  const full = Math.round(n);
+  return `<span class="stars" aria-hidden="true">${"★".repeat(full)}<span class="off">${"★".repeat(5 - full)}</span></span>`;
+}
+
+const fmtAvg = (n: number) => n.toFixed(1).replace(".", ",");
+
+function monthYear(iso: unknown): string {
+  const t = new Date(String(iso ?? ""));
+  return isNaN(t.getTime()) ? "" : t.toLocaleDateString("de-DE", { month: "long", year: "numeric", timeZone: "Europe/Berlin" });
+}
 
 // ---------------------------------------------------------------------
 // Layout
@@ -207,6 +233,19 @@ section.alt{background:var(--soft)}
 .ref .body{padding:18px 20px 22px}
 .ref .where{font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .ref p{margin:.4em 0 0;color:var(--muted)}
+.stars{color:#f2a900;letter-spacing:1px}.stars .off{color:#d5d9df}
+.rating-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 0;font-weight:600}
+.rating-line a{color:inherit}
+.theme-modern .rating-line .stars .off,.theme-frisch .rating-line .stars .off{color:rgba(255,255,255,.35)}
+.rv-sum{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 28px}
+.rv-sum .big{font-size:2.6rem;font-weight:800;font-family:var(--head);line-height:1}
+.rv-sum .stars{font-size:1.5rem}.rv-sum .cnt{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.rv{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin:0;display:flex;flex-direction:column;gap:10px}
+.rv blockquote{margin:0;font-size:1.02rem}
+.rv figcaption{color:var(--muted);font-size:.92rem;margin-top:auto}
+.rv-note{color:var(--muted);font-size:.88rem;margin:22px 0 0}
 .about{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
 .facts{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .facts li{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;font-weight:600}
@@ -255,6 +294,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
   const nav = [
     s.services && (d.services?.length ?? 0) > 0 ? `<a href="${link("leistungen")}">Leistungen</a>` : "",
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
+    s.reviews && reviewSummary(d) ? `<a href="${link("bewertungen")}">Bewertungen</a>` : "",
     s.about && (d.about_text || (d.highlights?.length ?? 0) > 0) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
     s.contact ? `<a href="${link("kontakt")}">Kontakt</a>` : "",
   ].join("");
@@ -336,6 +376,7 @@ export function renderHome(d: SiteData, ctx: Ctx): string {
   const area = areaList(d.service_area);
   const heroImg = safeUrl(d.hero_image_url);
   const phone = c.phone?.trim();
+  const rv = s.reviews ? reviewSummary(d) : null;
   const h1 = d.hero_title?.trim() || (city ? `Ihr Malerbetrieb in ${city}` : `Ihr Malerbetrieb`);
   const sub =
     d.hero_subtitle?.trim() ||
@@ -345,6 +386,7 @@ export function renderHome(d: SiteData, ctx: Ctx): string {
 <div><h1>${esc(h1)}</h1><p class="lead">${esc(sub)}</p>
 <div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
 ${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
+${rv ? `<p class="rating-line">${stars(rv.avg)} <a href="#bewertungen">${fmtAvg(rv.avg)} von 5 – ${rv.count} Kundenbewertung${rv.count === 1 ? "" : "en"}</a></p>` : ""}
 </div>
 ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} – Malerarbeiten`)}" fetchpriority="high"></div>` : ""}
 </div></section>`;
@@ -382,6 +424,27 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
           })
           .join("")}</div></div></section>`
       : "";
+
+  const reviewsHtml = rv
+    ? `<section class="block" id="bewertungen"><div class="wrap">
+<div class="sec-head"><h2>Das sagen unsere Kunden</h2><p>Bewertungen unserer Auftraggeber nach Abschluss der Arbeiten.</p></div>
+<div class="rv-sum"><span class="big">${fmtAvg(rv.avg)}</span><div>${stars(rv.avg)}<br><span class="cnt">${rv.count} Bewertung${rv.count === 1 ? "" : "en"}</span></div></div>
+${
+  rv.items.length
+    ? `<div class="rv-list">${rv.items
+        .map((i) => {
+          const who = [i.name, i.city].filter(Boolean).map(esc).join(", ");
+          const when = monthYear(i.date);
+          return `<figure class="rv">${stars(Number(i.rating))}<span class="sr">${Number(i.rating)} von 5 Sternen</span>${
+            i.text ? `<blockquote>„${esc(i.text).replace(/\n/g, "<br>")}“</blockquote>` : ""
+          }<figcaption>${who}${who && when ? " · " : ""}${esc(when)}</figcaption></figure>`;
+        })
+        .join("")}</div>`
+    : ""
+}
+<p class="rv-note">Alle Bewertungen stammen von Kunden, die einen Auftrag bei uns abgeschlossen haben, und wurden über unser Kundenportal abgegeben. Der Durchschnitt berücksichtigt alle abgegebenen Bewertungen; Texte werden nur mit Einwilligung der Kunden veröffentlicht.</p>
+</div></section>`
+    : "";
 
   const aboutHtml =
     s.about && (d.about_text || highlights.length)
@@ -433,7 +496,7 @@ ${formHtml || "<div></div>"}
   const description =
     d.seo_description?.trim() ||
     `${name}${city ? ` in ${city}` : ""}: ${services.length ? services.slice(0, 4).map((x) => x.title).join(", ") : "Malerarbeiten innen und außen"}. Jetzt kostenlos anfragen.`;
-  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), hero + servicesHtml + refsHtml + aboutHtml + areaHtml + contactHtml, {
+  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), hero + servicesHtml + refsHtml + reviewsHtml + aboutHtml + areaHtml + contactHtml, {
     home: true,
     index: !ctx.preview,
   });
@@ -483,7 +546,7 @@ ${
     ? `<h2>4. Kontaktformular, E-Mail und Telefon</h2><p>Wenn Sie uns über das Kontaktformular, per E-Mail oder telefonisch kontaktieren, verarbeiten wir Ihre Angaben (Name, Kontaktdaten, Anliegen) zur Bearbeitung Ihrer Anfrage und für mögliche Anschlussfragen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags) bzw. lit. f DSGVO. Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
     : ""
 }
-<h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift.</p>
+<h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten und Kundenbewertungen</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift. Kundenbewertungen (Sterne, Kommentar, Vorname mit Anfangsbuchstabe des Nachnamens bzw. Firmenname und Ort) veröffentlichen wir nur, wenn die Kundin oder der Kunde beim Bewerten ausdrücklich eingewilligt hat (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden; eine kurze Nachricht an die oben genannten Kontaktdaten genügt. In den angezeigten Durchschnittswert fließen alle Bewertungen ohne Namen ein.</p>
 <h2>${d.contact_form !== false ? "6" : "5"}. Ihre Rechte</h2><p>Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen die Verarbeitung (Art. 21 DSGVO). Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren. Wenden Sie sich für Ihre Anliegen einfach an die oben genannten Kontaktdaten.</p>
 ${d.privacy_extra ? `<h2>Ergänzende Hinweise</h2>${paragraphs(d.privacy_extra)}` : ""}
 </div>`;

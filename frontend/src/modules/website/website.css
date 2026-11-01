@@ -557,3 +557,53 @@
   align-items: flex-start;
   align-self: end;
 }
+
+/* Kundenbewertungen */
+.ws-root .ws-stars {
+  color: #f2a900;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.ws-root .ws-stars-off {
+  color: var(--tk-border);
+}
+
+.ws-root .ws-rv-intro {
+  margin: 0;
+}
+
+.ws-root .ws-rv-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.ws-root .ws-rv-stat {
+  border: 1px solid var(--tk-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--tk-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ws-root .ws-rv-stat strong {
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.ws-root .ws-rv-head {
+  margin: 8px 0 0;
+  font-size: 1rem;
+}
+
+.ws-root .ws-rv-order {
+  font-size: 0.88rem;
+  margin: 4px 0 6px;
+}
+
+.ws-root .ws-rv-actions {
+  margin-top: 10px;
+}

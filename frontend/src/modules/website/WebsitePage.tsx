@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import "../terminkalender/terminkalender.css";
 import "./website.css";
-import type { CompanyInfo, Website, WebsiteLead, WebsiteReference } from "./types";
+import type { CompanyInfo, Website, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
 import { imprintGaps, previewUrl, siteUrl, slugError, slugify } from "./types";
 import * as api from "./api";
 import DesignTab from "./DesignTab";
 import ReferencesTab from "./ReferencesTab";
 import LeadsTab from "./LeadsTab";
 import LegalTab from "./LegalTab";
+import ReviewsTab from "./ReviewsTab";
 
-type Tab = "design" | "references" | "leads" | "legal";
+type Tab = "design" | "references" | "reviews" | "leads" | "legal";
 
 export default function WebsitePage({
   tenantId,
@@ -26,6 +27,7 @@ export default function WebsitePage({
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [references, setReferences] = useState<WebsiteReference[]>([]);
   const [leads, setLeads] = useState<WebsiteLead[]>([]);
+  const [reviews, setReviews] = useState<WebsiteReviewOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +46,13 @@ export default function WebsitePage({
 
   const reloadRefs = useCallback(async () => setReferences(await api.loadReferences(tenantId)), [tenantId]);
   const reloadLeads = useCallback(async () => setLeads(await api.loadLeads(tenantId)), [tenantId]);
+  const reloadReviews = useCallback(async () => setReviews(await api.loadReviews(tenantId)), [tenantId]);
+
+  // Bewertungen erst laden, wenn der Reiter geöffnet wird (getrennt, damit ein fehlendes Datenbank-Update den Rest nicht stört)
+  useEffect(() => {
+    if (tab !== "reviews" || reviews) return;
+    api.loadReviews(tenantId).then(setReviews).catch((e) => showError((e as Error).message));
+  }, [tab, reviews, tenantId, showError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,6 +215,7 @@ export default function WebsitePage({
                 [
                   ["design", "Gestaltung"],
                   ["references", `Referenzen (${references.length})`],
+                  ["reviews", "Bewertungen"],
                   ["leads", `Anfragen${newLeads ? ` (${newLeads} neu)` : ""}`],
                   ["legal", "Impressum & Datenschutz"],
                 ] as [Tab, string][]
@@ -222,6 +232,7 @@ export default function WebsitePage({
             {tab === "references" && (
               <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} />
             )}
+            {tab === "reviews" && <ReviewsTab tenantId={tenantId} overview={reviews} onChanged={reloadReviews} onError={showError} onSuccess={flash} />}
             {tab === "leads" && <LeadsTab tenantId={tenantId} leads={leads} onChanged={reloadLeads} onError={showError} />}
             {tab === "legal" && <LegalTab key={website.updated_at} website={website} company={company} saving={busy} onSave={(v) => save(v, "Angaben gespeichert.")} />}
           </>
