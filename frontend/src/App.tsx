@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, BarChart3 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -6690,7 +6690,8 @@ onReloadOrders={async () => {
     setCurrentPage("business-intelligence");
   }}
 >
-  📊 Business Intelligence
+  <BarChart3 size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+  Business Intelligence
 </button>
 
 <KiTelefonButton

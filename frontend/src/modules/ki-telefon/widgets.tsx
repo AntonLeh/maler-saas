@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Lock, Phone } from "lucide-react";
 import { loadOpenCount } from "./api";
 
 /**
@@ -37,7 +38,12 @@ export function KiTelefonButton({
 
   return (
     <button type="button" className="btn btn-analysis" onClick={onOpen}>
-      {hasAccess ? "📞" : "🔒"} KI-Telefon{hasAccess && open > 0 ? ` (${open} neu)` : ""}
+      {hasAccess ? (
+        <Phone size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+      ) : (
+        <Lock size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+      )}
+      KI-Telefon{hasAccess && open > 0 ? ` (${open} neu)` : ""}
     </button>
   );
 }
