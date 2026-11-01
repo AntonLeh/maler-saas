@@ -173,8 +173,8 @@ export default function NumberPanel({
         <h3>Telefonnummer</h3>
         <div className="tk-notice tk-notice-error" role="status">
           <span>
-            <strong>Ihre eigene Telefonnummer mit Ihrer Ortsvorwahl kommt in Kürze.</strong> Wir richten sie für Sie ein und melden uns,
-            sobald Sie sie beantragen können. Bis dahin können Sie den KI-Assistenten im Browser testen.
+            <strong>Deine eigene Telefonnummer mit deiner Ortsvorwahl kommt in Kürze.</strong> Wir richten sie für dich ein und melden uns,
+            sobald du sie beantragen kannst. Bis dahin kannst du den KI-Assistenten im Browser testen.
           </span>
         </div>
       </section>

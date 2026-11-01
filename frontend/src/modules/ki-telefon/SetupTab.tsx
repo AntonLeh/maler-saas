@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AiPhoneAgent, AiPhoneBilling, AiPhoneSettings, Provider } from "./types";
+import { NUMBER_REQUESTS_ENABLED } from "./types";
 import { DYNAMIC_VARIABLES, firstMessage, setupUrls, systemPrompt, toolsFor } from "./setup";
 import NumberPanel from "./NumberPanel";
 
@@ -88,8 +89,9 @@ function ActivationPanel({
           </ul>
           {!agent?.phone_number && (
             <p className="tk-muted">
-              Als Nächstes beantragst du unten deine eigene Telefonnummer. Bis dahin kann der Assistent im Browser getestet
-              werden.
+              {NUMBER_REQUESTS_ENABLED
+                ? "Als Nächstes beantragst du unten deine eigene Telefonnummer. Bis dahin kann der Assistent im Browser getestet werden."
+                : "Die Telefonnummer richten wir in Kürze für dich ein. Bis dahin kann der Assistent im Browser getestet werden."}
             </p>
           )}
           <div className="kt-test-row">
