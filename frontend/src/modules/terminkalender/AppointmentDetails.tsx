@@ -83,6 +83,7 @@ export default function AppointmentDetails({
       <div className="tk-detail-head">
         <StatusBadge status={a.status} />
         <span className="tk-type">{typeLabel(a.appointment_type)}</span>
+        {a.source === "ki_telefon" && <span className="tk-type">🤖 KI-Telefon</span>}
       </div>
 
       <dl className="tk-detail-list">
@@ -101,6 +102,22 @@ export default function AppointmentDetails({
               >
                 Karte
               </a>
+            </dd>
+          </>
+        )}
+        {(a.contact_name || a.contact_phone) && (
+          <>
+            <dt>Kontakt</dt>
+            <dd>
+              {a.contact_name}
+              {a.contact_phone && (
+                <>
+                  {a.contact_name ? " · " : ""}
+                  <a className="tk-map-link" href={`tel:${a.contact_phone.replace(/[^\d+]/g, "")}`}>
+                    {a.contact_phone}
+                  </a>
+                </>
+              )}
             </dd>
           </>
         )}

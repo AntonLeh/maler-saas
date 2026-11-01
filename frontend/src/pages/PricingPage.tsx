@@ -39,6 +39,7 @@ const plans = [
       "Materialverwaltung",
       "Projektleiter",
       "Bilder & Baudokumentation",
+      "Eigene Website mit Kontaktformular",
       "Premium-Support",
     ],
   },
@@ -55,6 +56,7 @@ const plans = [
   "Erweiterte Auswertungen",
   "Mitarbeiter-Bewertungssystem",
   "Leistungs- & Umsatzstatistiken",
+  "KI-Telefonassistent (Minuten zubuchbar)",
   "API-Zugriff",
   "Mehr Speicherplatz",
   "Prioritäts-Support",
@@ -127,6 +129,9 @@ const canActivateCurrentTrialPlan =
             <div className="pricing-price" style={{ color: plan.color }}>
               {plan.price}
               <span>/Monat</span>
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "-4px", marginBottom: "8px" }}>
+              netto, zzgl. MwSt.
             </div>
 
             <div className="pricing-features">

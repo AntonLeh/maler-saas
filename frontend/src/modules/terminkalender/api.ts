@@ -10,8 +10,7 @@ import { formatRange } from "./dateUtils";
 
 const PROJECT_MANAGER_ROLE_ID = 3;
 
-const APPOINTMENT_COLUMNS =
-  "id, tenant_id, created_by, assigned_to, customer_id, order_id, title, appointment_type, description, location, starts_at, ends_at, status, forward_note, response_note, forwarded_at, responded_at, created_at, updated_at";
+const APPOINTMENT_COLUMNS = "*";
 
 function fail(context: string, error: { message: string } | null): never {
   const msg = error?.message ?? "Unbekannter Fehler";

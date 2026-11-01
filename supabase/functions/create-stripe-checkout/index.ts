@@ -104,6 +104,12 @@ serve(async (req) => {
 
       customer_email: user.email || appUser.email,
 
+      // Steuer automatisch über Stripe Tax (Sitz Spanien):
+      // ES 21 % IVA, EU-Firmen mit USt-IdNr. Reverse Charge, CH ohne EU-Steuer
+      automatic_tax: { enabled: true },
+      tax_id_collection: { enabled: true },
+      billing_address_collection: "required",
+
       success_url:
         `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
 
