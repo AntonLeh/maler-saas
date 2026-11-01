@@ -251,7 +251,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
   const logo = safeUrl(d.company.logo_url);
   const phone = d.company.phone?.trim();
   const s = { ...SECTION_DEFAULTS, ...(d.sections ?? {}) };
-  const link = (hash: string) => (home ? `#${hash}` : `${ctx.base}/${ctx.q ?? ""}#${hash}`);
+  const link = (hash: string) => (home ? `#${hash}` : `${ctx.base}${ctx.q ?? ""}#${hash}`);
   const nav = [
     s.services && (d.services?.length ?? 0) > 0 ? `<a href="${link("leistungen")}">Leistungen</a>` : "",
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
@@ -260,7 +260,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
   ].join("");
   return `${ctx.preview ? `<div class="preview">Vorschau – diese Seite ist noch nicht veröffentlicht.</div>` : ""}
 <header class="top"><div class="wrap">
-<a class="brand" href="${ctx.base}/${ctx.q ?? ""}">${logo ? `<img src="${esc(logo)}" alt="${esc(name)} Logo">` : ""}<span>${esc(name)}</span></a>
+<a class="brand" href="${ctx.base}${ctx.q ?? ""}">${logo ? `<img src="${esc(logo)}" alt="${esc(name)} Logo">` : ""}<span>${esc(name)}</span></a>
 <nav class="main" aria-label="Hauptnavigation">${nav}</nav>
 ${phone ? `<a class="btn call" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}
 </div></header>`;
@@ -274,7 +274,7 @@ function footer(d: SiteData, ctx: Ctx): string {
 <div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
 <div><a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
-${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${ctx.base}/${ctx.q ?? ""}#kontakt">✉️ Anfrage</a></div>` : ""}`;
+${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${ctx.base}${ctx.q ?? ""}#kontakt">✉️ Anfrage</a></div>` : ""}`;
 }
 
 function jsonLd(d: SiteData, ctx: Ctx): string {
@@ -549,7 +549,7 @@ export async function handle(request: Request): Promise<Response> {
 
   // Kontaktformular
   if (request.method === "POST" && url.searchParams.get("action") === "contact") {
-    const back = (q: string) => new Response(null, { status: 303, headers: { location: `${base}/?${q}#kontakt` } });
+    const back = (q: string) => new Response(null, { status: 303, headers: { location: `${base}?${q}#kontakt` } });
     const form = await request.formData().catch(() => null);
     if (!form) return back("fehler=formular");
     const get = (k: string) => String(form.get(k) ?? "").trim();
@@ -592,7 +592,7 @@ export async function handle(request: Request): Promise<Response> {
   const ctx: Ctx = {
     base,
     origin,
-    canonical: `${origin}${base}/`,
+    canonical: `${origin}${base}`,
     preview: isPreview,
     q: isPreview ? `?vorschau=${encodeURIComponent(preview)}` : "",
     notice: url.searchParams.get("gesendet") ? "ok" : errors[url.searchParams.get("fehler") || ""] || undefined,
