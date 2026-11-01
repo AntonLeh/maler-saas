@@ -186,7 +186,9 @@ section.alt{background:var(--soft)}
 .ref{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
 .ref .main{aspect-ratio:4/3;background:#e6e9ed}.ref .main img{width:100%;height:100%;object-fit:cover}
 .ref .thumbs{display:flex;gap:6px;padding:8px 8px 0;overflow-x:auto}
-.ref .thumbs img{width:64px;height:48px;object-fit:cover;border-radius:4px;flex:0 0 auto}
+.ref .thumb{padding:0;border:2px solid transparent;border-radius:6px;background:none;cursor:pointer;flex:0 0 auto;line-height:0}
+.ref .thumb.on{border-color:var(--accent)}
+.ref .thumbs img{width:64px;height:48px;object-fit:cover;border-radius:4px}
 .ref .body{padding:18px 20px 22px}
 .ref .where{font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .ref p{margin:.4em 0 0;color:var(--muted)}
@@ -302,6 +304,7 @@ ${opts.home ? jsonLd(d, ctx) : ""}
 ${header(d, ctx, opts.home)}
 <main id="inhalt">${body}</main>
 ${footer(d, ctx)}
+${opts.home ? `<script>document.addEventListener("click",function(e){var b=e.target.closest(".thumb");if(!b)return;var r=b.closest(".ref"),m=r&&r.querySelector(".main img");if(!m)return;m.src=b.getAttribute("data-src");r.querySelectorAll(".thumb").forEach(function(t){t.classList.toggle("on",t===b)})})</script>` : ""}
 </body></html>`;
 }
 
@@ -354,8 +357,11 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
             }${
               imgs.length > 1
                 ? `<div class="thumbs">${imgs
-                    .slice(1, 7)
-                    .map((im) => `<img src="${esc(im.url)}" alt="${esc(im.alt || r.title)}" loading="lazy">`)
+                    .slice(0, 8)
+                    .map(
+                      (im, i) =>
+                        `<button type="button" class="thumb${i === 0 ? " on" : ""}" data-src="${esc(im.url)}" aria-label="Bild ${i + 1} anzeigen"><img src="${esc(im.url)}" alt="" loading="lazy"></button>`
+                    )
                     .join("")}</div>`
                 : ""
             }<div class="body">${r.city ? `<div class="where">${esc(r.city)}</div>` : ""}<h3>${esc(r.title)}</h3>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div></article>`;
