@@ -91,6 +91,21 @@ function paragraphs(text: unknown): string {
     .join("");
 }
 
+/**
+ * E-Mail-Adresse als HTML-Zeichencodes ausgeben (Schutz vor Spam-Sammlern).
+ * Browser zeigen sie normal an und der Link funktioniert, im Quelltext steht aber keine lesbare Adresse.
+ */
+export function encodeEmail(email: unknown): string {
+  return Array.from(String(email ?? "").trim())
+    .map((ch) => `&#${ch.codePointAt(0)};`)
+    .join("");
+}
+
+function emailLink(email: unknown): string {
+  const enc = encodeEmail(email);
+  return `<a href="${encodeEmail("mailto:")}${enc}">${enc}</a>`;
+}
+
 function telHref(phone: string): string {
   const d = phone.replace(/[^\d+]/g, "");
   if (d.startsWith("+")) return d;
@@ -256,7 +271,7 @@ function footer(d: SiteData, ctx: Ctx): string {
   const phone = c.phone?.trim();
   return `<footer class="bottom"><div class="wrap">
 <div><strong>${esc(c.name)}</strong><br>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</div>
-<div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}</div>
+<div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
 <div><a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
 ${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${ctx.base}/${ctx.q ?? ""}#kontakt">✉️ Anfrage</a></div>` : ""}`;
@@ -270,7 +285,6 @@ function jsonLd(d: SiteData, ctx: Ctx): string {
     name: c.name || undefined,
     url: ctx.canonical,
     telephone: c.phone || undefined,
-    email: c.email || undefined,
     image: safeUrl(d.hero_image_url) || safeUrl(c.logo_url) || undefined,
     logo: safeUrl(c.logo_url) || undefined,
     address: c.street
@@ -408,7 +422,7 @@ ${notice}
     ? `<section class="block" id="kontakt"><div class="wrap contact">
 <div><h2>Kontakt</h2><p>Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen kostenlosen Besichtigungstermin.</p>
 <dl>${phone ? `<dt>Telefon</dt><dd><a href="tel:${esc(telHref(phone))}">${esc(phone)}</a></dd>` : ""}
-${c.email ? `<dt>E-Mail</dt><dd><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></dd>` : ""}
+${c.email ? `<dt>E-Mail</dt><dd>${emailLink(c.email)}</dd>` : ""}
 ${c.street ? `<dt>Adresse</dt><dd>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</dd>` : ""}
 ${d.opening_hours ? `<dt>Erreichbarkeit</dt><dd>${esc(d.opening_hours).replace(/\n/g, "<br>")}</dd>` : ""}</dl></div>
 ${formHtml || "<div></div>"}
@@ -431,7 +445,7 @@ export function renderImprint(d: SiteData, ctx: Ctx): string {
   rows.push(`<p><strong>${esc(c.name)}</strong>${d.legal_form ? `<br>${esc(d.legal_form)}` : ""}<br>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}<br>Deutschland</p>`);
   if (d.owner_name) rows.push(`<p>Vertreten durch: ${esc(d.owner_name)}</p>`);
   rows.push(
-    `<h2>Kontakt</h2><p>${c.phone ? `Telefon: ${esc(c.phone)}<br>` : ""}${c.email ? `E-Mail: <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}</p>`
+    `<h2>Kontakt</h2><p>${c.phone ? `Telefon: ${esc(c.phone)}<br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</p>`
   );
   if (d.register_court || d.register_number) {
     rows.push(`<h2>Registereintrag</h2><p>${d.register_court ? `Registergericht: ${esc(d.register_court)}<br>` : ""}${d.register_number ? `Registernummer: ${esc(d.register_number)}` : ""}</p>`);
@@ -459,7 +473,7 @@ export function renderImprint(d: SiteData, ctx: Ctx): string {
 
 export function renderPrivacy(d: SiteData, ctx: Ctx): string {
   const c = d.company;
-  const contact = `${esc(c.name)}, ${esc(c.street)}, ${esc([c.zip, c.city].filter(Boolean).join(" "))}${c.email ? `, E-Mail: ${esc(c.email)}` : ""}${c.phone ? `, Telefon: ${esc(c.phone)}` : ""}`;
+  const contact = `${esc(c.name)}, ${esc(c.street)}, ${esc([c.zip, c.city].filter(Boolean).join(" "))}${c.email ? `, E-Mail: ${encodeEmail(c.email)}` : ""}${c.phone ? `, Telefon: ${esc(c.phone)}` : ""}`;
   const body = `<div class="wrap legal"><h1>Datenschutzerklärung</h1>
 <h2>1. Verantwortlicher</h2><p>${contact}</p>
 <h2>2. Allgemeines</h2><p>Wir verarbeiten personenbezogene Daten nur, soweit dies zur Bereitstellung dieser Website und zur Bearbeitung Ihrer Anfragen erforderlich ist. Diese Website verwendet keine Cookies, keine Analyse- oder Tracking-Werkzeuge und lädt keine Schriften oder Inhalte von Drittanbietern.</p>
