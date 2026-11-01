@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { loadNumberRequest, refreshNumberRequest, submitNumberRequest } from "./api";
-import { BUNDESLAENDER, NUMBER_DOC_KINDS } from "./types";
+import { BUNDESLAENDER, NUMBER_DOC_KINDS, NUMBER_REQUESTS_ENABLED } from "./types";
 import type { AiPhoneNumber, NumberDocKind } from "./types";
 
 type DocSlot = { file: File | null; kind: NumberDocKind };
@@ -165,6 +165,21 @@ export default function NumberPanel({
   };
 
   if (!loaded) return null;
+
+  // Solange der Antrag noch nicht freigeschaltet ist: nur Hinweis (bestehende Nummern werden weiter angezeigt)
+  if (!NUMBER_REQUESTS_ENABLED && row?.status !== "aktiv") {
+    return (
+      <section className="kt-panel kt-number">
+        <h3>Telefonnummer</h3>
+        <div className="kt-number-wait">
+          <p>
+            <strong>Ihre eigene Telefonnummer mit Ihrer Ortsvorwahl kommt in Kürze.</strong> Wir richten sie für Sie ein und melden uns,
+            sobald Sie sie beantragen können. Bis dahin können Sie den KI-Assistenten im Browser testen.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const status = row?.status ?? "neu";
   const showForm = enabled && (editing || !row || ["entwurf", "fehler", "abgelehnt"].includes(status));

@@ -102,6 +102,12 @@ export const MINUTE_PACKAGES: { key: MinutePackage; minutes: number; net: number
 
 export const LOW_BALANCE_MINUTES = 50;
 
+/**
+ * Selbst-Antrag der Telefonnummer (Twilio) freischalten.
+ * Erst auf true setzen, wenn das Twilio-Profil freigegeben ist und die Funktion ai-phone-number läuft.
+ */
+export const NUMBER_REQUESTS_ENABLED = false;
+
 export type CallbackRequest = {
   id: number;
   tenant_id: number;
