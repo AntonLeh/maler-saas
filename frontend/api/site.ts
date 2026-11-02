@@ -148,7 +148,7 @@ export function areaList(area: unknown): string[] {
     .slice(0, 40);
 }
 
-const SECTION_DEFAULTS = { services: true, process: true, references: true, reviews: true, about: true, area: true, contact: true };
+const SECTION_DEFAULTS = { services: true, service_photos: false, process: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Symbole für Leistungen (aus Lucide, ISC-Lizenz), als SVG-Innenleben */
 export const SERVICE_ICONS: Record<string, string> = {
@@ -291,7 +291,7 @@ section.alt{background:var(--soft)}
 .sec-head p{color:var(--muted);margin:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
-.card{position:relative;overflow:hidden}.card-img{margin:-24px -24px 18px;aspect-ratio:16/10;background:#e6e9ed}.card-img img{width:100%;height:100%;object-fit:cover}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.card{position:relative;overflow:hidden}.card-img{margin:-24px -24px 18px;aspect-ratio:16/10;background:#e6e9ed}.card-img img{width:100%;height:100%;object-fit:cover}.card-img.ph{display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent-dark)}.card-img.ph svg{width:56px;height:56px;stroke-width:1.5}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
 .card .more{display:inline-block;margin-top:12px;font-weight:700;color:var(--accent-dark);font-size:.95rem}.card:hover{border-color:var(--accent)}.card:hover .more{text-decoration:underline}
 .faq{display:grid;gap:12px;max-width:860px}.faq details{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 20px}
 .faq summary{cursor:pointer;font-weight:700;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}.faq summary::-webkit-details-marker{display:none}
@@ -619,10 +619,12 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
 <div class="cards">${services
           .map(
             (sv, i) =>
-              `<article class="card${safeUrl(sv.image) ? " has-img" : ""}">${
-                safeUrl(sv.image)
-                  ? `<div class="card-img"><img src="${esc(safeUrl(sv.image))}" alt="${esc(sv.title)}" loading="lazy"></div>`
-                  : `<div class="ico">${iconSvg(serviceIcon(sv))}</div>`
+              `<article class="card${s.service_photos ? " has-img" : ""}">${
+                !s.service_photos
+                  ? `<div class="ico">${iconSvg(serviceIcon(sv))}</div>`
+                  : safeUrl(sv.image)
+                    ? `<div class="card-img"><img src="${esc(safeUrl(sv.image))}" alt="${esc(sv.title)}" loading="lazy"></div>`
+                    : `<div class="card-img ph">${iconSvg(serviceIcon(sv))}</div>`
               }<h3><a class="card-link" href="${ctx.base}/${slugs[i]}${ctx.q ?? ""}">${esc(sv.title)}</a></h3>${
                 sv.text ? `<p>${esc(sv.text)}</p>` : ""
               }<span class="more" aria-hidden="true">Mehr erfahren →</span></article>`

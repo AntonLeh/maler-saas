@@ -221,6 +221,19 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
         <h3>Leistungen</h3>
         {services.length === 0 && <p className="tk-muted">Noch keine Leistungen eingetragen.</p>}
         {services.length > 0 && <p className="tk-muted">Tipp: Auf das Symbol links klicken, um ein anderes zu wählen.</p>}
+        {services.length > 0 && (
+          <label className="ws-check">
+            <input type="checkbox" checked={sections.service_photos} onChange={(e) => setSections((p) => ({ ...p, service_photos: e.target.checked }))} />
+            <span>
+              Fotos statt Symbole in den Leistungskarten auf der Startseite zeigen
+              {sections.service_photos && services.filter((x) => x.title.trim() && !x.image).length > 0 && (
+                <small className="tk-muted ws-block">
+                  {services.filter((x) => x.title.trim() && !x.image).length} Leistung(en) ohne Foto zeigen eine farbige Fläche mit Symbol. Fotos fügen Sie unter „Eigene Seite für diese Leistung“ hinzu.
+                </small>
+              )}
+            </span>
+          </label>
+        )}
         <div className="ws-services">
           {services.map((s, i) => (
             <div key={i} className="ws-service">

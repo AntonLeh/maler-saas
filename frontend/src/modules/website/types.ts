@@ -18,6 +18,8 @@ export type WebsiteService = {
 
 export type WebsiteSections = {
   services: boolean;
+  /** Fotos statt Symbole in den Leistungskarten der Startseite */
+  service_photos: boolean;
   process: boolean;
   references: boolean;
   reviews: boolean;
@@ -192,7 +194,7 @@ export const DEFAULT_SERVICES: WebsiteService[] = [
 
 export const DEFAULT_HIGHLIGHTS = ["Meisterbetrieb", "Kostenlose Besichtigung", "Festpreis-Angebot", "Saubere Baustelle"];
 
-export const DEFAULT_SECTIONS: WebsiteSections = { services: true, process: true, references: true, reviews: true, about: true, area: true, contact: true };
+export const DEFAULT_SECTIONS: WebsiteSections = { services: true, service_photos: false, process: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Website für Starter-Tarif gesperrt (Professional, Business, Enterprise) */
 export function hasWebsiteAccess(plan: string | null | undefined): boolean {

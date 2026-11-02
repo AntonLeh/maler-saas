@@ -751,3 +751,8 @@
 .ws-root .ws-sp > .ws-link {
   justify-self: start;
 }
+
+.ws-root .ws-block {
+  display: block;
+  margin-top: 4px;
+}
