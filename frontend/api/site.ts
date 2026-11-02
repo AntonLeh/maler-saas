@@ -291,13 +291,13 @@ section.alt{background:var(--soft)}
 .sec-head p{color:var(--muted);margin:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
-.card{position:relative}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.card{position:relative;overflow:hidden}.card-img{margin:-24px -24px 18px;aspect-ratio:16/10;background:#e6e9ed}.card-img img{width:100%;height:100%;object-fit:cover}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
 .card .more{display:inline-block;margin-top:12px;font-weight:700;color:var(--accent-dark);font-size:.95rem}.card:hover{border-color:var(--accent)}.card:hover .more{text-decoration:underline}
 .faq{display:grid;gap:12px;max-width:860px}.faq details{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 20px}
 .faq summary{cursor:pointer;font-weight:700;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}.faq summary::-webkit-details-marker{display:none}
 .faq summary::after{content:"+";color:var(--accent);font-size:1.4rem;line-height:1}.faq details[open] summary::after{content:"–"}.faq details p{margin:0 0 16px;color:var(--muted)}
 .ico.big{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;margin-bottom:16px}
-.hero.sub{padding:48px 0 44px}.theme-modern .hero.sub{padding:64px 0 56px}.hero.sub .grid,.hero.sub:not(.has-img) .grid{grid-template-columns:1fr;max-width:1120px}.hero.sub .grid>div{max-width:860px}
+.hero.sub{padding:48px 0 44px}.theme-modern .hero.sub{padding:64px 0 56px}.hero.sub .grid{max-width:1120px}.hero.sub:not(.has-img) .grid{grid-template-columns:1fr;max-width:1120px}.hero.sub:not(.has-img) .grid>div{max-width:860px}
 .crumbs{font-size:.9rem;margin-bottom:14px;opacity:.85}.crumbs a{color:inherit}
 .area a{color:inherit;text-decoration:none;font-weight:600}.area li:has(a):hover{border-color:var(--accent)}
 .card p{margin:0;color:var(--muted)}
@@ -619,7 +619,11 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
 <div class="cards">${services
           .map(
             (sv, i) =>
-              `<article class="card"><div class="ico">${iconSvg(serviceIcon(sv))}</div><h3><a class="card-link" href="${ctx.base}/${slugs[i]}${ctx.q ?? ""}">${esc(sv.title)}</a></h3>${
+              `<article class="card${safeUrl(sv.image) ? " has-img" : ""}">${
+                safeUrl(sv.image)
+                  ? `<div class="card-img"><img src="${esc(safeUrl(sv.image))}" alt="${esc(sv.title)}" loading="lazy"></div>`
+                  : `<div class="ico">${iconSvg(serviceIcon(sv))}</div>`
+              }<h3><a class="card-link" href="${ctx.base}/${slugs[i]}${ctx.q ?? ""}">${esc(sv.title)}</a></h3>${
                 sv.text ? `<p>${esc(sv.text)}</p>` : ""
               }<span class="more" aria-hidden="true">Mehr erfahren →</span></article>`
           )
