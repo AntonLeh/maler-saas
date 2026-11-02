@@ -3,6 +3,7 @@ import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteThem
 import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, previewUrl, serviceSlugs, siteUrl, slugError } from "./types";
 import { ServiceIcon } from "./ServiceIcon";
 import ServicePageEditor from "./ServicePageEditor";
+import AiWriter from "./AiWriter";
 import { processImage, uploadImage } from "./api";
 
 type Props = {
@@ -182,6 +183,18 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
 
       <section className="ws-panel">
         <h3>Titelbereich</h3>
+        <div className="ws-ai-slot">
+          <AiWriter
+            kind="seo"
+            label="✨ Überschrift und Google-Texte mit KI schreiben"
+            onApply={(r) => {
+              if (r.hero_title) setHeroTitle(String(r.hero_title));
+              if (r.hero_subtitle) setHeroSubtitle(String(r.hero_subtitle));
+              if (r.seo_title) setSeoTitle(String(r.seo_title));
+              if (r.seo_description) setSeoDescription(String(r.seo_description));
+            }}
+          />
+        </div>
         <div className="tk-form">
           <label className="tk-field tk-span-2">
             <span>Überschrift</span>
@@ -292,6 +305,16 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
 
       <section className="ws-panel">
         <h3>Über uns, Einsatzgebiet und Kontakt</h3>
+        <div className="ws-ai-slot">
+          <AiWriter
+            kind="about"
+            label="✨ „Über uns“ mit KI schreiben"
+            onApply={(r) => {
+              if (r.about_title) setAboutTitle(String(r.about_title));
+              if (r.about_text) setAboutText(String(r.about_text));
+            }}
+          />
+        </div>
         <div className="tk-form">
           <label className="tk-field tk-span-2">
             <span>Überschrift „Über uns“</span>

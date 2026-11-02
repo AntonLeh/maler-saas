@@ -19,3 +19,6 @@
 12. Eigene Adresse: betriebsname.maler-saas.com bzw. eigene Domain
 
 Empfehlung: zuerst 1, 2, 3, dann 6.
+
+## Erledigt außerhalb der Liste
+- ✅ KI-Schreibhilfe für Leistungen, „Über uns“ und Google-Texte (02.11.2026)

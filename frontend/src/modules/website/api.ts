@@ -1,4 +1,4 @@
-import { supabase } from "../../lib/supabase";
+import { supabase, supabaseUrl } from "../../lib/supabase";
 import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
 import { DEFAULT_HIGHLIGHTS, DEFAULT_SECTIONS, DEFAULT_SERVICES } from "./types";
 
@@ -287,4 +287,32 @@ export async function setReviewApproved(tenantId: number, reviewId: number, appr
 export async function removeReviewConsent(tenantId: number, reviewId: number) {
   const { error } = await supabase.from("website_review_consents").delete().eq("review_id", reviewId).eq("tenant_id", tenantId);
   if (error) fail("Einwilligung entfernen", error);
+}
+
+// ---------------------------------------------------------------------
+// KI-Schreibhilfe (Funktion website-ai-text)
+// ---------------------------------------------------------------------
+export type AiKind = "service" | "about" | "seo";
+
+export async function aiWrite(
+  kind: AiKind,
+  keywords: string,
+  service?: { title: string; text?: string }
+): Promise<{ result: Record<string, unknown>; used: number; limit: number }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/website-ai-text`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ kind, keywords, service }),
+    });
+  } catch {
+    throw new Error("Die KI-Schreibhilfe ist nicht erreichbar. Ist die Funktion website-ai-text veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `KI-Schreibhilfe fehlgeschlagen (Status ${res.status}).`);
+  return { result: data.result ?? {}, used: data.used ?? 0, limit: data.limit ?? 0 };
 }

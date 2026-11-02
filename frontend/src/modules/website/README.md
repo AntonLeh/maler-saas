@@ -43,6 +43,17 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 - **SEO:** Server-HTML, Titel/Beschreibung, Canonical, Open Graph, JSON-LD `HousePainter`, `sitemap.xml`, `robots.txt`.
 - Unveröffentlichte Website nur per Vorschau-Link (`?vorschau=<token>`, `noindex`). Ohne aktives Abo ist die Seite offline.
 
+## KI-Schreibhilfe
+
+„✨ Mit KI schreiben“ bei jeder Leistung (Kurztext, ausführlicher Text, Enthalten, Fragen), bei „Über uns“ und für
+Überschrift/Google-Texte. Supabase-Funktion `supabase/functions/website-ai-text` (Anthropic Messages API, Ausgabe über
+erzwungenes Werkzeug als JSON). Nur Admins, ab Professional, Monatslimit pro Betrieb (Tabelle `website_ai_usage`,
+`supabase/migrations/20261102140000_website_ki_texte.sql`). Betriebsdaten kommen aus der Datenbank, nicht vom Browser.
+Vorschläge werden erst nach „Übernehmen“ + „Speichern“ gespeichert.
+
+Secrets: `ANTHROPIC_API_KEY` (Pflicht), `WEBSITE_AI_MODEL` (Standard `claude-sonnet-5-5`), `WEBSITE_AI_MONTHLY_LIMIT` (Standard 40).
+Deploy: `npx supabase functions deploy website-ai-text --no-verify-jwt`
+
 ## Adressen
 
 - `https://maler-saas.com/w/<slug>` (Start), `/impressum`, `/datenschutz`, `/<leistung>`

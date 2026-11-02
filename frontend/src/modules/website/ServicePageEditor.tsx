@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { WebsiteFaq, WebsiteService } from "./types";
 import { guessServiceIcon } from "./types";
 import { processImage, uploadImage } from "./api";
+import AiWriter from "./AiWriter";
 
 type Suggestions = { details: string; included: string[]; faq: WebsiteFaq[] };
 const cache = new Map<string, Suggestions>();
@@ -72,6 +73,19 @@ export default function ServicePageEditor({
       <summary>Eigene Seite für diese Leistung – {own.length ? `eigene Inhalte: ${own.join(", ")}` : "Standardinhalte"}</summary>
 
       <div className="ws-sp">
+        <AiWriter
+          kind="service"
+          service={{ title: service.title, text: service.text }}
+          label="✨ Texte für diese Leistung mit KI schreiben"
+          onApply={(r) =>
+            onChange({
+              ...(r.text ? { text: String(r.text) } : {}),
+              ...(r.details ? { details: String(r.details) } : {}),
+              ...(Array.isArray(r.included) && r.included.length ? { included: (r.included as unknown[]).map(String) } : {}),
+              ...(Array.isArray(r.faq) && r.faq.length ? { faq: r.faq as WebsiteFaq[] } : {}),
+            })
+          }
+        />
         <div className="ws-sp-block">
           <span className="ws-label">Bild oben auf der Seite</span>
           <div className="ws-hero-row">

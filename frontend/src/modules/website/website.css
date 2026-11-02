@@ -756,3 +756,49 @@
   display: block;
   margin-top: 4px;
 }
+
+/* KI-Schreibhilfe */
+.ws-root .ws-ai-slot {
+  margin: 0 0 14px;
+}
+
+.ws-root .ws-ai-btn {
+  justify-self: start;
+}
+
+.ws-root .ws-ai {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--tk-primary);
+  border-radius: 14px;
+  background: var(--tk-primary-soft);
+}
+
+.ws-root .ws-ai-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ws-root .ws-ai textarea {
+  width: 100%;
+}
+
+.ws-root .ws-ai-result {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+}
+
+.ws-root .ws-ai-field p,
+.ws-root .ws-ai-field ul {
+  margin: 4px 0 0;
+}
+
+.ws-root .ws-ai-text {
+  white-space: pre-wrap;
+}
