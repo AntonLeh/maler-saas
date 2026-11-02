@@ -678,3 +678,25 @@
 .ws-root .ws-lead-photo-btn {
   margin-top: 10px;
 }
+
+/* Eigene Seite pro Leistung */
+.ws-root .ws-service-more summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--tk-primary);
+  font-weight: 600;
+  padding: 2px 0;
+}
+
+.ws-root .ws-service-more[open] summary {
+  margin-bottom: 8px;
+}
+
+.ws-root .ws-service-more textarea {
+  width: 100%;
+}
+
+.ws-root .ws-service-more .ws-link {
+  display: inline-block;
+  margin-top: 6px;
+}

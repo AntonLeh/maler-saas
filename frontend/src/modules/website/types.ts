@@ -2,7 +2,7 @@
 
 export type WebsiteTheme = "klassisch" | "modern" | "frisch";
 
-export type WebsiteService = { title: string; text: string; icon?: string };
+export type WebsiteService = { title: string; text: string; icon?: string; details?: string };
 
 export type WebsiteSections = {
   services: boolean;
@@ -203,6 +203,32 @@ export const RESERVED_SLUGS = [
 ];
 
 /** "Malerbetrieb Müller GmbH" -> "malerbetrieb-mueller" */
+/** Adressen der Leistungsseiten – gleiche Regeln wie serviceSlugs in frontend/api/site.ts */
+const RESERVED_SERVICE_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
+export function serviceSlugs(titles: string[]): string[] {
+  const used = new Set<string>();
+  return titles.map((title) => {
+    let base =
+      title
+        .toLowerCase()
+        .replace(/ä/g, "ae")
+        .replace(/ö/g, "oe")
+        .replace(/ü/g, "ue")
+        .replace(/ß/g, "ss")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60)
+        .replace(/-+$/g, "") || "leistung";
+    if (RESERVED_SERVICE_PAGES.has(base)) base = `${base}-leistung`;
+    let slug = base;
+    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    used.add(slug);
+    return slug;
+  });
+}
+
 export function slugify(name: string): string {
   const s = name
     .toLowerCase()

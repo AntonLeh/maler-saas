@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
-import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, siteUrl, slugError } from "./types";
+import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, previewUrl, serviceSlugs, siteUrl, slugError } from "./types";
 import { ServiceIcon } from "./ServiceIcon";
 import { processImage, uploadImage } from "./api";
 
@@ -58,6 +58,14 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
     }
   };
 
+  // Adressen der Leistungsseiten (nach dem Speichern gültig)
+  const savedTitles = (website.services ?? []).map((s) => s.title.trim()).filter(Boolean);
+  const savedSlugs = serviceSlugs(savedTitles);
+  const pageUrl = (slug: string) => {
+    const base = website.published ? siteUrl(website.slug) : previewUrl(website);
+    const [path, query] = base.split("?");
+    return `${path}/${slug}${query ? `?${query}` : ""}`;
+  };
   const updateService = (i: number, patch: Partial<WebsiteService>) =>
     setServices((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const moveService = (i: number, dir: -1 | 1) =>
@@ -86,7 +94,9 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
         .map((h) => h.trim())
         .filter(Boolean)
         .slice(0, 8),
-      services: services.map((s) => ({ title: s.title.trim(), text: s.text.trim(), ...(s.icon ? { icon: s.icon } : {}) })).filter((s) => s.title),
+      services: services
+        .map((s) => ({ title: s.title.trim(), text: s.text.trim(), ...(s.icon ? { icon: s.icon } : {}), ...(s.details?.trim() ? { details: s.details.trim() } : {}) }))
+        .filter((s) => s.title),
       about_title: aboutTitle.trim() || null,
       about_text: aboutText.trim() || null,
       service_area: area.trim() || null,
@@ -204,6 +214,24 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
               <div className="ws-service-fields">
                 <input value={s.title} onChange={(e) => updateService(i, { title: e.target.value })} placeholder="z. B. Fassadenanstrich" maxLength={60} aria-label="Leistung" />
                 <textarea rows={2} value={s.text} onChange={(e) => updateService(i, { text: e.target.value })} placeholder="Ein bis zwei Sätze zur Leistung" maxLength={240} aria-label="Beschreibung" />
+                <details className="ws-service-more">
+                  <summary>
+                    Eigene Seite für diese Leistung{s.details?.trim() ? " – eigener Text hinterlegt" : " – Standardtext"}
+                  </summary>
+                  <textarea
+                    rows={6}
+                    value={s.details ?? ""}
+                    onChange={(e) => updateService(i, { details: e.target.value })}
+                    maxLength={3000}
+                    placeholder="Ausführlicher Text für die eigene Seite (optional). Leer lassen für einen passenden Standardtext. Tipp: Was genau machen Sie, welche Materialien, was ist Ihnen wichtig? Eigene Worte helfen bei Google am meisten."
+                    aria-label="Ausführlicher Text"
+                  />
+                  {s.title.trim() && savedSlugs[i] && savedTitles[i] === s.title.trim() && (
+                    <a className="ws-link" href={pageUrl(savedSlugs[i])} target="_blank" rel="noreferrer">
+                      Seite ansehen ↗
+                    </a>
+                  )}
+                </details>
               </div>
               <div className="ws-service-tools">
                 <button type="button" className="tk-icon-btn" onClick={() => moveService(i, -1)} disabled={i === 0} aria-label="Nach oben">

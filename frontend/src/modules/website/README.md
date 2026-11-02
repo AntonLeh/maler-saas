@@ -27,6 +27,10 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
   freigegebenen Bewertung oder ab 3 Bewertungen.
 - **Leistungen mit Symbolen:** Symbol wird anhand des Namens gewählt oder im Editor festgelegt (`services[].icon`).
   Die Symbol-Liste steht doppelt: `SERVICE_ICONS` in `frontend/api/site.ts` und `ServiceIcon.tsx` (gleiche Schlüssel).
+- **Eigene Seite pro Leistung:** `/w/<slug>/<leistung>` (z. B. `/fassadenanstrich`), H1 „Leistung in Ort und Umgebung“,
+  eigener Text (`services[].details`) oder Standardtext je Symbol, passende Referenzen, Bewertungen, Formular mit
+  vorausgewählter Leistung, JSON-LD `Service`, in `sitemap.xml`. Bewusst keine Seiten pro Ort (Google wertet viele
+  fast gleiche Ortsseiten als Brückenseiten ab).
 - **So läuft's ab:** fester Bereich mit 4 Schritten, abschaltbar (`sections.process`).
 - **Anfragen:** Kontaktformular → Tabelle `website_leads`, Leistungen zum Anklicken (`services`), bis zu 3 Fotos
   (im Browser auf 1600 px verkleinert, ohne EXIF/GPS; Tabelle `website_lead_photos`, werden mit der Anfrage gelöscht;
@@ -39,7 +43,7 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 
 ## Adressen
 
-- `https://maler-saas.com/w/<slug>` (Start), `/impressum`, `/datenschutz`
+- `https://maler-saas.com/w/<slug>` (Start), `/impressum`, `/datenschutz`, `/<leistung>`
 - Später möglich: `<slug>.maler-saas.com` und eigene Domains (Spalte `custom_domain` ist vorbereitet).
 
 ## Einrichtung

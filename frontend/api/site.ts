@@ -21,7 +21,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_N23R8SIVVw7_qmH3w-JPrw_w9YBpgyH";
 const env = (k: string): string =>
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[k] ?? "";
 
-export type Service = { title?: string; text?: string; icon?: string };
+export type Service = { title?: string; text?: string; icon?: string; details?: string };
 export type RefImage = { url?: string; alt?: string };
 export type Reference = { id: number; title: string; text?: string | null; city?: string | null; images?: RefImage[]; published_at?: string };
 export type ReviewItem = { rating: number; text?: string | null; name?: string | null; city?: string | null; date?: string | null };
@@ -281,7 +281,13 @@ section.alt{background:var(--soft)}
 .sec-head p{color:var(--muted);margin:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
-.card h3{margin-bottom:.35em}.card p{margin:0;color:var(--muted)}
+.card{position:relative}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.card .more{display:inline-block;margin-top:12px;font-weight:700;color:var(--accent-dark);font-size:.95rem}.card:hover{border-color:var(--accent)}.card:hover .more{text-decoration:underline}
+.ico.big{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;margin-bottom:16px}
+.hero.sub{padding:48px 0 44px}.theme-modern .hero.sub{padding:64px 0 56px}.hero.sub .grid,.hero.sub:not(.has-img) .grid{grid-template-columns:1fr;max-width:1120px}.hero.sub .grid>div{max-width:860px}
+.crumbs{font-size:.9rem;margin-bottom:14px;opacity:.85}.crumbs a{color:inherit}
+.area a{color:inherit;text-decoration:none;font-weight:600}.area li:has(a):hover{border-color:var(--accent)}
+.card p{margin:0;color:var(--muted)}
 .card .ico{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;font-weight:800;margin-bottom:14px}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;list-style:none;margin:0;padding:0;counter-reset:st}
 .steps li{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px 22px 22px}
@@ -413,7 +419,7 @@ function jsonLd(d: SiteData, ctx: Ctx): string {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
-function page(d: SiteData, ctx: Ctx, title: string, description: string, body: string, opts: { home: boolean; index: boolean }): string {
+function page(d: SiteData, ctx: Ctx, title: string, description: string, body: string, opts: { home: boolean; index: boolean; jsonLd?: string; script?: boolean }): string {
   const ogImage = safeUrl(d.hero_image_url) || safeUrl(d.references?.[0]?.images?.[0]?.url) || "";
   return `<!doctype html>
 <html lang="de"><head>
@@ -427,14 +433,14 @@ ${opts.index ? "" : '<meta name="robots" content="noindex">'}
 ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}
 <meta name="theme-color" content="${esc(validColor(d.accent_color))}">
 <style>${styles(d)}</style>
-${opts.home ? jsonLd(d, ctx) : ""}
+${opts.home ? jsonLd(d, ctx) : (opts.jsonLd ?? "")}
 </head>
 <body class="theme-${esc(["klassisch", "modern", "frisch"].includes(d.theme) ? d.theme : "klassisch")}">
 <a class="skip" href="#inhalt">Zum Inhalt springen</a>
 ${header(d, ctx, opts.home)}
 <main id="inhalt">${body}</main>
 ${footer(d, ctx)}
-${opts.home ? `<script>document.addEventListener("click",function(e){var b=e.target.closest(".thumb");if(!b)return;var r=b.closest(".ref"),m=r&&r.querySelector(".main img");if(!m)return;m.src=b.getAttribute("data-src");r.querySelectorAll(".thumb").forEach(function(t){t.classList.toggle("on",t===b)})})</script>` : ""}
+${opts.home || opts.script ? `<script>document.addEventListener("click",function(e){var b=e.target.closest(".thumb");if(!b)return;var r=b.closest(".ref"),m=r&&r.querySelector(".main img");if(!m)return;m.src=b.getAttribute("data-src");r.querySelectorAll(".thumb").forEach(function(t){t.classList.toggle("on",t===b)})})</script>` : ""}
 </body></html>`;
 }
 
@@ -449,12 +455,130 @@ function alternate(blocks: string[]): string {
     .join("");
 }
 
+// ---------------------------------------------------------------------
+// Bausteine (Startseite und Leistungsseiten)
+// ---------------------------------------------------------------------
+type Sections = typeof SECTION_DEFAULTS;
+const sectionsOf = (d: SiteData): Sections => ({ ...SECTION_DEFAULTS, ...(d.sections ?? {}) });
+const servicesOf = (d: SiteData): Service[] => (d.services ?? []).filter((x) => x?.title).slice(0, 12);
+
+function processSection(d: SiteData, s: Sections): string {
+  if (!s.process) return "";
+  const phone = d.company.phone?.trim();
+  return `<section class="block" id="ablauf"><div class="wrap">
+<div class="sec-head"><h2>So läuft's ab</h2><p>In vier Schritten zum fertigen Ergebnis – unkompliziert und transparent.</p></div>
+<ol class="steps">
+<li><h3>Anfrage</h3><p>${phone ? "Rufen Sie an oder schreiben" : "Schreiben"} Sie uns${s.contact && d.contact_form !== false ? " über das Formular – gern mit Fotos" : ""}.</p></li>
+<li><h3>Kostenlose Besichtigung</h3><p>Wir schauen uns alles vor Ort an und beraten Sie zu Farben und Materialien.</p></li>
+<li><h3>Verbindliches Angebot</h3><p>Sie erhalten ein schriftliches Angebot – klar aufgeschlüsselt und ohne versteckte Kosten.</p></li>
+<li><h3>Saubere Ausführung</h3><p>Termingerecht, mit sauber abgedeckten Flächen und gemeinsamer Abnahme zum Schluss.</p></li>
+</ol></div></section>`;
+}
+
+function refsSection(refs: Reference[], heading: string, sub: string): string {
+  if (!refs.length) return "";
+  return `<section class="block" id="referenzen"><div class="wrap">
+<div class="sec-head"><h2>${esc(heading)}</h2><p>${esc(sub)}</p></div>
+<div class="refs">${refs
+    .map((r) => {
+      const imgs = (r.images ?? []).map((im) => ({ url: safeUrl(im?.url), alt: im?.alt })).filter((im) => im.url);
+      const first = imgs[0];
+      return `<article class="ref">${
+        first ? `<div class="main"><img src="${esc(first.url)}" alt="${esc(first.alt || r.title)}" loading="lazy"></div>` : ""
+      }${
+        imgs.length > 1
+          ? `<div class="thumbs">${imgs
+              .slice(0, 8)
+              .map(
+                (im, i) =>
+                  `<button type="button" class="thumb${i === 0 ? " on" : ""}" data-src="${esc(im.url)}" aria-label="Bild ${i + 1} anzeigen"><img src="${esc(im.url)}" alt="" loading="lazy"></button>`
+              )
+              .join("")}</div>`
+          : ""
+      }<div class="body">${r.city ? `<div class="where">${esc(r.city)}</div>` : ""}<h3>${esc(r.title)}</h3>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div></article>`;
+    })
+    .join("")}</div></div></section>`;
+}
+
+function reviewsSection(rv: ReturnType<typeof reviewSummary>, maxItems = 12): string {
+  if (!rv) return "";
+  const items = rv.items.slice(0, maxItems);
+  return `<section class="block" id="bewertungen"><div class="wrap">
+<div class="sec-head"><h2>Das sagen unsere Kunden</h2><p>Bewertungen unserer Auftraggeber nach Abschluss der Arbeiten.</p></div>
+<div class="rv-sum"><span class="big">${fmtAvg(rv.avg)}</span><div>${stars(rv.avg)}<br><span class="cnt">${rv.count} Bewertung${rv.count === 1 ? "" : "en"}</span></div></div>
+${
+  items.length
+    ? `<div class="rv-list">${items
+        .map((i) => {
+          const who = [i.name, i.city].filter(Boolean).map(esc).join(", ");
+          const when = monthYear(i.date);
+          return `<figure class="rv">${stars(Number(i.rating))}<span class="sr">${Number(i.rating)} von 5 Sternen</span>${
+            i.text ? `<blockquote>„${esc(i.text).replace(/\n/g, "<br>")}“</blockquote>` : ""
+          }<figcaption>${who}${who && when ? " · " : ""}${esc(when)}</figcaption></figure>`;
+        })
+        .join("")}</div>`
+    : ""
+}
+<p class="rv-note">Alle Bewertungen stammen von Kunden, die einen Auftrag bei uns abgeschlossen haben, und wurden über unser Kundenportal abgegeben. Der Durchschnitt berücksichtigt alle abgegebenen Bewertungen; Texte werden nur mit Einwilligung der Kunden veröffentlicht.</p>
+</div></section>`;
+}
+
+/** Kontaktbereich mit Formular. preselect: Leistung, die schon angeklickt ist; page: Unterseite für die Rückkehr nach dem Absenden */
+function contactSection(d: SiteData, ctx: Ctx, s: Sections, opts: { preselect?: string; page?: string; intro?: string } = {}): string {
+  if (!s.contact) return "";
+  const c = d.company;
+  const phone = c.phone?.trim();
+  const services = servicesOf(d);
+  const notice =
+    ctx.notice === "ok"
+      ? `<div class="notice ok" role="status">Vielen Dank! Ihre Anfrage ist bei uns angekommen. Wir melden uns schnellstmöglich.</div>`
+      : ctx.notice
+        ? `<div class="notice err" role="alert">${esc(ctx.notice)}</div>`
+        : "";
+  const formHtml =
+    d.contact_form !== false
+      ? `<form class="lead" method="post" action="/api/site?slug=${encodeURIComponent(d.slug)}&action=contact">
+${notice}
+<div class="two"><label>Ihr Name *<input name="name" required maxlength="120" autocomplete="name"></label>
+<label>Telefon<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label></div>
+<label>E-Mail<input name="email" type="email" maxlength="160" autocomplete="email"></label>
+${
+  services.length
+    ? `<fieldset class="svc"><legend>Worum geht es? <small>(mehrere möglich)</small></legend><div class="opts">${services
+        .map(
+          (sv) =>
+            `<label class="opt"><input type="checkbox" name="leistung" value="${esc(sv.title)}"${sv.title === opts.preselect ? " checked" : ""}><span>${esc(sv.title)}</span></label>`
+        )
+        .join("")}</div></fieldset>`
+    : ""
+}
+<label>Ihr Anliegen${services.length ? "" : " *"}<textarea name="message"${services.length ? "" : " required"} rows="5" maxlength="3000" placeholder="z. B. Wohnzimmer und Flur streichen, ca. 60 m², gewünschter Zeitraum …"></textarea></label>
+<label class="photos">Fotos <small>(optional, bis zu 3 – z. B. von Wand, Fassade oder Schaden)</small><input type="file" id="fotos" accept="image/*" multiple></label>
+<div class="photo-prev" id="foto-vorschau"></div>
+<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<input type="hidden" name="t" value="${Date.now()}">${opts.page ? `\n<input type="hidden" name="seite" value="${esc(opts.page)}">` : ""}
+<small>Bitte Telefon oder E-Mail angeben. Ihre Angaben verwenden wir nur zur Bearbeitung Ihrer Anfrage, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
+<button class="btn" type="submit">Anfrage senden</button>
+</form>
+<script>${FORM_SCRIPT}</script>`
+      : "";
+  return `<section class="block" id="kontakt"><div class="wrap contact">
+<div><h2>Kontakt</h2><p>${esc(opts.intro || "Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen kostenlosen Besichtigungstermin.")}</p>
+<dl>${phone ? `<dt>Telefon</dt><dd><a href="tel:${esc(telHref(phone))}">${esc(phone)}</a></dd>` : ""}
+${c.email ? `<dt>E-Mail</dt><dd>${emailLink(c.email)}</dd>` : ""}
+${c.street ? `<dt>Adresse</dt><dd>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</dd>` : ""}
+${d.opening_hours ? `<dt>Erreichbarkeit</dt><dd>${esc(d.opening_hours).replace(/\n/g, "<br>")}</dd>` : ""}</dl></div>
+${formHtml || "<div></div>"}
+</div></section>`;
+}
+
 export function renderHome(d: SiteData, ctx: Ctx): string {
   const c = d.company;
   const city = c.city?.trim() || "";
   const name = c.name || "Malerbetrieb";
-  const s = { ...SECTION_DEFAULTS, ...(d.sections ?? {}) };
-  const services = (d.services ?? []).filter((x) => x?.title);
+  const s = sectionsOf(d);
+  const services = servicesOf(d);
+  const slugs = serviceSlugs(services);
   const refs = (d.references ?? []).filter((r) => r?.title);
   const highlights = (d.highlights ?? []).filter(Boolean).slice(0, 8);
   const area = areaList(d.service_area);
@@ -480,66 +604,14 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
       ? `<section class="block" id="leistungen"><div class="wrap">
 <div class="sec-head"><h2>Unsere Leistungen</h2><p>Alles aus einer Hand${city ? ` – für Privat- und Gewerbekunden in ${esc(city)} und Umgebung` : ""}.</p></div>
 <div class="cards">${services
-          .map((sv) => `<article class="card"><div class="ico">${iconSvg(serviceIcon(sv))}</div><h3>${esc(sv.title)}</h3>${sv.text ? `<p>${esc(sv.text)}</p>` : ""}</article>`)
+          .map(
+            (sv, i) =>
+              `<article class="card"><div class="ico">${iconSvg(serviceIcon(sv))}</div><h3><a class="card-link" href="${ctx.base}/${slugs[i]}${ctx.q ?? ""}">${esc(sv.title)}</a></h3>${
+                sv.text ? `<p>${esc(sv.text)}</p>` : ""
+              }<span class="more" aria-hidden="true">Mehr erfahren →</span></article>`
+          )
           .join("")}</div></div></section>`
       : "";
-
-  const processHtml = s.process
-    ? `<section class="block" id="ablauf"><div class="wrap">
-<div class="sec-head"><h2>So läuft's ab</h2><p>In vier Schritten zum fertigen Ergebnis – unkompliziert und transparent.</p></div>
-<ol class="steps">
-<li><h3>Anfrage</h3><p>${phone ? "Rufen Sie an oder schreiben" : "Schreiben"} Sie uns${s.contact && d.contact_form !== false ? " über das Formular – gern mit Fotos" : ""}.</p></li>
-<li><h3>Kostenlose Besichtigung</h3><p>Wir schauen uns alles vor Ort an und beraten Sie zu Farben und Materialien.</p></li>
-<li><h3>Verbindliches Angebot</h3><p>Sie erhalten ein schriftliches Angebot – klar aufgeschlüsselt und ohne versteckte Kosten.</p></li>
-<li><h3>Saubere Ausführung</h3><p>Termingerecht, mit sauber abgedeckten Flächen und gemeinsamer Abnahme zum Schluss.</p></li>
-</ol></div></section>`
-    : "";
-
-  const refsHtml =
-    s.references && refs.length
-      ? `<section class="block" id="referenzen"><div class="wrap">
-<div class="sec-head"><h2>Aktuelle Projekte</h2><p>Ein Auszug aus unseren zuletzt abgeschlossenen Arbeiten.</p></div>
-<div class="refs">${refs
-          .map((r) => {
-            const imgs = (r.images ?? []).map((im) => ({ url: safeUrl(im?.url), alt: im?.alt })).filter((im) => im.url);
-            const first = imgs[0];
-            return `<article class="ref">${
-              first ? `<div class="main"><img src="${esc(first.url)}" alt="${esc(first.alt || r.title)}" loading="lazy"></div>` : ""
-            }${
-              imgs.length > 1
-                ? `<div class="thumbs">${imgs
-                    .slice(0, 8)
-                    .map(
-                      (im, i) =>
-                        `<button type="button" class="thumb${i === 0 ? " on" : ""}" data-src="${esc(im.url)}" aria-label="Bild ${i + 1} anzeigen"><img src="${esc(im.url)}" alt="" loading="lazy"></button>`
-                    )
-                    .join("")}</div>`
-                : ""
-            }<div class="body">${r.city ? `<div class="where">${esc(r.city)}</div>` : ""}<h3>${esc(r.title)}</h3>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div></article>`;
-          })
-          .join("")}</div></div></section>`
-      : "";
-
-  const reviewsHtml = rv
-    ? `<section class="block" id="bewertungen"><div class="wrap">
-<div class="sec-head"><h2>Das sagen unsere Kunden</h2><p>Bewertungen unserer Auftraggeber nach Abschluss der Arbeiten.</p></div>
-<div class="rv-sum"><span class="big">${fmtAvg(rv.avg)}</span><div>${stars(rv.avg)}<br><span class="cnt">${rv.count} Bewertung${rv.count === 1 ? "" : "en"}</span></div></div>
-${
-  rv.items.length
-    ? `<div class="rv-list">${rv.items
-        .map((i) => {
-          const who = [i.name, i.city].filter(Boolean).map(esc).join(", ");
-          const when = monthYear(i.date);
-          return `<figure class="rv">${stars(Number(i.rating))}<span class="sr">${Number(i.rating)} von 5 Sternen</span>${
-            i.text ? `<blockquote>„${esc(i.text).replace(/\n/g, "<br>")}“</blockquote>` : ""
-          }<figcaption>${who}${who && when ? " · " : ""}${esc(when)}</figcaption></figure>`;
-        })
-        .join("")}</div>`
-    : ""
-}
-<p class="rv-note">Alle Bewertungen stammen von Kunden, die einen Auftrag bei uns abgeschlossen haben, und wurden über unser Kundenportal abgegeben. Der Durchschnitt berücksichtigt alle abgegebenen Bewertungen; Texte werden nur mit Einwilligung der Kunden veröffentlicht.</p>
-</div></section>`
-    : "";
 
   const aboutHtml =
     s.about && (d.about_text || highlights.length)
@@ -556,56 +628,207 @@ ${highlights.length ? `<ul class="facts">${highlights.map((h) => `<li>${esc(h)}<
 <ul class="area">${area.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div></section>`
       : "";
 
-  const notice =
-    ctx.notice === "ok"
-      ? `<div class="notice ok" role="status">Vielen Dank! Ihre Anfrage ist bei uns angekommen. Wir melden uns schnellstmöglich.</div>`
-      : ctx.notice
-        ? `<div class="notice err" role="alert">${esc(ctx.notice)}</div>`
-        : "";
-  const formHtml =
-    d.contact_form !== false
-      ? `<form class="lead" method="post" action="/api/site?slug=${encodeURIComponent(d.slug)}&action=contact">
-${notice}
-<div class="two"><label>Ihr Name *<input name="name" required maxlength="120" autocomplete="name"></label>
-<label>Telefon<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label></div>
-<label>E-Mail<input name="email" type="email" maxlength="160" autocomplete="email"></label>
-${
-  services.length
-    ? `<fieldset class="svc"><legend>Worum geht es? <small>(mehrere möglich)</small></legend><div class="opts">${services
-        .slice(0, 12)
-        .map((sv) => `<label class="opt"><input type="checkbox" name="leistung" value="${esc(sv.title)}"><span>${esc(sv.title)}</span></label>`)
-        .join("")}</div></fieldset>`
-    : ""
-}
-<label>Ihr Anliegen${services.length ? "" : " *"}<textarea name="message"${services.length ? "" : " required"} rows="5" maxlength="3000" placeholder="z. B. Wohnzimmer und Flur streichen, ca. 60 m², gewünschter Zeitraum …"></textarea></label>
-<label class="photos">Fotos <small>(optional, bis zu 3 – z. B. von Wand, Fassade oder Schaden)</small><input type="file" id="fotos" accept="image/*" multiple></label>
-<div class="photo-prev" id="foto-vorschau"></div>
-<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-<input type="hidden" name="t" value="${Date.now()}">
-<small>Bitte Telefon oder E-Mail angeben. Ihre Angaben verwenden wir nur zur Bearbeitung Ihrer Anfrage, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
-<button class="btn" type="submit">Anfrage senden</button>
-</form>
-<script>${FORM_SCRIPT}</script>`
-      : "";
-  const contactHtml = s.contact
-    ? `<section class="block" id="kontakt"><div class="wrap contact">
-<div><h2>Kontakt</h2><p>Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen kostenlosen Besichtigungstermin.</p>
-<dl>${phone ? `<dt>Telefon</dt><dd><a href="tel:${esc(telHref(phone))}">${esc(phone)}</a></dd>` : ""}
-${c.email ? `<dt>E-Mail</dt><dd>${emailLink(c.email)}</dd>` : ""}
-${c.street ? `<dt>Adresse</dt><dd>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</dd>` : ""}
-${d.opening_hours ? `<dt>Erreichbarkeit</dt><dd>${esc(d.opening_hours).replace(/\n/g, "<br>")}</dd>` : ""}</dl></div>
-${formHtml || "<div></div>"}
-</div></section>`
-    : "";
-
   const title = d.seo_title?.trim() || `${name} – Maler${city ? ` in ${city}` : ""}`;
   const description =
     d.seo_description?.trim() ||
     `${name}${city ? ` in ${city}` : ""}: ${services.length ? services.slice(0, 4).map((x) => x.title).join(", ") : "Malerarbeiten innen und außen"}. Jetzt kostenlos anfragen.`;
-  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), hero + alternate([servicesHtml, processHtml, refsHtml, reviewsHtml, aboutHtml, areaHtml, contactHtml]), {
-    home: true,
-    index: !ctx.preview,
+  const body =
+    hero +
+    alternate([
+      servicesHtml,
+      processSection(d, s),
+      s.references ? refsSection(refs, "Aktuelle Projekte", "Ein Auszug aus unseren zuletzt abgeschlossenen Arbeiten.") : "",
+      reviewsSection(rv),
+      aboutHtml,
+      areaHtml,
+      contactSection(d, ctx, s),
+    ]);
+  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), body, { home: true, index: !ctx.preview });
+}
+
+// ---------------------------------------------------------------------
+// Eigene Seite pro Leistung, z. B. /w/prinzenkinder/fassadenanstrich
+// ---------------------------------------------------------------------
+const RESERVED_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
+
+export function slugifyService(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "") || "leistung";
+}
+
+/** Eindeutige Adressen für alle Leistungen (gleiche Reihenfolge wie die Liste) */
+export function serviceSlugs(services: Service[]): string[] {
+  const used = new Set<string>();
+  return services.map((sv) => {
+    let base = slugifyService(String(sv.title ?? ""));
+    if (RESERVED_PAGES.has(base)) base = `${base}-leistung`;
+    let slug = base;
+    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    used.add(slug);
+    return slug;
   });
+}
+
+/** Standardtexte, solange der Betrieb keinen eigenen ausführlichen Text hinterlegt hat */
+const SERVICE_DEFAULT_TEXT: Record<string, string> = {
+  rolle:
+    "Frische Farbe verändert einen Raum mehr als fast jede andere Maßnahme. Wir decken Möbel und Böden sorgfältig ab, prüfen den Untergrund, bessern kleine Risse und Löcher aus und streichen Wände und Decken gleichmäßig und streifenfrei.\n\nGemeinsam wählen wir Farbtöne und die passende Farbe – zum Beispiel besonders strapazierfähig für Flur und Küche, scheuerbeständig für Kinderzimmer oder emissionsarm für Schlafräume. Nach getaner Arbeit räumen wir auf und hinterlassen alles besenrein.",
+  pinsel:
+    "Lackierte Flächen sind täglich im Gebrauch und brauchen eine sorgfältige Vorbereitung: Wir reinigen, schleifen und grundieren, bevor wir Türen, Zargen, Heizkörper, Geländer oder Treppen lackieren.\n\nSo entsteht eine glatte, widerstandsfähige Oberfläche, die lange schön bleibt. Auf Wunsch arbeiten wir mit wasserbasierten, geruchsarmen Lacken.",
+  haus:
+    "Eine gepflegte Fassade schützt Ihr Haus vor Witterung und steigert seinen Wert. Vor dem Anstrich prüfen wir den Untergrund, reinigen die Flächen, schließen Risse und wählen das passende System – etwa Silikonharz-, Silikat- oder Dispersionsfarbe.\n\nWir kümmern uns auf Wunsch um das Gerüst, schützen Fenster, Wege und Pflanzen und stimmen den Zeitplan auf das Wetter ab.",
+  tapete:
+    "Ob Raufaser, Vlies, Glasgewebe oder Designtapete: Wir entfernen alte Tapeten, bereiten den Untergrund vor und tapezieren sauber auf Stoß – auch bei Dachschrägen, Ecken und Nischen.\n\nGerne beraten wir Sie zur Auswahl von Tapeten und Farben, damit das Ergebnis zu Ihren Räumen passt.",
+  spachtel:
+    "Glatte Wände sind die Grundlage für jedes gute Ergebnis. Wir spachteln Wände und Decken in den Qualitätsstufen Q1 bis Q4, gleichen Unebenheiten aus und bringen auf Wunsch dekorative Putze und Strukturen auf.\n\nAuch Ausbesserungen nach Umbauten oder Installationen übernehmen wir – staubarm und sauber.",
+  boden:
+    "Neue Böden runden jede Renovierung ab. Wir bereiten den Untergrund vor, gleichen ihn bei Bedarf aus und verlegen Vinyl, Designbelag, Laminat oder Teppich fachgerecht – inklusive Sockelleisten und sauberer Übergänge.\n\nSo bekommen Sie Wand und Boden aus einer Hand, ohne zusätzlichen Abstimmungsaufwand.",
+  tuer:
+    "Fenster und Türen sind Wind und Wetter oder täglicher Nutzung ausgesetzt. Wir schleifen, grundieren und lackieren Holz- und Metallflächen, erneuern Anstriche an Fensterrahmen und Haustüren und sorgen für einen dauerhaften Schutz.",
+  schutz:
+    "Schimmel und Feuchtigkeit sollten Sie nicht einfach überstreichen. Wir suchen gemeinsam mit Ihnen nach der Ursache, entfernen befallene Beschichtungen fachgerecht und setzen geeignete Sanier- und Schutzsysteme ein.\n\nDazu geben wir Ihnen Tipps zum richtigen Lüften und Heizen, damit das Problem nicht wiederkommt.",
+  daemmung:
+    "Eine gute Dämmung senkt die Heizkosten und verbessert das Wohnklima. Wir beraten Sie zu Wärmedämm-Verbundsystemen und Innendämmung und führen die Arbeiten fachgerecht aus – inklusive Putz und Anstrich.",
+  mauer:
+    "Sichtmauerwerk, Klinker und Natursteinflächen brauchen besondere Pflege. Wir reinigen schonend, bessern Fugen aus und schützen die Flächen mit passenden Imprägnierungen und Beschichtungen.",
+  spray:
+    "Mit modernen Spritzverfahren beschichten wir große Flächen schnell und gleichmäßig. Wir entfernen außerdem Graffiti und schützen Flächen auf Wunsch mit Anti-Graffiti-Beschichtungen.",
+  palette:
+    "Die richtige Farbe macht den Unterschied. Wir beraten Sie zu Farbtönen, Materialien und Wirkung – mit Farbmustern direkt an Ihrer Wand – und entwickeln mit Ihnen ein stimmiges Gesamtkonzept für Wohnung, Haus oder Geschäftsräume.",
+  gewerbe:
+    "Für Büros, Praxen, Ladenlokale, Hotels und Hausverwaltungen arbeiten wir planbar und mit möglichst wenig Störung des laufenden Betriebs – auf Wunsch auch abends oder am Wochenende. Sie erhalten feste Ansprechpartner und verlässliche Termine.",
+  holz:
+    "Holz im Außenbereich braucht regelmäßigen Schutz. Wir reinigen, schleifen und behandeln Zäune, Carports, Gartenhäuser, Fensterläden und Holzfassaden mit Lasuren, Ölen oder Lacken – passend zum Holz und zur gewünschten Optik.",
+  wasser:
+    "Nach einem Wasserschaden kümmern wir uns um die Wiederherstellung: Wir prüfen die Trocknung, entfernen geschädigte Beschichtungen, spachteln und streichen neu. Auf Wunsch stimmen wir uns direkt mit Ihrer Versicherung ab.",
+  werkzeug:
+    "Ob kleine Schäden oder eine komplette Renovierung: Wir bessern Risse, Löcher und Beschädigungen aus, erneuern Oberflächen und bringen Ihre Räume wieder in einen gepflegten Zustand – zuverlässig und sauber.",
+  stern:
+    "Sprechen Sie uns an – wir beraten Sie gerne persönlich und finden gemeinsam die passende Lösung für Ihr Vorhaben.",
+};
+
+export function serviceDetails(sv: Service): string {
+  const own = String(sv.details ?? "").trim();
+  return own || SERVICE_DEFAULT_TEXT[serviceIcon(sv)] || SERVICE_DEFAULT_TEXT.stern;
+}
+
+/** Referenzen, die thematisch zur Leistung passen (gleiches Symbol bzw. Leistungsname im Text) */
+function refsForService(sv: Service, refs: Reference[]): Reference[] {
+  const key = serviceIcon(sv);
+  const word = slugifyService(String(sv.title ?? "")).split("-")[0].slice(0, 7);
+  return refs.filter((r) => {
+    const text = `${r.title} ${r.text ?? ""}`;
+    const guess = serviceIcon({ title: text });
+    return (guess === key && key !== "rolle") || (word.length >= 5 && slugifyService(text).includes(word));
+  });
+}
+
+export function findService(d: SiteData, pageSlug: string): { service: Service; index: number; slug: string } | null {
+  const services = servicesOf(d);
+  const slugs = serviceSlugs(services);
+  const i = slugs.indexOf(pageSlug);
+  return i >= 0 ? { service: services[i], index: i, slug: slugs[i] } : null;
+}
+
+export function renderService(d: SiteData, ctx: Ctx, found: { service: Service; slug: string }): string {
+  const sv = found.service;
+  const c = d.company;
+  const city = c.city?.trim() || "";
+  const name = c.name || "Malerbetrieb";
+  const s = sectionsOf(d);
+  const services = servicesOf(d);
+  const slugs = serviceSlugs(services);
+  const area = areaList(d.service_area);
+  const phone = c.phone?.trim();
+  const highlights = (d.highlights ?? []).filter(Boolean).slice(0, 8);
+  const rv = s.reviews ? reviewSummary(d) : null;
+  const title = String(sv.title);
+  const h1 = city ? `${title} in ${city} und Umgebung` : title;
+  const lead = sv.text?.trim() || `${title} vom Fachbetrieb – sauber, termintreu und mit festem Ansprechpartner.`;
+  const allRefs = (d.references ?? []).filter((r) => r?.title);
+  const matching = refsForService(sv, allRefs);
+  const refs = (matching.length ? matching : allRefs).slice(0, 6);
+  const pageCtx: Ctx = { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/${found.slug}` };
+
+  const hero = `<section class="hero sub"><div class="wrap grid">
+<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${ctx.base}${ctx.q ?? ""}">Startseite</a> › <a href="${ctx.base}${ctx.q ?? ""}#leistungen">Leistungen</a> › <span>${esc(title)}</span></nav>
+<h1>${esc(h1)}</h1><p class="lead">${esc(lead)}</p>
+<div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
+${rv ? `<p class="rating-line">${stars(rv.avg)} <a href="#bewertungen">${fmtAvg(rv.avg)} von 5 – ${rv.count} Kundenbewertung${rv.count === 1 ? "" : "en"}</a></p>` : ""}
+</div></div></section>`;
+
+  const detailHtml = `<section class="block" id="details"><div class="wrap about">
+<div><div class="ico big">${iconSvg(serviceIcon(sv))}</div><h2>${esc(title)} von ${esc(name)}</h2>${paragraphs(serviceDetails(sv))}${
+    city ? `<p>Wir sind für Sie in ${esc(city)}${area.filter((a) => a !== city).length ? ` und in ${esc(area.filter((a) => a !== city).slice(0, 6).join(", "))}` : " und Umgebung"} im Einsatz.</p>` : ""
+  }</div>
+${highlights.length ? `<div><h3>Darauf können Sie sich verlassen</h3><ul class="facts">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>` : ""}
+</div></section>`;
+
+  const others = services
+    .map((o, i) => ({ o, slug: slugs[i] }))
+    .filter((x) => x.slug !== found.slug);
+  const othersHtml = others.length
+    ? `<section class="block" id="weitere"><div class="wrap">
+<div class="sec-head"><h2>Weitere Leistungen</h2></div>
+<ul class="area">${others.map((x) => `<li><a href="${ctx.base}/${x.slug}${ctx.q ?? ""}">${esc(x.o.title)}</a></li>`).join("")}</ul></div></section>`
+    : "";
+
+  const body =
+    hero +
+    alternate([
+      detailHtml,
+      processSection(d, s),
+      s.references ? refsSection(refs, matching.length ? `Projekte: ${title}` : "Aus unseren letzten Projekten", "Ein Auszug aus unseren abgeschlossenen Arbeiten.") : "",
+      reviewsSection(rv, 3),
+      othersHtml,
+      contactSection(d, ctx, s, {
+        preselect: title,
+        page: found.slug,
+        intro: `Sie interessieren sich für „${title}“? Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen kostenlosen Besichtigungstermin.`,
+      }),
+    ]);
+
+  const pageTitle = `${city ? `${title} in ${city}` : title} – ${name}`;
+  const description = `${title}${city ? ` in ${city} und Umgebung` : ""}: ${lead}`.replace(/\s+/g, " ");
+  return page(d, pageCtx, pageTitle.slice(0, 70), description.slice(0, 160), body, {
+    home: false,
+    index: !ctx.preview,
+    jsonLd: serviceJsonLd(d, pageCtx, sv),
+    script: true,
+  });
+}
+
+function serviceJsonLd(d: SiteData, ctx: Ctx, sv: Service): string {
+  const c = d.company;
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: sv.title,
+    serviceType: sv.title,
+    description: sv.text || undefined,
+    url: ctx.canonical,
+    areaServed: areaList(d.service_area).map((n) => ({ "@type": "City", name: n })),
+    provider: {
+      "@type": "HousePainter",
+      name: c.name || undefined,
+      telephone: c.phone || undefined,
+      url: ctx.canonical.replace(/\/[^/]+$/, ""),
+      address: c.street
+        ? { "@type": "PostalAddress", streetAddress: c.street, postalCode: c.zip || undefined, addressLocality: c.city || undefined, addressCountry: "DE" }
+        : undefined,
+    },
+  };
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
 export function renderImprint(d: SiteData, ctx: Ctx): string {
@@ -723,8 +946,10 @@ export async function handle(request: Request): Promise<Response> {
 
   // Kontaktformular
   if (request.method === "POST" && url.searchParams.get("action") === "contact") {
-    const back = (q: string) => new Response(null, { status: 303, headers: { location: `${base}?${q}#kontakt` } });
     const form = await request.formData().catch(() => null);
+    const seite = String(form?.get("seite") ?? "").toLowerCase();
+    const target = /^[a-z0-9-]{1,70}$/.test(seite) && !["impressum", "datenschutz"].includes(seite) ? `${base}/${seite}` : base;
+    const back = (q: string) => new Response(null, { status: 303, headers: { location: `${target}?${q}#kontakt` } });
     if (!form) return back("fehler=formular");
     const get = (k: string) => String(form.get(k) ?? "").trim();
     const started = Number(get("t"));
@@ -804,7 +1029,10 @@ export async function handle(request: Request): Promise<Response> {
     return new Response(`User-agent: *\nAllow: /\nSitemap: ${origin}${base}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache } });
   }
   if (pagePath === "sitemap.xml") {
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${esc(ctx.canonical)}</loc></url></urlset>`;
+    const pages = sectionsOf(data).services ? serviceSlugs(servicesOf(data)).map((sl) => `${ctx.canonical}/${sl}`) : [];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[ctx.canonical, ...pages]
+      .map((u) => `<url><loc>${esc(u)}</loc></url>`)
+      .join("")}</urlset>`;
     return new Response(xml, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": cache } });
   }
 
@@ -812,7 +1040,11 @@ export async function handle(request: Request): Promise<Response> {
   if (pagePath === "" || pagePath === "index.html") html = renderHome(data, ctx);
   else if (pagePath === "impressum") html = renderImprint(data, ctx);
   else if (pagePath === "datenschutz") html = renderPrivacy(data, ctx);
-  else return notFound(origin);
+  else {
+    const found = sectionsOf(data).services && /^[a-z0-9-]{1,70}$/.test(pagePath) ? findService(data, pagePath) : null;
+    if (!found) return notFound(origin);
+    html = renderService(data, ctx, found);
+  }
 
   const headers = { ...HTML_HEADERS, "cache-control": cache };
   return new Response(request.method === "HEAD" ? null : html, { status: 200, headers });
