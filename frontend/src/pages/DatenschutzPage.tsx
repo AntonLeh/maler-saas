@@ -18,7 +18,7 @@ export default function DatenschutzPage({
             </p>
 
             <p>
-              <strong>Stand: 13. September 2026</strong>
+              <strong>Stand: 2. November 2026</strong>
             </p>
           </div>
 
@@ -533,7 +533,158 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>17. Kontakt- und Supportanfragen</h2>
+          <h2>17. Kundenbewertungen</h2>
+
+          <p>
+            Nach Abschluss eines Auftrags können Kunden über das
+            Kundenportal eine Bewertung abgeben (Sterne, Kommentar,
+            Weiterempfehlung) und optional einzelne Mitarbeiter
+            bewerten.
+          </p>
+
+          <p>
+            Bewertungen werden im Auftrag des jeweiligen Unternehmens
+            gespeichert. Mitarbeiterbewertungen sind ausschließlich
+            intern sichtbar und werden nicht veröffentlicht.
+          </p>
+
+          <p>
+            Hat das Unternehmen eine Firmen-Website über MalerSaaS,
+            kann der Kunde beim Bewerten freiwillig einwilligen, dass
+            seine Bewertung (Sterne und Kommentar) mit Vornamen,
+            Anfangsbuchstaben des Nachnamens beziehungsweise
+            Firmennamen und Ort auf dieser Website erscheint. Der
+            genaue Wortlaut der Einwilligung wird gespeichert. Das
+            Unternehmen entscheidet, welche Bewertungen gezeigt
+            werden, kann deren Inhalt aber nicht verändern.
+          </p>
+
+          <p>
+            Rechtsgrundlage der Veröffentlichung ist die Einwilligung
+            gemäß Artikel 6 Absatz 1 Buchstabe a DSGVO. Sie kann
+            jederzeit mit Wirkung für die Zukunft gegenüber dem
+            Unternehmen widerrufen werden. Der auf der Website
+            angezeigte Durchschnittswert wird aus allen Bewertungen
+            ohne Namensangabe berechnet.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>18. Firmen-Websites der Malerbetriebe</h2>
+
+          <p>
+            Unternehmen können über MalerSaaS eine eigene
+            Firmen-Website veröffentlichen (Adressen der Form
+            maler-saas.com/w/…). Verantwortlicher für diese Websites
+            und die dort verarbeiteten Daten ist das jeweilige
+            Unternehmen; es stellt dort ein eigenes Impressum und eine
+            eigene Datenschutzerklärung bereit. MalerSaaS betreibt die
+            Technik als Auftragsverarbeiter.
+          </p>
+
+          <p>
+            Die Firmen-Websites verwenden keine Cookies, keine
+            Analyse- oder Tracking-Werkzeuge und laden keine Schriften
+            oder Inhalte von Drittanbietern. Beim Aufruf werden
+            technisch notwendige Protokolldaten verarbeitet (siehe
+            Abschnitte zu Vercel und Supabase).
+          </p>
+
+          <p>
+            Über das Kontaktformular einer Firmen-Website können Name,
+            Telefonnummer, E-Mail-Adresse, Anliegen, gewünschte
+            Leistungen und bis zu drei Fotos an das Unternehmen
+            gesendet werden. Fotos werden bereits im Browser
+            verkleinert; dabei werden eingebettete Zusatzdaten wie
+            Standortangaben entfernt. Die Anfrage wird in MalerSaaS
+            gespeichert und dem Unternehmen zusätzlich per E-Mail
+            (über Brevo, siehe unten) zugestellt. Fotos werden mit der
+            Anfrage gelöscht.
+          </p>
+
+          <p>
+            Bilder von Kundenprojekten (Referenzen) werden nur
+            veröffentlicht, wenn das Unternehmen die Einwilligung des
+            Kunden bestätigt hat, und ohne genaue Anschrift.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>19. KI-Telefonassistent</h2>
+
+          <p>
+            Unternehmen können einen KI-Telefonassistenten einsetzen,
+            der Anrufe ihrer Kunden entgegennimmt, Fragen beantwortet,
+            Rückrufwünsche aufnimmt und Besichtigungstermine anbietet.
+            Der Assistent stellt sich zu Beginn jedes Gesprächs als
+            KI-Assistent vor.
+          </p>
+
+          <p>
+            Dabei werden insbesondere die Telefonnummer des Anrufers,
+            der Gesprächsinhalt (Sprache wird in Echtzeit in Text
+            umgewandelt und beantwortet), Name, Anschrift und Anliegen
+            sowie vereinbarte Termine, eine Zusammenfassung des
+            Gesprächs, Gesprächsdauer und Zeitpunkt verarbeitet. Das
+            Unternehmen erhält Benachrichtigungen per E-Mail und
+            optional per SMS.
+          </p>
+
+          <p>
+            Verantwortlich für den Einsatz ist das jeweilige
+            Unternehmen; MalerSaaS verarbeitet die Daten als
+            Auftragsverarbeiter. Für Sprachverarbeitung und
+            Gesprächsführung wird ElevenLabs eingesetzt, für
+            Telefonnummern und Anrufweiterleitung Twilio. Beide Anbieter
+            haben ihren Sitz in den USA beziehungsweise verarbeiten
+            Daten auch dort (siehe Datenübermittlung in Drittländer).
+          </p>
+
+          <p>
+            Weitere Informationen enthalten die Datenschutzerklärungen
+            von{" "}
+            <a href="https://elevenlabs.io/privacy-policy" target="_blank" rel="noreferrer">
+              ElevenLabs
+            </a>{" "}
+            und{" "}
+            <a href="https://www.twilio.com/legal/privacy" target="_blank" rel="noreferrer">
+              Twilio
+            </a>
+            .
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>20. KI-Schreibhilfe für Website-Texte</h2>
+
+          <p>
+            Unternehmen können Texte für ihre Firmen-Website mit einer
+            KI-Schreibhilfe erstellen lassen. Dazu werden die vom
+            Unternehmen eingegebenen Stichworte sowie Firmenname, Ort,
+            Einsatzgebiet, Stärken und Leistungsnamen an Anthropic
+            (Anbieter des KI-Modells Claude) übermittelt. Kunden- oder
+            Mitarbeiterdaten werden dabei nicht übermittelt.
+          </p>
+
+          <p>
+            Die Vorschläge werden erst gespeichert, wenn das
+            Unternehmen sie übernimmt. Gespeichert wird zur Einhaltung
+            eines Monatslimits nur, wann und welche Art von Text
+            erzeugt wurde.
+          </p>
+
+          <p>
+            Rechtsgrundlage ist Artikel 6 Absatz 1 Buchstabe b DSGVO.
+            Weitere Informationen enthält die{" "}
+            <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noreferrer">
+              Datenschutzerklärung von Anthropic
+            </a>
+            .
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>21. Kontakt- und Supportanfragen</h2>
 
           <p>
             Bei einer Kontakt- oder Supportanfrage können Name,
@@ -557,7 +708,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>18. Zahlungsabwicklung über Stripe</h2>
+          <h2>22. Zahlungsabwicklung über Stripe</h2>
 
           <p>
             Für die Abwicklung von Abonnements und Zahlungen wird
@@ -566,9 +717,11 @@ export default function DatenschutzPage({
 
           <p>
             Dabei können insbesondere Name, E-Mail-Adresse,
-            Rechnungsanschrift, Zahlungsinformationen,
-            Transaktionsdaten, Tarif, Betrag, Währung und
-            Abonnementstatus an Stripe übermittelt werden.
+            Rechnungsanschrift, Umsatzsteuer-Identifikationsnummer,
+            Zahlungsinformationen, Transaktionsdaten, Tarif, Betrag,
+            Währung und Abonnementstatus an Stripe übermittelt werden.
+            Stripe berechnet anhand der Rechnungsanschrift auch die
+            anfallende Umsatzsteuer.
           </p>
 
           <p>
@@ -598,7 +751,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>19. Technische Bereitstellung durch Supabase</h2>
+          <h2>23. Technische Bereitstellung durch Supabase</h2>
 
           <p>
             MalerSaaS nutzt Supabase insbesondere für Datenbanken,
@@ -633,7 +786,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>20. Hosting und Auslieferung über Vercel</h2>
+          <h2>24. Hosting und Auslieferung über Vercel</h2>
 
           <p>
             Die Website und Teile der technischen Anwendung werden
@@ -667,12 +820,21 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>21. E-Mail-Versand</h2>
+          <h2>25. E-Mail-Versand</h2>
 
           <p>
             Für Registrierungsbestätigungen, Sicherheitsnachrichten,
             vertragsbezogene Mitteilungen und Supportantworten können
             technische E-Mail-Dienstleister eingesetzt werden.
+          </p>
+
+          <p>
+            Automatische Benachrichtigungen (zum Beispiel neue
+            Website-Anfragen und Meldungen des KI-Telefonassistenten
+            per E-Mail und SMS) werden über Brevo (Sendinblue GmbH,
+            Berlin, Deutschland) versendet. Das Postfach
+            info@maler-saas.com wird bei IONOS (IONOS SE, Montabaur,
+            Deutschland) betrieben.
           </p>
 
           <p>
@@ -691,7 +853,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>22. Keine Analyse- oder Werbetracker</h2>
+          <h2>26. Keine Analyse- oder Werbetracker</h2>
 
           <p>
             MalerSaaS verwendet derzeit keine externen
@@ -713,7 +875,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>23. Technisch notwendige Speicherungen</h2>
+          <h2>27. Technisch notwendige Speicherungen</h2>
 
           <p>
             Für Anmeldung, Sitzungsverwaltung, Sicherheit und
@@ -743,7 +905,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>24. Empfänger personenbezogener Daten</h2>
+          <h2>28. Empfänger personenbezogener Daten</h2>
 
           <p>
             Personenbezogene Daten werden nur weitergegeben, wenn
@@ -758,8 +920,10 @@ export default function DatenschutzPage({
           <ul>
             <li>Hosting- und Infrastruktur-Anbieter,</li>
             <li>Datenbank- und Speicherdienstleister,</li>
-            <li>Authentifizierungs- und E-Mail-Dienstleister,</li>
-            <li>Zahlungsdienstleister,</li>
+            <li>Authentifizierungs- und E-Mail-Dienstleister (Supabase, Brevo, IONOS),</li>
+            <li>Zahlungsdienstleister (Stripe),</li>
+            <li>Anbieter für Sprach-KI und Telefonie (ElevenLabs, Twilio),</li>
+            <li>Anbieter für Text-KI (Anthropic),</li>
             <li>Support- und Sicherheitsdienstleister,</li>
             <li>
               Steuerberater, Rechtsberater und andere beruflich zur
@@ -780,13 +944,19 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>25. Datenübermittlung in Drittländer</h2>
+          <h2>29. Datenübermittlung in Drittländer</h2>
 
           <p>
             Einige technische Dienstleister oder deren
             Unterauftragnehmer können ihren Sitz außerhalb der
             Europäischen Union oder des Europäischen
             Wirtschaftsraums haben.
+          </p>
+
+          <p>
+            Dies betrifft insbesondere Vercel, Stripe, ElevenLabs,
+            Twilio und Anthropic, die ihren Sitz in den USA haben
+            beziehungsweise Daten auch dort verarbeiten.
           </p>
 
           <p>
@@ -797,7 +967,9 @@ export default function DatenschutzPage({
 
           <p>
             Hierfür können insbesondere ein
-            Angemessenheitsbeschluss der Europäischen Kommission,
+            Angemessenheitsbeschluss der Europäischen Kommission
+            (etwa das EU-US Data Privacy Framework für zertifizierte
+            Unternehmen),
             Standardvertragsklauseln, zusätzliche
             Sicherheitsmaßnahmen oder andere gesetzlich anerkannte
             Garantien verwendet werden.
@@ -813,7 +985,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>26. Speicherdauer</h2>
+          <h2>30. Speicherdauer</h2>
 
           <p>
             Personenbezogene Daten werden nur so lange gespeichert,
@@ -860,7 +1032,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>27. Datensicherheit</h2>
+          <h2>31. Datensicherheit</h2>
 
           <p>
             MalerSaaS trifft angemessene technische und
@@ -890,7 +1062,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>28. Pflicht zur Bereitstellung von Daten</h2>
+          <h2>32. Pflicht zur Bereitstellung von Daten</h2>
 
           <p>
             Bestimmte personenbezogene Daten sind erforderlich, um
@@ -912,7 +1084,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>29. Rechte betroffener Personen</h2>
+          <h2>33. Rechte betroffener Personen</h2>
 
           <p>
             Betroffene Personen haben nach Maßgabe der gesetzlichen
@@ -976,7 +1148,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>30. Widerspruchsrecht</h2>
+          <h2>34. Widerspruchsrecht</h2>
 
           <p>
             Werden personenbezogene Daten auf Grundlage von Artikel 6
@@ -997,7 +1169,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>31. Beschwerderecht</h2>
+          <h2>35. Beschwerderecht</h2>
 
           <p>
             Betroffene Personen haben das Recht, sich bei einer
@@ -1036,7 +1208,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-  <h2>32. Ansprechpartner für Datenschutz</h2>
+  <h2>36. Ansprechpartner für Datenschutz</h2>
 
   <p>
     Ansprechpartner für sämtliche Datenschutzanfragen im
@@ -1074,7 +1246,7 @@ export default function DatenschutzPage({
 </section>
 
         <section className="legal-section">
-          <h2>33. Änderungen dieser Datenschutzerklärung</h2>
+          <h2>37. Änderungen dieser Datenschutzerklärung</h2>
 
           <p>
             Diese Datenschutzerklärung kann angepasst werden, wenn
