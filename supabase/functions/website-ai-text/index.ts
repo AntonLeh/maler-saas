@@ -17,7 +17,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { SYSTEM_PROMPT, sanitize, schemaFor, userPrompt } from "./prompt.ts";
+import { SYSTEM_PROMPT, extractResult, sanitize, schemaFor, userPrompt } from "./prompt.ts";
 
 const ALLOWED_PLANS = ["professional", "business", "enterprise"];
 const ALLOWED_STATUS = ["active", "trialing", "past_due"];
@@ -96,10 +96,11 @@ serve(async (req) => {
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model,
-        max_tokens: 2500,
+        max_tokens: 6000,
         system: SYSTEM_PROMPT,
         tools: [{ name: "texte", description: "Die fertigen Website-Texte zurückgeben", input_schema: schemaFor(kind) }],
-        tool_choice: { type: "tool", name: "texte" },
+        // "auto" statt erzwungenem Werkzeug: funktioniert auch bei Modellen mit eingebautem Nachdenken
+        tool_choice: { type: "auto" },
         messages: [{ role: "user", content: userPrompt({ kind, keywords, service }, ctx) }],
       }),
     });
@@ -108,9 +109,12 @@ serve(async (req) => {
       console.error("anthropic", res.status, JSON.stringify(data).slice(0, 500));
       return json({ ok: false, error: "Die KI ist gerade nicht erreichbar. Bitte später noch einmal versuchen." }, 502);
     }
-    const block = (data.content ?? []).find((b) => b.type === "tool_use");
-    if (!block?.input) return json({ ok: false, error: "Die KI hat keinen Text geliefert. Bitte noch einmal versuchen." }, 502);
-    const result = sanitize(kind, block.input);
+    const raw = extractResult(data.content ?? []);
+    if (!raw) {
+      console.error("anthropic ohne Ergebnis", JSON.stringify(data).slice(0, 500));
+      return json({ ok: false, error: "Die KI hat keinen Text geliefert. Bitte noch einmal versuchen." }, 502);
+    }
+    const result = sanitize(kind, raw);
 
     await db.from("website_ai_usage").insert({
       tenant_id: user.tenant_id,
