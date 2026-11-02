@@ -28,8 +28,10 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 - **Leistungen mit Symbolen:** Symbol wird anhand des Namens gewählt oder im Editor festgelegt (`services[].icon`).
   Die Symbol-Liste steht doppelt: `SERVICE_ICONS` in `frontend/api/site.ts` und `ServiceIcon.tsx` (gleiche Schlüssel).
 - **Eigene Seite pro Leistung:** `/w/<slug>/<leistung>` (z. B. `/fassadenanstrich`), H1 „Leistung in Ort und Umgebung“,
-  eigener Text (`services[].details`) oder Standardtext je Symbol, passende Referenzen, Bewertungen, Formular mit
-  vorausgewählter Leistung, JSON-LD `Service`, in `sitemap.xml`. Bewusst keine Seiten pro Ort (Google wertet viele
+  eigener Text (`services[].details`) oder Standardtext je Symbol, „Das ist enthalten“ (`included`), häufige Fragen
+  (`faq`, JSON-LD `FAQPage`), eigenes Bild (`image`), passende Referenzen, Bewertungen, Formular mit vorausgewählter
+  Leistung, JSON-LD `Service`, in `sitemap.xml`. Nach Umbenennen leiten alte Adressen (`aliases`) per 301 weiter.
+  Vorschlagstexte stehen nur in `site.ts`; der Editor holt sie über `/api/site?action=vorschlaege&icon=…`. Bewusst keine Seiten pro Ort (Google wertet viele
   fast gleiche Ortsseiten als Brückenseiten ab).
 - **So läuft's ab:** fester Bereich mit 4 Schritten, abschaltbar (`sections.process`).
 - **Anfragen:** Kontaktformular → Tabelle `website_leads`, Leistungen zum Anklicken (`services`), bis zu 3 Fotos

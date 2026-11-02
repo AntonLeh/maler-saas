@@ -2,7 +2,19 @@
 
 export type WebsiteTheme = "klassisch" | "modern" | "frisch";
 
-export type WebsiteService = { title: string; text: string; icon?: string; details?: string };
+export type WebsiteFaq = { q: string; a: string };
+export type WebsiteService = {
+  title: string;
+  text: string;
+  icon?: string;
+  /** Inhalte der eigenen Leistungsseite (leer = Standard) */
+  details?: string;
+  included?: string[];
+  faq?: WebsiteFaq[];
+  image?: string;
+  /** frühere Adressen nach Umbenennen (werden auf die aktuelle Seite weitergeleitet) */
+  aliases?: string[];
+};
 
 export type WebsiteSections = {
   services: boolean;

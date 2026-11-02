@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
 import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, previewUrl, serviceSlugs, siteUrl, slugError } from "./types";
 import { ServiceIcon } from "./ServiceIcon";
+import ServicePageEditor from "./ServicePageEditor";
 import { processImage, uploadImage } from "./api";
 
 type Props = {
@@ -22,6 +23,30 @@ const SECTION_LABELS: [keyof WebsiteSections, string][] = [
   ["contact", "Kontakt"],
 ];
 
+/** Leistung für das Speichern aufbereiten: leere Felder weglassen, alte Adresse merken */
+function cleanService(s: WebsiteService & { origTitle?: string }): WebsiteService {
+  const title = s.title.trim();
+  const included = (s.included ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 12);
+  const faq = (s.faq ?? []).map((f) => ({ q: f.q.trim(), a: f.a.trim() })).filter((f) => f.q && f.a).slice(0, 8);
+  const [current] = serviceSlugs([title]);
+  let aliases = s.aliases ?? [];
+  if (s.origTitle?.trim()) {
+    const [old] = serviceSlugs([s.origTitle.trim()]);
+    if (old !== current) aliases = [...aliases, old];
+  }
+  aliases = [...new Set(aliases)].filter((a) => a !== current).slice(-10);
+  return {
+    title,
+    text: s.text.trim(),
+    ...(s.icon ? { icon: s.icon } : {}),
+    ...(s.details?.trim() ? { details: s.details.trim() } : {}),
+    ...(included.length ? { included } : {}),
+    ...(faq.length ? { faq } : {}),
+    ...(s.image ? { image: s.image } : {}),
+    ...(aliases.length ? { aliases } : {}),
+  };
+}
+
 export default function DesignTab({ website, company, saving, onSave, onError }: Props) {
   const [theme, setTheme] = useState<WebsiteTheme>(website.theme);
   const [accent, setAccent] = useState(website.accent_color);
@@ -29,7 +54,8 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const [heroSubtitle, setHeroSubtitle] = useState(website.hero_subtitle ?? "");
   const [heroImage, setHeroImage] = useState(website.hero_image_url ?? "");
   const [highlights, setHighlights] = useState((website.highlights ?? []).join("\n"));
-  const [services, setServices] = useState<WebsiteService[]>(website.services ?? []);
+  // origTitle merkt sich den gespeicherten Namen, damit nach dem Umbenennen die alte Adresse weiterleitet
+  const [services, setServices] = useState<(WebsiteService & { origTitle?: string })[]>((website.services ?? []).map((s) => ({ ...s, origTitle: s.title })));
   const [aboutTitle, setAboutTitle] = useState(website.about_title ?? "");
   const [aboutText, setAboutText] = useState(website.about_text ?? "");
   const [area, setArea] = useState(website.service_area ?? "");
@@ -94,9 +120,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
         .map((h) => h.trim())
         .filter(Boolean)
         .slice(0, 8),
-      services: services
-        .map((s) => ({ title: s.title.trim(), text: s.text.trim(), ...(s.icon ? { icon: s.icon } : {}), ...(s.details?.trim() ? { details: s.details.trim() } : {}) }))
-        .filter((s) => s.title),
+      services: services.filter((s) => s.title.trim()).map(cleanService),
       about_title: aboutTitle.trim() || null,
       about_text: aboutText.trim() || null,
       service_area: area.trim() || null,
@@ -214,24 +238,13 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
               <div className="ws-service-fields">
                 <input value={s.title} onChange={(e) => updateService(i, { title: e.target.value })} placeholder="z. B. Fassadenanstrich" maxLength={60} aria-label="Leistung" />
                 <textarea rows={2} value={s.text} onChange={(e) => updateService(i, { text: e.target.value })} placeholder="Ein bis zwei Sätze zur Leistung" maxLength={240} aria-label="Beschreibung" />
-                <details className="ws-service-more">
-                  <summary>
-                    Eigene Seite für diese Leistung{s.details?.trim() ? " – eigener Text hinterlegt" : " – Standardtext"}
-                  </summary>
-                  <textarea
-                    rows={6}
-                    value={s.details ?? ""}
-                    onChange={(e) => updateService(i, { details: e.target.value })}
-                    maxLength={3000}
-                    placeholder="Ausführlicher Text für die eigene Seite (optional). Leer lassen für einen passenden Standardtext. Tipp: Was genau machen Sie, welche Materialien, was ist Ihnen wichtig? Eigene Worte helfen bei Google am meisten."
-                    aria-label="Ausführlicher Text"
-                  />
-                  {s.title.trim() && savedSlugs[i] && savedTitles[i] === s.title.trim() && (
-                    <a className="ws-link" href={pageUrl(savedSlugs[i])} target="_blank" rel="noreferrer">
-                      Seite ansehen ↗
-                    </a>
-                  )}
-                </details>
+                <ServicePageEditor
+                  service={s}
+                  tenantId={website.tenant_id}
+                  pageUrl={s.title.trim() && savedSlugs[i] && savedTitles[i] === s.title.trim() ? pageUrl(savedSlugs[i]) : null}
+                  onChange={(patch) => updateService(i, patch)}
+                  onError={onError}
+                />
               </div>
               <div className="ws-service-tools">
                 <button type="button" className="tk-icon-btn" onClick={() => moveService(i, -1)} disabled={i === 0} aria-label="Nach oben">

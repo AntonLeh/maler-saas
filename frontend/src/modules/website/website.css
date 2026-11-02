@@ -700,3 +700,54 @@
   display: inline-block;
   margin-top: 6px;
 }
+
+.ws-root .ws-sp {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0 6px;
+}
+
+.ws-root .ws-sp-block {
+  display: grid;
+  gap: 6px;
+}
+
+.ws-root .ws-sp-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ws-root .ws-sp-hint {
+  margin: 0;
+}
+
+.ws-root .ws-faq {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  padding: 10px;
+  border: 1px solid var(--tk-border);
+  border-radius: 10px;
+  background: var(--tk-surface);
+}
+
+.ws-root .ws-faq input {
+  font-weight: 600;
+}
+
+.ws-root .ws-faq textarea {
+  grid-column: 1;
+}
+
+.ws-root .ws-faq .tk-icon-btn {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ws-root .ws-sp-block > .btn,
+.ws-root .ws-sp > .ws-link {
+  justify-self: start;
+}

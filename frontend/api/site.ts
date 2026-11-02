@@ -21,7 +21,17 @@ const SUPABASE_ANON_KEY = "sb_publishable_N23R8SIVVw7_qmH3w-JPrw_w9YBpgyH";
 const env = (k: string): string =>
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[k] ?? "";
 
-export type Service = { title?: string; text?: string; icon?: string; details?: string };
+export type Faq = { q?: string; a?: string };
+export type Service = {
+  title?: string;
+  text?: string;
+  icon?: string;
+  details?: string;
+  included?: string[];
+  faq?: Faq[];
+  image?: string;
+  aliases?: string[];
+};
 export type RefImage = { url?: string; alt?: string };
 export type Reference = { id: number; title: string; text?: string | null; city?: string | null; images?: RefImage[]; published_at?: string };
 export type ReviewItem = { rating: number; text?: string | null; name?: string | null; city?: string | null; date?: string | null };
@@ -283,6 +293,9 @@ section.alt{background:var(--soft)}
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}
 .card{position:relative}.card h3{margin-bottom:.35em}.card-link{color:inherit;text-decoration:none}.card-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
 .card .more{display:inline-block;margin-top:12px;font-weight:700;color:var(--accent-dark);font-size:.95rem}.card:hover{border-color:var(--accent)}.card:hover .more{text-decoration:underline}
+.faq{display:grid;gap:12px;max-width:860px}.faq details{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 20px}
+.faq summary{cursor:pointer;font-weight:700;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--accent);font-size:1.4rem;line-height:1}.faq details[open] summary::after{content:"–"}.faq details p{margin:0 0 16px;color:var(--muted)}
 .ico.big{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent-dark);display:grid;place-items:center;margin-bottom:16px}
 .hero.sub{padding:48px 0 44px}.theme-modern .hero.sub{padding:64px 0 56px}.hero.sub .grid,.hero.sub:not(.has-img) .grid{grid-template-columns:1fr;max-width:1120px}.hero.sub .grid>div{max-width:860px}
 .crumbs{font-size:.9rem;margin-bottom:14px;opacity:.85}.crumbs a{color:inherit}
@@ -717,6 +730,80 @@ const SERVICE_DEFAULT_TEXT: Record<string, string> = {
     "Sprechen Sie uns an – wir beraten Sie gerne persönlich und finden gemeinsam die passende Lösung für Ihr Vorhaben.",
 };
 
+/** „Das ist enthalten“ – Vorschläge je Leistungsart */
+const SERVICE_DEFAULT_INCLUDED: Record<string, string[]> = {
+  rolle: ["Kostenlose Besichtigung und Farbberatung", "Abdecken von Böden, Möbeln und Steckdosen", "Ausbessern kleiner Risse und Löcher", "Grundierung bei Bedarf", "Zwei Anstriche für ein gleichmäßiges Ergebnis", "Aufräumen und besenreine Übergabe"],
+  pinsel: ["Reinigen und Anschleifen der Oberflächen", "Ausbessern von Macken und Rissen", "Passende Grundierung", "Lackieren mit hochwertigen, auf Wunsch geruchsarmen Lacken", "Abkleben angrenzender Flächen", "Saubere Übergabe"],
+  haus: ["Prüfung von Untergrund und Altanstrich", "Reinigung der Fassade", "Rissbehandlung und Ausbesserungen", "Gerüst auf Wunsch", "Schutz von Fenstern, Wegen und Pflanzen", "Anstrich mit passendem Fassadensystem"],
+  tapete: ["Entfernen alter Tapeten", "Vorbereitung und Glätten des Untergrunds", "Tapezieren auf Stoß, auch an Schrägen und Nischen", "Anstrich der Tapete auf Wunsch", "Beratung zur Tapetenauswahl", "Aufräumen und Entsorgung"],
+  spachtel: ["Spachtelarbeiten in Q1 bis Q4", "Ausgleichen von Unebenheiten", "Schleifen mit staubarmer Technik", "Dekorative Putze und Strukturen auf Wunsch", "Ausbesserung nach Umbau oder Installation", "Fertig zum Streichen oder Tapezieren"],
+  boden: ["Entfernen des alten Belags", "Prüfen und Ausgleichen des Untergrunds", "Verlegung von Vinyl, Designbelag, Laminat oder Teppich", "Sockelleisten und Übergangsprofile", "Beratung zu Material und Optik", "Entsorgung von Resten"],
+  tuer: ["Schleifen und Ausbessern von Rahmen und Türblättern", "Grundierung von Holz und Metall", "Lackierung innen und außen", "Abkleben von Glas und Beschlägen", "Witterungsbeständige Materialien", "Saubere Übergabe"],
+  schutz: ["Begutachtung und Ursachensuche", "Fachgerechtes Entfernen befallener Beschichtungen", "Behandlung mit geeigneten Sanierprodukten", "Schimmelhemmender Anstrich", "Tipps zum Lüften und Heizen", "Dokumentation auf Wunsch"],
+  daemmung: ["Beratung zu Dämmsystem und Dämmstärke", "Untergrundvorbereitung", "Anbringen der Dämmplatten", "Armierung und Oberputz", "Fassadenanstrich", "Detailanschlüsse an Fenster und Dach"],
+};
+const GENERIC_INCLUDED = ["Kostenlose Besichtigung vor Ort", "Persönliche Beratung", "Schriftliches Angebot", "Sorgfältiges Abdecken und Schützen", "Fachgerechte Ausführung", "Aufräumen und saubere Übergabe"];
+
+/** Häufige Fragen – Vorschläge je Leistungsart */
+const SERVICE_DEFAULT_FAQ: Record<string, Faq[]> = {
+  rolle: [
+    { q: "Wie lange dauert es, ein Zimmer zu streichen?", a: "Ein durchschnittliches Zimmer ist meist an einem Tag fertig. Sind Ausbesserungen nötig oder wird ein dunkler Farbton überstrichen, kann es etwas länger dauern." },
+    { q: "Muss ich die Möbel vorher ausräumen?", a: "Nein. Wir rücken Möbel in die Raummitte und decken sie und den Boden sorgfältig ab. Zerbrechliches und Wertgegenstände räumen Sie am besten vorher weg." },
+    { q: "Welche Farbe ist für Küche und Bad geeignet?", a: "Für stark beanspruchte oder feuchte Räume empfehlen wir abwaschbare, scheuerbeständige Farben. Wir beraten Sie gern bei der Besichtigung." },
+  ],
+  pinsel: [
+    { q: "Können Türen und Heizkörper vor Ort lackiert werden?", a: "Ja, in den meisten Fällen lackieren wir direkt bei Ihnen. Türen können bei Bedarf auch ausgehängt werden." },
+    { q: "Riecht frischer Lack lange?", a: "Wir arbeiten auf Wunsch mit wasserbasierten Lacken, die kaum riechen und schnell trocknen." },
+    { q: "Wie lange muss der Lack trocknen?", a: "Oberflächlich ist er meist nach wenigen Stunden trocken, voll belastbar nach einigen Tagen. Wir sagen Ihnen genau, worauf Sie achten sollten." },
+  ],
+  haus: [
+    { q: "Wann ist die beste Zeit für einen Fassadenanstrich?", a: "Von Frühjahr bis Herbst bei trockenem Wetter und Temperaturen über etwa 5 °C. Wir planen den Termin passend zur Wetterlage." },
+    { q: "Wie oft sollte eine Fassade gestrichen werden?", a: "Je nach Lage, Wetterseite und Farbsystem etwa alle 10 bis 15 Jahre. Abplatzungen, Risse oder Verfärbungen sind ein Zeichen, dass es Zeit wird." },
+    { q: "Brauche ich ein Gerüst?", a: "Bei den meisten Häusern ja. Wir kümmern uns auf Wunsch um Gerüst und Genehmigungen." },
+  ],
+  tapete: [
+    { q: "Welche Tapete passt zu meinem Raum?", a: "Vliestapeten sind einfach zu verarbeiten und später leicht zu entfernen, Raufaser ist günstig und robust. Wir beraten Sie zu Optik und Pflege." },
+    { q: "Müssen alte Tapeten entfernt werden?", a: "In der Regel ja, damit die neue Tapete gut hält. Wir übernehmen das Ablösen und die Vorbereitung des Untergrunds." },
+    { q: "Kann die neue Tapete gestrichen werden?", a: "Raufaser und viele Vliestapeten sind überstreichbar. Den Anstrich erledigen wir auf Wunsch gleich mit." },
+  ],
+  spachtel: [
+    { q: "Was bedeuten Q1 bis Q4?", a: "Das sind Qualitätsstufen für die Oberfläche. Q2 ist der Standard für Tapete oder Anstrich, Q3 und Q4 sorgen für besonders glatte Wände, etwa bei Streiflicht." },
+    { q: "Wie viel Staub entsteht beim Schleifen?", a: "Wir arbeiten mit abgesaugten Schleifgeräten und decken alles sorgfältig ab. Ganz staubfrei geht es nicht, aber deutlich sauberer als früher." },
+    { q: "Kann man Rauputz glatt machen?", a: "Ja, durch Überspachteln entsteht wieder eine glatte Fläche, die gestrichen oder tapeziert werden kann." },
+  ],
+  boden: [
+    { q: "Kann der neue Boden auf den alten verlegt werden?", a: "Oft ja, wenn der alte Belag fest und eben ist. Bei der Besichtigung prüfen wir, ob das in Ihrem Fall geht." },
+    { q: "Ist Vinyl für Küche und Bad geeignet?", a: "Viele Vinyl- und Designbeläge sind wasserfest und daher gut für Küche und Bad geeignet." },
+    { q: "Wie lange dauert die Verlegung?", a: "Ein normales Zimmer ist meist an einem Tag fertig, eine ganze Wohnung in wenigen Tagen." },
+  ],
+  schutz: [
+    { q: "Reicht es, Schimmel zu überstreichen?", a: "Nein. Der Befall muss fachgerecht entfernt und die Ursache gefunden werden, sonst kommt er wieder." },
+    { q: "Woher kommt Schimmel in der Wohnung?", a: "Häufig durch zu hohe Luftfeuchtigkeit, Wärmebrücken oder Feuchtigkeit im Mauerwerk. Wir schauen uns das vor Ort an." },
+    { q: "Ab wann sollte ein Fachbetrieb kommen?", a: "Bei größeren Flächen, wiederkehrendem Befall oder wenn Kinder oder Allergiker im Haushalt leben, sollten Sie nicht selbst Hand anlegen." },
+  ],
+};
+const GENERIC_FAQ: Faq[] = [
+  { q: "Was kostet die Leistung?", a: "Das hängt von Fläche, Untergrund und Aufwand ab. Nach einer kostenlosen Besichtigung erhalten Sie ein schriftliches, verbindliches Angebot." },
+  { q: "Wie schnell bekomme ich einen Termin?", a: "Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen Besichtigungstermin." },
+  { q: "Arbeiten Sie auch für Gewerbekunden und Hausverwaltungen?", a: "Ja, wir arbeiten für Privatkunden ebenso wie für Gewerbe, Vermieter und Hausverwaltungen." },
+];
+
+export function serviceIncluded(sv: Service): string[] {
+  const own = (sv.included ?? []).map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
+  return own.length ? own : SERVICE_DEFAULT_INCLUDED[serviceIcon(sv)] ?? GENERIC_INCLUDED;
+}
+
+export function serviceFaq(sv: Service): Faq[] {
+  const own = (sv.faq ?? []).filter((f) => String(f?.q ?? "").trim() && String(f?.a ?? "").trim()).slice(0, 8);
+  return own.length ? own : SERVICE_DEFAULT_FAQ[serviceIcon(sv)] ?? GENERIC_FAQ;
+}
+
+/** Vorschläge für den Editor (GET /api/site?action=vorschlaege&icon=haus) */
+export function serviceSuggestions(icon: string) {
+  const sv: Service = { icon: SERVICE_ICONS[icon] ? icon : "stern" };
+  return { details: serviceDetails(sv), included: serviceIncluded(sv), faq: serviceFaq(sv) };
+}
+
 export function serviceDetails(sv: Service): string {
   const own = String(sv.details ?? "").trim();
   return own || SERVICE_DEFAULT_TEXT[serviceIcon(sv)] || SERVICE_DEFAULT_TEXT.stern;
@@ -733,11 +820,14 @@ function refsForService(sv: Service, refs: Reference[]): Reference[] {
   });
 }
 
-export function findService(d: SiteData, pageSlug: string): { service: Service; index: number; slug: string } | null {
+export function findService(d: SiteData, pageSlug: string): { service: Service; index: number; slug: string; moved?: boolean } | null {
   const services = servicesOf(d);
   const slugs = serviceSlugs(services);
   const i = slugs.indexOf(pageSlug);
-  return i >= 0 ? { service: services[i], index: i, slug: slugs[i] } : null;
+  if (i >= 0) return { service: services[i], index: i, slug: slugs[i] };
+  // Alte Adresse nach Umbenennen -> Weiterleitung
+  const j = services.findIndex((sv) => (sv.aliases ?? []).includes(pageSlug));
+  return j >= 0 ? { service: services[j], index: j, slug: slugs[j], moved: true } : null;
 }
 
 export function renderService(d: SiteData, ctx: Ctx, found: { service: Service; slug: string }): string {
@@ -760,19 +850,33 @@ export function renderService(d: SiteData, ctx: Ctx, found: { service: Service; 
   const refs = (matching.length ? matching : allRefs).slice(0, 6);
   const pageCtx: Ctx = { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/${found.slug}` };
 
-  const hero = `<section class="hero sub"><div class="wrap grid">
+  const img = safeUrl(sv.image);
+  const hero = `<section class="hero sub${img ? " has-img" : ""}"${img ? ` style="--hero-img:url('${esc(img)}')"` : ""}><div class="wrap grid">
 <div><nav class="crumbs" aria-label="Brotkrumen"><a href="${ctx.base}${ctx.q ?? ""}">Startseite</a> › <a href="${ctx.base}${ctx.q ?? ""}#leistungen">Leistungen</a> › <span>${esc(title)}</span></nav>
 <h1>${esc(h1)}</h1><p class="lead">${esc(lead)}</p>
 <div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
+${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
 ${rv ? `<p class="rating-line">${stars(rv.avg)} <a href="#bewertungen">${fmtAvg(rv.avg)} von 5 – ${rv.count} Kundenbewertung${rv.count === 1 ? "" : "en"}</a></p>` : ""}
-</div></div></section>`;
+</div>
+${img ? `<div class="pic"><img src="${esc(img)}" alt="${esc(`${title} – ${name}`)}" fetchpriority="high"></div>` : ""}
+</div></section>`;
 
+  const included = serviceIncluded(sv);
+  const faq = serviceFaq(sv);
   const detailHtml = `<section class="block" id="details"><div class="wrap about">
 <div><div class="ico big">${iconSvg(serviceIcon(sv))}</div><h2>${esc(title)} von ${esc(name)}</h2>${paragraphs(serviceDetails(sv))}${
     city ? `<p>Wir sind für Sie in ${esc(city)}${area.filter((a) => a !== city).length ? ` und in ${esc(area.filter((a) => a !== city).slice(0, 6).join(", "))}` : " und Umgebung"} im Einsatz.</p>` : ""
   }</div>
-${highlights.length ? `<div><h3>Darauf können Sie sich verlassen</h3><ul class="facts">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>` : ""}
+<div><h3>Das ist enthalten</h3><ul class="facts">${included.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>
 </div></section>`;
+
+  const faqHtml = faq.length
+    ? `<section class="block" id="fragen"><div class="wrap">
+<div class="sec-head"><h2>Häufige Fragen zu ${esc(title)}</h2></div>
+<div class="faq">${faq
+        .map((f) => `<details><summary>${esc(f.q)}</summary>${paragraphs(f.a)}</details>`)
+        .join("")}</div></div></section>`
+    : "";
 
   const others = services
     .map((o, i) => ({ o, slug: slugs[i] }))
@@ -787,6 +891,7 @@ ${highlights.length ? `<div><h3>Darauf können Sie sich verlassen</h3><ul class=
     hero +
     alternate([
       detailHtml,
+      faqHtml,
       processSection(d, s),
       s.references ? refsSection(refs, matching.length ? `Projekte: ${title}` : "Aus unseren letzten Projekten", "Ein Auszug aus unseren abgeschlossenen Arbeiten.") : "",
       reviewsSection(rv, 3),
@@ -803,9 +908,19 @@ ${highlights.length ? `<div><h3>Darauf können Sie sich verlassen</h3><ul class=
   return page(d, pageCtx, pageTitle.slice(0, 70), description.slice(0, 160), body, {
     home: false,
     index: !ctx.preview,
-    jsonLd: serviceJsonLd(d, pageCtx, sv),
+    jsonLd: serviceJsonLd(d, pageCtx, sv) + faqJsonLd(faq),
     script: true,
   });
+}
+
+function faqJsonLd(faq: Faq[]): string {
+  if (!faq.length) return "";
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
 function serviceJsonLd(d: SiteData, ctx: Ctx, sv: Service): string {
@@ -816,6 +931,7 @@ function serviceJsonLd(d: SiteData, ctx: Ctx, sv: Service): string {
     name: sv.title,
     serviceType: sv.title,
     description: sv.text || undefined,
+    image: safeUrl(sv.image) || undefined,
     url: ctx.canonical,
     areaServed: areaList(d.service_area).map((n) => ({ "@type": "City", name: n })),
     provider: {
@@ -939,6 +1055,10 @@ const HTML_HEADERS = { "content-type": "text/html; charset=utf-8", "x-content-ty
 
 export async function handle(request: Request): Promise<Response> {
   const url = new URL(request.url);
+  // Vorschläge für den Editor in der App (gleiche Texte wie auf den Websites)
+  if (url.searchParams.get("action") === "vorschlaege") {
+    return Response.json(serviceSuggestions(url.searchParams.get("icon") || ""), { headers: { "cache-control": "public, max-age=3600" } });
+  }
   const origin = env("SITE_ORIGIN") || "https://maler-saas.com";
   const slug = (url.searchParams.get("slug") || "").toLowerCase();
   if (!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)) return notFound(origin);
@@ -1043,6 +1163,7 @@ export async function handle(request: Request): Promise<Response> {
   else {
     const found = sectionsOf(data).services && /^[a-z0-9-]{1,70}$/.test(pagePath) ? findService(data, pagePath) : null;
     if (!found) return notFound(origin);
+    if (found.moved) return new Response(null, { status: 301, headers: { location: `${base}/${found.slug}${ctx.q ?? ""}`, "cache-control": cache } });
     html = renderService(data, ctx, found);
   }
 
