@@ -87,3 +87,8 @@ Kundenportal, URLs ohne Parameter. Muss im Vercel-Projekt unter „Analytics“ 
 2. Optional in Vercel (Project → Settings → Environment Variables) für E-Mails bei neuen Anfragen:
    `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`.
 3. Branch pushen → Vercel erstellt eine Vorschau-Version, dort `/w/<slug>?vorschau=…` testen.
+
+## Online-Terminbuchung (Reiter „Termine“)
+- Einstellungen in `websites.booking` (Migration `20261103220000_website_terminbuchung.sql`), „Vom KI-Telefon übernehmen“ liest `ai_phone_settings`.
+- Edge-Funktion `website-booking` (öffentlich, `--no-verify-jwt`): `action=slots` (freie Termine) und `action=book` (Termin mit `source = 'website'`, Anfrage, E-Mails über Brevo). Rechenlogik aus `ai-phone/slots.ts`.
+- Website: Bereich `#termin` nur bei `booking_enabled`; im Terminkalender mit 🌐 markiert.

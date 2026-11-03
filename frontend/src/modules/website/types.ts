@@ -48,6 +48,8 @@ export type Website = {
   opening_hours: string | null;
   whatsapp_number?: string | null;
   faq?: WebsiteFaq[];
+  /** Online-Terminbuchung (undefined = Datenbank-Update fehlt noch, null = nie eingestellt) */
+  booking?: WebsiteBooking | null;
   sections: WebsiteSections;
   contact_form: boolean;
   seo_title: string | null;
@@ -367,3 +369,53 @@ export function imprintGaps(company: CompanyInfo | null, w: Pick<Website, "owner
   if (!w.owner_name) gaps.push("Inhaber bzw. Geschäftsführer");
   return gaps;
 }
+
+// ---------------------------------------------------------------------
+// Online-Terminbuchung (Besichtigungen)
+// ---------------------------------------------------------------------
+export type WebsiteBooking = {
+  enabled: boolean;
+  visit_duration_minutes: number;
+  buffer_minutes: number;
+  min_notice_hours: number;
+  booking_horizon_days: number;
+  slot_step_minutes: number;
+  timezone: string;
+  availability: Record<string, [string, string][]>;
+};
+
+export const DEFAULT_BOOKING: WebsiteBooking = {
+  enabled: false,
+  visit_duration_minutes: 60,
+  buffer_minutes: 30,
+  min_notice_hours: 24,
+  booking_horizon_days: 21,
+  slot_step_minutes: 30,
+  timezone: "Europe/Berlin",
+  availability: {
+    "1": [["09:00", "12:00"], ["13:00", "17:00"]],
+    "2": [["09:00", "12:00"], ["13:00", "17:00"]],
+    "3": [["09:00", "12:00"], ["13:00", "17:00"]],
+    "4": [["09:00", "12:00"], ["13:00", "17:00"]],
+    "5": [["09:00", "13:00"]],
+    "6": [],
+    "7": [],
+  },
+};
+
+export const BOOKING_WEEKDAYS = [
+  { key: "1", label: "Montag" },
+  { key: "2", label: "Dienstag" },
+  { key: "3", label: "Mittwoch" },
+  { key: "4", label: "Donnerstag" },
+  { key: "5", label: "Freitag" },
+  { key: "6", label: "Samstag" },
+  { key: "7", label: "Sonntag" },
+];
+
+export const BOOKING_TIMEZONES = [
+  { value: "Europe/Berlin", label: "Deutschland (Berlin)" },
+  { value: "Europe/Vienna", label: "Österreich (Wien)" },
+  { value: "Europe/Zurich", label: "Schweiz (Zürich)" },
+  { value: "Europe/Madrid", label: "Spanien (Madrid/Palma)" },
+];

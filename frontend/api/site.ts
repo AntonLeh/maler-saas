@@ -52,6 +52,7 @@ export type SiteData = {
   service_area?: string | null;
   opening_hours?: string | null;
   whatsapp_number?: string | null;
+  booking_enabled?: boolean;
   faq?: Faq[] | null;
   sections?: Record<string, boolean>;
   contact_form?: boolean;
@@ -249,6 +250,22 @@ f.addEventListener("submit",function(e){var files=pick();if(!files.length||busy)
 Promise.all(files.map(shrink)).then(function(list){list.filter(Boolean).forEach(function(d){var h=document.createElement("input");h.type="hidden";h.name="foto";h.value=d;f.appendChild(h)});b.textContent="Wird gesendet …";HTMLFormElement.prototype.submit.call(f)})})})();`;
 
 /**
+ * Online-Terminbuchung: lädt freie Besichtigungstermine von der Funktion website-booking,
+ * zeigt Tage und Uhrzeiten und schickt die Buchung ab. Alle Texte über textContent (kein HTML aus Daten).
+ */
+const BOOKING_SCRIPT = `(function(){var root=document.getElementById("tb");if(!root)return;var api=root.getAttribute("data-api"),site=root.getAttribute("data-site"),started=Date.now();
+var daysEl=root.querySelector(".tb-days"),timesEl=root.querySelector(".tb-times"),form=root.querySelector("form"),msg=root.querySelector(".tb-msg"),chosen=root.querySelector(".tb-chosen"),data=null,day=0,pick=null;
+function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
+function say(t,kind){msg.textContent=t||"";msg.className="tb-msg"+(kind?" "+kind:"");msg.hidden=!t}
+function drawDays(){daysEl.innerHTML="";data.days.forEach(function(d,i){var b=el("button","tb-day"+(i===day?" on":""));b.type="button";b.setAttribute("aria-pressed",i===day?"true":"false");var p=d.label.split(", ");b.appendChild(el("span","wd",p[0].slice(0,2)));b.appendChild(el("span","dt",p[1]||""));b.appendChild(el("span","n",d.times.length+" frei"));b.onclick=function(){day=i;pick=null;drawDays();drawTimes();form.hidden=true};daysEl.appendChild(b)})}
+function drawTimes(){timesEl.innerHTML="";var d=data.days[day];timesEl.appendChild(el("p","tb-sub",d.label));var g=el("div","tb-grid");d.times.forEach(function(t){var b=el("button","tb-time"+(pick===t.start?" on":""),t.time);b.type="button";b.onclick=function(){pick=t.start;drawTimes();chosen.textContent=d.label+" um "+t.time+" Uhr (ca. "+data.duration+" Minuten)";form.hidden=false;say("");var f=form.querySelector("input[name=name]");if(f&&f.focus)f.focus({preventScroll:true});form.scrollIntoView({behavior:"smooth",block:"nearest"})};g.appendChild(b)});timesEl.appendChild(g)}
+function load(keep,note){say(note||"Freie Termine werden geladen …",note?"err":"");fetch(api+"?action=slots&site="+encodeURIComponent(site)).then(function(r){return r.json()}).then(function(j){if(!j.ok||!j.days||!j.days.length){root.classList.add("tb-none");say(j.ok?"Zurzeit sind online keine Termine frei. Rufen Sie uns gerne an oder schreiben Sie uns.":(j.error||"Online-Buchung gerade nicht möglich."),"err");return}data=j;if(!keep)day=0;if(day>=data.days.length)day=0;say(note||"",note?"err":"");drawDays();drawTimes()}).catch(function(){say("Die freien Termine konnten gerade nicht geladen werden. Bitte rufen Sie uns an oder nutzen Sie das Kontaktformular.","err")})}
+form.addEventListener("submit",function(e){e.preventDefault();if(!pick)return;var b=form.querySelector("button[type=submit]");b.disabled=true;b.textContent="Wird gebucht …";var fd=new FormData(form),body={site:site,start:pick,t:started};fd.forEach(function(v,k){body[k]=String(v)});
+fetch(api+"?action=book",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return{s:r.status,j:j}})}).then(function(x){b.disabled=false;b.textContent="Termin verbindlich anfragen";if(x.j.ok){root.innerHTML="";var ok=el("div","notice ok");ok.setAttribute("role","status");ok.appendChild(el("strong",null,"Vielen Dank! Ihr Termin ist eingetragen"+(x.j.label?": "+x.j.label:"")+"."));ok.appendChild(el("p",null,body.email?"Sie erhalten gleich eine Bestätigung per E-Mail. Wir melden uns, falls sich etwas ändert.":"Wir melden uns, falls sich etwas ändert."));root.appendChild(ok);return}
+if(x.j.code==="taken"){pick=null;form.hidden=true;load(true,x.j.error)}else say(x.j.error||"Die Buchung hat nicht geklappt.","err")}).catch(function(){b.disabled=false;b.textContent="Termin verbindlich anfragen";say("Die Buchung hat gerade nicht geklappt. Bitte rufen Sie uns an.","err")})});
+load(false)})();`;
+
+/**
  * Besucherzähler ohne Cookies und ohne Kennungen: meldet nur Seite und Herkunft (Google, Bing, soziale Netzwerke,
  * direkt, andere). Navigation innerhalb der Website zählt als Seitenaufruf, aber nicht als neuer Besuch.
  */
@@ -400,6 +417,24 @@ form.lead input:focus,form.lead textarea:focus{outline:3px solid color-mix(in sr
 form.lead .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 form.lead .hp{position:absolute;left:-5000px;width:1px;height:1px;overflow:hidden}
 form.lead small{color:var(--muted);font-weight:400}
+.booking{display:grid;grid-template-columns:.8fr 1.2fr;gap:40px;align-items:start}
+.tb{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:grid;gap:16px}
+.tb-days{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.tb-day{flex:0 0 auto;scroll-snap-align:start;display:grid;justify-items:center;gap:1px;min-width:72px;padding:10px 8px;border:1px solid #c9ced6;border-radius:calc(var(--radius) * .8);background:#fff;font:inherit;cursor:pointer;color:var(--ink)}
+.tb-day .wd{font-weight:700}.tb-day .dt{font-size:.92rem}.tb-day .n{font-size:.75rem;color:var(--muted)}
+.tb-day.on{background:var(--accent);border-color:var(--accent);color:#fff}.tb-day.on .n{color:rgba(255,255,255,.85)}
+.tb-sub{margin:0 0 8px;font-weight:700}
+.tb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+.tb-time{padding:10px 6px;border:1px solid #c9ced6;border-radius:calc(var(--radius) * .7);background:#fff;font:inherit;font-weight:600;cursor:pointer;color:var(--ink)}
+.tb-day:hover,.tb-time:hover{border-color:var(--accent)}
+.tb-time.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb-day:focus-visible,.tb-time:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.tb form.lead{border:0;padding:0;border-top:1px solid var(--line);padding-top:18px;border-radius:0}
+.tb-chosen{margin:0;font-weight:700;color:var(--accent-dark)}
+.tb-msg{margin:0;color:var(--muted)}.tb-msg.err{color:#8a1f1f;font-weight:600}
+.tb-none .tb-days,.tb-none .tb-times{display:none}
+.booking .steps-mini{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+.booking .steps-mini li::before{content:"✓";color:var(--accent);margin-right:10px;font-weight:700}
 .notice{padding:14px 18px;border-radius:var(--radius);margin-bottom:16px;font-weight:600}
 .notice.ok{background:#e7f6ec;color:#1d5b33}.notice.err{background:#fdecec;color:#8a1f1f}
 .preview{background:#fff4d6;color:#6b4e00;text-align:center;padding:8px 12px;font-size:.9rem;font-weight:600}
@@ -414,7 +449,7 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
 @media (max-width:860px){
  nav.main{display:none}
  .hero{padding:44px 0 40px}.theme-modern .hero{padding:72px 0 64px}
- .hero .grid,.about,.contact{grid-template-columns:1fr;gap:28px}
+ .hero .grid,.about,.contact,.booking{grid-template-columns:1fr;gap:28px}
  .steps{grid-template-columns:1fr 1fr}
  .gal{grid-template-columns:1fr 1fr}
  section.block{padding:52px 0}
@@ -446,6 +481,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
     s.reviews && reviewSummary(d) ? `<a href="${link("bewertungen")}">Bewertungen</a>` : "",
     s.about && (d.about_text || (d.highlights?.length ?? 0) > 0 || safeUrl(d.about_image_url)) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
+    d.booking_enabled ? `<a href="${link("termin")}">Termin buchen</a>` : "",
     s.contact ? `<a href="${link("kontakt")}">Kontakt</a>` : "",
   ].join("");
   return `${ctx.preview ? `<div class="preview">Vorschau – diese Seite ist noch nicht veröffentlicht.</div>` : ""}
@@ -696,6 +732,35 @@ ${
 </div></section>`;
 }
 
+/** Besichtigungstermin online buchen (nur wenn im Betrieb eingeschaltet) */
+function bookingSection(d: SiteData, ctx: Ctx): string {
+  if (!d.booking_enabled) return "";
+  const phone = d.company.phone?.trim();
+  return `<section class="block" id="termin"><div class="wrap booking">
+<div><h2>Besichtigungstermin online buchen</h2><p>Suchen Sie sich einfach einen freien Termin aus – wir kommen zu Ihnen, schauen uns alles vor Ort an und erstellen danach Ihr Angebot.</p>
+<ul class="steps-mini"><li>Kostenlos und unverbindlich</li><li>Freie Termine in Echtzeit</li><li>Bestätigung per E-Mail</li></ul>
+${phone ? `<p>Lieber persönlich? Rufen Sie uns an: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a></p>` : ""}</div>
+<div class="tb" id="tb" data-api="${esc(`${SUPABASE_URL}/functions/v1/website-booking`)}" data-site="${esc(d.slug)}">
+<p class="tb-msg" role="status">Freie Termine werden geladen …</p>
+<noscript><p>Für die Online-Terminbuchung wird JavaScript benötigt. Rufen Sie uns gerne an oder nutzen Sie das Kontaktformular.</p></noscript>
+<div class="tb-days" role="group" aria-label="Tag auswählen"></div>
+<div class="tb-times"></div>
+<form class="lead" hidden>
+<p class="tb-chosen"></p>
+<div class="two"><label>Ihr Name *<input name="name" required maxlength="120" autocomplete="name"></label>
+<label>Telefon *<input name="phone" type="tel" required maxlength="40" autocomplete="tel"></label></div>
+<label>E-Mail <small>(für die Bestätigung)</small><input name="email" type="email" maxlength="160" autocomplete="email"></label>
+<label>Adresse des Objekts *<input name="address" required maxlength="300" autocomplete="street-address" placeholder="Straße, Hausnummer, Ort"></label>
+<label>Worum geht es?<textarea name="concern" rows="3" maxlength="1500" placeholder="z. B. Fassade streichen, Einfamilienhaus"></textarea></label>
+<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<small>Ihre Angaben verwenden wir nur für den Termin, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
+<button class="btn" type="submit">Termin verbindlich anfragen</button>
+</form>
+</div>
+<script>${BOOKING_SCRIPT}</script>
+</div></section>`;
+}
+
 /** Kontaktbereich mit Formular. preselect: Leistung, die schon angeklickt ist; page: Unterseite für die Rückkehr nach dem Absenden */
 function contactSection(d: SiteData, ctx: Ctx, s: Sections, opts: { preselect?: string; page?: string; intro?: string } = {}): string {
   if (!s.contact) return "";
@@ -765,7 +830,7 @@ export function renderHome(d: SiteData, ctx: Ctx): string {
 
   const hero = `<section class="hero${heroImg ? " has-img" : ""}"${heroImg ? ` style="--hero-img:url('${esc(heroImg)}')"` : ""}><div class="wrap grid">
 <div><h1>${esc(h1)}</h1><p class="lead">${esc(sub)}</p>
-<div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
+<div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${d.booking_enabled ? `<a class="btn ghost" href="#termin">📅 Termin buchen</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
 ${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
 ${rv ? `<p class="rating-line">${stars(rv.avg)} <a href="#bewertungen">${fmtAvg(rv.avg)} von 5 – ${rv.count} Kundenbewertung${rv.count === 1 ? "" : "en"}</a></p>` : ""}
 </div>
@@ -836,6 +901,7 @@ ${facts}
       aboutHtml,
       areaHtml,
       faqHtml,
+      bookingSection(d, ctx),
       contactSection(d, ctx, s),
     ]);
   return page(d, ctx, title.slice(0, 70), description.slice(0, 160), body, { home: true, index: !ctx.preview, jsonLd: faqJsonLd(faq) });
@@ -1036,7 +1102,7 @@ export function renderService(d: SiteData, ctx: Ctx, found: { service: Service; 
   const hero = `<section class="hero sub${img ? " has-img" : ""}"${img ? ` style="--hero-img:url('${esc(img)}')"` : ""}><div class="wrap grid">
 <div><nav class="crumbs" aria-label="Brotkrumen"><a href="${homeHref(ctx)}">Startseite</a> › <a href="${homeHref(ctx)}#leistungen">Leistungen</a> › <span>${esc(title)}</span></nav>
 <h1>${esc(h1)}</h1><p class="lead">${esc(lead)}</p>
-<div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
+<div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${d.booking_enabled ? `<a class="btn ghost" href="${homeHref(ctx)}#termin">📅 Termin buchen</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
 ${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
 ${rv ? `<p class="rating-line">${stars(rv.avg)} <a href="#bewertungen">${fmtAvg(rv.avg)} von 5 – ${rv.count} Kundenbewertung${rv.count === 1 ? "" : "en"}</a></p>` : ""}
 </div>
@@ -1176,6 +1242,11 @@ ${
 ${
   waHref(d.whatsapp_number, "")
     ? `<h2>WhatsApp</h2><p>Auf dieser Website gibt es einen Link „WhatsApp“. Beim bloßen Aufruf der Website werden keine Daten an WhatsApp übertragen. Erst wenn Sie den Link anklicken, wird WhatsApp (WhatsApp Ireland Limited, Dublin, Irland, ein Unternehmen der Meta-Gruppe) geöffnet; dabei gelten die Datenschutzbestimmungen von WhatsApp. Schreiben Sie uns über WhatsApp, verarbeiten wir Ihre Nachricht und Telefonnummer zur Bearbeitung Ihrer Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Alternativ erreichen Sie uns jederzeit per Telefon, E-Mail oder Kontaktformular.</p>`
+    : ""
+}
+${
+  d.booking_enabled
+    ? `<h2>Online-Terminbuchung</h2><p>Wenn Sie über diese Website einen Besichtigungstermin buchen, verarbeiten wir Ihren Namen, Ihre Telefonnummer, ggf. Ihre E-Mail-Adresse, die Adresse des Objekts, Ihr Anliegen und den gewählten Termin. Die Angaben werden in unserem Terminkalender (Software „Maler-SaaS“, Speicherung bei Supabase) eingetragen, damit wir den Termin wahrnehmen und vorbereiten können. Haben Sie eine E-Mail-Adresse angegeben, senden wir Ihnen eine Terminbestätigung; der Versand erfolgt über den E-Mail-Dienstleister Brevo (Sendinblue GmbH, Berlin). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags). Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
     : ""
 }
 <h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten und Kundenbewertungen</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift. Kundenbewertungen (Sterne, Kommentar, Vorname mit Anfangsbuchstabe des Nachnamens bzw. Firmenname und Ort) veröffentlichen wir nur, wenn die Kundin oder der Kunde beim Bewerten ausdrücklich eingewilligt hat (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden; eine kurze Nachricht an die oben genannten Kontaktdaten genügt. In den angezeigten Durchschnittswert fließen alle Bewertungen ohne Namen ein.</p>

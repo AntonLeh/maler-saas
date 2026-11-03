@@ -84,6 +84,7 @@ export default function AppointmentDetails({
         <StatusBadge status={a.status} />
         <span className="tk-type">{typeLabel(a.appointment_type)}</span>
         {a.source === "ki_telefon" && <span className="tk-type">🤖 KI-Telefon</span>}
+        {a.source === "website" && <span className="tk-type">🌐 Website</span>}
       </div>
 
       <dl className="tk-detail-list">

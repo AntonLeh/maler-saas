@@ -124,6 +124,7 @@ export function ListView({ appointments, nameFor, onSelect }: Omit<ViewProps, "a
               <span className="tk-list-main">
                 <strong>
                   {a.source === "ki_telefon" && "🤖 "}
+                  {a.source === "website" && "🌐 "}
                   {a.title}
                 </strong>
                 {a.location && <span className="tk-muted">{a.location}</span>}
