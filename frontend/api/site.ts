@@ -301,9 +301,32 @@ header.top .wrap{display:flex;align-items:center;gap:16px;min-height:68px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:700;font-family:var(--head);font-size:1.15rem;min-width:0}
 .brand img{height:44px;width:auto;max-width:160px;object-fit:contain}
 .brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-nav.main{margin-left:auto;display:flex;gap:22px}
-nav.main a{color:var(--ink);text-decoration:none;font-weight:500;font-size:.98rem}
-nav.main a:hover{color:var(--accent)}
+nav.main{margin-left:auto;display:flex;align-items:center;gap:20px;flex:none}
+nav.main a{color:var(--ink);text-decoration:none;font-weight:500;font-size:.97rem;white-space:nowrap;padding:6px 0;border-bottom:2px solid transparent}
+nav.main a:hover{color:var(--accent-dark);border-bottom-color:var(--accent)}
+nav.main a.hl{color:var(--accent-dark);font-weight:700}
+header.top .wrap{flex-wrap:nowrap}
+.brand{flex:0 0 auto}
+header.top.compact .brand{flex:1 1 auto}
+header.top.compact details.menu{margin-left:auto}
+.top .call{white-space:nowrap;flex:none}
+details.menu{display:none;position:relative;flex:none}
+details.menu summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:var(--radius);font-weight:600;color:var(--ink);background:#fff;user-select:none}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu summary svg{width:20px;height:20px}
+details.menu[open] summary{border-color:var(--accent);color:var(--accent-dark)}
+.menu-panel{position:absolute;right:0;top:calc(100% + 10px);min-width:240px;background:#fff;border:1px solid var(--line);border-radius:calc(var(--radius) * 1.2);box-shadow:0 18px 40px rgba(20,30,45,.16);padding:8px;display:grid;z-index:40}
+.menu-panel a{padding:12px 14px;border-radius:calc(var(--radius) * .8);color:var(--ink);text-decoration:none;font-weight:600}
+.menu-panel a:hover{background:var(--soft);color:var(--accent-dark)}
+.menu-panel a.hl{color:var(--accent-dark)}
+.menu-panel a.tel{margin-top:6px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px}
+.top .call .ph{flex:none}
+header.top .wrap{max-width:1240px}
+header.top.tight nav.main{gap:16px}
+header.top.tight .call{padding:9px 13px}
+header.top.tight .call .num{display:none}
+header.top.compact nav.main{display:none}
+header.top.compact details.menu{display:block}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:var(--radius);font-weight:700;text-decoration:none;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:1rem;font-family:inherit}
 .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
 .btn.ghost{background:transparent;color:var(--accent-dark)}
@@ -458,6 +481,8 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
 .wa-float:hover{background:#17733e}
 @media (max-width:860px){
  nav.main{display:none}
+ details.menu{display:block;margin-left:auto}
+ .brand{flex:1 1 auto}
  .hero{padding:44px 0 40px}.theme-modern .hero{padding:72px 0 64px}
  .hero .grid,.about,.contact,.booking{grid-template-columns:1fr;gap:28px}
  .steps{grid-template-columns:1fr 1fr}
@@ -477,6 +502,17 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
 `;
 }
 
+/**
+ * Kopfleiste: Passt das Menü nicht in eine Zeile, wird es automatisch zum Knopf „Menü“ (Klasse compact).
+ * Menü schließt nach einem Klick auf einen Eintrag oder außerhalb. Ohne JavaScript greift die Handy-Ansicht per CSS.
+ */
+const PHONE_ICON = `<svg class="ph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>`;
+const HEADER_SCRIPT = `(function(){var h=document.currentScript.closest("header.top");if(!h)return;var w=h.querySelector(".wrap"),m=h.querySelector("details.menu");
+function over(){return w.scrollWidth>w.clientWidth+1}
+function fit(){h.classList.remove("tight","compact");if(over()){h.classList.add("tight");if(over()){h.classList.remove("tight");h.classList.add("compact")}}}
+fit();addEventListener("resize",fit);addEventListener("load",fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+if(m){m.addEventListener("click",function(e){if(e.target.closest(".menu-panel a"))m.open=false});document.addEventListener("click",function(e){if(m.open&&!m.contains(e.target))m.open=false});document.addEventListener("keydown",function(e){if(e.key==="Escape")m.open=false})}})();`;
+
 /** Link zur Startseite (bei eigener Adresse "/" statt "") */
 const homeHref = (ctx: Ctx) => `${ctx.base || "/"}${ctx.q ?? ""}`;
 
@@ -491,7 +527,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
     s.reviews && reviewSummary(d) ? `<a href="${link("bewertungen")}">Bewertungen</a>` : "",
     s.about && (d.about_text || (d.highlights?.length ?? 0) > 0 || safeUrl(d.about_image_url)) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
-    d.booking_enabled ? `<a href="${link("termin")}">Termin buchen</a>` : "",
+    d.booking_enabled ? `<a class="hl" href="${link("termin")}">Termin buchen</a>` : "",
     jobsOf(d).length ? `<a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a>` : "",
     s.contact ? `<a href="${link("kontakt")}">Kontakt</a>` : "",
   ].join("");
@@ -499,7 +535,9 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
 <header class="top"><div class="wrap">
 <a class="brand" href="${homeHref(ctx)}">${logo ? `<img src="${esc(logo)}" alt="${esc(name)} Logo">` : ""}<span>${esc(name)}</span></a>
 <nav class="main" aria-label="Hauptnavigation">${nav}</nav>
-${phone ? `<a class="btn call" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}
+${phone ? `<a class="btn call" href="tel:${esc(telHref(phone))}" aria-label="Anrufen: ${esc(phone)}" title="${esc(phone)}">${PHONE_ICON}<span class="num"> ${esc(phone)}</span></a>` : ""}
+${nav ? `<details class="menu"><summary aria-label="Menü öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menü</summary><nav class="menu-panel" aria-label="Menü">${nav}${phone ? `<a class="tel" href="tel:${esc(telHref(phone))}">${PHONE_ICON} ${esc(phone)}</a>` : ""}</nav></details>` : ""}
+<script>${HEADER_SCRIPT}</script>
 </div></header>`;
 }
 
