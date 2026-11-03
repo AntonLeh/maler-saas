@@ -25,3 +25,7 @@ Empfehlung: zuerst 1, 2, 3, dann 6.
 ✅ 13. „Wir stellen ein“: Karriereseite, Stellenseiten (Google for Jobs), Bewerbungen mit Lebenslauf
 ✅ 14. Fachkräfte-Pool auf maler-saas.com (Maler, Helfer, Subunternehmer; kostenlos; Kontaktfreigabe durch den Bewerber)
    ↳ umgesetzt: maler-saas.com/fachkraefte (Anmeldung, Profil, Anfrage beantworten), App-Modul „Fachkräfte“, Funktion talent-pool
+
+## Später: Landingpage maler-saas.com überarbeiten
+Neue Funktionen fehlen noch auf der Startseite und den Unterseiten: Firmen-Website (Subdomain/eigene Domain, Leistungsseiten, Projektseiten,
+Bewertungen, Online-Terminbuchung, „Wir stellen ein“, Besucherzähler, KI-Schreibhilfe), KI-Telefon, Fachkräfte-Pool (Link farblich hervorheben).
