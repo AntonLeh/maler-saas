@@ -1552,10 +1552,27 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-async function sendApplicationMail(to: string, company: string, jobTitle: string, a: Application, cv: { name: string; content: string } | null, siteUrl: string) {
+/** Dateiname für den E-Mail-Anhang: nur einfache Zeichen und passende Endung (sonst lehnt Brevo die ganze E-Mail ab) */
+export function attachmentName(name: string, mime: string | null | undefined): string {
+  const ext = mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : "pdf";
+  const stem =
+    String(name || "")
+      .replace(/\.[A-Za-z0-9]{1,5}$/, "")
+      .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss")
+      .normalize("NFKD")
+      .replace(/[^A-Za-z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 60) || "Lebenslauf";
+  return `${stem}.${ext}`;
+}
+
+async function sendApplicationMail(to: string, company: string, jobTitle: string, a: Application, cv: { name: string; content: string; mime: string } | null, siteUrl: string) {
   const key = env("BREVO_API_KEY");
   const sender = env("BREVO_SENDER_EMAIL");
-  if (!key || !sender || !to) return;
+  if (!key || !sender || !to) {
+    console.error("bewerbung: keine E-Mail gesendet", { to: !!to, key: !!key, sender: !!sender });
+    return;
+  }
   const rows = [
     ["Stelle", jobTitle],
     ["Telefon", a.phone],
@@ -1564,24 +1581,35 @@ async function sendApplicationMail(to: string, company: string, jobTitle: string
     ["Verfügbar ab", a.available],
     ["Führerschein B", a.license ? "ja" : ""],
   ].filter((r) => r[1]);
-  const html = `<p>Neue Bewerbung über Ihre Website:</p>
+  const html = (withCv: boolean) => `<p>Neue Bewerbung über Ihre Website:</p>
 <p><strong>${esc(a.name)}</strong></p>
 <table cellpadding="4">${rows.map((r) => `<tr><td style="color:#666">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>
 ${a.message ? `<p>${esc(a.message).replace(/\n/g, "<br>")}</p>` : ""}
-${cv ? "<p>Lebenslauf im Anhang.</p>" : ""}
+${cv ? (withCv ? "<p>Lebenslauf im Anhang.</p>" : "<p>Ein Lebenslauf wurde mitgeschickt – Sie finden ihn in Maler-SaaS bei der Bewerbung.</p>") : ""}
 <p>Alle Bewerbungen finden Sie in Maler-SaaS unter <em>Website → Stellen</em>. Bitte löschen Sie Bewerbungen, die Sie nicht mehr brauchen – spätestens nach 6 Monaten geschieht das automatisch.</p><p style="color:#888">${esc(siteUrl)}</p>`;
-  await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      sender: { email: sender, name: "Maler-SaaS Website" },
-      to: [{ email: to, name: company || undefined }],
-      replyTo: a.email ? { email: a.email, name: a.name } : undefined,
-      subject: `Neue Bewerbung: ${jobTitle} – ${a.name}`,
-      htmlContent: html,
-      attachment: cv ? [{ name: cv.name.replace(/[^A-Za-z0-9ÄÖÜäöüß._ -]/g, "") || "lebenslauf.pdf", content: cv.content }] : undefined,
-    }),
-  }).catch(() => undefined);
+  const send = (withCv: boolean) =>
+    fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        sender: { email: sender, name: "Maler-SaaS Website" },
+        to: [{ email: to, name: company || undefined }],
+        replyTo: a.email ? { email: a.email, name: a.name } : undefined,
+        subject: `Neue Bewerbung: ${jobTitle} – ${a.name}`,
+        htmlContent: html(withCv),
+        attachment: withCv && cv ? [{ name: attachmentName(cv.name, cv.mime), content: cv.content }] : undefined,
+      }),
+    });
+  try {
+    let res = await send(!!cv);
+    if (!res.ok && cv) {
+      console.error("bewerbung: brevo mit anhang", res.status, (await res.text().catch(() => "")).slice(0, 300));
+      res = await send(false); // ohne Anhang erneut – der Lebenslauf liegt ja in der App
+    }
+    if (!res.ok) console.error("bewerbung: brevo", res.status, (await res.text().catch(() => "")).slice(0, 300));
+  } catch (e) {
+    console.error("bewerbung: brevo nicht erreichbar", e);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -1685,7 +1713,7 @@ export async function handle(request: Request): Promise<Response> {
         const err = r?.error === "invalid_email" ? "email" : r?.error === "rate_limited" ? "spaeter" : r?.error === "cv" ? "datei" : "angaben";
         return back(`bfehler=${err}`);
       }
-      await sendApplicationMail(r.notify_email, r.company, r.job_title, app, cv && r.cv_mime ? { name: cvName, content: cv } : null, siteUrl);
+      await sendApplicationMail(r.notify_email, r.company, r.job_title, app, cv && r.cv_mime ? { name: cvName, content: cv, mime: r.cv_mime } : null, siteUrl);
       return back("beworben=1");
     } catch {
       return back("bfehler=server");
