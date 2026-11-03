@@ -6709,11 +6709,14 @@ onReloadOrders={async () => {
 
 <WebsiteButton
   tenantId={userProfile.tenant_id}
-  hasAccess={hasWebsiteAccess(subscription?.plan)}
+  hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
   onOpen={() => setCurrentPage("website")}
 />
 
-<FachkraefteButton onOpen={() => setCurrentPage("fachkraefte")} />
+<FachkraefteButton
+  hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
+  onOpen={() => setCurrentPage("fachkraefte")}
+/>
 
 </section>
                 </>
@@ -12046,7 +12049,7 @@ const businessAdvisor = generateBusinessInsights();
 )}
 
 {currentPage === "website" && isAdmin && userProfile?.tenant_id && (
-  hasWebsiteAccess(subscription?.plan) ? (
+  hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial) ? (
     <WebsitePage
       tenantId={userProfile.tenant_id}
       currentUserId={userProfile.id}
@@ -12056,15 +12059,27 @@ const businessAdvisor = generateBusinessInsights();
   ) : (
     <LockedFeatureCard
       feature="Website"
-      requiredPlan="Professional"
-      description="Ihre eigene Firmen-Website mit Kontaktformular und aktuellen Projekten aus Ihren Aufträgen – fertig eingerichtet, für Handy und Google optimiert."
+      requiredPlan="Enterprise"
+      description="Ihre eigene Firmen-Website mit eigener Domain, Kontaktformular, Online-Terminbuchung, Stellenanzeigen, Kundenbewertungen und aktuellen Projekten aus Ihren Aufträgen – fertig eingerichtet, für Handy und Google optimiert."
       onUpgradeClick={() => setCurrentPage("pricing")}
       onBackClick={openDashboard}
     />
   )
 )}
 
-{currentPage === "fachkraefte" && isAdmin && userProfile?.tenant_id && <FachkraeftePage onBack={openDashboard} />}
+{currentPage === "fachkraefte" && isAdmin && userProfile?.tenant_id && (
+  hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial) ? (
+    <FachkraeftePage onBack={openDashboard} />
+  ) : (
+    <LockedFeatureCard
+      feature="Fachkräfte-Pool"
+      requiredPlan="Enterprise"
+      description="Finden Sie Maler, Helfer und Subunternehmer aus Ihrer Umgebung, die Arbeit suchen – und nehmen Sie mit einem Klick Kontakt auf."
+      onUpgradeClick={() => setCurrentPage("pricing")}
+      onBackClick={openDashboard}
+    />
+  )
+)}
 
 {currentPage === "approval-center" && (
   <ApprovalCenterPage

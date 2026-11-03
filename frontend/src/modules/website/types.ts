@@ -210,8 +210,9 @@ export const DEFAULT_HIGHLIGHTS = ["Meisterbetrieb", "Kostenlose Besichtigung", 
 export const DEFAULT_SECTIONS: WebsiteSections = { services: true, service_photos: false, process: true, faq: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Website für Starter-Tarif gesperrt (Professional, Business, Enterprise) */
-export function hasWebsiteAccess(plan: string | null | undefined): boolean {
-  return plan === "professional" || plan === "business" || plan === "enterprise";
+/** Website (und Fachkräfte-Pool) gehören zum Tarif Enterprise – in der Testphase für alle Tarife */
+export function hasWebsiteAccess(plan: string | null | undefined, status?: string | null, isTrial?: boolean | null): boolean {
+  return plan === "enterprise" || status === "trialing" || isTrial === true;
 }
 
 export const SITE_ORIGIN = "https://maler-saas.com";

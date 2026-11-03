@@ -19,7 +19,9 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SYSTEM_PROMPT, extractResult, sanitize, schemaFor, userPrompt } from "./prompt.ts";
 
-const ALLOWED_PLANS = ["professional", "business", "enterprise"];
+// Website gehört zum Tarif Enterprise – in der Testphase für alle
+const ALLOWED_PLANS = ["enterprise"];
+const planOk = (sub: any) => !!sub && ALLOWED_STATUS.includes(sub.status) && (ALLOWED_PLANS.includes(sub.plan) || sub.status === "trialing");
 const ALLOWED_STATUS = ["active", "trialing", "past_due"];
 const KINDS = ["service", "about", "seo"];
 
@@ -55,8 +57,8 @@ serve(async (req) => {
 
     // ---------- Tarif ----------
     const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", user.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
-    if (!sub || !ALLOWED_PLANS.includes(sub.plan) || !ALLOWED_STATUS.includes(sub.status)) {
-      return json({ ok: false, error: "Die KI-Schreibhilfe gehört zur Website (ab Tarif Professional)." }, 403);
+    if (!planOk(sub)) {
+      return json({ ok: false, error: "Die KI-Schreibhilfe gehört zur Website (Tarif Enterprise)." }, 403);
     }
 
     // ---------- Anfrage ----------

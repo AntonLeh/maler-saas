@@ -29,7 +29,9 @@ const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =
   new Response(JSON.stringify(data), { status, headers: { ...HEADERS, ...extra } });
 
 const ALLOWED_STATUS = ["active", "trialing", "past_due"];
-const ALLOWED_PLANS = ["professional", "business", "enterprise"];
+// Website gehört zum Tarif Enterprise – in der Testphase für alle
+const ALLOWED_PLANS = ["enterprise"];
+const planOk = (sub: any) => !!sub && ALLOWED_STATUS.includes(sub.status) && (ALLOWED_PLANS.includes(sub.plan) || sub.status === "trialing");
 const MAX_BOOKINGS_PER_HOUR = 6;
 const DAY_NAMES = ["", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
@@ -110,7 +112,7 @@ async function findSite(site: string) {
   const settings = bookingSettings(w.booking);
   if (!settings.enabled) return null;
   const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", w.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
-  if (!sub || !ALLOWED_PLANS.includes(sub.plan) || !ALLOWED_STATUS.includes(sub.status)) return null;
+  if (!planOk(sub)) return null;
   return { website: w, settings };
 }
 

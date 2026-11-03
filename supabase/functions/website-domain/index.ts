@@ -18,7 +18,9 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { VercelError, addDomain, domainStatus, normalizeDomain, removeDomain } from "./vercel.ts";
 
-const ALLOWED_PLANS = ["professional", "business", "enterprise"];
+// Website gehört zum Tarif Enterprise – in der Testphase für alle
+const ALLOWED_PLANS = ["enterprise"];
+const planOk = (sub: any) => !!sub && ALLOWED_STATUS.includes(sub.status) && (ALLOWED_PLANS.includes(sub.plan) || sub.status === "trialing");
 const ALLOWED_STATUS = ["active", "trialing", "past_due"];
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -50,8 +52,8 @@ serve(async (req) => {
     const { data: user } = await db.from("app_users").select("id, tenant_id, role_id").eq("auth_user_id", authData.user.id).maybeSingle();
     if (!user || ![1, 2].includes(Number(user.role_id))) return json({ ok: false, error: "Nur Admins dürfen die Domain verwalten." }, 403);
     const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", user.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
-    if (!sub || !ALLOWED_PLANS.includes(sub.plan) || !ALLOWED_STATUS.includes(sub.status)) {
-      return json({ ok: false, error: "Eigene Domains gehören zur Website (ab Tarif Professional)." }, 403);
+    if (!planOk(sub)) {
+      return json({ ok: false, error: "Eigene Domains gehören zur Website (Tarif Enterprise)." }, 403);
     }
     const { data: site } = await db.from("websites").select("tenant_id, slug, custom_domain, custom_domain_status").eq("tenant_id", user.tenant_id).maybeSingle();
     if (!site) return json({ ok: false, error: "Bitte zuerst die Website anlegen." }, 400);

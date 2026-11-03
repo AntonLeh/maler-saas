@@ -120,7 +120,9 @@ async function businessUser(req: Request) {
   const { data: user } = await db.from("app_users").select("id, tenant_id, role_id").eq("auth_user_id", authData.user.id).maybeSingle();
   if (!user || ![1, 2].includes(Number(user.role_id))) return { error: fail("Nur Admins können den Fachkräfte-Pool nutzen.", 403) };
   const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", user.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
-  if (!sub || !ALLOWED_STATUS.includes(sub.status)) return { error: fail("Der Fachkräfte-Pool ist für Kunden mit laufendem Abo.", 403) };
+  // Fachkräfte-Pool gehört zum Tarif Enterprise – in der Testphase für alle
+  if (!sub || !ALLOWED_STATUS.includes(sub.status) || !(sub.plan === "enterprise" || sub.status === "trialing"))
+    return { error: fail("Der Fachkräfte-Pool gehört zum Tarif Enterprise.", 403) };
   const { data: cs } = await db.from("company_settings").select("company_name, zip, city, email, phone").eq("tenant_id", user.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
   return { user, company: cs ?? {} };
 }
