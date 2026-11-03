@@ -212,7 +212,7 @@ export const SITE_ORIGIN = "https://maler-saas.com";
  * Subdomains (betrieb.maler-saas.com) als Hauptadresse – gemeinsam mit der Vercel-Umgebungsvariable
  * SITE_SUBDOMAINS=1 einschalten, sobald *.maler-saas.com in Vercel eingerichtet und getestet ist.
  */
-export const SUBDOMAINS_ENABLED = false;
+export const SUBDOMAINS_ENABLED = true;
 export const SUBDOMAIN_SUFFIX = ".maler-saas.com";
 
 /** Adresse über maler-saas.com (Subdomain oder /w/<slug>) */
