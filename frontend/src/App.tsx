@@ -46,6 +46,7 @@ import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
+import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -470,7 +471,8 @@ type CurrentPage =
   | "terminkalender"
   | "meine-termine"
   | "ki-telefon"
-  | "website";
+  | "website"
+  | "fachkraefte";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -711,6 +713,11 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   if (window.location.pathname === "/customer-view") {
   return <CustomerPortalPage />;
 }
+
+  // Fachkräfte-Pool: öffentliche Seiten (Anmeldung, eigenes Profil, Kontaktanfrage beantworten)
+  if (/^\/fachkraefte(\/|$)/.test(window.location.pathname)) {
+    return <PublicPoolPage />;
+  }
 
   const [orderForm, setOrderForm] = useState<OrderFormData>({
     customer_id: "",
@@ -6706,6 +6713,8 @@ onReloadOrders={async () => {
   onOpen={() => setCurrentPage("website")}
 />
 
+<FachkraefteButton onOpen={() => setCurrentPage("fachkraefte")} />
+
 </section>
                 </>
               )}
@@ -12054,6 +12063,8 @@ const businessAdvisor = generateBusinessInsights();
     />
   )
 )}
+
+{currentPage === "fachkraefte" && isAdmin && userProfile?.tenant_id && <FachkraeftePage onBack={openDashboard} />}
 
 {currentPage === "approval-center" && (
   <ApprovalCenterPage

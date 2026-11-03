@@ -355,6 +355,7 @@ export default function LandingPage({
     <button type="button" onClick={onOpenAgb}>
       AGB
     </button>
+    <a href="/fachkraefte">Arbeit gesucht? Fachkräfte-Pool</a>
   </div>
 </footer>
     </div>

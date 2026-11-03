@@ -1064,3 +1064,8 @@
     width: 25px;
   }
 }
+.landing-footer-links a {
+  color: #475569;
+  font-weight: 700;
+  text-decoration: none;
+}

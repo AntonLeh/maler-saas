@@ -715,7 +715,57 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>21. Kontakt- und Supportanfragen</h2>
+          <h2>21. Fachkräfte-Pool</h2>
+
+          <p>
+            Unter maler-saas.com/fachkraefte können sich Maler, Helfer
+            und Subunternehmer kostenlos eintragen, um von
+            Malerbetrieben gefunden zu werden, die MalerSaaS nutzen.
+            Verarbeitet werden die Angaben aus dem Formular: Name,
+            E-Mail-Adresse, optional Telefonnummer, Qualifikation, Art
+            der gesuchten Tätigkeit, Fähigkeiten, Postleitzahl und
+            Umkreis, Verfügbarkeit, Führerschein und Fahrzeug, Sprachen,
+            ein freiwilliger Kurztext sowie bei Subunternehmern
+            optional Firmenname und Angabe zur Handwerksrolle.
+          </p>
+
+          <p>
+            Betriebe sehen das Profil nur ohne Namen, Kontaktdaten und
+            Postleitzahl; angezeigt werden der Ortsname und die
+            ungefähre Entfernung. Möchte ein Betrieb Kontakt aufnehmen,
+            erhält die Fachkraft eine E-Mail mit Name und Ort des
+            Betriebs und entscheidet selbst, ob ihr Name, ihre
+            E-Mail-Adresse und Telefonnummer an diesen Betrieb
+            weitergegeben werden. Ab der Weitergabe ist der Betrieb für
+            die weitere Verarbeitung selbst verantwortlich.
+          </p>
+
+          <p>
+            Zur Berechnung der Entfernung wird die Postleitzahl einmalig
+            über den Dienst Nominatim der OpenStreetMap Foundation
+            (Vereinigtes Königreich) in Koordinaten umgerechnet;
+            übermittelt wird dabei nur die Postleitzahl, keine
+            personenbezogenen Daten. E-Mails werden über Brevo
+            versendet.
+          </p>
+
+          <p>
+            Rechtsgrundlage ist die Einwilligung (Artikel 6 Absatz 1
+            Buchstabe a DSGVO), die jederzeit mit Wirkung für die
+            Zukunft widerrufen werden kann – am einfachsten durch
+            Löschen des Profils über den Link in unseren E-Mails.
+            Nicht bestätigte Anmeldungen werden nach 7 Tagen gelöscht.
+            Profile, die 90 Tage nicht bestätigt wurden, werden
+            ausgeblendet und nach 12 Monaten ohne Bestätigung gelöscht.
+            Mit dem Profil werden auch alle Kontaktanfragen gelöscht.
+            MalerSaaS ist für den Pool selbst verantwortlich, stellt
+            nur Kontakte her und verleiht keine Arbeitskräfte. Die
+            Nutzung ist für Fachkräfte kostenlos.
+          </p>
+        </section>
+
+        <section className="legal-section">
+          <h2>22. Kontakt- und Supportanfragen</h2>
 
           <p>
             Bei einer Kontakt- oder Supportanfrage können Name,
@@ -739,7 +789,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>22. Zahlungsabwicklung über Stripe</h2>
+          <h2>23. Zahlungsabwicklung über Stripe</h2>
 
           <p>
             Für die Abwicklung von Abonnements und Zahlungen wird
@@ -782,7 +832,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>23. Technische Bereitstellung durch Supabase</h2>
+          <h2>24. Technische Bereitstellung durch Supabase</h2>
 
           <p>
             MalerSaaS nutzt Supabase insbesondere für Datenbanken,
@@ -817,7 +867,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>24. Hosting und Auslieferung über Vercel</h2>
+          <h2>25. Hosting und Auslieferung über Vercel</h2>
 
           <p>
             Die Website und Teile der technischen Anwendung werden
@@ -851,7 +901,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>25. E-Mail-Versand</h2>
+          <h2>26. E-Mail-Versand</h2>
 
           <p>
             Für Registrierungsbestätigungen, Sicherheitsnachrichten,
@@ -884,7 +934,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>26. Reichweitenmessung, keine Werbetracker</h2>
+          <h2>27. Reichweitenmessung, keine Werbetracker</h2>
 
           <p>
             Um die Nutzung der öffentlichen Seiten von MalerSaaS
@@ -931,7 +981,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>27. Technisch notwendige Speicherungen</h2>
+          <h2>28. Technisch notwendige Speicherungen</h2>
 
           <p>
             Für Anmeldung, Sitzungsverwaltung, Sicherheit und
@@ -961,7 +1011,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>28. Empfänger personenbezogener Daten</h2>
+          <h2>29. Empfänger personenbezogener Daten</h2>
 
           <p>
             Personenbezogene Daten werden nur weitergegeben, wenn
@@ -1000,7 +1050,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>29. Datenübermittlung in Drittländer</h2>
+          <h2>30. Datenübermittlung in Drittländer</h2>
 
           <p>
             Einige technische Dienstleister oder deren
@@ -1041,7 +1091,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>30. Speicherdauer</h2>
+          <h2>31. Speicherdauer</h2>
 
           <p>
             Personenbezogene Daten werden nur so lange gespeichert,
@@ -1088,7 +1138,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>31. Datensicherheit</h2>
+          <h2>32. Datensicherheit</h2>
 
           <p>
             MalerSaaS trifft angemessene technische und
@@ -1118,7 +1168,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>32. Pflicht zur Bereitstellung von Daten</h2>
+          <h2>33. Pflicht zur Bereitstellung von Daten</h2>
 
           <p>
             Bestimmte personenbezogene Daten sind erforderlich, um
@@ -1140,7 +1190,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>33. Rechte betroffener Personen</h2>
+          <h2>34. Rechte betroffener Personen</h2>
 
           <p>
             Betroffene Personen haben nach Maßgabe der gesetzlichen
@@ -1204,7 +1254,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>34. Widerspruchsrecht</h2>
+          <h2>35. Widerspruchsrecht</h2>
 
           <p>
             Werden personenbezogene Daten auf Grundlage von Artikel 6
@@ -1225,7 +1275,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>35. Beschwerderecht</h2>
+          <h2>36. Beschwerderecht</h2>
 
           <p>
             Betroffene Personen haben das Recht, sich bei einer
@@ -1264,7 +1314,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-  <h2>36. Ansprechpartner für Datenschutz</h2>
+  <h2>37. Ansprechpartner für Datenschutz</h2>
 
   <p>
     Ansprechpartner für sämtliche Datenschutzanfragen im
@@ -1302,7 +1352,7 @@ export default function DatenschutzPage({
 </section>
 
         <section className="legal-section">
-          <h2>37. Änderungen dieser Datenschutzerklärung</h2>
+          <h2>38. Änderungen dieser Datenschutzerklärung</h2>
 
           <p>
             Diese Datenschutzerklärung kann angepasst werden, wenn

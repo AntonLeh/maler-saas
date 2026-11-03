@@ -23,4 +23,5 @@ Empfehlung: zuerst 1, 2, 3, dann 6.
 ## Erledigt außerhalb der Liste
 - ✅ KI-Schreibhilfe für Leistungen, „Über uns“ und Google-Texte (02.11.2026)
 ✅ 13. „Wir stellen ein“: Karriereseite, Stellenseiten (Google for Jobs), Bewerbungen mit Lebenslauf
-14. Fachkräfte-Pool auf maler-saas.com (Maler, Helfer, Subunternehmer; kostenlos; Kontaktfreigabe durch den Bewerber)
+✅ 14. Fachkräfte-Pool auf maler-saas.com (Maler, Helfer, Subunternehmer; kostenlos; Kontaktfreigabe durch den Bewerber)
+   ↳ umgesetzt: maler-saas.com/fachkraefte (Anmeldung, Profil, Anfrage beantworten), App-Modul „Fachkräfte“, Funktion talent-pool
