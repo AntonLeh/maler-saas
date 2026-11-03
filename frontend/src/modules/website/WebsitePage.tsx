@@ -9,8 +9,9 @@ import ReferencesTab from "./ReferencesTab";
 import LeadsTab from "./LeadsTab";
 import LegalTab from "./LegalTab";
 import ReviewsTab from "./ReviewsTab";
+import StatsTab from "./StatsTab";
 
-type Tab = "design" | "references" | "reviews" | "leads" | "legal";
+type Tab = "design" | "stats" | "references" | "reviews" | "leads" | "legal";
 
 export default function WebsitePage({
   tenantId,
@@ -214,6 +215,7 @@ export default function WebsitePage({
               {(
                 [
                   ["design", "Gestaltung"],
+                  ["stats", "Statistik"],
                   ["references", `Referenzen (${references.length})`],
                   ["reviews", "Bewertungen"],
                   ["leads", `Anfragen${newLeads ? ` (${newLeads} neu)` : ""}`],
@@ -232,6 +234,7 @@ export default function WebsitePage({
             {tab === "references" && (
               <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} />
             )}
+            {tab === "stats" && <StatsTab tenantId={tenantId} services={website.services ?? []} onError={showError} />}
             {tab === "reviews" && <ReviewsTab tenantId={tenantId} overview={reviews} onChanged={reloadReviews} onError={showError} onSuccess={flash} />}
             {tab === "leads" && <LeadsTab tenantId={tenantId} leads={leads} onChanged={reloadLeads} onError={showError} />}
             {tab === "legal" && <LegalTab key={website.updated_at} website={website} company={company} saving={busy} onSave={(v) => save(v, "Angaben gespeichert.")} />}

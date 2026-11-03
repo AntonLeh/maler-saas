@@ -341,3 +341,26 @@ export async function domainAction(action: "connect" | "check" | "disconnect", d
   if (!res.ok || !data.ok) throw new Error(data.error || `Domain-Verwaltung fehlgeschlagen (Status ${res.status}).`);
   return { domain: data.domain ?? null, status: data.status ?? null, records: data.records ?? [], problem: data.problem || "" };
 }
+
+// ---------------------------------------------------------------------
+// Besucherzähler
+// ---------------------------------------------------------------------
+export type WebsiteStats = {
+  from: string;
+  to: string;
+  daily: { day: string; views: number; visits: number; leads: number }[];
+  pages: { page: string; views: number }[];
+  sources: { source: string; visits: number }[];
+};
+
+export async function loadStats(tenantId: number, days: number): Promise<WebsiteStats> {
+  const { data, error } = await supabase.rpc("website_admin_stats", { p_tenant_id: tenantId, p_days: days });
+  if (error) {
+    if (error.message.includes("website_admin_stats") || error.code === "PGRST202") {
+      throw new Error("Für die Statistik fehlt noch ein Datenbank-Update. Bitte die SQL-Datei supabase/migrations/20261103140000_website_statistik.sql im Supabase SQL-Editor ausführen.");
+    }
+    fail("Statistik laden", error);
+  }
+  const d = (data ?? {}) as Partial<WebsiteStats>;
+  return { from: d.from ?? "", to: d.to ?? "", daily: d.daily ?? [], pages: d.pages ?? [], sources: d.sources ?? [] };
+}

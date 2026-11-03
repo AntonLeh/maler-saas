@@ -234,10 +234,21 @@ function shrink(file){return new Promise(function(res){var img=new Image();img.o
 f.addEventListener("submit",function(e){var files=pick();if(!files.length||busy)return;e.preventDefault();busy=true;var b=f.querySelector("button[type=submit]");b.disabled=true;b.textContent="Fotos werden vorbereitet …";
 Promise.all(files.map(shrink)).then(function(list){list.filter(Boolean).forEach(function(d){var h=document.createElement("input");h.type="hidden";h.name="foto";h.value=d;f.appendChild(h)});b.textContent="Wird gesendet …";HTMLFormElement.prototype.submit.call(f)})})})();`;
 
+/**
+ * Besucherzähler ohne Cookies und ohne Kennungen: meldet nur Seite und Herkunft (Google, Bing, soziale Netzwerke,
+ * direkt, andere). Navigation innerhalb der Website zählt als Seitenaufruf, aber nicht als neuer Besuch.
+ */
+export function countScript(slug: string, page: string): string {
+  const q = `action=hit&site=${encodeURIComponent(slug)}&page=${encodeURIComponent(page)}`;
+  return `(function(){try{if(navigator.webdriver)return;var r=document.referrer||"",h=location.hostname,s="";var rh="";try{rh=r?new URL(r).hostname:""}catch(e){}
+if(rh!==h){s=!rh?"direkt":/(^|\\.)google\\./.test(rh)?"google":/(^|\\.)bing\\.com$/.test(rh)?"bing":/(facebook|instagram|fb\\.|t\\.co$|linkedin|whatsapp|pinterest|tiktok|x\\.com$)/.test(rh)?"social":"andere"}
+var u="/api/site?${q}"+(s?"&src="+s:"");if(navigator.sendBeacon)navigator.sendBeacon(u);else fetch(u,{method:"POST",keepalive:true})}catch(e){}})();`;
+}
+
 // ---------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------
-type Ctx = { base: string; canonical: string; origin: string; notice?: string; preview: boolean; q?: string };
+type Ctx = { base: string; canonical: string; origin: string; notice?: string; preview: boolean; q?: string; page?: string; slug?: string };
 
 function styles(d: SiteData): string {
   const accent = validColor(d.accent_color);
@@ -457,6 +468,7 @@ ${opts.home ? jsonLd(d, ctx) : (opts.jsonLd ?? "")}
 ${header(d, ctx, opts.home)}
 <main id="inhalt">${body}</main>
 ${footer(d, ctx)}
+${!ctx.preview && ctx.slug ? `<script>${countScript(ctx.slug, ctx.page ?? "")}</script>` : ""}
 ${opts.home || opts.script ? `<script>document.addEventListener("click",function(e){var b=e.target.closest(".thumb");if(!b)return;var r=b.closest(".ref"),m=r&&r.querySelector(".main img");if(!m)return;m.src=b.getAttribute("data-src");r.querySelectorAll(".thumb").forEach(function(t){t.classList.toggle("on",t===b)})})</script>` : ""}
 </body></html>`;
 }
@@ -994,7 +1006,7 @@ export function renderPrivacy(d: SiteData, ctx: Ctx): string {
   const contact = `${esc(c.name)}, ${esc(c.street)}, ${esc([c.zip, c.city].filter(Boolean).join(" "))}${c.email ? `, E-Mail: ${encodeEmail(c.email)}` : ""}${c.phone ? `, Telefon: ${esc(c.phone)}` : ""}`;
   const body = `<div class="wrap legal"><h1>Datenschutzerklärung</h1>
 <h2>1. Verantwortlicher</h2><p>${contact}</p>
-<h2>2. Allgemeines</h2><p>Wir verarbeiten personenbezogene Daten nur, soweit dies zur Bereitstellung dieser Website und zur Bearbeitung Ihrer Anfragen erforderlich ist. Diese Website verwendet keine Cookies, keine Analyse- oder Tracking-Werkzeuge und lädt keine Schriften oder Inhalte von Drittanbietern.</p>
+<h2>2. Allgemeines</h2><p>Wir verarbeiten personenbezogene Daten nur, soweit dies zur Bereitstellung dieser Website und zur Bearbeitung Ihrer Anfragen erforderlich ist. Diese Website verwendet keine Cookies, keine Tracking-Werkzeuge von Drittanbietern und lädt keine Schriften oder Inhalte von Drittanbietern.</p><p>Um zu sehen, wie die Website genutzt wird, zählen wir Seitenaufrufe anonym: Gespeichert werden nur Tagessummen je Seite und die grobe Herkunft eines Besuchs (z. B. „Google“ oder „direkt“). IP-Adressen, Gerätekennungen oder Cookies werden dafür nicht verwendet; ein Rückschluss auf einzelne Personen ist nicht möglich. Die Tageswerte werden nach 13 Monaten gelöscht.</p>
 <h2>3. Hosting und Server-Protokolle</h2><p>Die Website wird über die Software „Maler-SaaS“ bereitgestellt und bei Vercel Inc. (USA) gehostet; die Inhalte werden bei Supabase gespeichert. Beim Aufruf werden technisch notwendige Daten (z. B. IP-Adresse, Datum und Uhrzeit, aufgerufene Seite, Browsertyp) kurzzeitig in Server-Protokollen verarbeitet, um die Website sicher und stabil auszuliefern. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren Betrieb). Mit den Dienstleistern bestehen Verträge zur Auftragsverarbeitung; Übermittlungen in die USA erfolgen auf Grundlage des EU-US Data Privacy Framework bzw. von Standardvertragsklauseln.</p>
 ${
   d.contact_form !== false
@@ -1101,6 +1113,21 @@ export async function handle(request: Request): Promise<Response> {
   }
   const origin = env("SITE_ORIGIN") || "https://maler-saas.com";
 
+  // Besucherzähler (vom Skript auf der Website, ohne Cookies)
+  if (url.searchParams.get("action") === "hit") {
+    const siteParam = (url.searchParams.get("site") || "").toLowerCase();
+    const pageParam = (url.searchParams.get("page") || "").toLowerCase().slice(0, 70);
+    const src = (url.searchParams.get("src") || "").toLowerCase();
+    if (request.method === "POST" && SLUG_RE.test(siteParam) && /^[a-z0-9-]{0,70}$/.test(pageParam)) {
+      await rpc("website_track", {
+        p_site: siteParam,
+        p_page: pageParam,
+        p_source: ["google", "bing", "social", "direkt", "andere"].includes(src) ? src : null,
+      }).catch(() => undefined);
+    }
+    return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
+  }
+
   // Kontaktformular (Formular sendet immer slug mit; "basis" = "" bei eigener Adresse, sonst /w/<slug>)
   if (request.method === "POST" && url.searchParams.get("action") === "contact") {
     const slug = (url.searchParams.get("slug") || "").toLowerCase();
@@ -1200,6 +1227,8 @@ export async function handle(request: Request): Promise<Response> {
     base,
     origin,
     canonical: preferred,
+    slug: data.slug,
+    page: pagePath === "index.html" ? "" : pagePath,
     preview: isPreview,
     q: isPreview ? `?vorschau=${encodeURIComponent(preview)}` : "",
     notice: url.searchParams.get("gesendet") ? "ok" : errors[url.searchParams.get("fehler") || ""] || undefined,

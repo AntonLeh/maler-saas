@@ -18,7 +18,7 @@ export default function DatenschutzPage({
             </p>
 
             <p>
-              <strong>Stand: 2. November 2026</strong>
+              <strong>Stand: 3. November 2026</strong>
             </p>
           </div>
 
@@ -584,10 +584,20 @@ export default function DatenschutzPage({
 
           <p>
             Die Firmen-Websites verwenden keine Cookies, keine
-            Analyse- oder Tracking-Werkzeuge und laden keine Schriften
-            oder Inhalte von Drittanbietern. Beim Aufruf werden
+            Tracking-Werkzeuge von Drittanbietern und laden keine
+            Schriften oder Inhalte von Drittanbietern. Beim Aufruf werden
             technisch notwendige Protokolldaten verarbeitet (siehe
             Abschnitte zu Vercel und Supabase).
+          </p>
+
+          <p>
+            Damit das Unternehmen sieht, wie seine Website genutzt wird,
+            werden Seitenaufrufe anonym gezählt: Gespeichert werden nur
+            Tagessummen je Seite und die grobe Herkunft eines Besuchs
+            (zum Beispiel „Google“ oder „direkt“). IP-Adressen,
+            Gerätekennungen oder Cookies werden dafür nicht verwendet;
+            ein Rückschluss auf einzelne Personen ist nicht möglich. Die
+            Tageswerte werden nach 13 Monaten gelöscht.
           </p>
 
           <p>
@@ -853,15 +863,40 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>26. Keine Analyse- oder Werbetracker</h2>
+          <h2>26. Reichweitenmessung, keine Werbetracker</h2>
 
           <p>
-            MalerSaaS verwendet derzeit keine externen
-            Analyse-, Werbe- oder Marketing-Tracking-Systeme.
+            Um die Nutzung der öffentlichen Seiten von MalerSaaS
+            auszuwerten, wird Vercel Web Analytics eingesetzt. Dabei
+            werden keine Cookies gesetzt und keine Daten im Endgerät
+            gespeichert. Erfasst werden die aufgerufene Seite (ohne
+            Parameter), die verweisende Website sowie ungefährer Ort
+            (Land, Region, Stadt), Gerätetyp, Betriebssystem und Browser.
+            Besucher werden nur über einen aus der Anfrage gebildeten
+            Prüfwert (Hash) unterschieden, der nach 24 Stunden verworfen
+            wird; die erfassten Daten werden nicht mit IP-Adressen
+            verknüpft und nur zusammengefasst ausgewertet.
+            Angemeldete Nutzer und das Kundenportal werden nicht erfasst.
           </p>
 
           <p>
-            Insbesondere werden derzeit kein Google Analytics, kein
+            Rechtsgrundlage ist Artikel 6 Absatz 1 Buchstabe f DSGVO
+            (berechtigtes Interesse an einer datensparsamen Auswertung
+            der Reichweite unseres Angebots). Weitere Informationen
+            enthält die{" "}
+            <a
+              href="https://vercel.com/docs/analytics/privacy-policy"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Datenschutzinformation zu Vercel Web Analytics
+            </a>
+            .
+          </p>
+
+          <p>
+            Werbe- oder Marketing-Tracking-Systeme werden nicht
+            eingesetzt. Insbesondere werden kein Google Analytics, kein
             Meta- beziehungsweise Facebook-Pixel, kein TikTok-Pixel
             und kein Microsoft Clarity eingesetzt.
           </p>

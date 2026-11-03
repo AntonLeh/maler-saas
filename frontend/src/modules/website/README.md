@@ -54,6 +54,16 @@ Vorschläge werden erst nach „Übernehmen“ + „Speichern“ gespeichert.
 Secrets: `ANTHROPIC_API_KEY` (Pflicht), `WEBSITE_AI_MODEL` (Standard `claude-sonnet-5-5`), `WEBSITE_AI_MONTHLY_LIMIT` (Standard 40).
 Deploy: `npx supabase functions deploy website-ai-text --no-verify-jwt`
 
+## Besucherzähler
+
+Kleines Skript auf jeder Seite (`countScript` in `site.ts`) meldet per `sendBeacon` Seite + grobe Herkunft
+(google/bing/social/direkt/andere) an `/api/site?action=hit` → `website_track`. Keine Cookies, keine IP, nur Tagessummen
+(Tabelle `website_stats`, 13 Monate). Automatisierte Browser (`navigator.webdriver`) und die Vorschau zählen nicht.
+Auswertung in der App unter Website → Statistik (`website_admin_stats`). Migration `20261103140000_website_statistik.sql`.
+
+maler-saas.com selbst: Vercel Web Analytics (`@vercel/analytics` in `src/main.tsx`), ohne angemeldete Nutzer und
+Kundenportal, URLs ohne Parameter. Muss im Vercel-Projekt unter „Analytics“ eingeschaltet werden.
+
 ## Eigene Adressen
 
 - `betrieb.maler-saas.com`: `frontend/proxy.ts` (Vercel Routing Middleware, eingetragen in `vercel.json`) leitet Anfragen an

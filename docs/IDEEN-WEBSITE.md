@@ -11,7 +11,7 @@
 ✅ 6. Eigene Seite pro Leistung mit Ort („Fassadenanstrich in Wittlich“) – größter Hebel für Google
 7. Eigene Seite pro Referenz mit Galerie, optional Vorher/Nachher-Schieberegler
 8. Häufige Fragen (FAQ) mit Vorschlägen
-9. Besucherzähler in der App (ohne Cookies)
+✅ 9. Besucherzähler in der App (ohne Cookies)
 
 ## Größere Schritte
 10. Online-Besichtigungstermin buchen (Terminkalender) + KI-Telefonnummer auf der Website

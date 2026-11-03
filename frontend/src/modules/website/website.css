@@ -903,3 +903,137 @@
   align-items: center;
   margin-top: 6px;
 }
+
+/* Statistik */
+.ws-root .ws-stats-head {
+  justify-content: space-between;
+}
+
+.ws-root .ws-chart {
+  position: relative;
+}
+
+.ws-root .ws-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ws-root .ws-chart-grid {
+  stroke: var(--tk-border);
+  stroke-width: 1;
+}
+
+.ws-root .ws-chart-axis {
+  fill: var(--tk-muted, #64748b);
+  font-size: 11px;
+}
+
+.ws-root .ws-chart-bar {
+  fill: var(--tk-primary);
+  opacity: 0.85;
+}
+
+.ws-root .ws-chart-bar.on {
+  opacity: 1;
+}
+
+.ws-root .ws-chart-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--tk-surface);
+  border: 1px solid var(--tk-border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  white-space: nowrap;
+  display: grid;
+}
+
+.ws-root .ws-chart-table {
+  margin-top: 10px;
+}
+
+.ws-root .ws-chart-table summary {
+  cursor: pointer;
+  color: var(--tk-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ws-root .ws-chart-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.ws-root .ws-chart-table th,
+.ws-root .ws-chart-table td {
+  text-align: right;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--tk-border);
+}
+
+.ws-root .ws-chart-table th:first-child,
+.ws-root .ws-chart-table td:first-child {
+  text-align: left;
+}
+
+.ws-root .ws-stats-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.ws-root .ws-hbars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ws-root .ws-hbars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.ws-root .ws-hbar-label {
+  grid-column: 1;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-root .ws-hbar-val {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ws-root .ws-hbar-track {
+  grid-column: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--tk-surface-2);
+  overflow: hidden;
+}
+
+.ws-root .ws-hbar {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--tk-primary);
+}
+
+.ws-root .ws-stats-hint {
+  margin: 12px 0 0;
+}
