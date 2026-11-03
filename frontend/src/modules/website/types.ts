@@ -220,6 +220,38 @@ export function siteUrl(slug: string): string {
   return SUBDOMAINS_ENABLED ? `https://${slug}${SUBDOMAIN_SUFFIX}` : `${SITE_ORIGIN}/w/${slug}`;
 }
 
+/**
+ * Domain kaufen (Hilfe für Betriebe ohne eigene Domain).
+ * DOMAIN_PARTNER_URL: persönlicher Partnerlink (z. B. aus affiliate.ionos.com). Ist er gesetzt, zeigt die App den
+ * vorgeschriebenen Hinweis auf die Vermittlungsprovision. Ohne Partnerlink: normaler Link, kein Hinweis.
+ */
+export const DOMAIN_SHOP_URL = "https://www.ionos.de/domains/domain-check";
+export const DOMAIN_PARTNER_URL: string | null = null;
+
+/** Vorschläge für eine Wunschdomain aus Firmenname und Ort (nur Vorschläge – ob frei, zeigt der Anbieter) */
+export function domainSuggestions(companyName: string | null | undefined, city: string | null | undefined): string[] {
+  const clean = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/ä/g, "ae")
+      .replace(/ö/g, "oe")
+      .replace(/ü/g, "ue")
+      .replace(/ß/g, "ss")
+      .replace(/\b(gmbh|ug|haftungsbeschraenkt|e\.?\s?k\.?|ohg|kg|gbr|mbh|co|und|&|die|der|das)\b/g, " ")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  const name = clean(companyName ?? "");
+  const ort = clean(city ?? "");
+  const core = name.replace(/\b(malerbetrieb|maler|malermeister|malerfachbetrieb|lackierer|malerwerkstatt)\b/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  const out = [
+    name && `${name}.de`,
+    core && `maler-${core}.de`,
+    core && ort && `maler-${core}-${ort}.de`,
+    core && ort && `${core}-${ort}.de`,
+  ].filter((x): x is string => !!x && x.length <= 63 + 3 && !x.startsWith("-"));
+  return [...new Set(out)].slice(0, 4);
+}
+
 /** Öffentliche Hauptadresse: eigene Domain (wenn aktiv) oder siteUrl */
 export function publicUrl(w: Pick<Website, "slug" | "custom_domain" | "custom_domain_status">): string {
   return w.custom_domain && w.custom_domain_status === "active" ? `https://${w.custom_domain}` : siteUrl(w.slug);

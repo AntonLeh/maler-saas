@@ -385,7 +385,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
         </div>
       </section>
 
-      <DomainPanel website={website} onError={onError} />
+      <DomainPanel website={website} companyName={company?.company_name} city={company?.city} onError={onError} />
 
       <div className="ws-savebar">
         <button type="button" className="btn btn-primary" onClick={submit} disabled={saving || uploading}>

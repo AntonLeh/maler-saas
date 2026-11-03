@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Website } from "./types";
+import { DOMAIN_PARTNER_URL, DOMAIN_SHOP_URL, domainSuggestions } from "./types";
 import type { DnsRecord, DomainState } from "./api";
 import { domainAction } from "./api";
 
@@ -7,7 +8,7 @@ import { domainAction } from "./api";
  * Eigene Domain verbinden: Domain eingeben → DNS-Einträge beim eigenen Anbieter setzen → prüfen.
  * Die Domain wird ausschließlich über die Funktion website-domain gesetzt (trägt sie bei Vercel ein).
  */
-export default function DomainPanel({ website, onError }: { website: Website; onError: (msg: string) => void }) {
+export default function DomainPanel({ website, companyName, city, onError }: { website: Website; companyName?: string | null; city?: string | null; onError: (msg: string) => void }) {
   const [state, setState] = useState<DomainState>({
     domain: website.custom_domain ?? null,
     status: website.custom_domain_status ?? null,
@@ -71,6 +72,38 @@ export default function DomainPanel({ website, onError }: { website: Website; on
               {busy === "connect" ? "Wird verbunden …" : "Domain verbinden"}
             </button>
           </div>
+
+          <details className="ws-dom-buy">
+            <summary>Noch keine eigene Domain? So bekommen Sie eine</summary>
+            <ol>
+              <li>
+                Überlegen Sie sich eine kurze, gut merkbare Adresse – am besten mit Firmenname oder „maler“ und Ort.
+                {domainSuggestions(companyName, city).length > 0 && (
+                  <span className="ws-dom-sugs">
+                    Vorschläge (zum Kopieren antippen):{" "}
+                    {domainSuggestions(companyName, city).map((d) => (
+                      <button key={d} type="button" className="ws-chip" onClick={() => copy(d)}>
+                        {copied === d ? "kopiert ✓" : d}
+                      </button>
+                    ))}
+                  </span>
+                )}
+              </li>
+              <li>
+                Prüfen Sie beim Anbieter, ob sie noch frei ist, und kaufen Sie <strong>nur die Domain</strong> – ein Website- oder Hosting-Paket brauchen
+                Sie nicht, die Website kommt von Maler-SaaS. Eine .de-Domain kostet meist nur wenige Euro im Jahr.{" "}
+                <a className="ws-link" href={DOMAIN_PARTNER_URL || DOMAIN_SHOP_URL} target="_blank" rel={DOMAIN_PARTNER_URL ? "noreferrer sponsored" : "noreferrer"}>
+                  Domain bei IONOS suchen ↗
+                </a>
+                {DOMAIN_PARTNER_URL && (
+                  <small className="tk-muted ws-block">
+                    Partnerlink: Maler-SaaS erhält bei einer Bestellung eine Vermittlungsprovision. Für Sie entstehen keine Mehrkosten.
+                  </small>
+                )}
+              </li>
+              <li>Tragen Sie die gekaufte Domain oben ein und klicken Sie auf „Domain verbinden“. Wir zeigen Ihnen dann die zwei DNS-Einträge.</li>
+            </ol>
+          </details>
         </>
       ) : (
         <>
