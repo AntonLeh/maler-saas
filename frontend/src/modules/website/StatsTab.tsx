@@ -54,7 +54,10 @@ export default function StatsTab({ tenantId, services, onError }: { tenantId: nu
   const visits = stats.daily.reduce((a, d) => a + d.visits, 0);
   const views = stats.daily.reduce((a, d) => a + d.views, 0);
   const leads = stats.daily.reduce((a, d) => a + d.leads, 0);
-  const rate = visits ? (leads / visits) * 100 : 0;
+  // Quote nur ab dem ersten Tag mit gezählten Seitenaufrufen (vorher gab es noch keine Zählung) und erst ab 10 Besuchen
+  const firstCounted = stats.daily.findIndex((d) => d.views > 0 || d.visits > 0);
+  const leadsSinceCounting = firstCounted < 0 ? 0 : stats.daily.slice(firstCounted).reduce((a, d) => a + d.leads, 0);
+  const rate = visits >= 10 ? Math.min(100, (leadsSinceCounting / visits) * 100) : null;
   const max = Math.max(1, ...stats.daily.map((d) => d.visits));
   const maxPage = Math.max(1, ...stats.pages.map((p) => p.views));
   const maxSource = Math.max(1, ...stats.sources.map((s) => s.visits));
@@ -102,8 +105,8 @@ export default function StatsTab({ tenantId, services, onError }: { tenantId: nu
           <span className="tk-muted">Anfragen über das Formular</span>
         </div>
         <div className="ws-rv-stat">
-          <strong>{visits ? `${rate.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %` : "–"}</strong>
-          <span className="tk-muted">der Besuche führen zu einer Anfrage</span>
+          <strong>{rate !== null ? `${rate.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %` : "–"}</strong>
+          <span className="tk-muted">{rate !== null ? "der Besuche führen zu einer Anfrage" : "Anfragequote – erscheint ab 10 Besuchen"}</span>
         </div>
       </div>
 
