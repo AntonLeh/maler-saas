@@ -60,6 +60,8 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const [services, setServices] = useState<(WebsiteService & { origTitle?: string })[]>((website.services ?? []).map((s) => ({ ...s, origTitle: s.title })));
   const [aboutTitle, setAboutTitle] = useState(website.about_title ?? "");
   const [aboutText, setAboutText] = useState(website.about_text ?? "");
+  const [aboutImage, setAboutImage] = useState(website.about_image_url ?? "");
+  const [uploadingAbout, setUploadingAbout] = useState(false);
   const [area, setArea] = useState(website.service_area ?? "");
   const [hours, setHours] = useState(website.opening_hours ?? "");
   const [contactForm, setContactForm] = useState(website.contact_form);
@@ -71,6 +73,19 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
 
   const city = company?.city?.trim() || "";
   const slugProblem = slug !== website.slug ? slugError(slug) : null;
+
+  const uploadAbout = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingAbout(true);
+    try {
+      const img = await uploadImage(website.tenant_id, await processImage(file, 1800), "ueber-uns");
+      setAboutImage(img.url);
+    } catch (e) {
+      onError((e as Error).message);
+    } finally {
+      setUploadingAbout(false);
+    }
+  };
 
   const uploadHero = async (file: File | undefined) => {
     if (!file) return;
@@ -125,6 +140,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       services: services.filter((s) => s.title.trim()).map(cleanService),
       about_title: aboutTitle.trim() || null,
       about_text: aboutText.trim() || null,
+      about_image_url: aboutImage || null,
       service_area: area.trim() || null,
       opening_hours: hours.trim() || null,
       contact_form: contactForm,
@@ -330,6 +346,27 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
               placeholder="Wer seid ihr, seit wann gibt es den Betrieb, wie groß ist das Team, was ist euch wichtig? Leerzeile = neuer Absatz."
             />
           </label>
+          <div className="tk-field tk-span-2">
+            <span>Foto für „Über uns“ (optional)</span>
+            <div className="ws-hero-row">
+              {aboutImage ? <img src={aboutImage} alt="Foto Über uns" className="ws-hero-thumb" /> : <div className="ws-hero-thumb ws-hero-empty">kein Bild</div>}
+              <div className="ws-hero-actions">
+                <label className="btn btn-secondary btn-small">
+                  {uploadingAbout ? "Wird hochgeladen …" : aboutImage ? "Anderes Foto wählen" : "Foto hochladen"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={uploadingAbout} onChange={(e) => uploadAbout(e.target.files?.[0])} />
+                </label>
+                {aboutImage && (
+                  <button type="button" className="ws-link" onClick={() => setAboutImage("")}>
+                    Foto entfernen
+                  </button>
+                )}
+                <small className="tk-muted">
+                  Am besten das Team, der Firmenwagen oder die Werkstatt im Querformat. Wichtig: Zeigen Sie Mitarbeiter nur mit deren schriftlicher
+                  Einwilligung. Standortdaten im Bild werden automatisch entfernt.
+                </small>
+              </div>
+            </div>
+          </div>
           <label className="tk-field tk-span-2">
             <span>Einsatzgebiet (Orte mit Komma trennen)</span>
             <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Wittlich, Bernkastel-Kues, Trier" />
@@ -388,7 +425,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       <DomainPanel website={website} companyName={company?.company_name} city={company?.city} onError={onError} />
 
       <div className="ws-savebar">
-        <button type="button" className="btn btn-primary" onClick={submit} disabled={saving || uploading}>
+        <button type="button" className="btn btn-primary" onClick={submit} disabled={saving || uploading || uploadingAbout}>
           {saving ? "Wird gespeichert …" : "Änderungen speichern"}
         </button>
       </div>

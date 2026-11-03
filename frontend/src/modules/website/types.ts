@@ -42,6 +42,7 @@ export type Website = {
   services: WebsiteService[];
   about_title: string | null;
   about_text: string | null;
+  about_image_url?: string | null;
   service_area: string | null;
   opening_hours: string | null;
   sections: WebsiteSections;

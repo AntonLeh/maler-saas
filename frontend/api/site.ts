@@ -48,6 +48,7 @@ export type SiteData = {
   services?: Service[];
   about_title?: string | null;
   about_text?: string | null;
+  about_image_url?: string | null;
   service_area?: string | null;
   opening_hours?: string | null;
   sections?: Record<string, boolean>;
@@ -352,6 +353,9 @@ fieldset.svc legend{font-weight:600;font-size:.95rem;margin-bottom:6px;padding:0
 .rv figcaption{color:var(--muted);font-size:.92rem;margin-top:auto}
 .rv-note{color:var(--muted);font-size:.88rem;margin:22px 0 0}
 .about{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.about.has-img{align-items:center}.about.has-img .facts{margin-top:22px}
+.about-pic{margin:0;border-radius:calc(var(--radius) * 1.6);overflow:hidden;aspect-ratio:4/3;background:#dfe3e8;box-shadow:0 18px 40px rgba(20,30,45,.12)}
+.about-pic img{width:100%;height:100%;object-fit:cover}
 .facts{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .facts li{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;font-weight:600}
 .facts li::before{content:"✓";color:var(--accent);margin-right:10px}
@@ -405,7 +409,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
     s.services && (d.services?.length ?? 0) > 0 ? `<a href="${link("leistungen")}">Leistungen</a>` : "",
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
     s.reviews && reviewSummary(d) ? `<a href="${link("bewertungen")}">Bewertungen</a>` : "",
-    s.about && (d.about_text || (d.highlights?.length ?? 0) > 0) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
+    s.about && (d.about_text || (d.highlights?.length ?? 0) > 0 || safeUrl(d.about_image_url)) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
     s.contact ? `<a href="${link("kontakt")}">Kontakt</a>` : "",
   ].join("");
   return `${ctx.preview ? `<div class="preview">Vorschau – diese Seite ist noch nicht veröffentlicht.</div>` : ""}
@@ -648,11 +652,18 @@ ${heroImg ? `<div class="pic"><img src="${esc(heroImg)}" alt="${esc(`${name} –
           .join("")}</div></div></section>`
       : "";
 
+  const aboutImg = safeUrl(d.about_image_url);
+  const facts = highlights.length ? `<ul class="facts">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : "";
   const aboutHtml =
-    s.about && (d.about_text || highlights.length)
-      ? `<section class="block" id="ueber-uns"><div class="wrap about">
+    s.about && (d.about_text || highlights.length || aboutImg)
+      ? aboutImg
+        ? `<section class="block" id="ueber-uns"><div class="wrap about has-img">
+<div><h2>${esc(d.about_title?.trim() || `Über ${name}`)}</h2>${paragraphs(d.about_text)}${facts}</div>
+<figure class="about-pic"><img src="${esc(aboutImg)}" alt="${esc(`Team und Betrieb von ${name}`)}" loading="lazy"></figure>
+</div></section>`
+        : `<section class="block" id="ueber-uns"><div class="wrap about">
 <div><h2>${esc(d.about_title?.trim() || `Über ${name}`)}</h2>${paragraphs(d.about_text)}</div>
-${highlights.length ? `<ul class="facts">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
+${facts}
 </div></section>`
       : "";
 

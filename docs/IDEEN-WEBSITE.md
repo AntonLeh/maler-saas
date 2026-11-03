@@ -4,7 +4,7 @@
 ✅ 1. Bereich „So läuft's ab“ (Anfrage → kostenlose Besichtigung → Festpreis-Angebot → saubere Ausführung)
 ✅ 2. Symbole statt Zahlen bei den Leistungen (Farbrolle, Haus, Tapete, Pinsel …)
 ✅ 3. Kontaktformular: Leistungen zum Anklicken, optional Fotos mitschicken
-4. Zweites Foto für „Über uns“ (Team, Firmenwagen)
+✅ 4. Zweites Foto für „Über uns“ (Team, Firmenwagen)
 5. WhatsApp-Knopf (optional)
 
 ## Mittlerer Aufwand (je ca. ½ Tag)
