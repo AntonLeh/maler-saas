@@ -37,12 +37,11 @@ export default function PublicPoolPage() {
           </span>
         </a>
         <nav className="fk-top-nav">
-          <a className="fk-top-link" href="/fachkraefte#zugang">
-            Mein Profil
-          </a>
-          <a className="fk-top-link" href="/">
-            Für Malerbetriebe
-          </a>
+          {path !== "/fachkraefte/profil" && (
+            <a className="fk-top-link" href="/fachkraefte#zugang">
+              Mein Profil
+            </a>
+          )}
         </nav>
       </header>
       <main className="fk-main">
@@ -62,6 +61,11 @@ export default function PublicPoolPage() {
           Datenschutz
         </button>
         <span>Ortsdaten © OpenStreetMap-Mitwirkende</span>
+        {path === "/fachkraefte" && (
+          <a href="/maler-software" className="fk-foot-biz">
+            Sie sind ein Malerbetrieb? Mehr über MalerSaaS
+          </a>
+        )}
       </footer>
     </div>
   );

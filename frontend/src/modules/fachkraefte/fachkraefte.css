@@ -636,3 +636,6 @@
   max-width: 520px;
   margin: 12px auto 0;
 }
+.fk-foot a {
+  color: inherit;
+}
