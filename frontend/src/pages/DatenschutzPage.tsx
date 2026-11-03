@@ -741,12 +741,10 @@ export default function DatenschutzPage({
           </p>
 
           <p>
-            Zur Berechnung der Entfernung wird die Postleitzahl einmalig
-            über den Dienst Nominatim der OpenStreetMap Foundation
-            (Vereinigtes Königreich) in Koordinaten umgerechnet;
-            übermittelt wird dabei nur die Postleitzahl, keine
-            personenbezogenen Daten. E-Mails werden über Brevo
-            versendet.
+            Die Entfernung wird anhand der Postleitzahl mit einer in
+            MalerSaaS hinterlegten Tabelle (Mittelpunkt jeder
+            Postleitzahl) berechnet; dafür werden keine Daten an Dritte
+            übermittelt. E-Mails werden über Brevo versendet.
           </p>
 
           <p>

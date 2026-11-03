@@ -5,4 +5,4 @@
 - Server: Edge-Funktion `talent-pool` (`--no-verify-jwt`), Tabellen aus `20261103240000_fachkraefte_pool.sql` (nur Service-Rolle).
 - Datenschutz: Betriebe sehen kein Name/Kontakt/PLZ, nur Ort + gerundete Entfernung. Kontaktdaten erst nach Zustimmung.
 - Fristen: unbestätigt 7 Tage, sichtbar 90 Tage nach letzter Bestätigung (Erinnerung nach 42 Tagen), Löschung nach 12 Monaten.
-- Postleitzahl → Koordinaten über OpenStreetMap Nominatim (zwischengespeichert in `talent_geo_cache`).
+- Postleitzahl → Koordinaten über die eingebaute Tabelle `supabase/functions/talent-pool/plz.ts` (WZB plz_geocoord, Apache 2.0; Ortsnamen © OpenStreetMap, ODbL). Die Tabelle `talent_geo_cache` wird derzeit nicht genutzt.

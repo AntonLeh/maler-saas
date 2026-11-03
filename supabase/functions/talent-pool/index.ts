@@ -9,6 +9,7 @@
 //
 // Alle Aufrufe: POST …/functions/v1/talent-pool  Body { action, … }
 // Secrets (vorhanden): BREVO_API_KEY, BREVO_SENDER_EMAIL
+// Postleitzahlen: eingebaute Tabelle plz.ts (keine Anfrage an fremde Dienste)
 // Optional: SITE_ORIGIN (Standard https://maler-saas.com)
 // Deploy:  npx supabase functions deploy talent-pool --no-verify-jwt
 // =====================================================================
@@ -16,6 +17,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { PLZ_DATA } from "./plz.ts";
 import { ROLE_LABEL, anonymize, distanceKm, esc, hashToken, newToken, validateProfile } from "./logic.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -71,28 +73,17 @@ async function sendMail(to: string, toName: string, subject: string, html: strin
 const button = (href: string, label: string, color = "#1d4e89") =>
   `<a href="${esc(href)}" style="display:inline-block;background:${color};color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;margin:4px 8px 4px 0">${esc(label)}</a>`;
 
-/** Postleitzahl -> Koordinaten (zwischengespeichert, Quelle OpenStreetMap/Nominatim) */
+/** Postleitzahl -> Koordinaten und Ort (eingebaute Tabelle, keine Anfrage an fremde Dienste) */
+let PLZ_MAP: Map<string, { lat: number; lon: number; ort: string | null }> | null = null;
 export async function geocode(plz: string): Promise<{ lat: number; lon: number; ort: string | null } | null> {
-  const { data: hit } = await db.from("talent_geo_cache").select("lat, lon, ort").eq("plz", plz).maybeSingle();
-  if (hit && hit.lat != null) return { lat: hit.lat, lon: hit.lon, ort: hit.ort };
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${plz}&countrycodes=de&format=jsonv2&limit=1&addressdetails=1`, {
-      headers: { "user-agent": "Maler-SaaS Fachkraefte-Pool/1.0 (https://maler-saas.com)", "accept-language": "de" },
-    });
-    if (!res.ok) return null;
-    const list = await res.json();
-    const r = Array.isArray(list) ? list[0] : null;
-    if (!r) return null;
-    const a = r.address ?? {};
-    const ort = a.city || a.town || a.village || a.municipality || a.suburb || String(r.display_name ?? "").split(",")[1]?.trim() || null;
-    const value = { lat: Number(r.lat), lon: Number(r.lon), ort };
-    if (!Number.isFinite(value.lat) || !Number.isFinite(value.lon)) return null;
-    await db.from("talent_geo_cache").upsert({ plz, ...value, fetched_at: new Date().toISOString() }, { onConflict: "plz" });
-    return value;
-  } catch (e) {
-    console.error("geocode", e);
-    return null;
+  if (!PLZ_MAP) {
+    PLZ_MAP = new Map();
+    for (const line of PLZ_DATA.split("\n")) {
+      const [k, lat, lon, ort] = line.split("|");
+      if (k) PLZ_MAP.set(k, { lat: Number(lat), lon: Number(lon), ort: ort || null });
+    }
   }
+  return PLZ_MAP.get(plz) ?? null;
 }
 
 async function profileByToken(t: unknown) {
