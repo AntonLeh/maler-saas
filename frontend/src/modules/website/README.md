@@ -92,3 +92,8 @@ Kundenportal, URLs ohne Parameter. Muss im Vercel-Projekt unter „Analytics“ 
 - Einstellungen in `websites.booking` (Migration `20261103220000_website_terminbuchung.sql`), „Vom KI-Telefon übernehmen“ liest `ai_phone_settings`.
 - Edge-Funktion `website-booking` (öffentlich, `--no-verify-jwt`): `action=slots` (freie Termine) und `action=book` (Termin mit `source = 'website'`, Anfrage, E-Mails über Brevo). Rechenlogik aus `ai-phone/slots.ts`.
 - Website: Bereich `#termin` nur bei `booking_enabled`; im Terminkalender mit 🌐 markiert.
+
+## Wir stellen ein (Reiter „Stellen“)
+- Stellen in `websites.jobs` (höchstens 10), Bewerbungen in `website_applications` (Migration `20261103230000_website_stellen.sql`), automatische Löschung nach 6 Monaten.
+- Website: `/karriere` (Übersicht + Initiativbewerbung), `/stelle-<titel>-<id>` (mit JobPosting-Daten für Google), Hinweis „Wir stellen ein“ auf der Startseite.
+- Formular `action=apply` (multipart, Lebenslauf PDF/JPG/PNG bis 3 MB) → `website_submit_application` → E-Mail mit Anhang über Brevo.

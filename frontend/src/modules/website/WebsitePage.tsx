@@ -11,8 +11,9 @@ import LegalTab from "./LegalTab";
 import ReviewsTab from "./ReviewsTab";
 import StatsTab from "./StatsTab";
 import BookingTab from "./BookingTab";
+import JobsTab from "./JobsTab";
 
-type Tab = "design" | "stats" | "booking" | "references" | "reviews" | "leads" | "legal";
+type Tab = "design" | "stats" | "booking" | "jobs" | "references" | "reviews" | "leads" | "legal";
 
 export default function WebsitePage({
   tenantId,
@@ -36,6 +37,7 @@ export default function WebsitePage({
   const [success, setSuccess] = useState("");
   const [tab, setTab] = useState<Tab>("design");
   const [slug, setSlug] = useState("");
+  const [newApps, setNewApps] = useState(0);
 
   const flash = (msg: string) => {
     setSuccess(msg);
@@ -70,6 +72,7 @@ export default function WebsitePage({
           if (cancelled) return;
           setReferences(r);
           setLeads(l);
+          api.countNewApplications(tenantId).then((n) => !cancelled && setNewApps(n));
         }
       } catch (e) {
         if (!cancelled) setError((e as Error).message);
@@ -218,6 +221,7 @@ export default function WebsitePage({
                   ["design", "Gestaltung"],
                   ["stats", "Statistik"],
                   ["booking", "Termine"],
+                  ["jobs", `Stellen${newApps ? ` (${newApps} neu)` : ""}`],
                   ["references", `Referenzen (${references.length})`],
                   ["reviews", "Bewertungen"],
                   ["leads", `Anfragen${newLeads ? ` (${newLeads} neu)` : ""}`],
@@ -235,6 +239,18 @@ export default function WebsitePage({
             )}
             {tab === "references" && (
               <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} website={website} />
+            )}
+            {tab === "jobs" && (
+              <JobsTab
+                key={website.updated_at}
+                tenantId={tenantId}
+                website={website}
+                city={company?.city}
+                saving={busy}
+                onSave={(v) => save(v, "Stellen gespeichert.")}
+                onError={showError}
+                onNewCount={setNewApps}
+              />
             )}
             {tab === "booking" && (
               <BookingTab key={website.updated_at} tenantId={tenantId} website={website} saving={busy} onSave={(v) => save(v, "Einstellungen für die Terminbuchung gespeichert.")} />

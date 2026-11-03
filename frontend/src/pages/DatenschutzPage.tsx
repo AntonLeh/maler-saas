@@ -613,6 +613,27 @@ export default function DatenschutzPage({
           </p>
 
           <p>
+            Bietet ein Unternehmen die Online-Terminbuchung an, werden
+            Name, Telefonnummer, ggf. E-Mail-Adresse, Adresse des
+            Objekts, Anliegen und der gewählte Termin im Terminkalender
+            des Unternehmens gespeichert; Unternehmen und Kunde erhalten
+            eine Bestätigung per E-Mail (über Brevo).
+          </p>
+
+          <p>
+            Veröffentlicht ein Unternehmen Stellenanzeigen, können sich
+            Interessierte über die Firmen-Website bewerben (Name,
+            Kontaktdaten, Erfahrung, Verfügbarkeit, Nachricht und
+            optional ein Lebenslauf als PDF oder Bild). Die Bewerbung
+            wird ausschließlich dem jeweiligen Unternehmen zugänglich
+            gemacht, in MalerSaaS gespeichert, per E-Mail (über Brevo)
+            zugestellt und spätestens sechs Monate nach Eingang
+            automatisch gelöscht. Verantwortlich für das
+            Bewerbungsverfahren ist das jeweilige Unternehmen; MalerSaaS
+            verarbeitet die Daten in dessen Auftrag.
+          </p>
+
+          <p>
             Bilder von Kundenprojekten (Referenzen) werden nur
             veröffentlicht, wenn das Unternehmen die Einwilligung des
             Kunden bestätigt hat, und ohne genaue Anschrift.

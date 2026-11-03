@@ -1,5 +1,5 @@
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
+import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview, WebsiteApplication } from "./types";
 import { DEFAULT_HIGHLIGHTS, DEFAULT_SECTIONS, DEFAULT_SERVICES } from "./types";
 
 const BUCKET = "website-media";
@@ -363,4 +363,41 @@ export async function loadStats(tenantId: number, days: number): Promise<Website
   }
   const d = (data ?? {}) as Partial<WebsiteStats>;
   return { from: d.from ?? "", to: d.to ?? "", daily: d.daily ?? [], pages: d.pages ?? [], sources: d.sources ?? [] };
+}
+
+// ---------------------------------------------------------------------
+// Bewerbungen
+// ---------------------------------------------------------------------
+const APP_COLUMNS = "id, job_id, job_title, name, email, phone, available_from, experience, driving_license, message, cv_name, cv_mime, status, created_at";
+
+export async function loadApplications(tenantId: number): Promise<WebsiteApplication[]> {
+  const { data, error } = await supabase.from("website_applications").select(APP_COLUMNS).eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(200);
+  if (error) {
+    if (error.message.includes("website_applications")) throw new Error("Für die Stellenanzeigen fehlt noch ein Datenbank-Update (20261103230000_website_stellen.sql).");
+    fail("Bewerbungen laden", error);
+  }
+  return (data ?? []) as WebsiteApplication[];
+}
+
+export async function countNewApplications(tenantId: number): Promise<number> {
+  const { count, error } = await supabase.from("website_applications").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("status", "neu");
+  return error ? 0 : (count ?? 0);
+}
+
+/** Lebenslauf als Datei-Adresse zum Öffnen/Herunterladen */
+export async function loadApplicationCv(tenantId: number, id: number): Promise<{ url: string; name: string }> {
+  const { data, error } = await supabase.from("website_applications").select("cv, cv_mime, cv_name").eq("tenant_id", tenantId).eq("id", id).single();
+  if (error) fail("Lebenslauf laden", error);
+  const row = data as { cv: string; cv_mime: string; cv_name: string };
+  return { url: URL.createObjectURL(new Blob([hexToBytes(row.cv)], { type: row.cv_mime || "application/pdf" })), name: row.cv_name || "lebenslauf" };
+}
+
+export async function setApplicationStatus(tenantId: number, id: number, status: WebsiteApplication["status"]) {
+  const { error } = await supabase.from("website_applications").update({ status }).eq("id", id).eq("tenant_id", tenantId);
+  if (error) fail("Bewerbung aktualisieren", error);
+}
+
+export async function deleteApplication(tenantId: number, id: number) {
+  const { error } = await supabase.from("website_applications").delete().eq("id", id).eq("tenant_id", tenantId);
+  if (error) fail("Bewerbung löschen", error);
 }

@@ -50,6 +50,8 @@ export type Website = {
   faq?: WebsiteFaq[];
   /** Online-Terminbuchung (undefined = Datenbank-Update fehlt noch, null = nie eingestellt) */
   booking?: WebsiteBooking | null;
+  /** Stellenanzeigen (undefined = Datenbank-Update fehlt noch) */
+  jobs?: WebsiteJob[];
   sections: WebsiteSections;
   contact_form: boolean;
   seo_title: string | null;
@@ -419,3 +421,127 @@ export const BOOKING_TIMEZONES = [
   { value: "Europe/Zurich", label: "Schweiz (Zürich)" },
   { value: "Europe/Madrid", label: "Spanien (Madrid/Palma)" },
 ];
+
+// ---------------------------------------------------------------------
+// „Wir stellen ein“
+// ---------------------------------------------------------------------
+export type WebsiteJob = {
+  id: string;
+  title: string;
+  employment: string;
+  location: string;
+  start: string;
+  text: string;
+  tasks: string[];
+  profile: string[];
+  benefits: string[];
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_unit: "HOUR" | "MONTH";
+  active: boolean;
+  posted_at: string;
+};
+
+export type WebsiteApplication = {
+  id: number;
+  job_id: string | null;
+  job_title: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  available_from: string | null;
+  experience: string | null;
+  driving_license: boolean | null;
+  message: string | null;
+  cv_name: string | null;
+  cv_mime: string | null;
+  status: "neu" | "kontaktiert" | "erledigt";
+  created_at: string;
+};
+
+export const EMPLOYMENT_OPTIONS = [
+  { value: "vollzeit", label: "Vollzeit" },
+  { value: "teilzeit", label: "Teilzeit" },
+  { value: "vollzeit_teilzeit", label: "Vollzeit oder Teilzeit" },
+  { value: "minijob", label: "Minijob" },
+  { value: "aushilfe", label: "Aushilfe / befristet" },
+  { value: "ausbildung", label: "Ausbildung" },
+];
+
+/** Website-Pfad einer Stelle (muss zu jobSlug in api/site.ts passen) */
+export function jobSlug(job: Pick<WebsiteJob, "id" | "title">): string {
+  const base = (serviceSlugs([job.title])[0] ?? "").slice(0, 50).replace(/-+$/g, "");
+  return `stelle-${base ? `${base}-` : ""}${job.id}`;
+}
+
+export const newJobId = () => Math.random().toString(36).slice(2, 8).padEnd(6, "0");
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Vorlagen, damit niemand bei null anfangen muss */
+export const JOB_TEMPLATES: { label: string; job: Omit<WebsiteJob, "id" | "location" | "posted_at" | "active"> }[] = [
+  {
+    label: "Maler/in (Geselle)",
+    job: {
+      title: "Maler- und Lackierer/in (m/w/d)",
+      employment: "vollzeit",
+      start: "ab sofort",
+      text: "Zur Verstärkung unseres Teams suchen wir eine/n Maler- und Lackierer/in in Vollzeit. Sie erwartet ein familiäres Team, abwechslungsreiche Aufträge bei Privat- und Gewerbekunden und ein sicherer, unbefristeter Arbeitsplatz.",
+      tasks: ["Maler- und Tapezierarbeiten im Innenbereich", "Fassadenanstriche und Lackierarbeiten", "Spachtel- und Putzarbeiten", "Saubere Baustellen beim Kunden"],
+      profile: ["Abgeschlossene Ausbildung als Maler/in und Lackierer/in", "Zuverlässige und sorgfältige Arbeitsweise", "Führerschein Klasse B wünschenswert"],
+      benefits: ["Unbefristeter Arbeitsvertrag", "Pünktliche Bezahlung, Bezahlung nach Tarif", "Moderne Arbeitsmittel und Arbeitskleidung", "Feste Ansprechpartner und gutes Teamklima"],
+      salary_min: null,
+      salary_max: null,
+      salary_unit: "HOUR",
+    },
+  },
+  {
+    label: "Helfer/in",
+    job: {
+      title: "Helfer/in im Malerhandwerk (m/w/d)",
+      employment: "vollzeit_teilzeit",
+      start: "ab sofort",
+      text: "Sie packen gerne mit an und möchten im Handwerk arbeiten? Auch Quereinsteiger sind bei uns willkommen – wir arbeiten Sie gründlich ein.",
+      tasks: ["Abkleben, Abdecken und Vorbereiten der Baustelle", "Unterstützung bei Maler- und Tapezierarbeiten", "Auf- und Abbau, Ordnung und Sauberkeit"],
+      profile: ["Handwerkliches Geschick und Freude an der Arbeit", "Zuverlässigkeit und Pünktlichkeit", "Gute Deutschkenntnisse"],
+      benefits: ["Einarbeitung durch erfahrene Kolleginnen und Kollegen", "Pünktliche Bezahlung", "Möglichkeit zur Weiterbildung"],
+      salary_min: null,
+      salary_max: null,
+      salary_unit: "HOUR",
+    },
+  },
+  {
+    label: "Auszubildende/r",
+    job: {
+      title: "Ausbildung Maler/in und Lackierer/in (m/w/d)",
+      employment: "ausbildung",
+      start: "1. August",
+      text: "Du willst etwas mit deinen Händen schaffen und am Ende des Tages sehen, was du geleistet hast? Dann starte deine Ausbildung bei uns!",
+      tasks: ["Wände, Decken und Fassaden gestalten", "Untergründe vorbereiten und spachteln", "Farben mischen und Techniken lernen"],
+      profile: ["Schulabschluss (Hauptschule oder höher)", "Freude an handwerklicher Arbeit", "Teamgeist und Zuverlässigkeit"],
+      benefits: ["Ausbildungsvergütung nach Tarif", "Gute Chancen auf Übernahme", "Erfahrene Ausbilder und Ausbilderinnen"],
+      salary_min: null,
+      salary_max: null,
+      salary_unit: "MONTH",
+    },
+  },
+];
+
+export function emptyJob(city?: string | null): WebsiteJob {
+  return {
+    id: newJobId(),
+    title: "",
+    employment: "vollzeit",
+    location: city ?? "",
+    start: "ab sofort",
+    text: "",
+    tasks: [],
+    profile: [],
+    benefits: [],
+    salary_min: null,
+    salary_max: null,
+    salary_unit: "HOUR",
+    active: true,
+    posted_at: today(),
+  };
+}

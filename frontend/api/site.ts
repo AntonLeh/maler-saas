@@ -53,6 +53,7 @@ export type SiteData = {
   opening_hours?: string | null;
   whatsapp_number?: string | null;
   booking_enabled?: boolean;
+  jobs?: Job[] | null;
   faq?: Faq[] | null;
   sections?: Record<string, boolean>;
   contact_form?: boolean;
@@ -279,7 +280,7 @@ var u="/api/site?${q}"+(s?"&src="+s:"");if(navigator.sendBeacon)navigator.sendBe
 // ---------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------
-type Ctx = { base: string; canonical: string; origin: string; notice?: string; preview: boolean; q?: string; page?: string; slug?: string };
+type Ctx = { base: string; canonical: string; origin: string; notice?: string; applyNotice?: string; preview: boolean; q?: string; page?: string; slug?: string };
 
 function styles(d: SiteData): string {
   const accent = validColor(d.accent_color);
@@ -417,6 +418,15 @@ form.lead input:focus,form.lead textarea:focus{outline:3px solid color-mix(in sr
 form.lead .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 form.lead .hp{position:absolute;left:-5000px;width:1px;height:1px;overflow:hidden}
 form.lead small{color:var(--muted);font-weight:400}
+.job-meta{font-weight:600;color:var(--accent-dark)!important;font-size:.92rem;margin:0 0 8px!important}
+.jobs-all{margin:26px 0 0}
+.job-chips li::before{content:""}
+.job-chips+.actions{margin-top:24px}
+.job-text{max-width:820px;margin-bottom:28px}
+.job-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px}
+form.apply select{font:inherit;padding:12px 14px;border:1px solid #c9ced6;border-radius:calc(var(--radius) * .7);width:100%;background:#fff}
+form.apply .ws-inline span{display:flex;align-items:center;gap:10px;font-weight:600}
+form.apply .ws-inline input{width:auto}
 .booking{display:grid;grid-template-columns:.8fr 1.2fr;gap:40px;align-items:start}
 .tb{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:grid;gap:16px}
 .tb-days{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
@@ -482,6 +492,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
     s.reviews && reviewSummary(d) ? `<a href="${link("bewertungen")}">Bewertungen</a>` : "",
     s.about && (d.about_text || (d.highlights?.length ?? 0) > 0 || safeUrl(d.about_image_url)) ? `<a href="${link("ueber-uns")}">Über uns</a>` : "",
     d.booking_enabled ? `<a href="${link("termin")}">Termin buchen</a>` : "",
+    jobsOf(d).length ? `<a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a>` : "",
     s.contact ? `<a href="${link("kontakt")}">Kontakt</a>` : "",
   ].join("");
   return `${ctx.preview ? `<div class="preview">Vorschau – diese Seite ist noch nicht veröffentlicht.</div>` : ""}
@@ -498,7 +509,7 @@ function footer(d: SiteData, ctx: Ctx): string {
   return `<footer class="bottom"><div class="wrap">
 <div><strong>${esc(c.name)}</strong><br>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</div>
 <div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
-<div><a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
+<div>${jobsOf(d).length ? `<a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a> · ` : ""}<a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
 ${(() => {
   const wa = waHref(d.whatsapp_number, c.name ?? "");
@@ -901,6 +912,7 @@ ${facts}
       aboutHtml,
       areaHtml,
       faqHtml,
+      jobsTeaser(d, ctx),
       bookingSection(d, ctx),
       contactSection(d, ctx, s),
     ]);
@@ -908,9 +920,230 @@ ${facts}
 }
 
 // ---------------------------------------------------------------------
+// „Wir stellen ein“: Karriereseite, Stellenseiten, Bewerbungsformular
+// ---------------------------------------------------------------------
+export type Job = {
+  id: string;
+  title: string;
+  employment?: string | null;
+  location?: string | null;
+  start?: string | null;
+  text?: string | null;
+  tasks?: string[] | null;
+  profile?: string[] | null;
+  benefits?: string[] | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_unit?: "HOUR" | "MONTH" | string | null;
+  active?: boolean;
+  posted_at?: string | null;
+};
+
+const EMPLOYMENT: Record<string, { label: string; schema: string[] }> = {
+  vollzeit: { label: "Vollzeit", schema: ["FULL_TIME"] },
+  teilzeit: { label: "Teilzeit", schema: ["PART_TIME"] },
+  vollzeit_teilzeit: { label: "Vollzeit oder Teilzeit", schema: ["FULL_TIME", "PART_TIME"] },
+  minijob: { label: "Minijob", schema: ["PART_TIME"] },
+  aushilfe: { label: "Aushilfe / befristet", schema: ["TEMPORARY"] },
+  ausbildung: { label: "Ausbildung", schema: ["FULL_TIME"] },
+};
+const employmentOf = (j: Job) => EMPLOYMENT[String(j.employment ?? "")] ?? EMPLOYMENT.vollzeit;
+const listOf = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => String(x ?? "").trim()).filter(Boolean).slice(0, 12) : []);
+const money = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+
+export function jobsOf(d: SiteData): Job[] {
+  return (Array.isArray(d.jobs) ? d.jobs : []).filter((j) => j && j.active !== false && String(j.title ?? "").trim() && /^[a-z0-9]{2,16}$/.test(String(j.id ?? ""))).slice(0, 10);
+}
+
+export function jobSlug(j: Pick<Job, "id" | "title">): string {
+  const base = slugifyService(String(j.title ?? "")).slice(0, 50).replace(/-+$/g, "");
+  return `stelle-${base ? `${base}-` : ""}${j.id}`;
+}
+
+export function findJob(d: SiteData, pageSlug: string): { job: Job; slug: string; moved: boolean } | null {
+  const m = /^stelle-(?:[a-z0-9-]*-)?([a-z0-9]{2,16})$/.exec(pageSlug);
+  if (!m) return null;
+  const job = jobsOf(d).find((j) => j.id === m[1]);
+  if (!job) return null;
+  const slug = jobSlug(job);
+  return { job, slug, moved: slug !== pageSlug };
+}
+
+function salaryText(j: Job): string {
+  const min = Number(j.salary_min) || 0;
+  const max = Number(j.salary_max) || 0;
+  if (!min && !max) return "";
+  const unit = j.salary_unit === "MONTH" ? "im Monat" : "pro Stunde";
+  if (min && max && max > min) return `${money(min)} – ${money(max)} € ${unit}`;
+  return `${min ? "ab " : "bis "}${money(min || max)} € ${unit}`;
+}
+
+function jobMeta(d: SiteData, j: Job): string[] {
+  return [employmentOf(j).label, j.location?.trim() || d.company.city?.trim() || "", j.start?.trim() ? `Start: ${j.start.trim()}` : "", salaryText(j)].filter(Boolean);
+}
+
+function jobCards(d: SiteData, ctx: Ctx, jobs: Job[]): string {
+  return `<div class="cards jobs">${jobs
+    .map(
+      (j) =>
+        `<article class="card job"><h3><a class="card-link" href="${ctx.base}/${jobSlug(j)}${ctx.q ?? ""}">${esc(j.title)}</a></h3><p class="job-meta">${jobMeta(d, j)
+          .map(esc)
+          .join(" · ")}</p>${j.text ? `<p>${esc(String(j.text).split(/\n/)[0].slice(0, 180))}</p>` : ""}<span class="more" aria-hidden="true">Zur Stelle →</span></article>`
+    )
+    .join("")}</div>`;
+}
+
+/** Startseite: kurzer Hinweis auf offene Stellen */
+function jobsTeaser(d: SiteData, ctx: Ctx): string {
+  const jobs = jobsOf(d);
+  if (!jobs.length) return "";
+  return `<section class="block" id="karriere"><div class="wrap">
+<div class="sec-head"><h2>Wir stellen ein</h2><p>Verstärken Sie unser Team – wir freuen uns auf Ihre Bewerbung.</p></div>
+${jobCards(d, ctx, jobs.slice(0, 6))}
+<p class="jobs-all"><a class="btn ghost" href="${ctx.base}/karriere${ctx.q ?? ""}">Alle Stellen und Initiativbewerbung</a></p>
+</div></section>`;
+}
+
+const APPLY_SCRIPT = `(function(){var f=document.querySelector("form.apply");if(!f)return;var i=f.querySelector("input[type=file]");if(!i)return;i.addEventListener("change",function(){var x=i.files&&i.files[0];i.setCustomValidity(x&&x.size>3145728?"Die Datei ist größer als 3 MB. Bitte eine kleinere Datei wählen.":"");i.reportValidity()});f.addEventListener("submit",function(){var b=f.querySelector("button[type=submit]");setTimeout(function(){b.disabled=true;b.textContent="Wird gesendet …"},0)})})();`;
+
+/** Bewerbungsformular. job = feste Stelle (Stellenseite), sonst Auswahl inkl. Initiativbewerbung */
+function applicationForm(d: SiteData, ctx: Ctx, opts: { job?: Job; page: string }): string {
+  const jobs = jobsOf(d);
+  const notice =
+    ctx.applyNotice === "ok"
+      ? `<div class="notice ok" role="status">Vielen Dank für Ihre Bewerbung! Wir melden uns so schnell wie möglich bei Ihnen.</div>`
+      : ctx.applyNotice
+        ? `<div class="notice err" role="alert">${esc(ctx.applyNotice)}</div>`
+        : "";
+  const phone = d.company.phone?.trim();
+  return `<section class="block" id="bewerbung"><div class="wrap contact">
+<div><h2>${opts.job ? "Jetzt bewerben" : "Bewerbung"}</h2><p>Kein Anschreiben nötig: Ein paar Angaben genügen, wir melden uns bei Ihnen. Einen Lebenslauf können Sie gerne mitschicken – müssen Sie aber nicht.</p>
+${phone ? `<p>Lieber direkt sprechen? Rufen Sie uns an: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a></p>` : ""}</div>
+<form class="lead apply" method="post" enctype="multipart/form-data" action="/api/site?slug=${encodeURIComponent(d.slug)}&action=apply">
+${notice}
+${
+  opts.job
+    ? `<input type="hidden" name="stelle" value="${esc(opts.job.id)}"><p class="tb-chosen">${esc(opts.job.title)}</p>`
+    : `<label>Stelle<select name="stelle">${jobs.map((j) => `<option value="${esc(j.id)}">${esc(j.title)}</option>`).join("")}<option value="">Initiativbewerbung</option></select></label>`
+}
+<div class="two"><label>Ihr Name *<input name="name" required maxlength="120" autocomplete="name"></label>
+<label>Telefon<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label></div>
+<label>E-Mail<input name="email" type="email" maxlength="160" autocomplete="email"></label>
+<div class="two"><label>Erfahrung<select name="erfahrung"><option value="">bitte wählen</option>${[
+    "Maler/in mit Gesellenbrief",
+    "Meister/in",
+    "Helfer/in oder Quereinsteiger/in",
+    "Schulabgänger/in (Ausbildung)",
+    "Sonstiges",
+  ]
+    .map((x) => `<option>${esc(x)}</option>`)
+    .join("")}</select></label>
+<label>Verfügbar ab<select name="verfuegbar"><option value="">bitte wählen</option>${["sofort", "in 2 Wochen", "in 1 Monat", "in 2–3 Monaten", "nach Absprache"]
+    .map((x) => `<option>${esc(x)}</option>`)
+    .join("")}</select></label></div>
+<label class="ws-inline"><span><input type="checkbox" name="fuehrerschein" value="1"> Führerschein Klasse B</span></label>
+<label>Nachricht <small>(optional)</small><textarea name="message" rows="4" maxlength="3000" placeholder="z. B. bisherige Erfahrung, Wunsch-Arbeitszeit …"></textarea></label>
+<label class="photos">Lebenslauf <small>(optional – PDF, JPG oder PNG, höchstens 3 MB)</small><input type="file" name="lebenslauf" accept=".pdf,application/pdf,image/jpeg,image/png"></label>
+<div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<input type="hidden" name="t" value="${Date.now()}"><input type="hidden" name="basis" value="${esc(ctx.base)}"><input type="hidden" name="seite" value="${esc(opts.page)}">
+<small>Bitte Telefon oder E-Mail angeben. Ihre Angaben verwenden wir nur für Ihre Bewerbung und löschen sie spätestens nach 6 Monaten, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
+<button class="btn" type="submit">Bewerbung absenden</button>
+</form>
+<script>${APPLY_SCRIPT}</script>
+</div></section>`;
+}
+
+export function renderCareer(d: SiteData, ctx: Ctx): string {
+  const c = d.company;
+  const name = c.name || "Malerbetrieb";
+  const city = c.city?.trim() || "";
+  const jobs = jobsOf(d);
+  const pageCtx: Ctx = { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/karriere` };
+  const highlights = (d.highlights ?? []).filter(Boolean).slice(0, 8);
+  const hero = `<section class="hero sub"><div class="wrap grid">
+<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${homeHref(ctx)}">Startseite</a> › <span>Karriere</span></nav>
+<h1>Karriere bei ${esc(name)}</h1><p class="lead">Wir suchen Verstärkung für unser Team${city ? ` in ${esc(city)}` : ""}. Bewerben Sie sich in zwei Minuten – ganz ohne Anschreiben.</p>
+${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
+</div></div></section>`;
+  const list = `<section class="block" id="stellen"><div class="wrap">
+<div class="sec-head"><h2>Offene Stellen</h2>${jobs.length ? "" : "<p>Gerade sind keine Stellen ausgeschrieben – über eine Initiativbewerbung freuen wir uns trotzdem.</p>"}</div>
+${jobs.length ? jobCards(d, ctx, jobs) : ""}</div></section>`;
+  const body = hero + alternate([list, applicationForm(d, ctx, { page: "karriere" })]);
+  return page(d, pageCtx, `Karriere – ${name}${city ? ` in ${city}` : ""}`.slice(0, 70), `Offene Stellen bei ${name}${city ? ` in ${city}` : ""}: ${jobs.map((j) => j.title).slice(0, 4).join(", ") || "Initiativbewerbung"}. Jetzt einfach bewerben.`.slice(0, 160), body, {
+    home: false,
+    index: !ctx.preview,
+  });
+}
+
+function jobJsonLd(d: SiteData, ctx: Ctx, j: Job): string {
+  const c = d.company;
+  const posted = /^\d{4}-\d{2}-\d{2}/.test(String(j.posted_at ?? "")) ? String(j.posted_at).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const description = [
+    paragraphs(j.text),
+    listOf(j.tasks).length ? `<h3>Ihre Aufgaben</h3><ul>${listOf(j.tasks).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "",
+    listOf(j.profile).length ? `<h3>Ihr Profil</h3><ul>${listOf(j.profile).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "",
+    listOf(j.benefits).length ? `<h3>Wir bieten</h3><ul>${listOf(j.benefits).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "",
+  ].join("") || `<p>${esc(j.title)} bei ${esc(c.name)}</p>`;
+  const min = Number(j.salary_min) || 0;
+  const max = Number(j.salary_max) || 0;
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: j.title,
+    description,
+    datePosted: posted,
+    validThrough: new Date(new Date(`${posted}T12:00:00Z`).getTime() + 180 * 86_400_000).toISOString().slice(0, 10),
+    employmentType: employmentOf(j).schema,
+    directApply: true,
+    url: ctx.canonical,
+    identifier: { "@type": "PropertyValue", name: c.name || undefined, value: j.id },
+    hiringOrganization: { "@type": "Organization", name: c.name || undefined, sameAs: ctx.canonical.replace(/\/stelle-[^/]*$/, ""), logo: safeUrl(c.logo_url) || undefined },
+    jobLocation: {
+      "@type": "Place",
+      address: { "@type": "PostalAddress", streetAddress: c.street || undefined, postalCode: c.zip || undefined, addressLocality: j.location?.trim() || c.city || undefined, addressCountry: "DE" },
+    },
+    baseSalary:
+      min || max
+        ? { "@type": "MonetaryAmount", currency: "EUR", value: { "@type": "QuantitativeValue", minValue: min || undefined, maxValue: max || undefined, unitText: j.salary_unit === "MONTH" ? "MONTH" : "HOUR" } }
+        : undefined,
+  };
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+}
+
+export function renderJob(d: SiteData, ctx: Ctx, found: { job: Job; slug: string }): string {
+  const j = found.job;
+  const c = d.company;
+  const name = c.name || "Malerbetrieb";
+  const pageCtx: Ctx = { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/${found.slug}` };
+  const loc = j.location?.trim() || c.city?.trim() || "";
+  const hero = `<section class="hero sub"><div class="wrap grid">
+<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${homeHref(ctx)}">Startseite</a> › <a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a> › <span>${esc(j.title)}</span></nav>
+<h1>${esc(j.title)}${loc ? ` in ${esc(loc)}` : ""}</h1><p class="lead">bei ${esc(name)}</p>
+<ul class="chips job-chips">${jobMeta(d, j).map((m) => `<li>${esc(m)}</li>`).join("")}</ul>
+<div class="actions"><a class="btn" href="#bewerbung">Jetzt bewerben</a></div>
+</div></div></section>`;
+  const block = (title: string, items: string[]) => (items.length ? `<div><h3>${esc(title)}</h3><ul class="facts">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "");
+  const lists = [block("Ihre Aufgaben", listOf(j.tasks)), block("Ihr Profil", listOf(j.profile)), block("Wir bieten", listOf(j.benefits))].filter(Boolean);
+  const details = `<section class="block" id="details"><div class="wrap">
+${j.text ? `<div class="job-text">${paragraphs(j.text)}</div>` : ""}
+${lists.length ? `<div class="job-lists">${lists.join("")}</div>` : ""}
+</div></section>`;
+  const others = jobsOf(d).filter((x) => x.id !== j.id);
+  const othersHtml = others.length
+    ? `<section class="block" id="weitere"><div class="wrap"><div class="sec-head"><h2>Weitere offene Stellen</h2></div>${jobCards(d, ctx, others)}</div></section>`
+    : "";
+  const body = hero + alternate([j.text || lists.length ? details : "", applicationForm(d, ctx, { job: j, page: found.slug }), othersHtml]);
+  return page(d, pageCtx, `${j.title}${loc ? ` in ${loc}` : ""} – ${name}`.slice(0, 70), `${j.title} (${jobMeta(d, j).join(", ")}) bei ${name}. Jetzt einfach online bewerben.`.slice(0, 160), body, {
+    home: false,
+    index: !ctx.preview,
+    jsonLd: jobJsonLd(d, pageCtx, j),
+  });
+}
+
+// ---------------------------------------------------------------------
 // Eigene Seite pro Leistung, z. B. /w/prinzenkinder/fassadenanstrich
 // ---------------------------------------------------------------------
-const RESERVED_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
+const RESERVED_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen", "karriere"]);
 
 export function slugifyService(title: string): string {
   return title
@@ -1249,6 +1482,11 @@ ${
     ? `<h2>Online-Terminbuchung</h2><p>Wenn Sie über diese Website einen Besichtigungstermin buchen, verarbeiten wir Ihren Namen, Ihre Telefonnummer, ggf. Ihre E-Mail-Adresse, die Adresse des Objekts, Ihr Anliegen und den gewählten Termin. Die Angaben werden in unserem Terminkalender (Software „Maler-SaaS“, Speicherung bei Supabase) eingetragen, damit wir den Termin wahrnehmen und vorbereiten können. Haben Sie eine E-Mail-Adresse angegeben, senden wir Ihnen eine Terminbestätigung; der Versand erfolgt über den E-Mail-Dienstleister Brevo (Sendinblue GmbH, Berlin). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags). Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
     : ""
 }
+${
+  jobsOf(d).length
+    ? `<h2>Bewerbungen</h2><p>Wenn Sie sich über diese Website bewerben, verarbeiten wir Ihre Angaben (Name, Kontaktdaten, Erfahrung, Verfügbarkeit, Nachricht und ggf. Ihren Lebenslauf) ausschließlich für das Bewerbungsverfahren (§ 26 BDSG bzw. Art. 6 Abs. 1 lit. b DSGVO). Die Bewerbung wird in unserer Software „Maler-SaaS“ (Speicherung bei Supabase) abgelegt und uns per E-Mail über den Dienstleister Brevo (Sendinblue GmbH, Berlin) zugestellt. Kommt kein Arbeitsverhältnis zustande, werden Ihre Daten spätestens sechs Monate nach Eingang gelöscht, sofern Sie nicht in eine längere Speicherung eingewilligt haben. Ihre Bewerbung wird nicht an andere Unternehmen weitergegeben.</p>`
+    : ""
+}
 <h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten und Kundenbewertungen</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift. Kundenbewertungen (Sterne, Kommentar, Vorname mit Anfangsbuchstabe des Nachnamens bzw. Firmenname und Ort) veröffentlichen wir nur, wenn die Kundin oder der Kunde beim Bewerten ausdrücklich eingewilligt hat (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden; eine kurze Nachricht an die oben genannten Kontaktdaten genügt. In den angezeigten Durchschnittswert fließen alle Bewertungen ohne Namen ein.</p>
 <h2>${d.contact_form !== false ? "6" : "5"}. Ihre Rechte</h2><p>Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen die Verarbeitung (Art. 21 DSGVO). Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren. Wenden Sie sich für Ihre Anliegen einfach an die oben genannten Kontaktdaten.</p>
 ${d.privacy_extra ? `<h2>Ergänzende Hinweise</h2>${paragraphs(d.privacy_extra)}` : ""}
@@ -1302,6 +1540,46 @@ ${lead.photos.length ? `<p>${lead.photos.length} Foto${lead.photos.length > 1 ? 
       subject: `Neue Website-Anfrage von ${lead.name}`,
       htmlContent: html,
       attachment: lead.photos.length ? lead.photos.map((content, i) => ({ name: `foto-${i + 1}.jpg`, content })) : undefined,
+    }),
+  }).catch(() => undefined);
+}
+
+type Application = { job: string; name: string; email: string; phone: string; available: string; experience: string; license: boolean; message: string };
+
+function toBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+async function sendApplicationMail(to: string, company: string, jobTitle: string, a: Application, cv: { name: string; content: string } | null, siteUrl: string) {
+  const key = env("BREVO_API_KEY");
+  const sender = env("BREVO_SENDER_EMAIL");
+  if (!key || !sender || !to) return;
+  const rows = [
+    ["Stelle", jobTitle],
+    ["Telefon", a.phone],
+    ["E-Mail", a.email],
+    ["Erfahrung", a.experience],
+    ["Verfügbar ab", a.available],
+    ["Führerschein B", a.license ? "ja" : ""],
+  ].filter((r) => r[1]);
+  const html = `<p>Neue Bewerbung über Ihre Website:</p>
+<p><strong>${esc(a.name)}</strong></p>
+<table cellpadding="4">${rows.map((r) => `<tr><td style="color:#666">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>
+${a.message ? `<p>${esc(a.message).replace(/\n/g, "<br>")}</p>` : ""}
+${cv ? "<p>Lebenslauf im Anhang.</p>" : ""}
+<p>Alle Bewerbungen finden Sie in Maler-SaaS unter <em>Website → Stellen</em>. Bitte löschen Sie Bewerbungen, die Sie nicht mehr brauchen – spätestens nach 6 Monaten geschieht das automatisch.</p><p style="color:#888">${esc(siteUrl)}</p>`;
+  await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: { email: sender, name: "Maler-SaaS Website" },
+      to: [{ email: to, name: company || undefined }],
+      replyTo: a.email ? { email: a.email, name: a.name } : undefined,
+      subject: `Neue Bewerbung: ${jobTitle} – ${a.name}`,
+      htmlContent: html,
+      attachment: cv ? [{ name: cv.name.replace(/[^A-Za-z0-9ÄÖÜäöüß._ -]/g, "") || "lebenslauf.pdf", content: cv.content }] : undefined,
     }),
   }).catch(() => undefined);
 }
@@ -1362,6 +1640,56 @@ export async function handle(request: Request): Promise<Response> {
       }).catch(() => undefined);
     }
     return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
+  }
+
+  // Bewerbung (Formular mit Datei-Upload)
+  if (request.method === "POST" && url.searchParams.get("action") === "apply") {
+    const slug = (url.searchParams.get("slug") || "").toLowerCase();
+    if (!SLUG_RE.test(slug)) return notFound(origin);
+    const form = await request.formData().catch(() => null);
+    const base = String(form?.get("basis") ?? "x") === "" ? "" : `/w/${slug}`;
+    const seite = String(form?.get("seite") ?? "").toLowerCase();
+    const target = /^(karriere|stelle-[a-z0-9-]{1,80})$/.test(seite) ? `${base}/${seite}` : `${base}/karriere`;
+    const reqHost = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").toLowerCase().replace(/:\d+$/, "");
+    const siteUrl = base === "" && DOMAIN_RE.test(reqHost) ? `https://${reqHost}` : `${origin}/w/${slug}`;
+    const back = (q: string) => new Response(null, { status: 303, headers: { location: `${target}?${q}#bewerbung` } });
+    if (!form) return back("bfehler=formular");
+    const get = (k: string) => String(form.get(k) ?? "").trim();
+    const started = Number(get("t"));
+    if (get("website") || !started || Date.now() - started < 3000) return back("beworben=1");
+    let cv = "";
+    let cvName = "";
+    const file = form.get("lebenslauf");
+    if (file && typeof file === "object" && "arrayBuffer" in file && (file as File).size > 0) {
+      const f = file as File;
+      if (f.size > 3_145_728) return back("bfehler=datei");
+      cv = toBase64(new Uint8Array(await f.arrayBuffer()));
+      cvName = String(f.name || "lebenslauf").slice(0, 80);
+    }
+    const app: Application = {
+      job: get("stelle").slice(0, 16),
+      name: get("name"),
+      email: get("email"),
+      phone: get("phone"),
+      available: get("verfuegbar").slice(0, 60),
+      experience: get("erfahrung").slice(0, 60),
+      license: get("fuehrerschein") === "1",
+      message: get("message").slice(0, 3000),
+    };
+    try {
+      const r = await rpc("website_submit_application", {
+        p_slug: slug, p_job_id: app.job, p_name: app.name, p_email: app.email, p_phone: app.phone, p_available: app.available,
+        p_experience: app.experience, p_license: app.license, p_message: app.message, p_cv: cv || null, p_cv_name: cvName || null,
+      });
+      if (!r?.ok) {
+        const err = r?.error === "invalid_email" ? "email" : r?.error === "rate_limited" ? "spaeter" : r?.error === "cv" ? "datei" : "angaben";
+        return back(`bfehler=${err}`);
+      }
+      await sendApplicationMail(r.notify_email, r.company, r.job_title, app, cv && r.cv_mime ? { name: cvName, content: cv } : null, siteUrl);
+      return back("beworben=1");
+    } catch {
+      return back("bfehler=server");
+    }
   }
 
   // Kontaktformular (Formular sendet immer slug mit; "basis" = "" bei eigener Adresse, sonst /w/<slug>)
@@ -1444,7 +1772,7 @@ export async function handle(request: Request): Promise<Response> {
   const preferredIsOwn = !!data.custom_domain || subdomainsEnabled();
   if (!isPreview && preferredIsOwn && preferred !== current) {
     const keep = new URLSearchParams();
-    for (const k of ["gesendet", "fehler"]) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k)!);
+    for (const k of ["gesendet", "fehler", "beworben", "bfehler"]) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k)!);
     const qs = keep.toString();
     return new Response(null, {
       status: 301,
@@ -1468,6 +1796,13 @@ export async function handle(request: Request): Promise<Response> {
     preview: isPreview,
     q: isPreview ? `?vorschau=${encodeURIComponent(preview)}` : "",
     notice: url.searchParams.get("gesendet") ? "ok" : errors[url.searchParams.get("fehler") || ""] || undefined,
+    applyNotice: url.searchParams.get("beworben")
+      ? "ok"
+      : url.searchParams.get("bfehler") === "datei"
+        ? "Der Lebenslauf konnte nicht verarbeitet werden. Bitte eine PDF-, JPG- oder PNG-Datei mit höchstens 3 MB wählen – oder ohne Datei bewerben."
+        : url.searchParams.get("bfehler") === "angaben"
+          ? "Bitte geben Sie Ihren Namen und Telefon oder E-Mail an."
+          : errors[url.searchParams.get("bfehler") || ""] || undefined,
   };
   const cache = isPreview ? "private, no-store" : "public, s-maxage=120, stale-while-revalidate=600";
 
@@ -1478,6 +1813,7 @@ export async function handle(request: Request): Promise<Response> {
     const pages = [
       ...(sectionsOf(data).services ? serviceSlugs(servicesOf(data)).map((sl) => `${ctx.canonical}/${sl}`) : []),
       ...(sectionsOf(data).references ? (data.references ?? []).filter((r) => r.title).map((r) => `${ctx.canonical}/${referenceSlug(r)}`) : []),
+      ...(jobsOf(data).length ? [`${ctx.canonical}/karriere`, ...jobsOf(data).map((j) => `${ctx.canonical}/${jobSlug(j)}`)] : []),
     ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[ctx.canonical, ...pages]
       .map((u) => `<url><loc>${esc(u)}</loc></url>`)
@@ -1489,6 +1825,12 @@ export async function handle(request: Request): Promise<Response> {
   if (pagePath === "" || pagePath === "index.html") html = renderHome(data, ctx);
   else if (pagePath === "impressum") html = renderImprint(data, ctx);
   else if (pagePath === "datenschutz") html = renderPrivacy(data, ctx);
+  else if (pagePath === "karriere" && jobsOf(data).length) html = renderCareer(data, ctx);
+  else if (pagePath.startsWith("stelle-") && findJob(data, pagePath)) {
+    const fj = findJob(data, pagePath)!;
+    if (fj.moved) return new Response(null, { status: 301, headers: { location: `${base}/${fj.slug}${ctx.q ?? ""}`, "cache-control": cache } });
+    html = renderJob(data, ctx, fj);
+  }
   else if (sectionsOf(data).references && pagePath.startsWith("projekt-") && findReference(data, pagePath)) {
     const ref = findReference(data, pagePath)!;
     if (ref.moved) return new Response(null, { status: 301, headers: { location: `${base}/${ref.slug}${ctx.q ?? ""}`, "cache-control": cache } });

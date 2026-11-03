@@ -1151,3 +1151,128 @@
     gap: 4px;
   }
 }
+
+/* ---------- Stellen & Bewerbungen ---------- */
+.ws-root .ws-job-list,
+.ws-root .ws-app-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ws-root .ws-job-list > li {
+  border-top: 1px solid var(--tk-border);
+  padding: 10px 0;
+}
+.ws-root .ws-job-list > li.off .ws-job-row > div:first-child {
+  opacity: 0.55;
+}
+.ws-root .ws-job-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ws-root .ws-check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ws-root .ws-job-edit {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--tk-surface-2);
+}
+.ws-root .ws-job-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.ws-root .ws-job-grid .ws-span2 {
+  grid-column: span 2;
+}
+.ws-root .ws-salary {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.ws-root .ws-salary input {
+  width: 0;
+  flex: 1 1 60px;
+  min-width: 0;
+}
+.ws-root .ws-salary select {
+  flex: 0 0 auto;
+}
+.ws-root .ws-job-done {
+  justify-content: flex-end;
+}
+.ws-root .ws-job-add {
+  margin-top: 14px;
+  align-items: center;
+}
+.ws-root .ws-app {
+  border-top: 1px solid var(--tk-border);
+  padding: 14px 0;
+  display: grid;
+  gap: 8px;
+}
+.ws-root .ws-app.erledigt {
+  opacity: 0.6;
+}
+.ws-root .ws-app-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ws-root .ws-app-date {
+  font-size: 13px;
+}
+.ws-root .ws-app-badge {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: var(--tk-surface-2);
+  white-space: nowrap;
+}
+.ws-root .ws-app-badge.neu {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.ws-root .ws-app-badge.kontaktiert {
+  background: #fef3c7;
+  color: #92400e;
+}
+.ws-root .ws-app-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 14px;
+  margin: 0;
+  font-size: 14px;
+}
+.ws-root .ws-app-facts dt {
+  color: var(--tk-muted, #667085);
+}
+.ws-root .ws-app-facts dd {
+  margin: 0;
+}
+.ws-root .ws-app-msg {
+  margin: 0;
+  white-space: pre-line;
+  font-size: 14px;
+}
+@media (max-width: 760px) {
+  .ws-root .ws-job-grid,
+  .ws-root .ws-job-grid.three {
+    grid-template-columns: 1fr;
+  }
+  .ws-root .ws-job-grid .ws-span2 {
+    grid-column: auto;
+  }
+}

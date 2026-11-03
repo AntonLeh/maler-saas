@@ -44,7 +44,7 @@ export default function StatsTab({ tenantId, services, onError }: { tenantId: nu
   const pageNames = useMemo(() => {
     const titles = services.map((s) => s.title.trim()).filter(Boolean);
     const slugs = serviceSlugs(titles);
-    const map: Record<string, string> = { "": "Startseite", impressum: "Impressum", datenschutz: "Datenschutz" };
+    const map: Record<string, string> = { "": "Startseite", impressum: "Impressum", datenschutz: "Datenschutz", karriere: "Karriere" };
     slugs.forEach((sl, i) => (map[sl] = titles[i]));
     return map;
   }, [services]);
