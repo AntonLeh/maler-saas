@@ -54,6 +54,16 @@ Vorschläge werden erst nach „Übernehmen“ + „Speichern“ gespeichert.
 Secrets: `ANTHROPIC_API_KEY` (Pflicht), `WEBSITE_AI_MODEL` (Standard `claude-sonnet-5-5`), `WEBSITE_AI_MONTHLY_LIMIT` (Standard 40).
 Deploy: `npx supabase functions deploy website-ai-text --no-verify-jwt`
 
+## Eigene Adressen
+
+- `betrieb.maler-saas.com`: `frontend/proxy.ts` (Vercel Routing Middleware, eingetragen in `vercel.json`) leitet Anfragen an
+  Subdomains und fremde Domains intern an `/api/site?host=…&page=…`. maler-saas.com, www und *.vercel.app bleiben unberührt.
+- Hauptadresse: eigene Domain (aktiv) > Subdomain (wenn `SITE_SUBDOMAINS=1` in Vercel und `SUBDOMAINS_ENABLED` in
+  `types.ts`) > `maler-saas.com/w/<slug>`. Alle anderen Adressen leiten per 301 dorthin; die Vorschau (`?vorschau=`) nie.
+- Eigene Domain: Funktion `supabase/functions/website-domain` (Vercel-API: Domain + Weiterleitung ohne/mit www, Prüfung,
+  DNS-Anleitung). Spalten `custom_domain*` (`supabase/migrations/20261103120000_website_domains.sql`) sind gegen direkte
+  Änderung durch Admins geschützt. Secrets: `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`.
+
 ## Adressen
 
 - `https://maler-saas.com/w/<slug>` (Start), `/impressum`, `/datenschutz`, `/<leistung>`

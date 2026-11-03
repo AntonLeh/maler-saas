@@ -16,7 +16,7 @@
 ## Größere Schritte
 10. Online-Besichtigungstermin buchen (Terminkalender) + KI-Telefonnummer auf der Website
 ✅ 11. Bewertungen (nur echte, mit Zustimmung; später Google-Bewertungen)
-12. Eigene Adresse: betriebsname.maler-saas.com bzw. eigene Domain
+✅ 12. Eigene Adresse: betriebsname.maler-saas.com bzw. eigene Domain
 
 Empfehlung: zuerst 1, 2, 3, dann 6.
 

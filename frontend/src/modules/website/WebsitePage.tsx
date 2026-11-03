@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import "../terminkalender/terminkalender.css";
 import "./website.css";
 import type { CompanyInfo, Website, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
-import { imprintGaps, previewUrl, siteUrl, slugError, slugify } from "./types";
+import { imprintGaps, previewUrl, publicUrl, slugError, slugify } from "./types";
 import * as api from "./api";
 import DesignTab from "./DesignTab";
 import ReferencesTab from "./ReferencesTab";
@@ -196,12 +196,12 @@ export default function WebsitePage({
             <div className={`ws-status${website.published ? " ws-status-online" : ""}`}>
               <div>
                 <strong>{website.published ? "● Online" : "○ Noch nicht veröffentlicht"}</strong>
-                <a href={website.published ? siteUrl(website.slug) : previewUrl(website)} target="_blank" rel="noreferrer" className="ws-url">
-                  {siteUrl(website.slug).replace("https://", "")}
+                <a href={website.published ? publicUrl(website) : previewUrl(website)} target="_blank" rel="noreferrer" className="ws-url">
+                  {publicUrl(website).replace("https://", "")}
                 </a>
               </div>
               <div className="ws-row">
-                <a className="btn btn-secondary" href={website.published ? siteUrl(website.slug) : previewUrl(website)} target="_blank" rel="noreferrer">
+                <a className="btn btn-secondary" href={website.published ? publicUrl(website) : previewUrl(website)} target="_blank" rel="noreferrer">
                   {website.published ? "Website ansehen" : "Vorschau ansehen"}
                 </a>
                 <button type="button" className={`btn ${website.published ? "btn-secondary" : "btn-primary"}`} onClick={togglePublish} disabled={busy}>

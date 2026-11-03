@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
-import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, THEMES, guessServiceIcon, previewUrl, serviceSlugs, siteUrl, slugError } from "./types";
+import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, SUBDOMAINS_ENABLED, SUBDOMAIN_SUFFIX, THEMES, guessServiceIcon, previewUrl, publicUrl, serviceSlugs, siteUrl, slugError } from "./types";
+import DomainPanel from "./DomainPanel";
 import { ServiceIcon } from "./ServiceIcon";
 import ServicePageEditor from "./ServicePageEditor";
 import AiWriter from "./AiWriter";
@@ -89,7 +90,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const savedTitles = (website.services ?? []).map((s) => s.title.trim()).filter(Boolean);
   const savedSlugs = serviceSlugs(savedTitles);
   const pageUrl = (slug: string) => {
-    const base = website.published ? siteUrl(website.slug) : previewUrl(website);
+    const base = website.published ? publicUrl(website) : previewUrl(website);
     const [path, query] = base.split("?");
     return `${path}/${slug}${query ? `?${query}` : ""}`;
   };
@@ -372,8 +373,9 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
           <label className="tk-field tk-span-2">
             <span>Web-Adresse</span>
             <div className="ws-slug">
-              <span className="tk-muted">{siteUrl("").replace(/\/$/, "")}/</span>
+              {!SUBDOMAINS_ENABLED && <span className="tk-muted">{siteUrl("").replace(/\/$/, "").replace("https://", "")}/</span>}
               <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} maxLength={50} />
+              {SUBDOMAINS_ENABLED && <span className="tk-muted">{SUBDOMAIN_SUFFIX}</span>}
             </div>
             {slugProblem && <small className="ws-warn">{slugProblem}</small>}
             {slug !== website.slug && !slugProblem && (
@@ -382,6 +384,8 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
           </label>
         </div>
       </section>
+
+      <DomainPanel website={website} onError={onError} />
 
       <div className="ws-savebar">
         <button type="button" className="btn btn-primary" onClick={submit} disabled={saving || uploading}>

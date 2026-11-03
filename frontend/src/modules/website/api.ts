@@ -316,3 +316,28 @@ export async function aiWrite(
   if (!res.ok || !data.ok) throw new Error(data.error || `KI-Schreibhilfe fehlgeschlagen (Status ${res.status}).`);
   return { result: data.result ?? {}, used: data.used ?? 0, limit: data.limit ?? 0 };
 }
+
+// ---------------------------------------------------------------------
+// Eigene Domain (Funktion website-domain)
+// ---------------------------------------------------------------------
+export type DnsRecord = { type: "A" | "CNAME" | "TXT"; name: string; value: string; note?: string };
+export type DomainState = { domain: string | null; status: "pending" | "active" | "error" | null; records: DnsRecord[]; problem?: string };
+
+export async function domainAction(action: "connect" | "check" | "disconnect", domain?: string): Promise<DomainState> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/website-domain?action=${action}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ domain }),
+    });
+  } catch {
+    throw new Error("Die Domain-Verwaltung ist nicht erreichbar. Ist die Funktion website-domain veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `Domain-Verwaltung fehlgeschlagen (Status ${res.status}).`);
+  return { domain: data.domain ?? null, status: data.status ?? null, records: data.records ?? [], problem: data.problem || "" };
+}

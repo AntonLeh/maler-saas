@@ -57,6 +57,11 @@ export type Website = {
   job_title_country: string | null;
   privacy_extra: string | null;
   updated_at: string;
+  /** eigene Domain (nur über die Funktion website-domain änderbar) */
+  custom_domain?: string | null;
+  custom_domain_status?: "pending" | "active" | "error" | null;
+  custom_domain_checked_at?: string | null;
+  custom_domain_error?: string | null;
 };
 
 export type WebsiteImage = { url: string; path: string; alt?: string };
@@ -203,12 +208,26 @@ export function hasWebsiteAccess(plan: string | null | undefined): boolean {
 
 export const SITE_ORIGIN = "https://maler-saas.com";
 
+/**
+ * Subdomains (betrieb.maler-saas.com) als Hauptadresse – gemeinsam mit der Vercel-Umgebungsvariable
+ * SITE_SUBDOMAINS=1 einschalten, sobald *.maler-saas.com in Vercel eingerichtet und getestet ist.
+ */
+export const SUBDOMAINS_ENABLED = false;
+export const SUBDOMAIN_SUFFIX = ".maler-saas.com";
+
+/** Adresse über maler-saas.com (Subdomain oder /w/<slug>) */
 export function siteUrl(slug: string): string {
-  return `${SITE_ORIGIN}/w/${slug}`;
+  return SUBDOMAINS_ENABLED ? `https://${slug}${SUBDOMAIN_SUFFIX}` : `${SITE_ORIGIN}/w/${slug}`;
+}
+
+/** Öffentliche Hauptadresse: eigene Domain (wenn aktiv) oder siteUrl */
+export function publicUrl(w: Pick<Website, "slug" | "custom_domain" | "custom_domain_status">): string {
+  return w.custom_domain && w.custom_domain_status === "active" ? `https://${w.custom_domain}` : siteUrl(w.slug);
 }
 
 export function previewUrl(w: Pick<Website, "slug" | "preview_token">): string {
-  return `${siteUrl(w.slug)}?vorschau=${w.preview_token}`;
+  // Vorschau immer über maler-saas.com/w/… (funktioniert unabhängig von Subdomain und Domain)
+  return `${SITE_ORIGIN}/w/${w.slug}?vorschau=${w.preview_token}`;
 }
 
 export const RESERVED_SLUGS = [

@@ -62,6 +62,7 @@ export type SiteData = {
   job_title?: string | null;
   job_title_country?: string | null;
   privacy_extra?: string | null;
+  custom_domain?: string | null;
   company: {
     name?: string | null;
     street?: string | null;
@@ -380,12 +381,15 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
 `;
 }
 
+/** Link zur Startseite (bei eigener Adresse "/" statt "") */
+const homeHref = (ctx: Ctx) => `${ctx.base || "/"}${ctx.q ?? ""}`;
+
 function header(d: SiteData, ctx: Ctx, home: boolean): string {
   const name = d.company.name || "Malerbetrieb";
   const logo = safeUrl(d.company.logo_url);
   const phone = d.company.phone?.trim();
   const s = { ...SECTION_DEFAULTS, ...(d.sections ?? {}) };
-  const link = (hash: string) => (home ? `#${hash}` : `${ctx.base}${ctx.q ?? ""}#${hash}`);
+  const link = (hash: string) => (home ? `#${hash}` : `${homeHref(ctx)}#${hash}`);
   const nav = [
     s.services && (d.services?.length ?? 0) > 0 ? `<a href="${link("leistungen")}">Leistungen</a>` : "",
     s.references && (d.references?.length ?? 0) > 0 ? `<a href="${link("referenzen")}">Referenzen</a>` : "",
@@ -395,7 +399,7 @@ function header(d: SiteData, ctx: Ctx, home: boolean): string {
   ].join("");
   return `${ctx.preview ? `<div class="preview">Vorschau – diese Seite ist noch nicht veröffentlicht.</div>` : ""}
 <header class="top"><div class="wrap">
-<a class="brand" href="${ctx.base}${ctx.q ?? ""}">${logo ? `<img src="${esc(logo)}" alt="${esc(name)} Logo">` : ""}<span>${esc(name)}</span></a>
+<a class="brand" href="${homeHref(ctx)}">${logo ? `<img src="${esc(logo)}" alt="${esc(name)} Logo">` : ""}<span>${esc(name)}</span></a>
 <nav class="main" aria-label="Hauptnavigation">${nav}</nav>
 ${phone ? `<a class="btn call" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}
 </div></header>`;
@@ -409,7 +413,7 @@ function footer(d: SiteData, ctx: Ctx): string {
 <div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
 <div><a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
-${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${ctx.base}${ctx.q ?? ""}#kontakt">✉️ Anfrage</a></div>` : ""}`;
+${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${homeHref(ctx)}#kontakt">✉️ Anfrage</a></div>` : ""}`;
 }
 
 function jsonLd(d: SiteData, ctx: Ctx): string {
@@ -569,7 +573,7 @@ ${
 <label class="photos">Fotos <small>(optional, bis zu 3 – z. B. von Wand, Fassade oder Schaden)</small><input type="file" id="fotos" accept="image/*" multiple></label>
 <div class="photo-prev" id="foto-vorschau"></div>
 <div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-<input type="hidden" name="t" value="${Date.now()}">${opts.page ? `\n<input type="hidden" name="seite" value="${esc(opts.page)}">` : ""}
+<input type="hidden" name="t" value="${Date.now()}"><input type="hidden" name="basis" value="${esc(ctx.base)}">${opts.page ? `\n<input type="hidden" name="seite" value="${esc(opts.page)}">` : ""}
 <small>Bitte Telefon oder E-Mail angeben. Ihre Angaben verwenden wir nur zur Bearbeitung Ihrer Anfrage, siehe <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>.</small>
 <button class="btn" type="submit">Anfrage senden</button>
 </form>
@@ -858,7 +862,7 @@ export function renderService(d: SiteData, ctx: Ctx, found: { service: Service; 
 
   const img = safeUrl(sv.image);
   const hero = `<section class="hero sub${img ? " has-img" : ""}"${img ? ` style="--hero-img:url('${esc(img)}')"` : ""}><div class="wrap grid">
-<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${ctx.base}${ctx.q ?? ""}">Startseite</a> › <a href="${ctx.base}${ctx.q ?? ""}#leistungen">Leistungen</a> › <span>${esc(title)}</span></nav>
+<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${homeHref(ctx)}">Startseite</a> › <a href="${homeHref(ctx)}#leistungen">Leistungen</a> › <span>${esc(title)}</span></nav>
 <h1>${esc(h1)}</h1><p class="lead">${esc(lead)}</p>
 <div class="actions">${phone ? `<a class="btn" href="tel:${esc(telHref(phone))}">📞 ${esc(phone)}</a>` : ""}${s.contact ? `<a class="btn ghost" href="#kontakt">Kostenlos anfragen</a>` : ""}</div>
 ${highlights.length ? `<ul class="chips">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
@@ -1057,6 +1061,36 @@ ${lead.photos.length ? `<p>${lead.photos.length} Foto${lead.photos.length > 1 ? 
 // ---------------------------------------------------------------------
 // Einstieg
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Adressen
+// ---------------------------------------------------------------------
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
+const DOMAIN_RE = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/;
+export const SUBDOMAIN_SUFFIX = ".maler-saas.com";
+
+/** Subdomains erst nach dem Test einschalten (Vercel-Umgebungsvariable SITE_SUBDOMAINS=1) */
+export const subdomainsEnabled = () => env("SITE_SUBDOMAINS") === "1";
+
+export function preferredSiteUrl(d: SiteData, origin: string): string {
+  if (d.custom_domain && DOMAIN_RE.test(d.custom_domain)) return `https://${d.custom_domain}`;
+  if (subdomainsEnabled()) return `https://${d.slug}${SUBDOMAIN_SUFFIX}`;
+  return `${origin}/w/${d.slug}`;
+}
+
+/** Website-Schlüssel aus der Anfrage: ?host=… (eigene Adresse, von middleware.ts) oder ?slug=… (Pfad /w/…) */
+export function siteKey(url: URL): { key: string; root: boolean; host?: string } | null {
+  const host = (url.searchParams.get("host") || "").toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
+  if (host) {
+    if (host.endsWith(SUBDOMAIN_SUFFIX)) {
+      const sub = host.slice(0, -SUBDOMAIN_SUFFIX.length);
+      return SLUG_RE.test(sub) ? { key: sub, root: true, host } : null;
+    }
+    return DOMAIN_RE.test(host) && host.length <= 253 ? { key: host, root: true, host } : null;
+  }
+  const slug = (url.searchParams.get("slug") || "").toLowerCase();
+  return SLUG_RE.test(slug) ? { key: slug, root: false } : null;
+}
+
 const HTML_HEADERS = { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "referrer-policy": "strict-origin-when-cross-origin" };
 
 export async function handle(request: Request): Promise<Response> {
@@ -1066,15 +1100,17 @@ export async function handle(request: Request): Promise<Response> {
     return Response.json(serviceSuggestions(url.searchParams.get("icon") || ""), { headers: { "cache-control": "public, max-age=3600" } });
   }
   const origin = env("SITE_ORIGIN") || "https://maler-saas.com";
-  const slug = (url.searchParams.get("slug") || "").toLowerCase();
-  if (!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)) return notFound(origin);
-  const base = `/w/${slug}`;
 
-  // Kontaktformular
+  // Kontaktformular (Formular sendet immer slug mit; "basis" = "" bei eigener Adresse, sonst /w/<slug>)
   if (request.method === "POST" && url.searchParams.get("action") === "contact") {
+    const slug = (url.searchParams.get("slug") || "").toLowerCase();
+    if (!SLUG_RE.test(slug)) return notFound(origin);
     const form = await request.formData().catch(() => null);
+    const base = String(form?.get("basis") ?? "x") === "" ? "" : `/w/${slug}`;
     const seite = String(form?.get("seite") ?? "").toLowerCase();
-    const target = /^[a-z0-9-]{1,70}$/.test(seite) && !["impressum", "datenschutz"].includes(seite) ? `${base}/${seite}` : base;
+    const target = /^[a-z0-9-]{1,70}$/.test(seite) && !["impressum", "datenschutz"].includes(seite) ? `${base}/${seite}` : base || "/";
+    const reqHost = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").toLowerCase();
+    const siteUrl = base === "" && DOMAIN_RE.test(reqHost.replace(/:\d+$/, "")) ? `https://${reqHost.replace(/:\d+$/, "")}` : `${origin}/w/${slug}`;
     const back = (q: string) => new Response(null, { status: 303, headers: { location: `${target}?${q}#kontakt` } });
     if (!form) return back("fehler=formular");
     const get = (k: string) => String(form.get(k) ?? "").trim();
@@ -1114,7 +1150,7 @@ export async function handle(request: Request): Promise<Response> {
       }
       if (!lead.message && services.length) lead.message = `Anfrage zu: ${services.join(", ")}`;
       if (typeof r.photos === "number" && r.photos < lead.photos.length) lead.photos = lead.photos.slice(0, r.photos);
-      await sendLeadMail(r.notify_email, r.company, lead, `${origin}${base}`);
+      await sendLeadMail(r.notify_email, r.company, lead, siteUrl);
       return back("gesendet=1");
     } catch {
       return back("fehler=server");
@@ -1122,10 +1158,15 @@ export async function handle(request: Request): Promise<Response> {
   }
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
 
+  // Welche Website? Eigene Adresse (über middleware.ts: ?host=…) oder Pfad /w/<slug>
+  const site = siteKey(url);
+  if (!site) return notFound(origin);
+  const base = site.root ? "" : `/w/${site.key}`;
+
   const preview = url.searchParams.get("vorschau") || "";
   let data: SiteData | null = null;
   try {
-    data = await rpc("website_public", { p_slug: slug, p_preview: preview || null });
+    data = await rpc("website_public", { p_slug: site.key, p_preview: preview || null });
   } catch {
     return new Response("Die Seite ist vorübergehend nicht erreichbar.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });
   }
@@ -1133,6 +1174,20 @@ export async function handle(request: Request): Promise<Response> {
 
   const isPreview = !data.published;
   const pagePath = (url.searchParams.get("page") || "").replace(/^\/+|\/+$/g, "").toLowerCase();
+
+  // Bevorzugte Adresse: eigene Domain > Subdomain (wenn eingeschaltet) > maler-saas.com/w/<slug>
+  const preferred = preferredSiteUrl(data, origin);
+  const current = site.root ? `https://${site.host}` : `${origin}/w/${data.slug}`;
+  const preferredIsOwn = !!data.custom_domain || subdomainsEnabled();
+  if (!isPreview && preferredIsOwn && preferred !== current) {
+    const keep = new URLSearchParams();
+    for (const k of ["gesendet", "fehler"]) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k)!);
+    const qs = keep.toString();
+    return new Response(null, {
+      status: 301,
+      headers: { location: `${preferred}${pagePath && pagePath !== "index.html" ? `/${pagePath}` : "/"}${qs ? `?${qs}` : ""}`, "cache-control": "public, s-maxage=300" },
+    });
+  }
   const errors: Record<string, string> = {
     email: "Bitte prüfen Sie Ihre E-Mail-Adresse.",
     spaeter: "Gerade gehen sehr viele Anfragen ein. Bitte versuchen Sie es später noch einmal oder rufen Sie uns an.",
@@ -1144,7 +1199,7 @@ export async function handle(request: Request): Promise<Response> {
   const ctx: Ctx = {
     base,
     origin,
-    canonical: `${origin}${base}`,
+    canonical: preferred,
     preview: isPreview,
     q: isPreview ? `?vorschau=${encodeURIComponent(preview)}` : "",
     notice: url.searchParams.get("gesendet") ? "ok" : errors[url.searchParams.get("fehler") || ""] || undefined,
@@ -1152,7 +1207,7 @@ export async function handle(request: Request): Promise<Response> {
   const cache = isPreview ? "private, no-store" : "public, s-maxage=120, stale-while-revalidate=600";
 
   if (pagePath === "robots.txt") {
-    return new Response(`User-agent: *\nAllow: /\nSitemap: ${origin}${base}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache } });
+    return new Response(`User-agent: *\nAllow: /\nSitemap: ${preferred}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache } });
   }
   if (pagePath === "sitemap.xml") {
     const pages = sectionsOf(data).services ? serviceSlugs(servicesOf(data)).map((sl) => `${ctx.canonical}/${sl}`) : [];

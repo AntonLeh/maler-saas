@@ -802,3 +802,77 @@
 .ws-root .ws-ai-text {
   white-space: pre-wrap;
 }
+
+/* Eigene Domain */
+.ws-root .ws-dom-intro {
+  margin: 0 0 12px;
+}
+
+.ws-root .ws-dom-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.ws-root .ws-dom-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--tk-border);
+  background: var(--tk-surface-2);
+  margin-bottom: 12px;
+}
+
+.ws-root .ws-dom-status.ok {
+  border-color: #86d3a3;
+  background: #ecfbf1;
+}
+
+.ws-root .ws-dom-step {
+  margin: 0 0 10px;
+}
+
+.ws-root .ws-dom-table {
+  display: grid;
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.ws-root .ws-dom-row {
+  display: grid;
+  grid-template-columns: 80px minmax(90px, 1fr) minmax(0, 2.4fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--tk-border);
+  align-items: start;
+}
+
+.ws-root .ws-dom-row code {
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+}
+
+.ws-root .ws-dom-head {
+  border-top: 0;
+  background: var(--tk-surface-2);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.ws-root .ws-dom-hint {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 560px) {
+  .ws-root .ws-dom-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .ws-root .ws-dom-head {
+    display: none;
+  }
+}
