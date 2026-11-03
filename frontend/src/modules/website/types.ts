@@ -66,7 +66,7 @@ export type Website = {
   custom_domain_error?: string | null;
 };
 
-export type WebsiteImage = { url: string; path: string; alt?: string };
+export type WebsiteImage = { url: string; path: string; alt?: string; kind?: "vorher" | "nachher" | null };
 
 export type WebsiteReference = {
   id: number;
@@ -270,6 +270,25 @@ export const RESERVED_SLUGS = [
 ];
 
 /** "Malerbetrieb Müller GmbH" -> "malerbetrieb-mueller" */
+/** Adresse der Projektseite einer Referenz – gleiche Regel wie referenceSlug in frontend/api/site.ts */
+export function referenceSlug(id: number, title: string): string {
+  const base = title
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/g, "");
+  return `projekt-${base ? `${base}-` : ""}${id}`;
+}
+
 /** Adressen der Leistungsseiten – gleiche Regeln wie serviceSlugs in frontend/api/site.ts */
 const RESERVED_SERVICE_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
 export function serviceSlugs(titles: string[]): string[] {

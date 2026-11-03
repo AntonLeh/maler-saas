@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { OrderImage, OrderOption, WebsiteImage, WebsiteReference } from "./types";
+import type { OrderImage, OrderOption, Website, WebsiteImage, WebsiteReference } from "./types";
+import { previewUrl, publicUrl, referenceSlug } from "./types";
 import * as api from "./api";
 
 type Props = {
@@ -9,9 +10,17 @@ type Props = {
   onChanged: () => Promise<void> | void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
+  /** Website (für den Link zur Projektseite) */
+  website?: Pick<Website, "slug" | "published" | "preview_token" | "custom_domain" | "custom_domain_status">;
 };
 
 const MAX_IMAGES = 8;
+
+function projectUrl(w: NonNullable<Props["website"]>, r: WebsiteReference): string {
+  const base = w.published ? publicUrl(w) : previewUrl(w);
+  const [path, query] = base.split("?");
+  return `${path.replace(/\/$/, "")}/${referenceSlug(r.id, r.title)}${query ? `?${query}` : ""}`;
+}
 
 function formatDate(iso: string | null) {
   if (!iso) return "";
@@ -162,10 +171,25 @@ function Editor({
       {kept.length > 0 && (
         <div className="ws-pick">
           <span className="ws-label">Bilder dieser Referenz</span>
+          <small className="tk-muted ws-block">
+            Tipp: Markieren Sie ein Bild als „Vorher“ und eines als „Nachher“ – dann zeigt die Projektseite einen Vergleichs-Regler.
+          </small>
           <div className="ws-grid">
             {kept.map((im) => (
               <div key={im.path} className="ws-tile selected">
                 <img src={im.url} alt={im.alt ?? ""} />
+                <button
+                  type="button"
+                  className={`ws-tile-kind${im.kind ? ` on ${im.kind}` : ""}`}
+                  onClick={() =>
+                    setKept((p) =>
+                      p.map((k) => (k.path === im.path ? { ...k, kind: k.kind === "vorher" ? "nachher" : k.kind === "nachher" ? null : "vorher" } : k))
+                    )
+                  }
+                  title="Als Vorher- bzw. Nachher-Bild markieren"
+                >
+                  {im.kind === "vorher" ? "Vorher" : im.kind === "nachher" ? "Nachher" : "Vorher/Nachher?"}
+                </button>
                 <button type="button" className="ws-tile-remove" onClick={() => setKept((p) => p.filter((k) => k.path !== im.path))} aria-label="Bild entfernen">
                   ×
                 </button>
@@ -246,7 +270,7 @@ function Editor({
   );
 }
 
-export default function ReferencesTab({ tenantId, userId, references, onChanged, onError, onSuccess }: Props) {
+export default function ReferencesTab({ tenantId, userId, references, onChanged, onError, onSuccess, website }: Props) {
   const [editing, setEditing] = useState<WebsiteReference | "new" | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -332,6 +356,11 @@ export default function ReferencesTab({ tenantId, userId, references, onChanged,
                   <button type="button" className="btn btn-secondary btn-small" onClick={() => setEditing(r)} disabled={busyId === r.id}>
                     Bearbeiten
                   </button>
+                  {r.status === "veroeffentlicht" && website && (
+                    <a className="btn btn-secondary btn-small" href={projectUrl(website, r)} target="_blank" rel="noreferrer">
+                      Projektseite ↗
+                    </a>
+                  )}
                   {r.status === "veroeffentlicht" ? (
                     <button type="button" className="btn btn-secondary btn-small" onClick={() => setStatus(r, "entwurf")} disabled={busyId === r.id}>
                       Ausblenden

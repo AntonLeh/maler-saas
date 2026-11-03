@@ -232,7 +232,7 @@ export default function WebsitePage({
               <DesignTab key={website.updated_at} website={website} company={company} saving={busy} onSave={(v) => save(v, "Gestaltung gespeichert.")} onError={showError} />
             )}
             {tab === "references" && (
-              <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} />
+              <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} website={website} />
             )}
             {tab === "stats" && <StatsTab tenantId={tenantId} services={website.services ?? []} onError={showError} />}
             {tab === "reviews" && <ReviewsTab tenantId={tenantId} overview={reviews} onChanged={reloadReviews} onError={showError} onSuccess={flash} />}

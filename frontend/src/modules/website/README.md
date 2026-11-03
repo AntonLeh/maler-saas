@@ -33,6 +33,8 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
   Leistung, JSON-LD `Service`, in `sitemap.xml`. Nach Umbenennen leiten alte Adressen (`aliases`) per 301 weiter.
   Vorschlagstexte stehen nur in `site.ts`; der Editor holt sie über `/api/site?action=vorschlaege&icon=…`. Bewusst keine Seiten pro Ort (Google wertet viele
   fast gleiche Ortsseiten als Brückenseiten ab).
+- **Projektseiten:** `/<slug>/projekt-<titel>-<id>` mit Galerie (Vollbild), Vorher/Nachher-Regler (Bilder mit `kind`
+  vorher/nachher), passender Leistung, weiteren Projekten, Formular; in `sitemap.xml`, alter Titel → 301.
 - **So läuft's ab:** fester Bereich mit 4 Schritten, abschaltbar (`sections.process`).
 - **Anfragen:** Kontaktformular → Tabelle `website_leads`, Leistungen zum Anklicken (`services`), bis zu 3 Fotos
   (im Browser auf 1600 px verkleinert, ohne EXIF/GPS; Tabelle `website_lead_photos`, werden mit der Anfrage gelöscht;

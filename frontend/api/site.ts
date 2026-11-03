@@ -32,7 +32,7 @@ export type Service = {
   image?: string;
   aliases?: string[];
 };
-export type RefImage = { url?: string; alt?: string };
+export type RefImage = { url?: string; alt?: string; kind?: "vorher" | "nachher" | null };
 export type Reference = { id: number; title: string; text?: string | null; city?: string | null; images?: RefImage[]; published_at?: string };
 export type ReviewItem = { rating: number; text?: string | null; name?: string | null; city?: string | null; date?: string | null };
 export type Reviews = { count: number; average: number | string | null; items: ReviewItem[] };
@@ -351,6 +351,23 @@ fieldset.svc legend{font-weight:600;font-size:.95rem;margin-bottom:6px;padding:0
 .ref .body{padding:18px 20px 22px}
 .ref .where{font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .ref p{margin:.4em 0 0;color:var(--muted)}
+.ref .ref-link{color:inherit;text-decoration:none}.ref .ref-link:hover{color:var(--accent-dark)}
+.ref .more{display:inline-block;margin-top:10px;font-weight:700;color:var(--accent-dark);font-size:.95rem;text-decoration:none}.ref .more:hover{text-decoration:underline}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.gal a{display:block;border-radius:var(--radius);overflow:hidden;aspect-ratio:4/3;background:#e6e9ed;line-height:0}
+.gal a.big{grid-column:span 2;grid-row:span 2}
+.gal img{width:100%;height:100%;object-fit:cover;transition:transform .25s}.gal a:hover img{transform:scale(1.03)}
+.lb{border:0;padding:0;background:transparent;max-width:96vw;max-height:92vh}.lb::backdrop{background:rgba(10,14,20,.88)}
+.lb img{display:block;max-width:96vw;max-height:88vh;object-fit:contain;border-radius:8px}
+.lb button{position:fixed;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.9);font-size:28px;line-height:1;cursor:pointer}
+.lb .lb-prev{left:16px}.lb .lb-next{right:16px}.lb .lb-close{top:28px;right:16px;transform:none}
+.ba{position:relative;max-width:820px;aspect-ratio:4/3;border-radius:calc(var(--radius) * 1.4);overflow:hidden;background:#e6e9ed;user-select:none}
+.ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ba .ba-after{clip-path:inset(0 0 0 var(--pos))}
+.ba-line{position:absolute;top:0;bottom:0;left:var(--pos);width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);pointer-events:none}
+.ba-line::after{content:"⇆";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;background:#fff;display:grid;place-items:center;font-weight:800;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.ba input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize}
+.ba-tag{position:absolute;top:12px;padding:4px 10px;border-radius:999px;background:rgba(15,20,28,.7);color:#fff;font-size:.85rem;font-weight:700;pointer-events:none}.ba-tag.l{left:12px}.ba-tag.r{right:12px}
 .stars{color:#f2a900;letter-spacing:1px}.stars .off{color:#d5d9df}
 .rating-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 0;font-weight:600}
 .rating-line a{color:inherit}
@@ -398,6 +415,7 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  .hero{padding:44px 0 40px}.theme-modern .hero{padding:72px 0 64px}
  .hero .grid,.about,.contact{grid-template-columns:1fr;gap:28px}
  .steps{grid-template-columns:1fr 1fr}
+ .gal{grid-template-columns:1fr 1fr}
  section.block{padding:52px 0}
  form.lead .two{grid-template-columns:1fr}
  .top .call{display:none}
@@ -534,7 +552,7 @@ function processSection(d: SiteData, s: Sections): string {
 </ol></div></section>`;
 }
 
-function refsSection(refs: Reference[], heading: string, sub: string): string {
+function refsSection(refs: Reference[], heading: string, sub: string, ctx: Ctx): string {
   if (!refs.length) return "";
   return `<section class="block" id="referenzen"><div class="wrap">
 <div class="sec-head"><h2>${esc(heading)}</h2><p>${esc(sub)}</p></div>
@@ -554,9 +572,104 @@ function refsSection(refs: Reference[], heading: string, sub: string): string {
               )
               .join("")}</div>`
           : ""
-      }<div class="body">${r.city ? `<div class="where">${esc(r.city)}</div>` : ""}<h3>${esc(r.title)}</h3>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div></article>`;
+      }<div class="body">${r.city ? `<div class="where">${esc(r.city)}</div>` : ""}<h3><a class="ref-link" href="${ctx.base}/${referenceSlug(r)}${ctx.q ?? ""}">${esc(r.title)}</a></h3>${
+        r.text ? `<p>${esc(r.text)}</p>` : ""
+      }<a class="more" href="${ctx.base}/${referenceSlug(r)}${ctx.q ?? ""}" aria-hidden="true" tabindex="-1">Projekt ansehen →</a></div></article>`;
     })
     .join("")}</div></div></section>`;
+}
+
+// ---------------------------------------------------------------------
+// Eigene Seite pro Referenz, z. B. /w/prinzenkinder/projekt-wohnzimmer-in-sandton-12
+// ---------------------------------------------------------------------
+export function referenceSlug(r: Pick<Reference, "id" | "title">): string {
+  const t = String(r.title ?? "").trim();
+  const base = t ? slugifyService(t).slice(0, 50).replace(/-+$/g, "") : "";
+  return `projekt-${base ? `${base}-` : ""}${r.id}`;
+}
+
+export function findReference(d: SiteData, pageSlug: string): { ref: Reference; slug: string; moved: boolean } | null {
+  const m = /^projekt-(?:[a-z0-9-]*-)?(\d{1,12})$/.exec(pageSlug);
+  if (!m) return null;
+  const ref = (d.references ?? []).find((r) => String(r.id) === m[1] && r.title);
+  if (!ref) return null;
+  const slug = referenceSlug(ref);
+  return { ref, slug, moved: slug !== pageSlug };
+}
+
+/** Lightbox (Vollbild) und Vorher/Nachher-Regler – kleines Skript nur auf Referenzseiten */
+const GALLERY_SCRIPT = `(function(){var d=document.getElementById("lb");if(d&&d.showModal){var imgs=[].slice.call(document.querySelectorAll(".gal a")),i=0,im=d.querySelector("img");
+function show(n){i=(n+imgs.length)%imgs.length;im.src=imgs[i].getAttribute("href");im.alt=imgs[i].querySelector("img").alt}
+imgs.forEach(function(a,n){a.addEventListener("click",function(e){e.preventDefault();show(n);d.showModal()})});
+d.querySelector(".lb-prev").onclick=function(){show(i-1)};d.querySelector(".lb-next").onclick=function(){show(i+1)};d.querySelector(".lb-close").onclick=function(){d.close()};
+d.addEventListener("click",function(e){if(e.target===d)d.close()});document.addEventListener("keydown",function(e){if(!d.open)return;if(e.key==="ArrowLeft")show(i-1);if(e.key==="ArrowRight")show(i+1)})}
+document.querySelectorAll(".ba input").forEach(function(r){var b=r.closest(".ba");function u(){b.style.setProperty("--pos",r.value+"%")}r.addEventListener("input",u);u()})})();`;
+
+export function renderReference(d: SiteData, ctx: Ctx, found: { ref: Reference; slug: string }): string {
+  const r = found.ref;
+  const c = d.company;
+  const name = c.name || "Malerbetrieb";
+  const s = sectionsOf(d);
+  const imgs = (r.images ?? []).map((im) => ({ url: safeUrl(im?.url), alt: im?.alt || r.title, kind: im?.kind ?? null })).filter((im) => im.url);
+  const before = imgs.find((im) => im.kind === "vorher");
+  const after = imgs.find((im) => im.kind === "nachher");
+  const pageCtx: Ctx = { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/${found.slug}` };
+  const when = r.published_at ? monthYear(r.published_at) : "";
+  const h1 = r.city ? `${r.title} in ${r.city}` : r.title;
+
+  // passende Leistung(en) verlinken
+  const services = servicesOf(d);
+  const slugs = serviceSlugs(services);
+  const related = s.services ? services.map((sv, i) => ({ sv, slug: slugs[i] })).filter((x) => refsForService(x.sv, [r]).length) : [];
+
+  const hero = `<section class="hero sub"><div class="wrap grid">
+<div><nav class="crumbs" aria-label="Brotkrumen"><a href="${homeHref(ctx)}">Startseite</a> › <a href="${homeHref(ctx)}#referenzen">Projekte</a> › <span>${esc(r.title)}</span></nav>
+<h1>${esc(h1)}</h1>${r.text ? `<p class="lead">${esc(r.text)}</p>` : ""}
+<ul class="chips">${r.city ? `<li>${esc(r.city)}</li>` : ""}${when ? `<li>${esc(when)}</li>` : ""}${related.map((x) => `<li>${esc(x.sv.title)}</li>`).join("")}</ul>
+</div></div></section>`;
+
+  const baHtml =
+    before && after
+      ? `<section class="block" id="vorher-nachher"><div class="wrap">
+<div class="sec-head"><h2>Vorher und nachher</h2><p>Schieben Sie den Regler, um den Unterschied zu sehen.</p></div>
+<div class="ba" style="--pos:50%"><img src="${esc(before.url)}" alt="${esc(`Vorher: ${before.alt}`)}" loading="lazy"><img class="ba-after" src="${esc(after.url)}" alt="${esc(`Nachher: ${after.alt}`)}" loading="lazy">
+<span class="ba-tag l">Vorher</span><span class="ba-tag r">Nachher</span><span class="ba-line" aria-hidden="true"></span>
+<input type="range" min="0" max="100" value="50" aria-label="Vorher/Nachher vergleichen"></div></div></section>`
+      : "";
+
+  const galHtml = imgs.length
+    ? `<section class="block" id="bilder"><div class="wrap">
+<div class="sec-head"><h2>Bilder zum Projekt</h2><p>Zum Vergrößern antippen.</p></div>
+<div class="gal">${imgs.map((im, i) => `<a href="${esc(im.url)}" class="${i === 0 ? "big" : ""}"><img src="${esc(im.url)}" alt="${esc(im.alt)}" loading="${i < 3 ? "eager" : "lazy"}"></a>`).join("")}</div>
+<dialog id="lb" class="lb" aria-label="Bild in voller Größe"><img src="" alt=""><button type="button" class="lb-prev" aria-label="Vorheriges Bild">‹</button><button type="button" class="lb-next" aria-label="Nächstes Bild">›</button><button type="button" class="lb-close" aria-label="Schließen">×</button></dialog>
+</div></section>`
+    : "";
+
+  const relatedHtml = related.length
+    ? `<section class="block" id="leistung"><div class="wrap">
+<div class="sec-head"><h2>Passende Leistung</h2><p>Mehr über diese Arbeiten bei ${esc(name)}:</p></div>
+<ul class="area">${related.map((x) => `<li><a href="${ctx.base}/${x.slug}${ctx.q ?? ""}">${esc(x.sv.title)} →</a></li>`).join("")}</ul></div></section>`
+    : "";
+
+  const others = (d.references ?? []).filter((o) => o.title && o.id !== r.id).slice(0, 3);
+  const body =
+    hero +
+    alternate([
+      baHtml,
+      galHtml,
+      relatedHtml,
+      s.references ? refsSection(others, "Weitere Projekte", "Noch mehr aus unseren abgeschlossenen Arbeiten.", ctx) : "",
+      contactSection(d, ctx, s, {
+        preselect: related[0]?.sv.title,
+        page: found.slug,
+        intro: "Ähnliches geplant? Rufen Sie uns an oder schreiben Sie uns – wir melden uns zeitnah und vereinbaren einen kostenlosen Besichtigungstermin.",
+      }),
+    ]) +
+    `<script>${GALLERY_SCRIPT}</script>`;
+
+  const title = `${h1} – Referenz von ${name}`;
+  const description = `${r.title}${r.city ? ` in ${r.city}` : ""}: ${r.text ? r.text : `abgeschlossenes Projekt von ${name}`}`.replace(/\s+/g, " ");
+  return page(d, pageCtx, title.slice(0, 70), description.slice(0, 160), body, { home: false, index: !ctx.preview });
 }
 
 function reviewsSection(rv: ReturnType<typeof reviewSummary>, maxItems = 12): string {
@@ -709,7 +822,7 @@ ${facts}
     alternate([
       servicesHtml,
       processSection(d, s),
-      s.references ? refsSection(refs, "Aktuelle Projekte", "Ein Auszug aus unseren zuletzt abgeschlossenen Arbeiten.") : "",
+      s.references ? refsSection(refs, "Aktuelle Projekte", "Ein Auszug aus unseren zuletzt abgeschlossenen Arbeiten.", ctx) : "",
       reviewsSection(rv),
       aboutHtml,
       areaHtml,
@@ -952,7 +1065,7 @@ ${img ? `<div class="pic"><img src="${esc(img)}" alt="${esc(`${title} – ${name
       detailHtml,
       faqHtml,
       processSection(d, s),
-      s.references ? refsSection(refs, matching.length ? `Projekte: ${title}` : "Aus unseren letzten Projekten", "Ein Auszug aus unseren abgeschlossenen Arbeiten.") : "",
+      s.references ? refsSection(refs, matching.length ? `Projekte: ${title}` : "Aus unseren letzten Projekten", "Ein Auszug aus unseren abgeschlossenen Arbeiten.", ctx) : "",
       reviewsSection(rv, 3),
       othersHtml,
       contactSection(d, ctx, s, {
@@ -1281,7 +1394,10 @@ export async function handle(request: Request): Promise<Response> {
     return new Response(`User-agent: *\nAllow: /\nSitemap: ${preferred}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache } });
   }
   if (pagePath === "sitemap.xml") {
-    const pages = sectionsOf(data).services ? serviceSlugs(servicesOf(data)).map((sl) => `${ctx.canonical}/${sl}`) : [];
+    const pages = [
+      ...(sectionsOf(data).services ? serviceSlugs(servicesOf(data)).map((sl) => `${ctx.canonical}/${sl}`) : []),
+      ...(sectionsOf(data).references ? (data.references ?? []).filter((r) => r.title).map((r) => `${ctx.canonical}/${referenceSlug(r)}`) : []),
+    ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[ctx.canonical, ...pages]
       .map((u) => `<url><loc>${esc(u)}</loc></url>`)
       .join("")}</urlset>`;
@@ -1292,7 +1408,11 @@ export async function handle(request: Request): Promise<Response> {
   if (pagePath === "" || pagePath === "index.html") html = renderHome(data, ctx);
   else if (pagePath === "impressum") html = renderImprint(data, ctx);
   else if (pagePath === "datenschutz") html = renderPrivacy(data, ctx);
-  else {
+  else if (sectionsOf(data).references && pagePath.startsWith("projekt-") && findReference(data, pagePath)) {
+    const ref = findReference(data, pagePath)!;
+    if (ref.moved) return new Response(null, { status: 301, headers: { location: `${base}/${ref.slug}${ctx.q ?? ""}`, "cache-control": cache } });
+    html = renderReference(data, ctx, ref);
+  } else {
     const found = sectionsOf(data).services && /^[a-z0-9-]{1,70}$/.test(pagePath) ? findService(data, pagePath) : null;
     if (!found) return notFound(origin);
     if (found.moved) return new Response(null, { status: 301, headers: { location: `${base}/${found.slug}${ctx.q ?? ""}`, "cache-control": cache } });
