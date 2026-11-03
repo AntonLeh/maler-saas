@@ -1060,3 +1060,11 @@
 .ws-root .ws-tile-kind.on.nachher {
   background: #15803d;
 }
+
+.ws-root .ws-faq-tools {
+  margin-top: 10px;
+}
+
+.ws-root .ws-faq + .ws-faq {
+  margin-top: 8px;
+}

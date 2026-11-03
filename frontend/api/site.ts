@@ -52,6 +52,7 @@ export type SiteData = {
   service_area?: string | null;
   opening_hours?: string | null;
   whatsapp_number?: string | null;
+  faq?: Faq[] | null;
   sections?: Record<string, boolean>;
   contact_form?: boolean;
   seo_title?: string | null;
@@ -162,7 +163,7 @@ export function areaList(area: unknown): string[] {
     .slice(0, 40);
 }
 
-const SECTION_DEFAULTS = { services: true, service_photos: false, process: true, references: true, reviews: true, about: true, area: true, contact: true };
+const SECTION_DEFAULTS = { services: true, service_photos: false, process: true, faq: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Symbole für Leistungen (aus Lucide, ISC-Lizenz), als SVG-Innenleben */
 export const SERVICE_ICONS: Record<string, string> = {
@@ -509,7 +510,7 @@ ${opts.index ? "" : '<meta name="robots" content="noindex">'}
 ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}
 <meta name="theme-color" content="${esc(validColor(d.accent_color))}">
 <style>${styles(d)}</style>
-${opts.home ? jsonLd(d, ctx) : (opts.jsonLd ?? "")}
+${opts.home ? jsonLd(d, ctx) : ""}${opts.jsonLd ?? ""}
 </head>
 <body class="theme-${esc(["klassisch", "modern", "frisch"].includes(d.theme) ? d.theme : "klassisch")}">
 <a class="skip" href="#inhalt">Zum Inhalt springen</a>
@@ -813,6 +814,14 @@ ${facts}
 <ul class="area">${area.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div></section>`
       : "";
 
+  // Häufige Fragen (nur vom Betrieb gespeicherte, vollständige Einträge)
+  const faq = s.faq ? (d.faq ?? []).filter((f) => String(f?.q ?? "").trim() && String(f?.a ?? "").trim()).slice(0, 15) : [];
+  const faqHtml = faq.length
+    ? `<section class="block" id="fragen"><div class="wrap">
+<div class="sec-head"><h2>Häufige Fragen</h2><p>Antworten auf das, was uns Kunden am häufigsten fragen.</p></div>
+<div class="faq">${faq.map((f) => `<details><summary>${esc(f.q)}</summary>${paragraphs(f.a)}</details>`).join("")}</div></div></section>`
+    : "";
+
   const title = d.seo_title?.trim() || `${name} – Maler${city ? ` in ${city}` : ""}`;
   const description =
     d.seo_description?.trim() ||
@@ -826,9 +835,10 @@ ${facts}
       reviewsSection(rv),
       aboutHtml,
       areaHtml,
+      faqHtml,
       contactSection(d, ctx, s),
     ]);
-  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), body, { home: true, index: !ctx.preview });
+  return page(d, ctx, title.slice(0, 70), description.slice(0, 160), body, { home: true, index: !ctx.preview, jsonLd: faqJsonLd(faq) });
 }
 
 // ---------------------------------------------------------------------

@@ -21,6 +21,7 @@ export type WebsiteSections = {
   /** Fotos statt Symbole in den Leistungskarten der Startseite */
   service_photos: boolean;
   process: boolean;
+  faq: boolean;
   references: boolean;
   reviews: boolean;
   about: boolean;
@@ -46,6 +47,7 @@ export type Website = {
   service_area: string | null;
   opening_hours: string | null;
   whatsapp_number?: string | null;
+  faq?: WebsiteFaq[];
   sections: WebsiteSections;
   contact_form: boolean;
   seo_title: string | null;
@@ -201,7 +203,7 @@ export const DEFAULT_SERVICES: WebsiteService[] = [
 
 export const DEFAULT_HIGHLIGHTS = ["Meisterbetrieb", "Kostenlose Besichtigung", "Festpreis-Angebot", "Saubere Baustelle"];
 
-export const DEFAULT_SECTIONS: WebsiteSections = { services: true, service_photos: false, process: true, references: true, reviews: true, about: true, area: true, contact: true };
+export const DEFAULT_SECTIONS: WebsiteSections = { services: true, service_photos: false, process: true, faq: true, references: true, reviews: true, about: true, area: true, contact: true };
 
 /** Website für Starter-Tarif gesperrt (Professional, Business, Enterprise) */
 export function hasWebsiteAccess(plan: string | null | undefined): boolean {
@@ -270,6 +272,21 @@ export const RESERVED_SLUGS = [
 ];
 
 /** "Malerbetrieb Müller GmbH" -> "malerbetrieb-mueller" */
+/**
+ * Vorschläge für allgemeine Fragen auf der Startseite. Bewusst nur als Vorlage im Editor –
+ * die Antworten müssen zum Betrieb passen und werden erst nach dem Speichern veröffentlicht.
+ */
+export const GENERAL_FAQ_SUGGESTIONS: WebsiteFaq[] = [
+  { q: "Sind Besichtigung und Angebot kostenlos?", a: "Ja. Wir kommen unverbindlich zu Ihnen, schauen uns alles vor Ort an und schicken Ihnen danach ein schriftliches Angebot." },
+  { q: "Wie schnell bekomme ich einen Termin?", a: "Für die Besichtigung meist innerhalb weniger Tage. Wann wir mit den Arbeiten beginnen können, sagen wir Ihnen mit dem Angebot." },
+  { q: "Wie wird abgerechnet?", a: "So, wie es im Angebot steht – als Festpreis oder nach Aufmaß. Zusätzliche Arbeiten führen wir nur nach Absprache mit Ihnen aus." },
+  { q: "Muss ich während der Arbeiten zu Hause sein?", a: "Nicht unbedingt. Viele Kunden geben uns einen Schlüssel. Zu Beginn und zur Abnahme sollten Sie aber kurz da sein." },
+  { q: "Müssen die Möbel ausgeräumt werden?", a: "Nein. Wir rücken Möbel zur Seite und decken Möbel und Böden sorgfältig ab. Wertgegenstände und Zerbrechliches räumen Sie am besten vorher weg." },
+  { q: "Arbeiten Sie auch für Vermieter, Hausverwaltungen und Gewerbe?", a: "Ja, wir arbeiten für Privatkunden ebenso wie für Vermieter, Hausverwaltungen und Gewerbebetriebe." },
+  { q: "Sind Sie versichert?", a: "Ja, wir haben eine Betriebshaftpflichtversicherung. Sollte bei uns doch einmal etwas zu Bruch gehen, sind Sie abgesichert." },
+  { q: "Kann ich die Farben selbst aussuchen?", a: "Natürlich. Wir beraten Sie gern und bringen auf Wunsch Farbmuster mit, damit Sie die Wirkung direkt an Ihrer Wand sehen." },
+];
+
 /** Adresse der Projektseite einer Referenz – gleiche Regel wie referenceSlug in frontend/api/site.ts */
 export function referenceSlug(id: number, title: string): string {
   const base = title

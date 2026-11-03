@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { CompanyInfo, Website, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
-import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, SUBDOMAINS_ENABLED, SUBDOMAIN_SUFFIX, THEMES, guessServiceIcon, previewUrl, publicUrl, serviceSlugs, siteUrl, slugError } from "./types";
+import type { CompanyInfo, Website, WebsiteFaq, WebsiteSections, WebsiteService, WebsiteTheme } from "./types";
+import { ACCENT_PRESETS, DEFAULT_SECTIONS, DEFAULT_SERVICES, SERVICE_ICON_KEYS, GENERAL_FAQ_SUGGESTIONS, SUBDOMAINS_ENABLED, SUBDOMAIN_SUFFIX, THEMES, guessServiceIcon, previewUrl, publicUrl, serviceSlugs, siteUrl, slugError } from "./types";
 import DomainPanel from "./DomainPanel";
 import { ServiceIcon } from "./ServiceIcon";
 import ServicePageEditor from "./ServicePageEditor";
@@ -18,6 +18,7 @@ type Props = {
 const SECTION_LABELS: [keyof WebsiteSections, string][] = [
   ["services", "Leistungen"],
   ["process", "So läuft's ab (4 Schritte)"],
+  ["faq", "Häufige Fragen"],
   ["references", "Referenzen / Aktuelle Projekte"],
   ["reviews", "Kundenbewertungen"],
   ["about", "Über uns"],
@@ -65,6 +66,8 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const [area, setArea] = useState(website.service_area ?? "");
   const [hours, setHours] = useState(website.opening_hours ?? "");
   const [whatsapp, setWhatsapp] = useState(website.whatsapp_number ?? "");
+  const [faq, setFaq] = useState<WebsiteFaq[]>(website.faq ?? []);
+  const unusedSuggestions = GENERAL_FAQ_SUGGESTIONS.filter((sg) => !faq.some((f) => f.q.trim() === sg.q));
   const whatsappProblem = whatsapp.trim() && !/^\+?[0-9 ()/-]{6,25}$/.test(whatsapp.trim()) ? "Bitte nur Ziffern, Leerzeichen und + eingeben, z. B. +49 171 2345678" : "";
   const [contactForm, setContactForm] = useState(website.contact_form);
   const [sections, setSections] = useState<WebsiteSections>({ ...DEFAULT_SECTIONS, ...website.sections });
@@ -150,6 +153,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       service_area: area.trim() || null,
       opening_hours: hours.trim() || null,
       whatsapp_number: whatsapp.trim() || null,
+      faq: faq.map((f) => ({ q: f.q.trim(), a: f.a.trim() })).filter((f) => f.q && f.a).slice(0, 15),
       contact_form: contactForm,
       sections,
       seo_title: seoTitle.trim() || null,
@@ -396,6 +400,38 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
             <input type="checkbox" checked={contactForm} onChange={(e) => setContactForm(e.target.checked)} />
             <span>Kontaktformular anzeigen (Anfragen landen unter „Anfragen“)</span>
           </label>
+        </div>
+      </section>
+
+      <section className="ws-panel">
+        <h3>Häufige Fragen (Startseite)</h3>
+        <p className="tk-muted ws-dom-intro">
+          Beantworten Sie hier, was Kunden oft fragen – das spart Telefonate und hilft bei Google. Übernehmen Sie Vorschläge per Klick und{" "}
+          <strong>prüfen Sie jede Antwort</strong>: Sie muss zu Ihrem Betrieb passen. Auf der Website erscheinen nur Fragen mit Antwort.
+        </p>
+        {faq.map((f, i) => (
+          <div key={i} className="ws-faq">
+            <input value={f.q} onChange={(e) => setFaq((p) => p.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} placeholder="Frage" maxLength={160} aria-label={`Frage ${i + 1}`} />
+            <textarea rows={2} value={f.a} onChange={(e) => setFaq((p) => p.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} placeholder="Antwort" maxLength={800} aria-label={`Antwort ${i + 1}`} />
+            <button type="button" className="tk-icon-btn" onClick={() => setFaq((p) => p.filter((_, j) => j !== i))} aria-label={`Frage ${i + 1} entfernen`}>
+              ×
+            </button>
+          </div>
+        ))}
+        <div className="ws-row ws-faq-tools">
+          <button type="button" className="btn btn-secondary btn-small" disabled={faq.length >= 15} onClick={() => setFaq((p) => [...p, { q: "", a: "" }])}>
+            + Frage hinzufügen
+          </button>
+          {unusedSuggestions.length > 0 && faq.length < 15 && (
+            <span className="ws-suggest">
+              Vorschläge:{" "}
+              {unusedSuggestions.map((sg) => (
+                <button key={sg.q} type="button" className="ws-chip" onClick={() => setFaq((p) => [...p, { ...sg }].slice(0, 15))}>
+                  + {sg.q}
+                </button>
+              ))}
+            </span>
+          )}
         </div>
       </section>
 
