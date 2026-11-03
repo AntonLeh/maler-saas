@@ -5,7 +5,7 @@
 ✅ 2. Symbole statt Zahlen bei den Leistungen (Farbrolle, Haus, Tapete, Pinsel …)
 ✅ 3. Kontaktformular: Leistungen zum Anklicken, optional Fotos mitschicken
 ✅ 4. Zweites Foto für „Über uns“ (Team, Firmenwagen)
-5. WhatsApp-Knopf (optional)
+✅ 5. WhatsApp-Knopf (optional)
 
 ## Mittlerer Aufwand (je ca. ½ Tag)
 ✅ 6. Eigene Seite pro Leistung mit Ort („Fassadenanstrich in Wittlich“) – größter Hebel für Google

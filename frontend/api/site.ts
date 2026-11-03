@@ -51,6 +51,7 @@ export type SiteData = {
   about_image_url?: string | null;
   service_area?: string | null;
   opening_hours?: string | null;
+  whatsapp_number?: string | null;
   sections?: Record<string, boolean>;
   contact_form?: boolean;
   seo_title?: string | null;
@@ -128,6 +129,17 @@ function telHref(phone: string): string {
   if (d.startsWith("0")) return `+49${d.slice(1)}`;
   return d;
 }
+
+/** WhatsApp-Link (wa.me) mit vorausgefülltem Text; nur Ziffern mit Ländervorwahl */
+export function waHref(number: unknown, company: string): string {
+  const intl = telHref(String(number ?? "")).replace(/^\+/, "");
+  if (!/^[1-9][0-9]{6,15}$/.test(intl)) return "";
+  const text = `Hallo${company ? ` ${company}` : ""}, ich habe eine Anfrage über Ihre Website: `;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+}
+
+const WA_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>';
 
 function validColor(c: string): string {
   return /^#[0-9a-f]{6}$/i.test(c) ? c : "#1d4e89";
@@ -379,6 +391,8 @@ footer.bottom .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-b
 footer.bottom .made{opacity:.6;font-size:.85rem}
 .legal{padding:48px 0 72px;max-width:820px}.legal h2{font-size:1.3rem;margin-top:1.6em}
 .callbar{display:none}
+.wa-float{position:fixed;right:20px;bottom:20px;z-index:30;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1f8f4e;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+.wa-float:hover{background:#17733e}
 @media (max-width:860px){
  nav.main{display:none}
  .hero{padding:44px 0 40px}.theme-modern .hero{padding:72px 0 64px}
@@ -390,6 +404,9 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  .callbar{display:grid;grid-template-columns:1fr 1fr;position:fixed;left:0;right:0;bottom:0;z-index:30;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
  .callbar a{padding:15px 10px;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--accent)}
  .callbar a+a{background:var(--accent-dark)}
+ .callbar.three{grid-template-columns:1fr 1fr 1fr}
+ .callbar a.wa{background:#1f8f4e;display:flex;align-items:center;justify-content:center;gap:6px}
+ .wa-float{display:none!important}
 }
 @media (max-width:520px){.steps{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -428,7 +445,16 @@ function footer(d: SiteData, ctx: Ctx): string {
 <div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
 <div><a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
-${phone ? `<div class="callbar"><a href="tel:${esc(telHref(phone))}">📞 Anrufen</a><a href="${homeHref(ctx)}#kontakt">✉️ Anfrage</a></div>` : ""}`;
+${(() => {
+  const wa = waHref(d.whatsapp_number, c.name ?? "");
+  const waLink = wa ? `<a class="wa" href="${esc(wa)}" target="_blank" rel="noopener">${WA_ICON} WhatsApp</a>` : "";
+  const bar =
+    phone || wa
+      ? `<div class="callbar${phone && wa ? " three" : ""}">${phone ? `<a href="tel:${esc(telHref(phone))}">📞 Anrufen</a>` : ""}${waLink}<a href="${homeHref(ctx)}#kontakt">✉️ Anfrage</a></div>`
+      : "";
+  const float = wa ? `<a class="wa-float" href="${esc(wa)}" target="_blank" rel="noopener" aria-label="Per WhatsApp schreiben">${WA_ICON}<span>WhatsApp</span></a>` : "";
+  return bar + float;
+})()}`;
 }
 
 function jsonLd(d: SiteData, ctx: Ctx): string {
@@ -1022,6 +1048,11 @@ export function renderPrivacy(d: SiteData, ctx: Ctx): string {
 ${
   d.contact_form !== false
     ? `<h2>4. Kontaktformular, E-Mail und Telefon</h2><p>Wenn Sie uns über das Kontaktformular, per E-Mail oder telefonisch kontaktieren, verarbeiten wir Ihre Angaben (Name, Kontaktdaten, Anliegen, gewünschte Leistungen und ggf. mitgesendete Fotos) zur Bearbeitung Ihrer Anfrage und für mögliche Anschlussfragen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags) bzw. lit. f DSGVO. Fotos werden bereits in Ihrem Browser verkleinert; dabei werden eingebettete Zusatzdaten wie Standortangaben entfernt. Die Daten werden gelöscht, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen.</p>`
+    : ""
+}
+${
+  waHref(d.whatsapp_number, "")
+    ? `<h2>WhatsApp</h2><p>Auf dieser Website gibt es einen Link „WhatsApp“. Beim bloßen Aufruf der Website werden keine Daten an WhatsApp übertragen. Erst wenn Sie den Link anklicken, wird WhatsApp (WhatsApp Ireland Limited, Dublin, Irland, ein Unternehmen der Meta-Gruppe) geöffnet; dabei gelten die Datenschutzbestimmungen von WhatsApp. Schreiben Sie uns über WhatsApp, verarbeiten wir Ihre Nachricht und Telefonnummer zur Bearbeitung Ihrer Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Alternativ erreichen Sie uns jederzeit per Telefon, E-Mail oder Kontaktformular.</p>`
     : ""
 }
 <h2>${d.contact_form !== false ? "5" : "4"}. Bilder von Projekten und Kundenbewertungen</h2><p>Bilder von Kundenprojekten veröffentlichen wir nur mit Einwilligung der jeweiligen Auftraggeber und ohne Angabe der genauen Anschrift. Kundenbewertungen (Sterne, Kommentar, Vorname mit Anfangsbuchstabe des Nachnamens bzw. Firmenname und Ort) veröffentlichen wir nur, wenn die Kundin oder der Kunde beim Bewerten ausdrücklich eingewilligt hat (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden; eine kurze Nachricht an die oben genannten Kontaktdaten genügt. In den angezeigten Durchschnittswert fließen alle Bewertungen ohne Namen ein.</p>

@@ -64,6 +64,8 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
   const [uploadingAbout, setUploadingAbout] = useState(false);
   const [area, setArea] = useState(website.service_area ?? "");
   const [hours, setHours] = useState(website.opening_hours ?? "");
+  const [whatsapp, setWhatsapp] = useState(website.whatsapp_number ?? "");
+  const whatsappProblem = whatsapp.trim() && !/^\+?[0-9 ()/-]{6,25}$/.test(whatsapp.trim()) ? "Bitte nur Ziffern, Leerzeichen und + eingeben, z. B. +49 171 2345678" : "";
   const [contactForm, setContactForm] = useState(website.contact_form);
   const [sections, setSections] = useState<WebsiteSections>({ ...DEFAULT_SECTIONS, ...website.sections });
   const [seoTitle, setSeoTitle] = useState(website.seo_title ?? "");
@@ -126,6 +128,10 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       onError(slugProblem);
       return;
     }
+    if (whatsappProblem) {
+      onError(`WhatsApp-Nummer: ${whatsappProblem}`);
+      return;
+    }
     onSave({
       theme,
       accent_color: /^#[0-9a-f]{6}$/i.test(accent) ? accent : website.accent_color,
@@ -143,6 +149,7 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
       about_image_url: aboutImage || null,
       service_area: area.trim() || null,
       opening_hours: hours.trim() || null,
+      whatsapp_number: whatsapp.trim() || null,
       contact_form: contactForm,
       sections,
       seo_title: seoTitle.trim() || null,
@@ -375,6 +382,15 @@ export default function DesignTab({ website, company, saving, onSave, onError }:
           <label className="tk-field">
             <span>Erreichbarkeit</span>
             <textarea rows={2} value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Mo–Fr 7:00–17:00 Uhr" />
+          </label>
+          <label className="tk-field">
+            <span>WhatsApp-Nummer (optional)</span>
+            <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+49 171 2345678" inputMode="tel" maxLength={25} />
+            {whatsappProblem ? (
+              <small className="ws-warn">{whatsappProblem}</small>
+            ) : (
+              <small className="tk-muted">Leer lassen = kein WhatsApp-Knopf. Am besten das Firmenhandy mit WhatsApp Business.</small>
+            )}
           </label>
           <label className="tk-field ws-check">
             <input type="checkbox" checked={contactForm} onChange={(e) => setContactForm(e.target.checked)} />

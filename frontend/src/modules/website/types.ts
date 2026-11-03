@@ -45,6 +45,7 @@ export type Website = {
   about_image_url?: string | null;
   service_area: string | null;
   opening_hours: string | null;
+  whatsapp_number?: string | null;
   sections: WebsiteSections;
   contact_form: boolean;
   seo_title: string | null;
