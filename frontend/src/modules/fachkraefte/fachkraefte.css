@@ -617,3 +617,22 @@
 .fk-page .fk-avail .fk-check input {
   margin: 0;
 }
+
+.fk-top-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.fk-access .fk-row {
+  align-items: flex-end;
+  margin: 8px 0 0;
+}
+.fk-grow {
+  flex: 1 1 240px;
+}
+.fk-done .fk-access {
+  text-align: left;
+  max-width: 520px;
+  margin: 12px auto 0;
+}

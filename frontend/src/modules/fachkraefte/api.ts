@@ -48,6 +48,8 @@ export function toForm(p: any): PoolProfile {
   };
 }
 
+export const sendLink = (email: string) => call("send_link", { email });
+
 export const signup = (p: PoolProfile, extra: { consent: boolean; website: string; t: number }) => call("signup", { ...p, ...extra });
 
 export async function loadProfile(t: string, noch = false): Promise<{ profile: PoolProfile; contacts: PoolContactForWorker[] }> {

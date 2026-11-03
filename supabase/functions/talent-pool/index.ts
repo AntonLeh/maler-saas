@@ -100,6 +100,10 @@ async function rotateToken(id: string) {
   return token;
 }
 
+/** Hinweisbox: Dieser Link ist der Zugang zum eigenen Profil */
+const accessNote = () =>
+  `<div style="background:#f4f6f9;border-radius:10px;padding:14px 16px;margin:18px 0"><strong>Ihr persönlicher Zugang:</strong> Über den Knopf oben kommen Sie jederzeit in Ihr Profil – dort können Sie Ihre Angaben ändern, Ihr Profil pausieren oder löschen und sehen Ihre Kontaktanfragen. Ein Passwort brauchen Sie nicht. <strong>Bitte bewahren Sie diese E-Mail auf.</strong><br><br>Link verloren? Auf <a href="${esc(SITE())}/fachkraefte#zugang">${esc(SITE().replace(/^https:\/\//, ""))}/fachkraefte</a> können Sie sich jederzeit einen neuen Zugangslink schicken lassen.</div>`;
+
 const profileLink = (token: string, extra = "") => `${SITE()}/fachkraefte/profil?t=${encodeURIComponent(token)}${extra}`;
 
 async function cleanup() {
@@ -141,6 +145,7 @@ async function sendReminders() {
       "Sind Sie noch auf der Suche?",
       `<p>Hallo ${esc(p.first_name)},</p><p>Sie sind im Maler-SaaS Fachkräfte-Pool eingetragen. Damit Betriebe nur aktuelle Profile sehen, fragen wir regelmäßig nach: <strong>Sind Sie noch verfügbar?</strong></p>
 <p>${button(profileLink(token, "&noch=1"), "Ja, ich suche noch")}${button(profileLink(token), "Profil ansehen oder löschen", "#5b6573")}</p>
+<p style="color:#666;font-size:13px">Dieser Link ist ab jetzt Ihr Zugang zum Profil – ältere Links aus früheren E-Mails gelten nicht mehr.</p>
 <p>Wenn Sie nicht reagieren, wird Ihr Profil nach ${VISIBLE_DAYS} Tagen ohne Bestätigung ausgeblendet und nach 12 Monaten gelöscht.</p>`
     );
   }
@@ -168,8 +173,8 @@ async function signup(b: any) {
       `${existing.first_name} ${existing.last_name}`,
       existing.status === "pending" ? "Bitte bestätigen Sie Ihre Anmeldung" : "Ihr Profil im Fachkräfte-Pool",
       existing.status === "pending"
-        ? `<p>Hallo ${esc(existing.first_name)},</p><p>bitte bestätigen Sie Ihre Anmeldung im Maler-SaaS Fachkräfte-Pool:</p><p>${button(profileLink(token), "Anmeldung bestätigen")}</p>`
-        : `<p>Hallo ${esc(existing.first_name)},</p><p>mit dieser E-Mail-Adresse besteht bereits ein Profil im Fachkräfte-Pool. Hier können Sie es ansehen, ändern oder löschen:</p><p>${button(profileLink(token), "Mein Profil")}</p>`
+        ? `<p>Hallo ${esc(existing.first_name)},</p><p>bitte bestätigen Sie Ihre Anmeldung im Maler-SaaS Fachkräfte-Pool:</p><p>${button(profileLink(token), "Anmeldung bestätigen und zum Profil")}</p>${accessNote()}`
+        : `<p>Hallo ${esc(existing.first_name)},</p><p>mit dieser E-Mail-Adresse besteht bereits ein Profil im Fachkräfte-Pool. Hier können Sie es ansehen, ändern oder löschen:</p><p>${button(profileLink(token), "Zu meinem Profil")}</p>${accessNote()}`
     );
     return json({ ok: true });
   }
@@ -184,10 +189,28 @@ async function signup(b: any) {
     `${p.first_name} ${p.last_name}`,
     "Bitte bestätigen Sie Ihre Anmeldung im Fachkräfte-Pool",
     `<p>Hallo ${esc(p.first_name)},</p><p>schön, dass Sie dabei sind! Bitte bestätigen Sie mit einem Klick Ihre E-Mail-Adresse. Erst dann wird Ihr Profil für Malerbetriebe sichtbar – ohne Ihren Namen und ohne Ihre Kontaktdaten.</p>
-<p>${button(profileLink(token), "Anmeldung bestätigen")}</p>
+<p>${button(profileLink(token), "Anmeldung bestätigen und zum Profil")}</p>
+${accessNote()}
 <p>Möchte ein Betrieb Sie kennenlernen, bekommen Sie eine E-Mail und entscheiden selbst, ob er Ihre Kontaktdaten erhält.</p>
 <p>Haben Sie sich nicht angemeldet? Dann ignorieren Sie diese E-Mail einfach – die Angaben werden nach 7 Tagen gelöscht.</p>`
   );
+  return json({ ok: true });
+}
+
+/** Neuen Zugangslink anfordern (immer „ok“, damit niemand prüfen kann, wer eingetragen ist) */
+async function sendLink(b: any) {
+  const email = String(b.email ?? "").trim().toLowerCase().slice(0, 160);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return fail("Bitte eine gültige E-Mail-Adresse angeben.");
+  const { data: p } = await db.from("talent_profiles").select("id, status, first_name, last_name, email").eq("email", email).maybeSingle();
+  if (p) {
+    const token = await rotateToken(p.id);
+    await sendMail(
+      p.email,
+      `${p.first_name} ${p.last_name}`,
+      p.status === "pending" ? "Bitte bestätigen Sie Ihre Anmeldung" : "Ihr Zugang zum Fachkräfte-Pool",
+      `<p>Hallo ${esc(p.first_name)},</p><p>hier ist Ihr neuer Zugangslink zu Ihrem Profil im Maler-SaaS Fachkräfte-Pool:</p><p>${button(profileLink(token), p.status === "pending" ? "Anmeldung bestätigen und zum Profil" : "Zu meinem Profil")}</p>${accessNote()}<p style="color:#666;font-size:13px">Ältere Links gelten ab jetzt nicht mehr. Haben Sie keinen Link angefordert? Dann ignorieren Sie diese E-Mail einfach.</p>`
+    );
+  }
   return json({ ok: true });
 }
 
@@ -383,6 +406,8 @@ async function route(req: Request) {
   try {
     const b = await req.json().catch(() => ({}));
     switch (b.action) {
+      case "send_link":
+        return await sendLink(b);
       case "signup":
         return await signup(b);
       case "profile":

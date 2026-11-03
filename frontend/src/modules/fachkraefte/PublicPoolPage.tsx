@@ -36,9 +36,14 @@ export default function PublicPoolPage() {
             <strong>MalerSaaS</strong> Fachkräfte-Pool
           </span>
         </a>
-        <a className="fk-top-link" href="/">
-          Für Malerbetriebe
-        </a>
+        <nav className="fk-top-nav">
+          <a className="fk-top-link" href="/fachkraefte#zugang">
+            Mein Profil
+          </a>
+          <a className="fk-top-link" href="/">
+            Für Malerbetriebe
+          </a>
+        </nav>
       </header>
       <main className="fk-main">
         {path === "/fachkraefte/profil" ? (
@@ -74,6 +79,11 @@ function SignupView({ onPrivacy }: { onPrivacy: () => void }) {
   const [done, setDone] = useState(false);
   const started = useRef(Date.now());
   const formRef = useRef<HTMLDivElement | null>(null);
+  // Sprungmarke (#zugang, #anmelden) nach dem Aufbau der Seite anspringen
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }), 50);
+  }, []);
 
   const submit = async () => {
     setError("");
@@ -105,6 +115,10 @@ function SignupView({ onPrivacy }: { onPrivacy: () => void }) {
         <p>
           Wir haben Ihnen eine E-Mail an <strong>{p.email}</strong> geschickt. Bitte klicken Sie dort auf <strong>„Anmeldung bestätigen“</strong> – erst
           dann ist Ihr Profil für Malerbetriebe sichtbar.
+        </p>
+        <p>
+          <strong>Wichtig:</strong> Der Knopf in dieser E-Mail ist gleichzeitig Ihr <strong>persönlicher Zugang zu Ihrem Profil</strong> – ein Passwort
+          brauchen Sie nicht. Bitte heben Sie die E-Mail auf.
         </p>
         <p className="fk-muted">Keine E-Mail bekommen? Schauen Sie bitte auch im Spam-Ordner nach.</p>
       </section>
@@ -182,6 +196,11 @@ function SignupView({ onPrivacy }: { onPrivacy: () => void }) {
         <button type="button" className="fk-btn fk-btn-wide" onClick={submit} disabled={busy}>
           {busy ? "Wird gesendet …" : "Kostenlos eintragen"}
         </button>
+      </section>
+
+      <section className="fk-card" id="zugang">
+        <h2>Schon eingetragen?</h2>
+        <AccessLinkForm intro="Ein Passwort gibt es nicht: Ihr Zugang ist der Link aus unserer E-Mail. Haben Sie die E-Mail nicht mehr, schicken wir Ihnen hier einen neuen Link." />
       </section>
 
       <section className="fk-faq">
@@ -286,10 +305,7 @@ function ProfileView({ token, noch, onPrivacy }: { token: string; noch: boolean;
           <>
             <h1>Link nicht gültig</h1>
             <p>{error}</p>
-            <p className="fk-muted">Tipp: Melden Sie sich mit derselben E-Mail-Adresse noch einmal an – wir schicken Ihnen dann einen neuen Link.</p>
-            <a className="fk-btn" href="/fachkraefte#anmelden">
-              Neuen Link anfordern
-            </a>
+            <AccessLinkForm intro="Wir schicken Ihnen gerne einen neuen Zugangslink:" />
           </>
         ) : (
           <p>Profil wird geladen …</p>
@@ -354,7 +370,7 @@ function ProfileView({ token, noch, onPrivacy }: { token: string; noch: boolean;
             Profil löschen
           </button>
         </div>
-        <p className="fk-muted fk-small">Bitte bewahren Sie diese E-Mail auf – der Link darin ist Ihr Zugang. Mit jeder neuen E-Mail von uns erhalten Sie einen neuen Link.</p>
+        <p className="fk-muted fk-small">Ihr Zugang ist der Link aus unserer neuesten E-Mail – ein Passwort gibt es nicht. Tipp: Setzen Sie sich ein Lesezeichen auf diese Seite. Link verloren? Unter maler-saas.com/fachkraefte → „Mein Profil“ schicken wir Ihnen einen neuen.</p>
       </section>
 
       <section className="fk-card">
@@ -477,5 +493,54 @@ function ContactView({ token, hint }: { token: string; hint: string | null }) {
         <p className="fk-ok">Alles klar – {info.company} erhält keine Kontaktdaten von Ihnen.</p>
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Zugangslink per E-Mail anfordern (für bereits Eingetragene)
+// ---------------------------------------------------------------------
+function AccessLinkForm({ intro }: { intro?: string }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await api.sendLink(email);
+      setSent(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (sent) {
+    return (
+      <p className="fk-ok" role="status">
+        Falls für {email} ein Profil besteht, ist der Zugangslink jetzt unterwegs. Bitte auch im Spam-Ordner nachsehen.
+      </p>
+    );
+  }
+  return (
+    <form className="fk-access" onSubmit={submit}>
+      {intro && <p className="fk-muted">{intro}</p>}
+      <div className="fk-row">
+        <label className="fk-field fk-grow">
+          <span>Ihre E-Mail-Adresse</span>
+          <input type="email" required value={email} maxLength={160} autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
+        </label>
+        <button type="submit" className="fk-btn" disabled={busy}>
+          {busy ? "Wird gesendet …" : "Zugangslink schicken"}
+        </button>
+      </div>
+      {error && (
+        <div className="fk-error" role="alert">
+          {error}
+        </div>
+      )}
+    </form>
   );
 }
