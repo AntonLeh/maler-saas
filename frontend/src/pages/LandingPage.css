@@ -1069,3 +1069,15 @@
   font-weight: 700;
   text-decoration: none;
 }
+
+/* Knöpfe und Link gleich groß (Knöpfe übernehmen die Schrift sonst nicht) */
+.landing-footer-links button,
+.landing-footer-links a {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.landing-footer-links a:hover {
+  color: #1d4ed8;
+}
