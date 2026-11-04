@@ -4,6 +4,7 @@ import "./website.css";
 import type { CompanyInfo, Website, WebsiteLead, WebsiteReference, WebsiteReviewOverview } from "./types";
 import { imprintGaps, previewUrl, publicUrl, slugError, slugify } from "./types";
 import * as api from "./api";
+import * as kiPhone from "../ki-telefon/api";
 import DesignTab from "./DesignTab";
 import ReferencesTab from "./ReferencesTab";
 import LeadsTab from "./LeadsTab";
@@ -92,6 +93,13 @@ export default function WebsitePage({
     try {
       setWebsite(await api.saveWebsite(tenantId, values));
       flash(msg);
+      // KI-Telefon kennt Leistungen, Einsatzgebiet usw. aus der Website -> im Hintergrund nachziehen (Fehler egal)
+      if (values.services || values.service_area !== undefined || values.opening_hours !== undefined || values.faq || values.highlights) {
+        kiPhone
+          .loadAgent(tenantId)
+          .then((a) => (a?.agent_id ? kiPhone.provisionAgent() : null))
+          .catch(() => undefined);
+      }
     } catch (e) {
       showError((e as Error).message);
     } finally {
