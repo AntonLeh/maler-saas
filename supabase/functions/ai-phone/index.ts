@@ -134,8 +134,9 @@ async function checkPlan(tenantId: number): Promise<boolean> {
 
 async function checkAccess(settings: any): Promise<{ ok: boolean; reason?: string }> {
   if (!settings.enabled) return { ok: false, reason: "disabled" };
-  if (!(await checkPlan(settings.tenant_id))) return { ok: false, reason: "plan" };
-  const billing = await loadBilling(settings.tenant_id);
+  // parallel statt nacheinander (jede Abfrage kostet Zeit, während der Anrufer wartet)
+  const [planOk, billing] = await Promise.all([checkPlan(settings.tenant_id), loadBilling(settings.tenant_id)]);
+  if (!planOk) return { ok: false, reason: "plan" };
   if (!billing.setup_paid_at) return { ok: false, reason: "setup" };
   if (Number(billing.balance_seconds) <= 0) return { ok: false, reason: "guthaben" };
   return { ok: true };
@@ -407,11 +408,13 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
     .single();
   if (error) throw error;
 
-  await logCall(s.tenant_id, ctx.provider, ctx.callId, {
-    outcome: "termin",
-    appointment_id: appt.id,
-    caller_number: ctx.callerNumber || phone,
-  });
+  await inBackground(
+    logCall(s.tenant_id, ctx.provider, ctx.callId, {
+      outcome: "termin",
+      appointment_id: appt.id,
+      caller_number: ctx.callerNumber || phone,
+    })
+  );
 
   await inBackground(
     companyName(s).then((company) =>
@@ -422,7 +425,7 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
   return {
     ok: true,
     appointment_id: appt.id,
-    message: `Termin eingetragen: ${slotLabel(start, s.timezone)} bei ${address}. Bestätige dem Anrufer Datum und Uhrzeit und sage, dass sich der Betrieb bei Änderungen meldet.`,
+    message: `Termin eingetragen: ${slotLabel(start, s.timezone)} bei ${address}. Bestätige dem Anrufer Datum und Uhrzeit und sage, dass wir uns bei Änderungen melden.`,
   };
 }
 
@@ -450,11 +453,13 @@ async function toolCreateCallback(args: any, ctx: ToolCtx) {
     .single();
   if (error) throw error;
 
-  await logCall(s.tenant_id, ctx.provider, ctx.callId, {
-    outcome: "rueckruf",
-    callback_id: data.id,
-    caller_number: ctx.callerNumber || phone,
-  });
+  await inBackground(
+    logCall(s.tenant_id, ctx.provider, ctx.callId, {
+      outcome: "rueckruf",
+      callback_id: data.id,
+      caller_number: ctx.callerNumber || phone,
+    })
+  );
 
   await inBackground(
     companyName(s).then((company) =>
@@ -468,7 +473,7 @@ async function toolCreateCallback(args: any, ctx: ToolCtx) {
 
   return {
     ok: true,
-    message: "Rückrufwunsch ist notiert. Sage dem Anrufer, dass sich der Betrieb so bald wie möglich meldet.",
+    message: "Rückrufwunsch ist notiert. Sage dem Anrufer in einem Satz, dass wir uns melden – ohne Zeitangabe wie „so bald wie möglich“.",
   };
 }
 
@@ -480,7 +485,7 @@ async function runTool(name: string, args: any, ctx: ToolCtx, access: { ok: bool
     return {
       ok: false,
       message:
-        "Es gab ein technisches Problem. Nimm Name, Telefonnummer und Anliegen auf, rufe create_callback auf oder sage, dass der Betrieb zurückruft.",
+        "Es gab ein technisches Problem. Nimm Name, Telefonnummer und Anliegen auf, rufe create_callback auf oder sage, dass wir zurückrufen.",
     };
   }
 }
@@ -811,7 +816,7 @@ serve(async (req) => {
       {
         ok: false,
         message:
-          "Es gab ein technisches Problem. Nimm Name, Telefonnummer und Anliegen auf und sage, dass der Betrieb zurückruft.",
+          "Es gab ein technisches Problem. Nimm Name, Telefonnummer und Anliegen auf und sage, dass wir zurückrufen. Sag nicht, dass etwas eingetragen wurde.",
       },
       200
     );

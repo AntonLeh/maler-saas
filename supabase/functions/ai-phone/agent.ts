@@ -10,6 +10,9 @@
 //   ELEVENLABS_TTS_MODEL          Standard: Sprachmodell der Vorlage (außer v3), sonst eleven_flash_v2_5
 //   ELEVENLABS_TTS_STABILITY      Standard 0.6  (höher = gleichmäßiger)
 //   ELEVENLABS_TTS_SPEED          Standard 1.0
+// Sprecherwechsel (optional):
+//   ELEVENLABS_TURN_EAGERNESS     patient (Standard) | normal | eager
+//   ELEVENLABS_TURN_TIMEOUT       Sekunden Stille bis zur Nachfrage, Standard 10
 
 const env = (k: string) => (globalThis as any).Deno?.env?.get(k) ?? "";
 const apiBase = () => env("ELEVENLABS_API_URL") || "https://api.elevenlabs.io";
@@ -307,7 +310,14 @@ export async function provisionAgent(input: ProvisionInput): Promise<ProvisionRe
         },
       },
       tts,
-      turn: { turn_eagerness: "patient", speculative_turn: false },
+      // Sprecherwechsel: "patient" = wartet Denkpausen ab (fällt seltener ins Wort), "normal" = antwortet schneller.
+      // Einstellbar ohne Code über das Secret ELEVENLABS_TURN_EAGERNESS (eager | normal | patient).
+      turn: {
+        turn_eagerness: ["eager", "normal", "patient"].includes(env("ELEVENLABS_TURN_EAGERNESS")) ? env("ELEVENLABS_TURN_EAGERNESS") : "patient",
+        speculative_turn: false,
+        // erst nach 10 Sekunden Stille nachfragen („Sind Sie noch dran?“)
+        turn_timeout: Number(env("ELEVENLABS_TURN_TIMEOUT")) || 10,
+      },
       conversation: { max_duration_seconds: 900 },
     },
     // Zusammenfassungen nach dem Gespräch auf Deutsch (sonst oft Englisch)
