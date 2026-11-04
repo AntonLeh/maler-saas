@@ -100,6 +100,6 @@ Kundenportal, URLs ohne Parameter. Muss im Vercel-Projekt unter „Analytics“ 
 
 ## KI-Chat (Reiter „Chat“)
 - Einstellungen in `websites.chat` {enabled, greeting, info}; Verläufe in `website_chats` (90 Tage), Migration `20261104120000_website_chat.sql`.
-- Edge-Funktion `website-chat` (öffentlich): Antworten über Anthropic (Standard `claude-haiku-5-5`, Ersatz `claude-sonnet-5-5`), Werkzeug `anfrage_speichern` → `website_leads` + E-Mail.
+- Edge-Funktion `website-chat` (öffentlich): Antworten über Anthropic (Standard `claude-sonnet-5-5`, Ersatz `claude-haiku-5-5`), Werkzeug `anfrage_speichern` → `website_leads` + E-Mail.
 - Wissen nur aus den Website-Angaben (Leistungen, FAQ, Einsatzgebiet, Erreichbarkeit, Termin-/Karriere-Link) + Hinweisen des Betriebs. Keine Preise, außer ausdrücklich erlaubt.
 - Limits: 3000 Antworten/Monat/Betrieb (WEBSITE_CHAT_MONTHLY_LIMIT), 30 Antworten pro Chat, 100 neue Chats/Stunde.

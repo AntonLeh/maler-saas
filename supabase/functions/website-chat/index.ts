@@ -7,7 +7,7 @@
 // Beantwortet Fragen aus den Angaben der Website und nimmt Anfragen auf (landen unter „Anfragen“ + E-Mail).
 // Verläufe: Tabelle website_chats (90 Tage).
 // Secrets (vorhanden): ANTHROPIC_API_KEY, BREVO_API_KEY, BREVO_SENDER_EMAIL
-// Optional: WEBSITE_CHAT_MODEL (Standard claude-haiku-5-5), WEBSITE_CHAT_MONTHLY_LIMIT (Standard 3000 Antworten/Betrieb)
+// Optional: WEBSITE_CHAT_MODEL (Standard claude-sonnet-5-5, Ersatz claude-haiku-5-5), WEBSITE_CHAT_MONTHLY_LIMIT (Standard 3000 Antworten/Betrieb)
 // Deploy:  npx supabase functions deploy website-chat --no-verify-jwt
 // =====================================================================
 
@@ -61,7 +61,7 @@ function siteUrl(w: any) {
 async function callClaude(body: Record<string, unknown>) {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY fehlt");
-  const models = [Deno.env.get("WEBSITE_CHAT_MODEL") || "claude-haiku-5-5", "claude-sonnet-5-5"];
+  const models = [Deno.env.get("WEBSITE_CHAT_MODEL") || "claude-sonnet-5-5", "claude-haiku-5-5"];
   let last: any = null;
   for (const model of [...new Set(models)]) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
