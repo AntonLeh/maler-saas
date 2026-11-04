@@ -53,6 +53,7 @@ GRUNDREGELN
 - Erfinde nie Termine, Personen, Rollen, Abläufe oder Zeitzusagen (z. B. "unser Meister kommt", "wir rufen heute noch zurück", "das dauert zwei Tage"). Sag stattdessen: "Wir melden uns bei Ihnen." – ohne "so bald wie möglich" oder "zeitnah". Wenn du etwas nicht weißt, biete einen Rückruf an.
 - Nutze für Fragen zu Leistungen, Einsatzgebiet, Erreichbarkeit und Adresse nur die WISSENSBASIS unten.
 - Wenn ein Werkzeug "ok": false zurückgibt, folge genau dem Hinweis in "message".
+- Sag NIE, dass ein Termin eingetragen oder ein Rückruf notiert ist, wenn das Werkzeug nicht erfolgreich war ("ok": true). Schlägt book_appointment fehl oder kommt keine Antwort, sag ehrlich, dass das Eintragen gerade nicht geklappt hat, und nimm stattdessen mit create_callback einen Rückrufwunsch mit dem gewünschten Termin auf.
 - Dienst verfügbar: ${v("service_available")}. Steht dort "nein", entschuldige dich, bitte um einen späteren Anruf und beende das Gespräch.
 
 DEINE AUFGABEN
@@ -66,7 +67,7 @@ Prüfe den Ort des Objekts IMMER gegen das Einsatzgebiet in der Wissensbasis, be
 TELEFONNUMMERN, NAMEN, ADRESSEN
 - Wiederhole jede Telefonnummer langsam in Zweier- oder Dreiergruppen und lass sie bestätigen. Fehlt die Vorwahl, frag danach; rate sie nicht.
 - Frag bei ungewöhnlichen Namen oder Straßennamen nach der Schreibweise. E-Mail-Adressen lässt du dir buchstabieren.
-- Frag, ob die Nummer, von der angerufen wird, als Rückrufnummer passt.
+- Frag, ob die Nummer, von der angerufen wird, als Rückrufnummer passt. Passt sie, lass "phone" beim Werkzeug weg – die Nummer kennt das System bereits.
 
 ABLAUF BESICHTIGUNG
 1. Frage kurz, worum es geht (z. B. welche Räume, Fassade, ungefähre Größe) und in welchem Ort.
@@ -92,6 +93,8 @@ Bedankt sich der Anrufer zum Schluss, verabschiede dich mit einem kurzen Satz, o
 const str = (description: string) => ({ type: "string", description });
 // Gesprächs-ID automatisch mitschicken (verbindet Termin/Rückruf mit dem späteren Gesprächsprotokoll)
 const CALL_ID = { type: "string", dynamic_variable: "system__conversation_id" };
+// Nummer des Anrufers automatisch mitschicken (Rückrufnummer, wenn keine andere genannt wird)
+const CALLER = { type: "string", dynamic_variable: "system__caller_id" };
 
 /** Werkzeug-Definitionen im Format der ElevenLabs-API */
 export function toolConfigs(functionUrl: string, key: string) {
@@ -141,12 +144,14 @@ export function toolConfigs(functionUrl: string, key: string) {
         request_body_schema: {
           type: "object",
           description: "Daten des Anrufers und gewählter Termin.",
-          required: ["start", "name", "phone", "address"],
+          // phone bewusst nicht Pflicht: ohne Angabe nimmt der Server die Nummer des Anrufers
+          required: ["start", "name", "address"],
           properties: {
             call_id: CALL_ID,
+            caller_number: CALLER,
             start: str("Exakt der Wert start aus get_free_slots, z. B. 2026-11-03T10:00"),
             name: str("Vor- und Nachname des Anrufers"),
-            phone: str("Rückrufnummer des Anrufers"),
+            phone: str("Rückrufnummer – nur angeben, wenn der Anrufer eine andere Nummer nennt; sonst weglassen (dann gilt die Nummer, von der er anruft)"),
             address: str("Adresse des Objekts: Straße, Hausnummer, PLZ, Ort"),
             concern: str("Kurz: was soll gemacht werden"),
             email: str("E-Mail-Adresse, nur wenn der Anrufer sie nennt"),
@@ -166,11 +171,12 @@ export function toolConfigs(functionUrl: string, key: string) {
         request_body_schema: {
           type: "object",
           description: "Kontaktdaten und Anliegen für den Rückruf.",
-          required: ["phone", "concern"],
+          required: ["concern"],
           properties: {
             call_id: CALL_ID,
+            caller_number: CALLER,
             name: str("Name des Anrufers"),
-            phone: str("Rückrufnummer"),
+            phone: str("Rückrufnummer – nur angeben, wenn der Anrufer eine andere Nummer nennt; sonst weglassen (dann gilt die Nummer, von der er anruft)"),
             concern: str("Anliegen in einem Satz"),
             preferred_time: str("Wann der Rückruf zeitlich passt, nur wenn genannt"),
           },
