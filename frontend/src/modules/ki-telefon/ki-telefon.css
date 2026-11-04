@@ -739,3 +739,41 @@
 .kt-forward code {
   white-space: nowrap;
 }
+
+.kt-codes {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.kt-codes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--tk-border);
+}
+.kt-codes code {
+  font-size: 15px;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .kt-codes li {
+    grid-template-columns: 1fr auto;
+  }
+  .kt-codes li span {
+    grid-column: 1 / -1;
+  }
+}
+.kt-copy {
+  border: 0;
+  background: none;
+  color: var(--tk-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+}

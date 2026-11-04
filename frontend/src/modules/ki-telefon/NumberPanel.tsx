@@ -15,28 +15,54 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-/** Rufumleitung einrichten – kurze Anleitung */
+/** Rufumleitung einrichten – kurze Anleitung (GSM-Standardcodes, gelten bei Telekom, Vodafone und O2 samt deren Marken) */
 function ForwardingHelp({ number }: { number: string }) {
   const n = prettyNumber(number);
+  const [copied, setCopied] = useState("");
+  const copy = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      window.setTimeout(() => setCopied(""), 1500);
+    } catch {
+      /* Zwischenablage nicht verfügbar */
+    }
+  };
+  const rows: [string, string][] = [
+    ["Wenn ich nicht rangehe (nach ca. 20 Sekunden)", `**61*${n}**20#`],
+    ["Wenn besetzt", `**67*${n}#`],
+    ["Wenn nicht erreichbar (Funkloch, Akku leer)", `**62*${n}#`],
+    ["Alle drei auf einmal", `**004*${n}**20#`],
+    ["Immer weiterleiten (z. B. Urlaub)", `**21*${n}#`],
+    ["Alle Umleitungen ausschalten", "##002#"],
+  ];
   return (
     <details className="kt-forward" open>
       <summary>So leitest du Anrufe an die KI weiter</summary>
-      <ol>
-        <li>
-          <strong>Handy (alle Netze):</strong> Für „bei Nichtannahme nach ca. 20 Sekunden“ wähle{" "}
-          <code>**61*{n}**20#</code> und drücke die Anruftaste. Ausschalten: <code>##61#</code>.
-        </li>
-        <li>
-          <strong>Wenn besetzt:</strong> <code>**67*{n}#</code> · <strong>Immer weiterleiten</strong> (z. B. Urlaub):{" "}
-          <code>**21*{n}#</code>, ausschalten mit <code>##21#</code>.
-        </li>
-        <li>
-          <strong>Festnetz mit Router (z. B. FRITZ!Box):</strong> Telefonie → Rufbehandlung → Rufumleitung → neue
-          Rufumleitung: „bei Nichtannahme“ an <code>{n}</code>.
-        </li>
-        <li>Danach einmal von einem anderen Telefon die Firmennummer anrufen und nicht abheben – die KI sollte sich melden.</li>
-      </ol>
-      <p className="tk-muted">Hinweis: Bei manchen Anbietern kostet die Weiterleitung die üblichen Gesprächsgebühren ins deutsche Festnetz.</p>
+      <p>
+        <strong>Handy:</strong> Code im Telefon-Tastenfeld eintippen und die grüne Anruftaste drücken. Die Codes sind Standard und gelten bei
+        Telekom, Vodafone und O2 sowie deren Marken. Die bisherige Mailbox wird dabei ersetzt.
+      </p>
+      <ul className="kt-codes">
+        {rows.map(([label, code]) => (
+          <li key={code}>
+            <span>{label}</span>
+            <code>{code}</code>
+            <button type="button" className="kt-copy" onClick={() => copy(code)}>
+              {copied === code ? "kopiert ✓" : "kopieren"}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p>
+        <strong>Festnetz mit Router (z. B. FRITZ!Box):</strong> Telefonie → Rufbehandlung → Rufumleitung → neue Rufumleitung: „bei Nichtannahme“
+        an <code>{n}</code>. Ohne eigenen Router: im Kundencenter des Anbieters unter „Rufumleitung“.
+      </p>
+      <p>Danach einmal von einem anderen Telefon die eigene Nummer anrufen und nicht abheben – die KI sollte sich melden.</p>
+      <p className="tk-muted">
+        Hinweise: Bei manchen Tarifen kostet die Weiterleitung die üblichen Gebühren ins deutsche Festnetz. Klappt ein Code nicht (bei einzelnen
+        Discount- oder Prepaid-Tarifen ist die Rufumleitung eingeschränkt), hilft der eigene Anbieter weiter.
+      </p>
     </details>
   );
 }
