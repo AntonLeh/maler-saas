@@ -429,6 +429,51 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
   };
 }
 
+/** Nachricht an den Betrieb, ohne Rückrufwunsch (z. B. „Der Chef soll selbst kommen“) */
+async function toolLeaveMessage(args: any, ctx: ToolCtx) {
+  const s = ctx.settings;
+  const message = str(args.message ?? args.concern, 1500);
+  const name = str(args.name, 120);
+  const phone = str(args.phone, 40) || ctx.callerNumber;
+  if (!message) return { ok: false, message: "Bitte frag kurz, was wir ausrichten sollen." };
+  // Wurde in diesem Gespräch ein Termin eingetragen, kommt die Nachricht direkt in den Termin
+  let appointmentId: number | null = null;
+  if (ctx.callId) {
+    const { data: call } = await db.from("ai_calls").select("appointment_id").eq("tenant_id", s.tenant_id).eq("provider_call_id", ctx.callId).maybeSingle();
+    appointmentId = call?.appointment_id ?? null;
+  }
+  if (appointmentId) {
+    const { data: appt } = await db.from("appointments").select("id, description").eq("id", appointmentId).eq("tenant_id", s.tenant_id).maybeSingle();
+    if (appt) {
+      await db
+        .from("appointments")
+        .update({ description: [appt.description, `Hinweis des Kunden (Telefon): ${message}`].filter(Boolean).join("\n") })
+        .eq("id", appt.id);
+    }
+  }
+  // Zusätzlich in der Liste „Rückrufwünsche“ sichtbar – als Nachricht gekennzeichnet
+  const { error } = await db.from("ai_callback_requests").insert([
+    {
+      tenant_id: s.tenant_id,
+      caller_name: name || null,
+      caller_phone: phone || "unbekannt",
+      concern: `Nachricht: ${message}`,
+      preferred_time: "kein Rückruf nötig",
+      provider_call_id: ctx.callId,
+    },
+  ]);
+  if (error) throw error;
+  await inBackground(
+    companyName(s).then((company) =>
+      notify(s, { kind: "callback", name, phone: phone || "unbekannt", concern: `Nachricht (kein Rückruf nötig): ${message}`, preferredTime: "" }, company)
+    )
+  );
+  return {
+    ok: true,
+    message: `Nachricht ist notiert${appointmentId ? " und beim Termin vermerkt" : ""}. Sage dem Anrufer in einem Satz, dass wir es ausrichten.`,
+  };
+}
+
 async function toolCreateCallback(args: any, ctx: ToolCtx) {
   const s = ctx.settings;
   const name = str(args.name ?? args.customer_name, 120);
@@ -517,6 +562,8 @@ async function runToolUnsafe(name: string, args: any, ctx: ToolCtx, access: { ok
       return toolBookAppointment(args, ctx);
     case "create_callback":
       return toolCreateCallback(args, ctx);
+    case "leave_message":
+      return toolLeaveMessage(args, ctx);
     default:
       return { ok: false, message: `Unbekanntes Werkzeug: ${name}` };
   }

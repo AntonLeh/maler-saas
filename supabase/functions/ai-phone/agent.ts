@@ -62,7 +62,7 @@ GRUNDREGELN
 
 DEINE AUFGABEN
 1. Besichtigungstermine vereinbaren (Dauer ${v("visit_duration")}, mögliche Zeiten: ${v("visit_hours")}).
-2. Rückrufwünsche aufnehmen.
+2. Rückrufwünsche aufnehmen und Nachrichten an den Betrieb ausrichten.
 3. Fragen zu Leistungen, Einsatzgebiet und Erreichbarkeit beantworten (aus der Wissensbasis).
 
 EINSATZGEBIET (WICHTIG)
@@ -84,6 +84,9 @@ ABLAUF BESICHTIGUNG
 4. Hat sich der Anrufer entschieden, erfrage: vollständigen Namen, Adresse des Objekts (Straße, Hausnummer, PLZ, Ort) und die Rückrufnummer.
 5. Wiederhole Termin und Adresse kurz in einem Satz und frag "Passt das so?". Nach einem Ja rufst du SOFORT book_appointment auf, ohne es vorher anzukündigen (kein "Ich trage den Termin ein"). Verwende für "start" exakt den Wert aus get_free_slots.
 6. Bestätige den Termin in einem Satz und sage, dass wir uns bei Änderungen melden.
+
+NACHRICHT AUSRICHTEN
+Möchte der Anrufer nur etwas ausrichten lassen und ausdrücklich KEINEN Rückruf (z. B. "Sagen Sie dem Chef, er soll selbst kommen"), dann frag nicht nach einem Rückruf, sondern ruf leave_message auf und bestätige: "Das richten wir aus." Fragen, die du nicht beantworten kannst (z. B. wer zur Besichtigung kommt), beantwortest du ehrlich mit "Das kann ich Ihnen leider nicht sagen" und bietest an, den Wunsch auszurichten.
 
 ABLAUF RÜCKRUF
 Frage nach Name, Rückrufnummer, Anliegen und wann es zeitlich passt. Fasse kurz zusammen, frag "Passt das so?" und rufe nach einem Ja create_callback auf. Bestätige in einem Satz, ohne Zeitzusage.
@@ -170,6 +173,29 @@ export function toolConfigs(functionUrl: string, key: string) {
       },
       response_timeout_secs: 15,
       // Während das Werkzeug läuft, nicht unterbrechen lassen – sonst bricht ein „Sehr gut“ des Anrufers den Aufruf ab
+      disable_interruptions: true,
+    },
+    leave_message: {
+      type: "webhook",
+      name: "leave_message",
+      description:
+        "Gibt eine Nachricht des Anrufers an den Betrieb weiter, wenn er KEINEN Rückruf möchte (z. B. „Der Chef soll persönlich kommen“, „Bitte vorher klingeln“). Wurde im Gespräch ein Termin eingetragen, wird die Nachricht dort vermerkt.",
+      api_schema: {
+        url: url("leave_message"),
+        method: "POST",
+        request_body_schema: {
+          type: "object",
+          description: "Nachricht an den Betrieb.",
+          required: ["message"],
+          properties: {
+            call_id: CALL_ID,
+            caller_number: CALLER,
+            name: str("Name des Anrufers, falls bekannt"),
+            message: str("Die Nachricht in einem Satz, z. B. Kunde wünscht, dass der Chef persönlich zur Besichtigung kommt"),
+          },
+        },
+      },
+      response_timeout_secs: 15,
       disable_interruptions: true,
     },
     create_callback: {
