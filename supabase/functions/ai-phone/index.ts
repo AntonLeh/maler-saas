@@ -502,8 +502,13 @@ async function toolLeaveMessage(args: any, ctx: ToolCtx) {
   // Wurde in diesem Gespräch ein Termin eingetragen, kommt die Nachricht direkt in den Termin
   let appointmentId: number | null = null;
   if (ctx.callId) {
-    const { data: call } = await db.from("ai_calls").select("appointment_id").eq("tenant_id", s.tenant_id).eq("provider_call_id", ctx.callId).maybeSingle();
-    appointmentId = call?.appointment_id ?? null;
+    // Läuft parallel ein book_appointment, ist der Termin evtl. noch nicht vermerkt -> kurz nachsehen (max. ~4 s)
+    for (let i = 0; i < 5 && !appointmentId; i++) {
+      const { data: call } = await db.from("ai_calls").select("appointment_id").eq("tenant_id", s.tenant_id).eq("provider_call_id", ctx.callId).maybeSingle();
+      appointmentId = call?.appointment_id ?? null;
+      if (!appointmentId && (args.after_booking === true || i < 2) && i < 4) await new Promise((r) => setTimeout(r, 800));
+      else if (!appointmentId) break;
+    }
   }
   if (appointmentId) {
     const { data: appt } = await db.from("appointments").select("id, description").eq("id", appointmentId).eq("tenant_id", s.tenant_id).maybeSingle();
