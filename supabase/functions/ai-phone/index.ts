@@ -339,6 +339,28 @@ async function toolGetFreeSlots(args: any, ctx: ToolCtx) {
   };
 }
 
+/** Deutsche Rufnummer ohne Vorwahl erkennen (beginnt nicht mit 0 oder +) */
+export function missingAreaCode(phone: string): string | null {
+  const p = phone.replace(/[\s()/-]/g, "");
+  if (!p) return null; // keine Angabe -> Nummer des Anrufers
+  if (/^(\+|00|0)/.test(p)) return null;
+  return "Die Telefonnummer hat keine Vorwahl (sie muss mit 0 oder + beginnen). Frag den Anrufer nach der Vorwahl – rate sie nicht – und ruf das Werkzeug dann erneut mit der vollständigen Nummer auf.";
+}
+
+/** Termin, der in diesem Gespräch schon eingetragen wurde */
+async function ownAppointment(tenantId: number, callId: string | null) {
+  if (!callId) return null;
+  const { data: call } = await db.from("ai_calls").select("appointment_id").eq("tenant_id", tenantId).eq("provider_call_id", callId).maybeSingle();
+  if (!call?.appointment_id) return null;
+  const { data: appt } = await db
+    .from("appointments")
+    .select("id, starts_at, ends_at, description, status")
+    .eq("id", call.appointment_id)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  return appt && appt.status !== "abgesagt" ? appt : null;
+}
+
 async function toolBookAppointment(args: any, ctx: ToolCtx) {
   const s = ctx.settings;
   const name = str(args.name ?? args.customer_name, 120);
@@ -355,13 +377,29 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
     return { ok: false, message: `Es fehlen noch: ${missing.join(", ")}. Bitte erfrage diese Angaben und versuche es erneut.` };
   }
 
+  const phoneProblem = missingAreaCode(str(args.phone, 40));
+  if (phoneProblem) return { ok: false, message: phoneProblem };
+
   const start = parseStart(str(args.start, 40), s.timezone);
   if (!start) {
     return { ok: false, message: "Die Startzeit ist ungültig. Nutze einen 'start'-Wert aus get_free_slots." };
   }
 
+  // Wurde in DIESEM Gespräch schon ein Termin eingetragen, ist ein erneuter Aufruf eine Korrektur (z. B. Vorwahl nachgereicht)
+  const own = await ownAppointment(s.tenant_id, ctx.callId);
+
   const now = new Date();
-  const busy = await loadBusy(s.tenant_id, new Date(start.getTime() - 86_400_000), new Date(start.getTime() + 86_400_000));
+  let busy = await loadBusy(s.tenant_id, new Date(start.getTime() - 86_400_000), new Date(start.getTime() + 86_400_000));
+  if (own) {
+    // den eigenen Termin nicht als „belegt“ zählen
+    const os = Date.parse(own.starts_at);
+    const oe = Date.parse(own.ends_at);
+    let skipped = false;
+    busy = busy.filter((b) => {
+      if (!skipped && b.start.getTime() === os && b.end.getTime() === oe) return !(skipped = true);
+      return true;
+    });
+  }
   if (!isBookable(start, { settings: s, busy, now })) {
     const allBusy = await loadBusy(s.tenant_id, now, new Date(now.getTime() + (s.booking_horizon_days + 2) * 86_400_000));
     const alt = computeFreeSlots({ settings: s, busy: allBusy, now, maxSlots: 3 });
@@ -375,6 +413,32 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
   }
 
   const end = new Date(start.getTime() + s.visit_duration_minutes * 60_000);
+  if (own) {
+    const description = [concern && `Anliegen: ${concern}`, `Telefon: ${phone}`, email && `E-Mail: ${email}`, "Vom KI-Telefon gebucht – bitte prüfen und an einen Projektleiter weiterleiten."]
+      .filter(Boolean)
+      .join("\n");
+    const notes = String(own.description ?? "").split("\n").filter((l: string) => l.startsWith("Hinweis des Kunden"));
+    const { error: upErr } = await db
+      .from("appointments")
+      .update({
+        title: `Besichtigung: ${name}`,
+        description: [description, ...notes].join("\n"),
+        location: address,
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
+        contact_name: name,
+        contact_phone: phone,
+      })
+      .eq("id", own.id)
+      .eq("tenant_id", s.tenant_id);
+    if (upErr) throw upErr;
+    return {
+      ok: true,
+      appointment_id: own.id,
+      updated: true,
+      message: `Termin eingetragen (aktualisiert, kein zweiter Termin): ${slotLabel(start, s.timezone)} bei ${address}, Telefon ${phone}. Bestätige dem Anrufer kurz, dass die Angaben korrigiert sind.`,
+    };
+  }
   const [adminId, customerId] = await Promise.all([firstAdminId(s.tenant_id), matchCustomer(s.tenant_id, phone, countryCodeForTimezone(s.timezone))]);
   const description = [
     concern && `Anliegen: ${concern}`,
@@ -408,13 +472,12 @@ async function toolBookAppointment(args: any, ctx: ToolCtx) {
     .single();
   if (error) throw error;
 
-  await inBackground(
-    logCall(s.tenant_id, ctx.provider, ctx.callId, {
-      outcome: "termin",
-      appointment_id: appt.id,
-      caller_number: ctx.callerNumber || phone,
-    })
-  );
+  // nicht im Hintergrund: eine spätere Korrektur im selben Gespräch findet den Termin darüber
+  await logCall(s.tenant_id, ctx.provider, ctx.callId, {
+    outcome: "termin",
+    appointment_id: appt.id,
+    caller_number: ctx.callerNumber || phone,
+  });
 
   await inBackground(
     companyName(s).then((company) =>
@@ -479,6 +542,8 @@ async function toolCreateCallback(args: any, ctx: ToolCtx) {
   const name = str(args.name ?? args.customer_name, 120);
   const phone = str(args.phone, 40) || ctx.callerNumber;
   const concern = str(args.concern ?? args.message, 1500);
+  const phoneProblem = missingAreaCode(str(args.phone, 40));
+  if (phoneProblem) return { ok: false, message: phoneProblem };
   if (!phone) {
     return { ok: false, message: "Bitte erfrage zuerst die Rückrufnummer." };
   }
