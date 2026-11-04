@@ -121,7 +121,7 @@ export default function ChatTab({
         <div className="ws-row ws-bk-head">
           <h3>Chat-Verläufe</h3>
           <label className="ws-check-inline">
-            <input type="checkbox" checked={onlyLeads} onChange={(e) => setOnlyLeads(e.target.checked)} /> nur mit Anfrage
+            <input type="checkbox" checked={onlyLeads} onChange={(e) => setOnlyLeads(e.target.checked)} /> Nur Chats anzeigen, aus denen eine Anfrage entstanden ist
           </label>
         </div>
         <p className="tk-muted">
