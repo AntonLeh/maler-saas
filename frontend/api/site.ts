@@ -53,6 +53,8 @@ export type SiteData = {
   opening_hours?: string | null;
   whatsapp_number?: string | null;
   booking_enabled?: boolean;
+  chat_enabled?: boolean;
+  chat_greeting?: string | null;
   jobs?: Job[] | null;
   faq?: Faq[] | null;
   sections?: Record<string, boolean>;
@@ -477,6 +479,33 @@ footer.bottom .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-b
 footer.bottom .made{opacity:.6;font-size:.85rem}
 .legal{padding:48px 0 72px;max-width:820px}.legal h2{font-size:1.3rem;margin-top:1.6em}
 .callbar{display:none}
+.kc{position:fixed;right:20px;bottom:20px;z-index:45;font-family:var(--body)}
+.kc.with-wa{bottom:86px}
+.kc-open{display:inline-flex;align-items:center;gap:8px;padding:13px 18px;border-radius:999px;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.2)}
+.kc-open:hover{background:var(--accent-dark)}
+.kc.is-open .kc-open{display:none}
+.kc-panel{position:absolute;right:0;bottom:0;width:min(380px,calc(100vw - 32px));height:min(580px,calc(100vh - 110px));background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(20,30,45,.25);display:flex;flex-direction:column;overflow:hidden}
+.kc-panel[hidden]{display:none}
+.kc-head{display:flex;align-items:center;gap:10px;padding:14px 14px 14px 16px;background:var(--accent);color:#fff}
+.kc-head div{flex:1;min-width:0;display:grid;line-height:1.25}.kc-head small{opacity:.85;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc-ava{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);flex:none}
+.kc-close{border:0;background:transparent;color:#fff;font-size:28px;line-height:1;cursor:pointer;padding:0 4px}
+.kc-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--soft)}
+.kc-msg{max-width:85%;padding:10px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.95rem;line-height:1.45}
+.kc-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.kc-msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.kc-msg.me a{color:#fff}
+.kc-msg.typing{color:var(--muted);letter-spacing:2px}
+.kc-sug{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0;background:#fff}
+.kc-sug[hidden]{display:none}
+.kc-sug button{border:1px solid var(--accent);background:#fff;color:var(--accent-dark);border-radius:999px;padding:6px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.kc-sug button:hover{background:color-mix(in srgb,var(--accent) 10%,#fff)}
+.kc-form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;background:#fff;border-top:1px solid var(--line)}
+.kc-form textarea{flex:1;resize:none;font:inherit;font-size:.95rem;padding:10px 12px;border:1px solid #c9ced6;border-radius:14px;max-height:120px}
+.kc-form textarea:focus{outline:3px solid color-mix(in srgb,var(--accent) 30%,transparent);border-color:var(--accent)}
+.kc-form button{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer}
+.kc-form button:disabled{opacity:.5}
+.kc-note{margin:0;padding:0 12px 10px;font-size:.72rem;color:var(--muted);background:#fff}
 .wa-float{position:fixed;right:20px;bottom:20px;z-index:30;display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:#1f8f4e;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.18)}
 .wa-float:hover{background:#17733e}
 @media (max-width:860px){
@@ -496,6 +525,11 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  .callbar.three{grid-template-columns:1fr 1fr 1fr}
  .callbar a.wa{background:#1f8f4e;display:flex;align-items:center;justify-content:center;gap:6px}
  .wa-float{display:none!important}
+ .kc,.kc.with-wa{right:14px;bottom:68px}
+ .kc-open{padding:12px}.kc-open span{display:none}
+ .kc.is-open{inset:0;right:0;bottom:0}
+ .kc-panel{position:fixed;inset:0;width:100%;height:100%;border-radius:0;border:0}
+ .kc-form textarea{font-size:16px}
 }
 @media (max-width:520px){.steps{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -506,6 +540,47 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
  * Kopfleiste: Passt das Menü nicht in eine Zeile, wird es automatisch zum Knopf „Menü“ (Klasse compact).
  * Menü schließt nach einem Klick auf einen Eintrag oder außerhalb. Ohne JavaScript greift die Handy-Ansicht per CSS.
  */
+/**
+ * KI-Chat auf der Firmen-Website: kleine Blase unten rechts, Verlauf nur im Browser-Tab (sessionStorage).
+ * Antworten kommen von der Funktion website-chat. Texte werden nur über textContent eingefügt.
+ */
+const CHAT_SCRIPT = `(function(){var r=document.getElementById("kichat");if(!r)return;var api=r.getAttribute("data-api"),site=r.getAttribute("data-site"),pg=r.getAttribute("data-page")||"",greet=r.getAttribute("data-greeting"),key="kichat:"+site;
+var btn=r.querySelector(".kc-open"),panel=r.querySelector(".kc-panel"),log=r.querySelector(".kc-log"),form=r.querySelector(".kc-form"),ta=form.querySelector("textarea"),send=form.querySelector("button"),sug=r.querySelector(".kc-sug"),busy=false;
+var st={id:null,m:[]};try{st=JSON.parse(sessionStorage.getItem(key))||st}catch(e){}
+function save(){try{sessionStorage.setItem(key,JSON.stringify(st))}catch(e){}}
+function bubble(role,text){var d=document.createElement("div");d.className="kc-msg "+(role==="u"?"me":"bot");var re=/(https?:\\/\\/[^\\s<]+[^\\s<.,;:!?)])/g,last=0,m;while((m=re.exec(text))){if(m.index>last)d.appendChild(document.createTextNode(text.slice(last,m.index)));var a=document.createElement("a");a.href=m[1];a.textContent=m[1].replace(/^https?:\\/\\//,"");a.rel="noopener";if(m[1].indexOf(location.host)<0)a.target="_blank";d.appendChild(a);last=m.index+m[1].length}if(last<text.length)d.appendChild(document.createTextNode(text.slice(last)));log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+function render(){log.innerHTML="";bubble("b",greet);st.m.forEach(function(x){bubble(x.r,x.t)});if(sug)sug.hidden=st.m.length>0}
+function open(o){panel.hidden=!o;btn.setAttribute("aria-expanded",o?"true":"false");r.classList.toggle("is-open",o);if(o){render();setTimeout(function(){ta.focus()},50)}}
+btn.addEventListener("click",function(){open(panel.hidden)});r.querySelector(".kc-close").addEventListener("click",function(){open(false);btn.focus()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!panel.hidden){open(false);btn.focus()}});
+function ask(text){text=text.trim();if(!text||busy)return;busy=true;send.disabled=true;if(sug)sug.hidden=true;st.m.push({r:"u",t:text});save();bubble("u",text);ta.value="";ta.style.height="";var t=bubble("b","…");t.classList.add("typing");
+fetch(api,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({site:site,chat_id:st.id,message:text,page:pg})}).then(function(x){return x.json()}).then(function(j){t.remove();var rep=j.reply||j.error||"Das hat gerade nicht geklappt.";if(j.chat_id)st.id=j.chat_id;st.m.push({r:"b",t:rep});if(st.m.length>60)st.m=st.m.slice(-60);save();bubble("b",rep)}).catch(function(){t.remove();bubble("b","Die Verbindung hat gerade nicht geklappt. Bitte versuchen Sie es noch einmal oder rufen Sie uns an.")}).then(function(){busy=false;send.disabled=false;ta.focus()})}
+form.addEventListener("submit",function(e){e.preventDefault();ask(ta.value)});
+ta.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask(ta.value)}});
+ta.addEventListener("input",function(){ta.style.height="";ta.style.height=Math.min(ta.scrollHeight,120)+"px"});
+if(sug)sug.addEventListener("click",function(e){var b=e.target.closest("button");if(b)ask(b.textContent)})})();`;
+
+function chatWidget(d: SiteData, ctx: Ctx): string {
+  const name = d.company.name || "unser Betrieb";
+  const greeting =
+    String(d.chat_greeting ?? "").trim().slice(0, 300) ||
+    `Hallo! Ich bin der digitale KI-Assistent von ${name}. Ich beantworte gern Ihre Fragen zu unseren Leistungen und nehme Ihre Anfrage auf.`;
+  const suggestions = ["Welche Leistungen bieten Sie an?", "Ich möchte ein Angebot", d.service_area ? "Kommen Sie auch zu mir?" : "Wie erreiche ich Sie?"];
+  return `<div class="kc${waHref(d.whatsapp_number, "") ? " with-wa" : ""}" id="kichat" data-api="${esc(`${SUPABASE_URL}/functions/v1/website-chat`)}" data-site="${esc(d.slug)}" data-page="${esc(ctx.page ?? "")}" data-greeting="${esc(greeting)}">
+<div class="kc-panel" id="kc-panel" role="dialog" aria-label="Chat mit dem KI-Assistenten" hidden>
+<div class="kc-head"><span class="kc-ava" aria-hidden="true">${CHAT_ICON}</span><div><strong>Digitaler Assistent</strong><small>KI-Assistent von ${esc(name)}</small></div><button type="button" class="kc-close" aria-label="Chat schließen">×</button></div>
+<div class="kc-log" aria-live="polite"></div>
+<div class="kc-sug">${suggestions.map((x) => `<button type="button">${esc(x)}</button>`).join("")}</div>
+<form class="kc-form"><textarea rows="1" maxlength="1000" placeholder="Ihre Frage …" aria-label="Ihre Nachricht"></textarea><button type="submit" aria-label="Senden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
+<p class="kc-note">Sie chatten mit einer KI – Antworten können Fehler enthalten. Bitte keine sensiblen Daten eingeben. <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a></p>
+</div>
+<button type="button" class="kc-open" aria-expanded="false" aria-controls="kc-panel">${CHAT_ICON}<span>Fragen? Chat</span></button>
+<script>${CHAT_SCRIPT}</script>
+</div>`;
+}
+
+const CHAT_ICON = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>`;
+
 const PHONE_ICON = `<svg class="ph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>`;
 const HEADER_SCRIPT = `(function(){var h=document.currentScript.closest("header.top");if(!h)return;var w=h.querySelector(".wrap"),m=h.querySelector("details.menu");
 function over(){return w.scrollWidth>w.clientWidth+1}
@@ -602,6 +677,7 @@ ${opts.home ? jsonLd(d, ctx) : ""}${opts.jsonLd ?? ""}
 ${header(d, ctx, opts.home)}
 <main id="inhalt">${body}</main>
 ${footer(d, ctx)}
+${d.chat_enabled ? chatWidget(d, ctx) : ""}
 ${!ctx.preview && ctx.slug ? `<script>${countScript(ctx.slug, ctx.page ?? "")}</script>` : ""}
 ${opts.home || opts.script ? `<script>document.addEventListener("click",function(e){var b=e.target.closest(".thumb");if(!b)return;var r=b.closest(".ref"),m=r&&r.querySelector(".main img");if(!m)return;m.src=b.getAttribute("data-src");r.querySelectorAll(".thumb").forEach(function(t){t.classList.toggle("on",t===b)})})</script>` : ""}
 </body></html>`;
@@ -1513,6 +1589,11 @@ ${
 ${
   waHref(d.whatsapp_number, "")
     ? `<h2>WhatsApp</h2><p>Auf dieser Website gibt es einen Link „WhatsApp“. Beim bloßen Aufruf der Website werden keine Daten an WhatsApp übertragen. Erst wenn Sie den Link anklicken, wird WhatsApp (WhatsApp Ireland Limited, Dublin, Irland, ein Unternehmen der Meta-Gruppe) geöffnet; dabei gelten die Datenschutzbestimmungen von WhatsApp. Schreiben Sie uns über WhatsApp, verarbeiten wir Ihre Nachricht und Telefonnummer zur Bearbeitung Ihrer Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Alternativ erreichen Sie uns jederzeit per Telefon, E-Mail oder Kontaktformular.</p>`
+    : ""
+}
+${
+  d.chat_enabled
+    ? `<h2>Chat mit dem KI-Assistenten</h2><p>Auf dieser Website können Sie einem digitalen KI-Assistenten Fragen stellen. Ihre Nachrichten werden zur Erzeugung der Antworten an Anthropic PBC (USA) übermittelt, deren KI-Modell „Claude“ die Antworten erstellt; Anthropic verwendet die Daten nicht zum Training seiner Modelle. Die Übermittlung erfolgt auf Grundlage von Standardvertragsklauseln. Der Chat-Verlauf wird in unserer Software „Maler-SaaS“ (Speicherung bei Supabase) gespeichert, damit wir Ihr Anliegen nachvollziehen können, und nach 90 Tagen automatisch gelöscht. Bitten Sie den Assistenten, eine Anfrage an uns weiterzugeben, speichern wir die genannten Kontaktdaten und Ihr Anliegen wie eine Anfrage über das Kontaktformular. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anbahnung eines Vertrags) bzw. lit. f DSGVO (berechtigtes Interesse an einer schnellen Beantwortung von Fragen). Bitte geben Sie im Chat keine sensiblen Daten ein. Die Antworten werden automatisch erzeugt und können Fehler enthalten; verbindlich sind nur Angebote und Auskünfte von uns persönlich.</p>`
     : ""
 }
 ${

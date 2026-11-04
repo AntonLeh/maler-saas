@@ -97,3 +97,9 @@ Kundenportal, URLs ohne Parameter. Muss im Vercel-Projekt unter „Analytics“ 
 - Stellen in `websites.jobs` (höchstens 10), Bewerbungen in `website_applications` (Migration `20261103230000_website_stellen.sql`), automatische Löschung nach 6 Monaten.
 - Website: `/karriere` (Übersicht + Initiativbewerbung), `/stelle-<titel>-<id>` (mit JobPosting-Daten für Google), Hinweis „Wir stellen ein“ auf der Startseite.
 - Formular `action=apply` (multipart, Lebenslauf PDF/JPG/PNG bis 3 MB) → `website_submit_application` → E-Mail mit Anhang über Brevo.
+
+## KI-Chat (Reiter „Chat“)
+- Einstellungen in `websites.chat` {enabled, greeting, info}; Verläufe in `website_chats` (90 Tage), Migration `20261104120000_website_chat.sql`.
+- Edge-Funktion `website-chat` (öffentlich): Antworten über Anthropic (Standard `claude-haiku-5-5`, Ersatz `claude-sonnet-5-5`), Werkzeug `anfrage_speichern` → `website_leads` + E-Mail.
+- Wissen nur aus den Website-Angaben (Leistungen, FAQ, Einsatzgebiet, Erreichbarkeit, Termin-/Karriere-Link) + Hinweisen des Betriebs. Keine Preise, außer ausdrücklich erlaubt.
+- Limits: 3000 Antworten/Monat/Betrieb (WEBSITE_CHAT_MONTHLY_LIMIT), 30 Antworten pro Chat, 100 neue Chats/Stunde.

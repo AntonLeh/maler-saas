@@ -50,6 +50,8 @@ export type Website = {
   faq?: WebsiteFaq[];
   /** Online-Terminbuchung (undefined = Datenbank-Update fehlt noch, null = nie eingestellt) */
   booking?: WebsiteBooking | null;
+  /** KI-Chat (undefined = Datenbank-Update fehlt noch) */
+  chat?: WebsiteChatSettings | null;
   /** Stellenanzeigen (undefined = Datenbank-Update fehlt noch) */
   jobs?: WebsiteJob[];
   sections: WebsiteSections;
@@ -546,3 +548,18 @@ export function emptyJob(city?: string | null): WebsiteJob {
     posted_at: today(),
   };
 }
+
+// ---------------------------------------------------------------------
+// KI-Chatassistent
+// ---------------------------------------------------------------------
+export type WebsiteChatSettings = { enabled: boolean; greeting: string; info: string };
+export type WebsiteChat = {
+  id: string;
+  page: string | null;
+  messages: { role: "user" | "assistant"; text: string; at: string; lead?: boolean }[];
+  bot_replies: number;
+  lead_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+export const CHAT_MONTHLY_LIMIT = 3000;

@@ -12,8 +12,9 @@ import ReviewsTab from "./ReviewsTab";
 import StatsTab from "./StatsTab";
 import BookingTab from "./BookingTab";
 import JobsTab from "./JobsTab";
+import ChatTab from "./ChatTab";
 
-type Tab = "design" | "stats" | "booking" | "jobs" | "references" | "reviews" | "leads" | "legal";
+type Tab = "design" | "stats" | "booking" | "chat" | "jobs" | "references" | "reviews" | "leads" | "legal";
 
 export default function WebsitePage({
   tenantId,
@@ -221,6 +222,7 @@ export default function WebsitePage({
                   ["design", "Gestaltung"],
                   ["stats", "Statistik"],
                   ["booking", "Termine"],
+                  ["chat", "Chat"],
                   ["jobs", `Stellen${newApps ? ` (${newApps} neu)` : ""}`],
                   ["references", `Referenzen (${references.length})`],
                   ["reviews", "Bewertungen"],
@@ -239,6 +241,9 @@ export default function WebsitePage({
             )}
             {tab === "references" && (
               <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} website={website} />
+            )}
+            {tab === "chat" && (
+              <ChatTab key={website.updated_at} tenantId={tenantId} website={website} companyName={company?.company_name} saving={busy} onSave={(v) => save(v, "Chat-Einstellungen gespeichert.")} onError={showError} />
             )}
             {tab === "jobs" && (
               <JobsTab

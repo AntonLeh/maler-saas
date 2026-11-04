@@ -18,7 +18,7 @@ export default function DatenschutzPage({
             </p>
 
             <p>
-              <strong>Stand: 3. November 2026</strong>
+              <strong>Stand: 4. November 2026</strong>
             </p>
           </div>
 
@@ -618,6 +618,19 @@ export default function DatenschutzPage({
             Objekts, Anliegen und der gewählte Termin im Terminkalender
             des Unternehmens gespeichert; Unternehmen und Kunde erhalten
             eine Bestätigung per E-Mail (über Brevo).
+          </p>
+
+          <p>
+            Schaltet ein Unternehmen den KI-Chatassistenten ein, werden
+            die Nachrichten der Website-Besucher zur Erzeugung der
+            Antworten an Anthropic (Anbieter des KI-Modells Claude, USA)
+            übermittelt; als Wissensgrundlage dienen nur die
+            veröffentlichten Angaben der Firmen-Website. Der Verlauf wird
+            in MalerSaaS für das Unternehmen gespeichert und nach 90 Tagen
+            automatisch gelöscht. Bittet ein Besucher um Kontakt, werden
+            seine Angaben wie eine Anfrage über das Kontaktformular
+            gespeichert und dem Unternehmen per E-Mail (über Brevo)
+            zugestellt.
           </p>
 
           <p>

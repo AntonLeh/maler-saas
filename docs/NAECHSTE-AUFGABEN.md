@@ -1,6 +1,6 @@
 # Nächste Aufgaben (Stand 3. November 2026)
 
-1. **KI-Chatassistent** – z. B. Chat auf der Firmen-Website (Fragen beantworten, Anfragen/Termine aufnehmen); Tarif Enterprise.
+1. **KI-Chatassistent** – ✅ Teil 1: Chat auf den Firmen-Websites (Fragen + Anfrage aufnehmen, Verläufe 90 Tage). Offen: Teil 2 Hilfe-Chat auf maler-saas.com.
 2. **Social Media** – Beiträge aus Referenzen/Projekten automatisch vorbereiten und veröffentlichen (Meta-Konto: zuerst 2FA, dann Portfolio).
 3. **Buchhaltung** – Umfang klären (z. B. Export für Steuerberater/DATEV, Belege, offene Posten).
 4. **Google-Optimierung** – SEO für Firmen-Websites und maler-saas.com (Search Console, Google-Unternehmensprofil, strukturierte Daten prüfen).

@@ -1276,3 +1276,75 @@
     grid-column: auto;
   }
 }
+
+/* ---------- KI-Chat ---------- */
+.ws-root .ws-chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ws-root .ws-chat-list > li {
+  border-top: 1px solid var(--tk-border);
+}
+.ws-root .ws-chat-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 4px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ws-root .ws-chat-row:hover {
+  background: var(--tk-surface-2);
+}
+.ws-root .ws-chat-date {
+  font-size: 13px;
+  color: var(--tk-muted, #667085);
+}
+.ws-root .ws-chat-q {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-root .ws-chat-meta {
+  font-size: 13px;
+  color: var(--tk-muted, #667085);
+  white-space: nowrap;
+}
+.ws-root .ws-chat-log {
+  display: grid;
+  gap: 8px;
+  padding: 10px 4px 16px;
+}
+.ws-root .ws-chat-msg {
+  max-width: 85%;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: var(--tk-surface-2);
+}
+.ws-root .ws-chat-msg.me {
+  justify-self: end;
+  background: var(--tk-primary-soft);
+}
+.ws-root .ws-chat-msg small {
+  color: var(--tk-muted, #667085);
+  font-size: 12px;
+}
+.ws-root .ws-chat-msg p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}
+@media (max-width: 760px) {
+  .ws-root .ws-chat-row {
+    grid-template-columns: 1fr auto;
+  }
+  .ws-root .ws-chat-date {
+    grid-column: 1 / -1;
+  }
+}

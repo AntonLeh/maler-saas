@@ -1,5 +1,5 @@
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview, WebsiteApplication } from "./types";
+import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview, WebsiteApplication, WebsiteChat } from "./types";
 import { DEFAULT_HIGHLIGHTS, DEFAULT_SECTIONS, DEFAULT_SERVICES } from "./types";
 
 const BUCKET = "website-media";
@@ -400,4 +400,26 @@ export async function setApplicationStatus(tenantId: number, id: number, status:
 export async function deleteApplication(tenantId: number, id: number) {
   const { error } = await supabase.from("website_applications").delete().eq("id", id).eq("tenant_id", tenantId);
   if (error) fail("Bewerbung löschen", error);
+}
+
+// ---------------------------------------------------------------------
+// KI-Chat
+// ---------------------------------------------------------------------
+export async function loadChats(tenantId: number): Promise<WebsiteChat[]> {
+  const { data, error } = await supabase
+    .from("website_chats")
+    .select("id, page, messages, bot_replies, lead_id, created_at, updated_at")
+    .eq("tenant_id", tenantId)
+    .order("updated_at", { ascending: false })
+    .limit(300);
+  if (error) {
+    if (error.message.includes("website_chats")) throw new Error("Für den KI-Chat fehlt noch ein Datenbank-Update (20261104120000_website_chat.sql).");
+    fail("Chats laden", error);
+  }
+  return (data ?? []) as WebsiteChat[];
+}
+
+export async function deleteChat(tenantId: number, id: string) {
+  const { error } = await supabase.from("website_chats").delete().eq("id", id).eq("tenant_id", tenantId);
+  if (error) fail("Chat löschen", error);
 }
