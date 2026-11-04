@@ -490,6 +490,8 @@ footer.bottom .made{opacity:.6;font-size:.85rem}
 .kc-head div{flex:1;min-width:0;display:grid;line-height:1.25}.kc-head small{opacity:.85;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kc-ava{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);flex:none}
 .kc-close{border:0;background:transparent;color:#fff;font-size:28px;line-height:1;cursor:pointer;padding:0 4px}
+.kc-new{display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.45);background:transparent;color:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;flex:none}
+.kc-new:hover{background:rgba(255,255,255,.15)}
 .kc-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--soft)}
 .kc-msg{max-width:85%;padding:10px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.95rem;line-height:1.45}
 .kc-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
@@ -551,7 +553,8 @@ function save(){try{sessionStorage.setItem(key,JSON.stringify(st))}catch(e){}}
 function bubble(role,text){var d=document.createElement("div");d.className="kc-msg "+(role==="u"?"me":"bot");var re=/(https?:\\/\\/[^\\s<]+[^\\s<.,;:!?)])/g,last=0,m;while((m=re.exec(text))){if(m.index>last)d.appendChild(document.createTextNode(text.slice(last,m.index)));var a=document.createElement("a");a.href=m[1];a.textContent=m[1].replace(/^https?:\\/\\//,"");a.rel="noopener";if(m[1].indexOf(location.host)<0)a.target="_blank";d.appendChild(a);last=m.index+m[1].length}if(last<text.length)d.appendChild(document.createTextNode(text.slice(last)));log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
 function render(){log.innerHTML="";bubble("b",greet);st.m.forEach(function(x){bubble(x.r,x.t)});if(sug)sug.hidden=st.m.length>0}
 function open(o){panel.hidden=!o;btn.setAttribute("aria-expanded",o?"true":"false");r.classList.toggle("is-open",o);if(o){render();setTimeout(function(){ta.focus()},50)}}
-btn.addEventListener("click",function(){open(panel.hidden)});r.querySelector(".kc-close").addEventListener("click",function(){open(false);btn.focus()});
+btn.addEventListener("click",function(){open(panel.hidden)});
+r.querySelector(".kc-new").addEventListener("click",function(){if(busy)return;st={id:null,m:[]};save();render();ta.value="";ta.focus()});r.querySelector(".kc-close").addEventListener("click",function(){open(false);btn.focus()});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!panel.hidden){open(false);btn.focus()}});
 function ask(text){text=text.trim();if(!text||busy)return;busy=true;send.disabled=true;if(sug)sug.hidden=true;st.m.push({r:"u",t:text});save();bubble("u",text);ta.value="";ta.style.height="";var t=bubble("b","…");t.classList.add("typing");
 fetch(api,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({site:site,chat_id:st.id,message:text,page:pg})}).then(function(x){return x.json()}).then(function(j){t.remove();var rep=j.reply||j.error||"Das hat gerade nicht geklappt.";if(j.chat_id)st.id=j.chat_id;st.m.push({r:"b",t:rep});if(st.m.length>60)st.m=st.m.slice(-60);save();bubble("b",rep)}).catch(function(){t.remove();bubble("b","Die Verbindung hat gerade nicht geklappt. Bitte versuchen Sie es noch einmal oder rufen Sie uns an.")}).then(function(){busy=false;send.disabled=false;ta.focus()})}
@@ -568,7 +571,7 @@ function chatWidget(d: SiteData, ctx: Ctx): string {
   const suggestions = ["Welche Leistungen bieten Sie an?", "Ich möchte ein Angebot", d.service_area ? "Kommen Sie auch zu mir?" : "Wie erreiche ich Sie?"];
   return `<div class="kc${waHref(d.whatsapp_number, "") ? " with-wa" : ""}" id="kichat" data-api="${esc(`${SUPABASE_URL}/functions/v1/website-chat`)}" data-site="${esc(d.slug)}" data-page="${esc(ctx.page ?? "")}" data-greeting="${esc(greeting)}">
 <div class="kc-panel" id="kc-panel" role="dialog" aria-label="Chat mit dem KI-Assistenten" hidden>
-<div class="kc-head"><span class="kc-ava" aria-hidden="true">${CHAT_ICON}</span><div><strong>Digitaler Assistent</strong><small>KI-Assistent von ${esc(name)}</small></div><button type="button" class="kc-close" aria-label="Chat schließen">×</button></div>
+<div class="kc-head"><span class="kc-ava" aria-hidden="true">${CHAT_ICON}</span><div><strong>Digitaler Assistent</strong><small>KI-Assistent von ${esc(name)}</small></div><button type="button" class="kc-new" title="Neuen Chat beginnen" aria-label="Neuen Chat beginnen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neu</span></button><button type="button" class="kc-close" aria-label="Chat schließen">×</button></div>
 <div class="kc-log" aria-live="polite"></div>
 <div class="kc-sug">${suggestions.map((x) => `<button type="button">${esc(x)}</button>`).join("")}</div>
 <form class="kc-form"><textarea rows="1" maxlength="1000" placeholder="Ihre Frage …" aria-label="Ihre Nachricht"></textarea><button type="submit" aria-label="Senden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
