@@ -208,6 +208,29 @@ async function companyName(settings: any): Promise<string> {
   return data?.company_name || data?.name || "unser Malerbetrieb";
 }
 
+/** Wissen über den Betrieb (aus Firmendaten und Website) – damit der Assistent Fragen beantworten kann */
+async function companyFacts(tenantId: number): Promise<string> {
+  const [{ data: cs }, { data: w }] = await Promise.all([
+    db.from("company_settings").select("street, zip, city, phone, email").eq("tenant_id", tenantId).order("id", { ascending: false }).limit(1).maybeSingle(),
+    db.from("websites").select("services, service_area, opening_hours, highlights, faq, booking").eq("tenant_id", tenantId).maybeSingle(),
+  ]);
+  const clip = (v: unknown, n: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  const lines: string[] = [];
+  const addr = [clip(cs?.street, 120), [clip(cs?.zip, 10), clip(cs?.city, 80)].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  if (addr) lines.push(`Adresse des Betriebs: ${addr}`);
+  if (clip(cs?.phone, 40)) lines.push(`Telefon: ${clip(cs?.phone, 40)}`);
+  if (clip(cs?.email, 120)) lines.push(`E-Mail: ${clip(cs?.email, 120)}`);
+  if (clip(w?.opening_hours, 300)) lines.push(`Erreichbarkeit: ${clip(w.opening_hours, 300)}`);
+  if (clip(w?.service_area, 400)) lines.push(`Einsatzgebiet: ${clip(w.service_area, 400)}`);
+  const services = (Array.isArray(w?.services) ? w.services : []).filter((x: any) => clip(x?.title, 80)).slice(0, 15);
+  if (services.length) lines.push(`Leistungen: ${services.map((x: any) => `${clip(x.title, 80)}${clip(x.text, 160) ? ` (${clip(x.text, 160)})` : ""}`).join("; ")}`);
+  const hl = (Array.isArray(w?.highlights) ? w.highlights : []).map((x: unknown) => clip(x, 80)).filter(Boolean).slice(0, 8);
+  if (hl.length) lines.push(`Besonderheiten: ${hl.join("; ")}`);
+  const faq = (Array.isArray(w?.faq) ? w.faq : []).filter((f: any) => clip(f?.q, 160) && clip(f?.a, 400)).slice(0, 10);
+  if (faq.length) lines.push(`Häufige Fragen: ${faq.map((f: any) => `${clip(f.q, 160)} – ${clip(f.a, 400)}`).join(" | ")}`);
+  return lines.join("\n").slice(0, 4000) || "keine weiteren Angaben";
+}
+
 async function contextVariables(settings: any, access: { ok: boolean }) {
   const name = await companyName(settings);
   const now = new Date();
@@ -225,6 +248,7 @@ async function contextVariables(settings: any, access: { ok: boolean }) {
     visit_hours: availabilityText(settings),
     visit_duration: `${settings.visit_duration_minutes} Minuten`,
     extra_instructions: str(settings.assistant_instructions, 4000) || "keine",
+    company_facts: access.ok ? await companyFacts(settings.tenant_id).catch(() => "keine weiteren Angaben") : "keine",
     service_available: access.ok ? "ja" : "nein",
   };
 }
