@@ -7,7 +7,7 @@
 //   ELEVENLABS_VOICE_ID           Stimme
 //   ELEVENLABS_LLM                KI-Modell (Standard: gemini-2.5-flash)
 // Sprachausgabe (optional, sonst feste, ruhige Standardwerte):
-//   ELEVENLABS_TTS_MODEL          Standard eleven_flash_v2_5 (stabil, gleichmäßiges Tempo)
+//   ELEVENLABS_TTS_MODEL          Standard: Sprachmodell der Vorlage (außer v3), sonst eleven_flash_v2_5
 //   ELEVENLABS_TTS_STABILITY      Standard 0.6  (höher = gleichmäßiger)
 //   ELEVENLABS_TTS_SPEED          Standard 1.0
 
@@ -209,19 +209,22 @@ async function voiceAndModel() {
   const templateId = env("ELEVENLABS_TEMPLATE_AGENT_ID");
   let voiceId = env("ELEVENLABS_VOICE_ID");
   let llm = env("ELEVENLABS_LLM");
+  let templateTts = "";
   if (templateId) {
     const tpl = await el("GET", `/v1/convai/agents/${encodeURIComponent(templateId)}`);
     voiceId = voiceId || tpl?.conversation_config?.tts?.voice_id || "";
     llm = llm || tpl?.conversation_config?.agent?.prompt?.llm || "";
+    templateTts = String(tpl?.conversation_config?.tts?.model_id ?? "");
   }
   if (!voiceId) {
     throw new Error(
       "Keine Stimme festgelegt. Bitte ELEVENLABS_TEMPLATE_AGENT_ID (Vorlage-Agent) oder ELEVENLABS_VOICE_ID als Secret hinterlegen."
     );
   }
-  // Sprachmodell bewusst fest: "v3"-Modelle aus der Vorlage sprechen mit wechselndem Tempo
-  // und brechen Sätze teils ab. Flash v2.5 ist für Telefonie gedacht und klingt gleichmäßig.
-  const ttsModel = env("ELEVENLABS_TTS_MODEL") || "eleven_flash_v2_5";
+  // Sprachmodell: aus dem Secret, sonst aus der Vorlage – außer "v3"-Modelle (die sprechen mit wechselndem
+  // Tempo und brechen Sätze teils ab). Ohne Angabe: Flash v2.5, für Telefonie gedacht und gleichmäßig.
+  const fromTemplate = templateTts && !/v3/i.test(templateTts) ? templateTts : "";
+  const ttsModel = env("ELEVENLABS_TTS_MODEL") || fromTemplate || "eleven_flash_v2_5";
   return { voiceId, ttsModel, llm: llm || "gemini-2.5-flash" };
 }
 
