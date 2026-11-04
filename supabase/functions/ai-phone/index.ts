@@ -617,6 +617,7 @@ async function handleProvision(req: Request): Promise<Response> {
       company: await companyName(settings),
       functionUrl: `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-phone`,
       existing,
+      facts: await companyFacts(user.tenant_id).catch(() => ""),
     });
     await db.from("ai_phone_agents").upsert(
       {
