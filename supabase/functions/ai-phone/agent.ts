@@ -57,7 +57,7 @@ GRUNDREGELN
 - Erfinde nie Termine, Personen, Rollen, Abläufe oder Zeitzusagen (z. B. "unser Meister kommt", "wir rufen heute noch zurück", "das dauert zwei Tage"). Sag stattdessen: "Wir melden uns bei Ihnen." – ohne "so bald wie möglich" oder "zeitnah". Wenn du etwas nicht weißt, biete einen Rückruf an.
 - Nutze für Fragen zu Leistungen, Einsatzgebiet, Erreichbarkeit und Adresse nur die WISSENSBASIS unten.
 - Wenn ein Werkzeug "ok": false zurückgibt, folge genau dem Hinweis in "message".
-- Sag NIE, dass ein Termin eingetragen oder ein Rückruf notiert ist, wenn das Werkzeug nicht erfolgreich war ("ok": true). Schlägt book_appointment fehl oder kommt keine Antwort, sag ehrlich, dass das Eintragen gerade nicht geklappt hat, und nimm stattdessen mit create_callback einen Rückrufwunsch mit dem gewünschten Termin auf.
+- Sag NIE, dass ein Termin eingetragen oder ein Rückruf notiert ist, wenn das Werkzeug nicht erfolgreich war. Erfolgreich heißt: Die Antwort enthält "ok": true UND den Text "Termin eingetragen" bzw. "Rückrufwunsch ist notiert". Fehlt das (Fehler, Abbruch, keine Antwort), ruf das Werkzeug noch einmal auf. Schlägt book_appointment fehl oder kommt keine Antwort, sag ehrlich, dass das Eintragen gerade nicht geklappt hat, und nimm stattdessen mit create_callback einen Rückrufwunsch mit dem gewünschten Termin auf.
 - Dienst verfügbar: ${v("service_available")}. Steht dort "nein", entschuldige dich, bitte um einen späteren Anruf und beende das Gespräch.
 
 DEINE AUFGABEN
@@ -82,7 +82,7 @@ ABLAUF BESICHTIGUNG
 2. Frage nach einem Wunschtag oder Vormittag/Nachmittag und rufe get_free_slots auf.
 3. Biete zwei bis drei passende Termine an.
 4. Hat sich der Anrufer entschieden, erfrage: vollständigen Namen, Adresse des Objekts (Straße, Hausnummer, PLZ, Ort) und die Rückrufnummer.
-5. Wiederhole Termin und Adresse kurz in einem Satz und frag "Passt das so?". Nach einem Ja rufst du book_appointment auf. Verwende für "start" exakt den Wert aus get_free_slots.
+5. Wiederhole Termin und Adresse kurz in einem Satz und frag "Passt das so?". Nach einem Ja rufst du SOFORT book_appointment auf, ohne es vorher anzukündigen (kein "Ich trage den Termin ein"). Verwende für "start" exakt den Wert aus get_free_slots.
 6. Bestätige den Termin in einem Satz und sage, dass wir uns bei Änderungen melden.
 
 ABLAUF RÜCKRUF
@@ -140,6 +140,8 @@ export function toolConfigs(functionUrl: string, key: string) {
         },
       },
       response_timeout_secs: 15,
+      // Während das Werkzeug läuft, nicht unterbrechen lassen – sonst bricht ein „Sehr gut“ des Anrufers den Aufruf ab
+      disable_interruptions: true,
     },
     book_appointment: {
       type: "webhook",
@@ -167,6 +169,8 @@ export function toolConfigs(functionUrl: string, key: string) {
         },
       },
       response_timeout_secs: 15,
+      // Während das Werkzeug läuft, nicht unterbrechen lassen – sonst bricht ein „Sehr gut“ des Anrufers den Aufruf ab
+      disable_interruptions: true,
     },
     create_callback: {
       type: "webhook",
@@ -191,6 +195,8 @@ export function toolConfigs(functionUrl: string, key: string) {
         },
       },
       response_timeout_secs: 15,
+      // Während das Werkzeug läuft, nicht unterbrechen lassen – sonst bricht ein „Sehr gut“ des Anrufers den Aufruf ab
+      disable_interruptions: true,
     },
   };
 }
@@ -251,9 +257,21 @@ async function syncTools(existing: ToolIds, configs: Record<string, any>): Promi
   const ids: ToolIds = {};
   for (const [name, cfg] of Object.entries(configs)) {
     const id = existing?.[name];
+    // Falls ElevenLabs ein neueres Feld (disable_interruptions) nicht kennt: ohne dieses Feld erneut versuchen
+    const send = async (method: string, path: string) => {
+      try {
+        return await el(method, path, { tool_config: cfg });
+      } catch (e) {
+        if (e instanceof ElevenLabsError && [400, 422].includes(e.status) && "disable_interruptions" in cfg) {
+          const { disable_interruptions: _d, ...rest } = cfg;
+          return await el(method, path, { tool_config: rest });
+        }
+        throw e;
+      }
+    };
     if (id) {
       try {
-        await el("PATCH", `/v1/convai/tools/${encodeURIComponent(id)}`, { tool_config: cfg });
+        await send("PATCH", `/v1/convai/tools/${encodeURIComponent(id)}`);
         ids[name] = id;
         continue;
       } catch (e) {
@@ -261,7 +279,7 @@ async function syncTools(existing: ToolIds, configs: Record<string, any>): Promi
         // Werkzeug wurde gelöscht -> neu anlegen
       }
     }
-    const created = await el("POST", "/v1/convai/tools", { tool_config: cfg });
+    const created = await send("POST", "/v1/convai/tools");
     ids[name] = created.id;
   }
   return ids;
