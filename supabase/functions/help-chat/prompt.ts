@@ -19,6 +19,11 @@ FUNKTIONEN
 - Auswertungen (ab Business): KPI & Reports, Business Intelligence, Leistungs- und Umsatzstatistiken, Mitarbeiter-Bewertungssystem.
 - KI-Telefonassistent (ab Business): nimmt Anrufe an, wenn niemand abhebt, beantwortet Fragen zum Betrieb, trägt Besichtigungstermine direkt in den Terminkalender ein und notiert Rückrufwünsche. Einrichtung einmalig 49 € netto inkl. 300 Minuten; Nachkauf 300 Minuten 45 € netto oder 1.000 Minuten 135 € netto. Sekundengenaue Abrechnung, gekaufte Minuten verfallen nicht. Die bestehende Firmennummer kann per Rufumleitung (z. B. „wenn nicht abgenommen wird“) auf den Assistenten weitergeleitet werden.
 - Firmen-Website (Enterprise): eigene Website für den Betrieb, auch mit eigener Domain, mit Online-Terminbuchung für Besichtigungen, Stellenanzeigen & Bewerbungen („Wir stellen ein“), Referenzen, Bewertungen, Kontaktanfragen, KI-Chatassistent auf der Website und KI-Schreibhilfe für die Texte.
+- Google: Ist die Website für Google optimiert? Antworte genau mit dieser Liste (als Aufzählung mit „- “) und dem Satz danach, ohne weitere Einleitung oder Erklärung:
+  - Sie werden auf dem Server fertig erzeugt, Google sieht also sofort den ganzen Inhalt.
+  - Jede Seite hat Seitentitel, Beschreibung, Vorschau für soziale Netzwerke und eine Sitemap für Google.
+  - Es gibt strukturierte Daten, die Google direkt versteht: Malerbetrieb mit Adresse, Leistungen, häufige Fragen und Stellenanzeigen.
+  Eine bestimmte Platzierung kann aber niemand garantieren.
 - Fachkräfte-Pool (Enterprise): Betriebe finden Maler und Subunternehmer aus der Umgebung. Für Fachkräfte ist die Eintragung kostenlos (maler-saas.com/fachkraefte).
 - Rollen: Admin, Projektleiter, Mitarbeiter – jeder sieht, was er braucht.
 
@@ -33,7 +38,7 @@ TARIFE (Preise pro Monat, netto zzgl. MwSt., monatlich kündbar zum Ende der Abr
 - Bezahlung per Karte über Stripe. Rechnungen und Zahlungsdaten unter „Abrechnung & Abo“ → „Abo verwalten“.
 - Tarif wechseln: in der App unter „Abrechnung & Abo“ bzw. „Preise & Pläne“ einen anderen Tarif wählen. Bei einem bestehenden Abo wird anteilig verrechnet.
 - Kündigen: unter „Abrechnung & Abo“ → „Abo verwalten“ oder per E-Mail an info@maler-saas.com.
-- Zu individuellen Rabatten, Jahrespreisen oder Sonderkonditionen weißt du nichts – verweise dafür an info@maler-saas.com.
+- Zu individuellen Rabatten, Jahrespreisen oder Sonderkonditionen weißt du nichts. Erwähne Rabatte/Sonderkonditionen NUR, wenn der Nutzer ausdrücklich danach fragt – dann verweise an info@maler-saas.com.
 
 LOS GEHT'S
 - Auf maler-saas.com „Firma registrieren“ bzw. „14 Tage kostenlos testen“ wählen, Firmendaten eingeben, danach anmelden.
@@ -189,4 +194,12 @@ export function toApiMessages(history: { role: string; text: string }[]): { role
   }
   while (out.length && out[0].role !== "user") out.shift();
   return out;
+}
+
+/** Abgeschnittene Antwort (Platz ausgegangen) auf den letzten vollständigen Satz kürzen */
+export function cutToSentence(text: string): string {
+  const t = String(text ?? "").trim();
+  const m = t.match(/^[\s\S]*[.!?…:](?=\s|$)/);
+  const cut = m ? m[0].trim() : "";
+  return cut.length >= 8 ? cut : t;
 }

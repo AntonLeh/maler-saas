@@ -14,7 +14,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { SUPPORT_TOOL, cleanSupport, planName, replyText, roleName, systemPrompt, toApiMessages } from "./prompt.ts";
+import { SUPPORT_TOOL, cleanSupport, cutToSentence, planName, replyText, roleName, systemPrompt, toApiMessages } from "./prompt.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -181,7 +181,7 @@ serve(async (req) => {
     let alreadySent = chat.support_sent === true;
     for (let round = 0; round < 3; round++) {
       const data = await callClaude({
-        max_tokens: 800,
+        max_tokens: 2000,
         system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         tools: [SUPPORT_TOOL],
         tool_choice: { type: "auto" },
@@ -190,6 +190,7 @@ serve(async (req) => {
       const uses = (data.content ?? []).filter((c: any) => c.type === "tool_use" && c.name === "support_anfrage");
       if (!uses.length || round === 2) {
         reply = replyText(data.content);
+        if (data.stop_reason === "max_tokens") reply = cutToSentence(reply);
         break;
       }
       const results: any[] = [];
