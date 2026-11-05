@@ -207,7 +207,16 @@ export default function BelegForm({
     }
     setSaving(true);
     try {
-      const dups = await api.findDuplicates(tenantId, values.receipt_date, values.gross_amount, values.supplier, expense?.id).catch(() => []);
+      let dups: Expense[] = [];
+      try {
+        dups = await api.findDuplicates(tenantId, values.receipt_date, values.gross_amount, values.supplier, expense?.id);
+      } catch (e) {
+        // Prüfung darf das Speichern nicht verhindern – aber sichtbar machen
+        if (!window.confirm(`Die Prüfung auf doppelte Belege hat nicht geklappt (${(e as Error).message}).\n\nTrotzdem speichern?`)) {
+          setSaving(false);
+          return;
+        }
+      }
       if (
         dups.length &&
         !window.confirm(
