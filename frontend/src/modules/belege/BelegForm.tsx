@@ -207,6 +207,19 @@ export default function BelegForm({
     }
     setSaving(true);
     try {
+      const dups = await api.findDuplicates(tenantId, values.receipt_date, values.gross_amount, values.supplier, expense?.id).catch(() => []);
+      if (
+        dups.length &&
+        !window.confirm(
+          `Möglicherweise doppelt erfasst:\n\n${dups
+            .slice(0, 3)
+            .map((d) => `• ${d.supplier}, ${new Date(`${d.receipt_date}T12:00:00`).toLocaleDateString("de-DE")}, ${money(Number(d.gross_amount))}`)
+            .join("\n")}\n\nTrotzdem speichern?`
+        )
+      ) {
+        setSaving(false);
+        return;
+      }
       if (editing && expense) await api.updateExpense(expense.id, values);
       else await api.createExpense(tenantId, { ...values, file_path: file?.path ?? null, file_name: file?.name ?? null, file_type: file?.type ?? null, ai_extracted: aiUsed });
       onSaved(editing ? "Beleg geändert." : "Beleg gespeichert.");

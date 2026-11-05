@@ -39,6 +39,21 @@ export async function createExpense(tenantId: number, values: ExpenseInput & { f
   fail(error, "Beleg konnte nicht gespeichert werden.");
 }
 
+/** Mögliche Doppelerfassung: gleicher Tag + gleicher Betrag (+ ähnlicher Lieferant), nicht ungültig */
+export async function findDuplicates(tenantId: number, date: string, gross: number, supplier: string, excludeId?: number): Promise<Expense[]> {
+  const { data } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("receipt_date", date)
+    .eq("voided", false)
+    .gte("gross_amount", Math.round((gross - 0.01) * 100) / 100)
+    .lte("gross_amount", Math.round((gross + 0.01) * 100) / 100);
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9äöüß]/g, "");
+  const key = norm(supplier).slice(0, 5);
+  return ((data ?? []) as Expense[]).filter((e) => e.id !== excludeId && (!key || norm(e.supplier).includes(key) || key.includes(norm(e.supplier).slice(0, 5))));
+}
+
 export async function updateExpense(id: number, values: Partial<ExpenseInput>) {
   const { error } = await supabase.from("expenses").update(values).eq("id", id);
   fail(error, "Beleg konnte nicht geändert werden.");
