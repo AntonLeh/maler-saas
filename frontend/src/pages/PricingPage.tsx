@@ -74,6 +74,7 @@ const plans = [
   "Online-Terminbuchung für Besichtigungen",
   "Stellenanzeigen & Bewerbungen („Wir stellen ein“)",
   "Fachkräfte-Pool: Maler & Subunternehmer finden",
+  "KI-Chatassistent auf der Website",
   "KI-Schreibhilfe für Website-Texte",
   "Individuelle Unternehmensanpassungen",
   "Persönlicher Premium-Support",
