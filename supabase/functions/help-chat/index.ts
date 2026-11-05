@@ -125,6 +125,8 @@ serve(async (req) => {
     if (!message) return fail("Bitte eine Nachricht eingeben.");
     const page = String(b.page ?? "").replace(/[^a-z0-9/_-]/gi, "").slice(0, 80);
     const user = await findUser(req);
+    // Die App sagt „angemeldet“, aber die Anmeldung ist ungültig/abgelaufen -> nicht still als Besucher weitermachen
+    if (b.app === true && !user) return json({ ok: false, error: "Anmeldung abgelaufen", relogin: true }, 401);
     const mode = user ? "app" : "public";
 
     // ---------- Monatslimit (alle Chats zusammen) ----------
@@ -215,7 +217,7 @@ serve(async (req) => {
       .from("help_chats")
       .update({ messages: history.slice(-80), bot_replies: (chat.bot_replies ?? 0) + 1, support_sent: alreadySent, updated_at: new Date().toISOString() })
       .eq("id", chat.id);
-    return json({ ok: true, chat_id: chat.id, reply, support_sent: sent });
+    return json({ ok: true, chat_id: chat.id, reply, support_sent: sent, mode });
   } catch (e) {
     console.error("help-chat", e);
     return json({ ok: false, error: FALLBACK }, 500);

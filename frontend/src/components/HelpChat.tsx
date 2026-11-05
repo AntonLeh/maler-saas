@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseUrl } from "../lib/supabase";
 import "./HelpChat.css";
 
 // Hilfe-Chat von maler-saas.com: unten rechts auf der Startseite/den Funktionsseiten und in der App.
@@ -63,6 +63,26 @@ function Linkified({ text }: { text: string }) {
       )}
     </>
   );
+}
+
+/** Aufruf der Funktion help-chat – mit der aktuellen Anmeldung (wie KI-Telefon und Website) */
+async function callHelpChat(body: Record<string, unknown>, forceRefresh: boolean): Promise<Response> {
+  let token: string | undefined;
+  if (body.app) {
+    const { data } = forceRefresh ? await supabase.auth.refreshSession() : await supabase.auth.getSession();
+    token = data.session?.access_token;
+    // läuft die Anmeldung in der nächsten Minute ab, gleich erneuern
+    const exp = data.session?.expires_at;
+    if (token && !forceRefresh && exp && exp * 1000 < Date.now() + 60_000) {
+      const { data: fresh } = await supabase.auth.refreshSession();
+      token = fresh.session?.access_token ?? token;
+    }
+  }
+  return fetch(`${supabaseUrl}/functions/v1/help-chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body),
+  });
 }
 
 const ChatIcon = () => (
@@ -158,15 +178,14 @@ function ChatBox({ mode }: { mode: Mode }) {
       let reply = "";
       let id = state.id;
       try {
-        const { data, error } = await supabase.functions.invoke("help-chat", {
-          body: { chat_id: state.id, message: msg, page: window.location.pathname },
-        });
-        if (error) {
-          const ctx = (error as { context?: Response }).context;
-          const j = ctx && typeof ctx.json === "function" ? await ctx.json().catch(() => null) : null;
-          reply = j?.error || "Das hat gerade nicht geklappt. Bitte versuchen Sie es noch einmal oder schreiben Sie an info@maler-saas.com.";
-        } else {
-          reply = data?.reply || data?.error || "Das hat gerade nicht geklappt.";
+        const body = { chat_id: state.id, message: msg, page: window.location.pathname, app: mode === "app" };
+        let res = await callHelpChat(body, false);
+        // Anmeldung abgelaufen? Einmal erneuern und nochmal versuchen
+        if (res.status === 401 && mode === "app") res = await callHelpChat(body, true);
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401 && mode === "app") reply = "Ihre Anmeldung ist abgelaufen. Bitte laden Sie die Seite neu oder melden Sie sich erneut an.";
+        else {
+          reply = data?.reply || data?.error || "Das hat gerade nicht geklappt. Bitte versuchen Sie es noch einmal oder schreiben Sie an info@maler-saas.com.";
           if (data?.chat_id) id = data.chat_id;
         }
       } catch {
@@ -178,7 +197,7 @@ function ChatBox({ mode }: { mode: Mode }) {
       setBusy(false);
       window.setTimeout(() => taRef.current?.focus(), 0);
     },
-    [busy, state, key]
+    [busy, state, key, mode]
   );
 
   const reset = () => {
