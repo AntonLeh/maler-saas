@@ -1,0 +1,255 @@
+/* ===================== Belege & Ausgaben ===================== */
+.bl-app .bl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+.bl-app .bl-toolbar .tk-field {
+  min-width: 170px;
+  margin: 0;
+}
+.bl-check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 10px;
+  font-size: 0.92rem;
+  color: var(--tk-muted);
+}
+.bl-check-inline input {
+  width: auto;
+}
+.bl-add {
+  margin-left: auto;
+}
+.bl-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.bl-summary div {
+  background: var(--tk-surface-2);
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+.bl-summary span {
+  font-size: 0.8rem;
+  color: var(--tk-muted);
+}
+.bl-summary strong {
+  font-size: 1.05rem;
+}
+.bl-period {
+  margin: 4px 0 16px;
+  text-align: left;
+}
+.bl-locked {
+  display: inline-block;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+.bl-empty {
+  text-align: center;
+  padding: 30px 10px;
+  color: var(--tk-muted);
+}
+.bl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.bl-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  text-align: left;
+}
+.bl-item.voided {
+  opacity: 0.55;
+}
+.bl-item.voided strong {
+  text-decoration: line-through;
+}
+.bl-item-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bl-date {
+  font-size: 0.8rem;
+  color: var(--tk-muted);
+}
+.bl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.bl-tag {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #eef2ff;
+  color: #3730a3;
+}
+.bl-tag.order {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.bl-tag.ai {
+  background: #fef3c7;
+  color: #92400e;
+}
+.bl-tag.void {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.bl-tag.lock {
+  background: #f1f5f9;
+  color: #334155;
+}
+.bl-item-amount {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+.bl-item-amount .tk-muted {
+  font-size: 0.8rem;
+}
+.bl-paid {
+  font-size: 0.8rem;
+  color: #b45309;
+}
+.bl-paid.yes {
+  color: #047857;
+}
+.bl-item-actions {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+}
+.bl-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--tk-primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.bl-link.danger {
+  color: #b91c1c;
+}
+.bl-small {
+  font-size: 0.8rem;
+}
+.bl-foot {
+  margin-top: 16px;
+  text-align: left;
+}
+
+/* ---------- Formular ---------- */
+.bl-form {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+.bl-file {
+  border: 1px dashed var(--tk-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--tk-surface-2);
+}
+.bl-file-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bl-file-done {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.bl-file-done img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--tk-border);
+}
+.bl-file-done > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  justify-items: start;
+}
+.bl-file-done strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.bl-file-icon {
+  font-size: 40px;
+}
+.bl-ai-reading {
+  margin: 8px 0 0;
+  color: #92400e;
+  font-weight: 600;
+}
+.bl-ai-note {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+.bl-split {
+  margin: -2px 0 4px;
+  font-size: 0.88rem;
+  color: var(--tk-muted);
+}
+.bl-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+.bl-check-row input {
+  width: auto;
+}
+
+@media (max-width: 760px) {
+  .bl-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bl-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .bl-item-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: flex-start;
+  }
+  .bl-add {
+    margin-left: 0;
+    width: 100%;
+  }
+}

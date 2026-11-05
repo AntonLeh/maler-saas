@@ -413,6 +413,20 @@ export default function DatenschutzPage({
             hochgeladen werden, wenn dies für den vorgesehenen
             betrieblichen Zweck nicht erforderlich ist.
           </p>
+
+          <p>
+            Unter „Belege &amp; Ausgaben“ können Unternehmen Fotos oder
+            PDF-Dateien ihrer Eingangsbelege (z. B. Rechnungen von
+            Lieferanten, Quittungen) speichern. Die Belege werden in einem
+            nicht öffentlichen Speicher abgelegt, sind nur für Admins des
+            jeweiligen Unternehmens zugänglich und werden wegen der
+            gesetzlichen Aufbewahrungspflichten nicht vorzeitig gelöscht.
+            Nutzt ein Unternehmen die automatische Belegerkennung, wird
+            der Beleg zum Auslesen von Lieferant, Datum, Betrag und
+            Steuersatz an Anthropic (Anbieter des KI-Modells Claude, USA)
+            übermittelt; das Ergebnis wird dem Unternehmen nur als
+            Vorschlag angezeigt.
+          </p>
         </section>
 
         <section className="legal-section">

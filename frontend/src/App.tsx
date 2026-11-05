@@ -44,6 +44,7 @@ import RechnungenPage from "./pages/RechnungenPage";
 import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import CustomerTaxFields from "./components/CustomerTaxFields";
+import { BelegeButton, BelegePage } from "./modules/belege";
 import { isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
@@ -480,7 +481,8 @@ type CurrentPage =
   | "meine-termine"
   | "ki-telefon"
   | "website"
-  | "fachkraefte";
+  | "fachkraefte"
+  | "belege";
 
 export default function App() {
   const [selectedAdditionalPositionId, setSelectedAdditionalPositionId] = useState("");
@@ -6782,6 +6784,7 @@ onReloadOrders={async () => {
   hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
   onOpen={() => setCurrentPage("fachkraefte")}
 />
+{isAdmin && <BelegeButton onOpen={() => setCurrentPage("belege")} />}
 
 </section>
                 </>
@@ -12161,6 +12164,20 @@ const businessAdvisor = generateBusinessInsights();
       onBackClick={openDashboard}
     />
   )
+)}
+
+{currentPage === "belege" && isAdmin && userProfile?.tenant_id && (
+  <BelegePage
+    tenantId={userProfile.tenant_id}
+    country={companySettings?.country}
+    currencySymbol={companySettings?.currency_symbol}
+    aiAllowed={
+      subscription?.status === "trialing" ||
+      ((subscription?.plan === "business" || subscription?.plan === "enterprise") &&
+        ["active", "trialing", "past_due"].includes(String(subscription?.status)))
+    }
+    onBack={openDashboard}
+  />
 )}
 
 {currentPage === "fachkraefte" && isAdmin && userProfile?.tenant_id && (
