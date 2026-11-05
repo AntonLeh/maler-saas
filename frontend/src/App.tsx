@@ -11976,12 +11976,20 @@ const businessAdvisor = generateBusinessInsights();
   subscriptionStatus={subscription?.status}
   onBack={openDashboard}
   onUpgrade={async (plan) => {
+    // Anmeldung auffrischen: nach langer Pause (z. B. Tab über Nacht offen) ist das Zugangs-Token sonst abgelaufen
+    const { data: fresh } = await supabase.auth.refreshSession();
+    const accessToken = fresh.session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (!accessToken) {
+      alert("Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich neu an und versuchen Sie es noch einmal.");
+      return;
+    }
     const { data, error } = await supabase.functions.invoke(
       "create-stripe-checkout",
       {
         body: {
           plan,
         },
+        headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
 
