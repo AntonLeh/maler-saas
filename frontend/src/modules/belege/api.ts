@@ -1,6 +1,6 @@
 // Belege & Ausgaben – Datenzugriff
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { Expense, ExpenseInput, ExpensePeriod, OrderOption } from "./types";
+import type { AiResult, Expense, ExpenseInput, ExpensePeriod, OrderOption } from "./types";
 
 const BUCKET = "receipts";
 const fail = (e: { message?: string } | null, fallback: string) => {
@@ -101,8 +101,33 @@ export async function receiptUrl(path: string): Promise<string> {
   return data.signedUrl;
 }
 
+async function callReceiptAi(body: Record<string, unknown>) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/receipt-ai`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Die Funktion receipt-ai ist nicht erreichbar. Ist sie veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `Fehler (Status ${res.status}).`);
+  return data;
+}
+
+/** EZB-Referenzkurs: 1 Einheit „from“ = rate Einheiten „to“ (letzter Kurs bis zum Datum) */
+export async function exchangeRate(from: string, to: string, date: string): Promise<{ rate: number; date: string }> {
+  const data = await callReceiptAi({ action: "rate", from, to, date });
+  return { rate: Number(data.rate), date: String(data.date) };
+}
+
 /** KI-Belegerkennung (Funktion receipt-ai) */
-export async function recognize(path: string): Promise<Partial<ExpenseInput>> {
+export async function recognize(path: string): Promise<AiResult> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error("Bitte erneut anmelden.");

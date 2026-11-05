@@ -26,6 +26,9 @@ export type Expense = {
   locked: boolean;
   notes: string | null;
   created_at: string;
+  original_currency?: string | null;
+  original_amount?: number | null;
+  exchange_rate?: number | null;
 };
 
 export type ExpenseInput = {
@@ -40,7 +43,16 @@ export type ExpenseInput = {
   payment_method: PaymentMethod | null;
   order_id: number | null;
   notes: string | null;
+  original_currency?: string | null;
+  original_amount?: number | null;
+  exchange_rate?: number | null;
 };
+
+/** Zusätzliche Angabe der KI (nicht in der Tabelle als Spalte gleichen Namens) */
+export type AiResult = Partial<ExpenseInput> & { currency?: string };
+
+export const CURRENCIES = ["EUR", "CHF", "USD", "GBP", "PLN", "CZK", "HUF", "DKK", "SEK", "NOK"];
+export const homeCurrency = (country: Country) => (country === "CH" ? "CHF" : "EUR");
 
 export type ExpensePeriod = { period_year: number; period_month: number; locked_at: string };
 export type OrderOption = { id: number; title: string };

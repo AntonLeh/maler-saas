@@ -266,6 +266,11 @@ export default function BelegePage({
                 </div>
                 <div className="bl-item-amount">
                   <strong>{fmt(Number(e.gross_amount))}</strong>
+                  {e.original_currency && e.original_amount != null && (
+                    <span className="tk-muted">
+                      {Number(e.original_amount).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {e.original_currency}
+                    </span>
+                  )}
                   <span className="tk-muted">
                     netto {fmt(Number(e.net_amount))} · VSt {fmt(Number(e.tax_amount))}
                     {e.tax_rate !== null ? ` (${Number(e.tax_rate).toLocaleString("de-DE")} %${isForeignRate(e.tax_rate, cc) ? ", Ausland" : ""})` : " (gemischt)"}

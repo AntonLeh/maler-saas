@@ -16,6 +16,7 @@ Regeln:
 - category: material (Farbe, Lacke, Tapete, Spachtel, Abdeckmaterial, Baustoffe), werkzeug (Werkzeug, Geräte, Leitern, Maschinen), fahrzeug (Tanken, Werkstatt, Parken, Maut), subunternehmer, miete, versicherung, buero (Büro, Telefon, Software, Porto), sonstiges.
 - description: kurze Beschreibung in 2–8 Wörtern, was gekauft wurde (z. B. „Dispersionsfarbe und Abdeckfolie“).
 - payment_method: bar, karte, ueberweisung, lastschrift oder paypal – nur wenn auf dem Beleg erkennbar (z. B. „EC-Karte“, „Bar“).
+- currency: Währung der Beträge als ISO-Code mit 3 Buchstaben (EUR, USD, CHF, GBP …). „$“ ohne weiteren Hinweis = USD, „€“ = EUR, „£“ = GBP, „Fr.“/„SFr.“ = CHF.
 - Ist das Bild kein Beleg oder unlesbar, setze not_a_receipt auf true.`;
 
 export const TOOL = {
@@ -33,6 +34,7 @@ export const TOOL = {
       category: { type: "string", enum: [...CATEGORIES] },
       description: { type: "string" },
       payment_method: { type: "string", enum: [...PAYMENTS] },
+      currency: { type: "string", description: "ISO-Währungscode, z. B. EUR, USD, CHF" },
     },
   },
 };
@@ -66,6 +68,8 @@ export function cleanResult(input: any): { ok: true; data: Record<string, unknow
   const desc = String(input.description ?? "").replace(/\s+/g, " ").trim().slice(0, 200);
   if (desc) out.description = desc;
   if (PAYMENTS.includes(input.payment_method)) out.payment_method = input.payment_method;
+  const cur = currencyCode(input.currency);
+  if (cur) out.currency = cur;
   if (!Object.keys(out).length) return { ok: false, error: "Die KI konnte auf dem Beleg nichts sicher lesen. Bitte die Angaben selbst eintragen." };
   return { ok: true, data: out };
 }
@@ -87,4 +91,57 @@ export function encodeBase64(bytes: Uint8Array): string {
   let bin = "";
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(bin);
+}
+
+/** Währungsangabe der KI auf ISO-Code bringen ($ -> USD usw.) */
+export function currencyCode(v: unknown): string | null {
+  const t = String(v ?? "").trim().toUpperCase();
+  const map: Record<string, string> = { "$": "USD", "US$": "USD", "€": "EUR", "£": "GBP", "FR.": "CHF", "SFR.": "CHF", "SFR": "CHF", "FR": "CHF" };
+  const c = map[t] ?? t;
+  return /^[A-Z]{3}$/.test(c) ? c : null;
+}
+
+/**
+ * EZB-Referenzkurse (Stand: letzter Kurs bis einschließlich Datum) – CSV der EZB-Daten-API.
+ * Liefert „Einheiten je 1 EUR“ für eine Währung; EUR = 1.
+ */
+export async function ecbPerEur(currency: string, date: string, fetcher: typeof fetch = fetch): Promise<{ value: number; date: string }> {
+  if (currency === "EUR") return { value: 1, date };
+  const url = `https://data-api.ecb.europa.eu/service/data/EXR/D.${currency}.EUR.SP00.A?endPeriod=${date}&lastNObservations=1&format=csvdata`;
+  const res = await fetcher(url, { headers: { accept: "text/csv" } });
+  if (!res.ok) throw new Error(`EZB ${res.status}`);
+  const lines = (await res.text()).trim().split(/\r?\n/);
+  const head = csvRow(lines[0]);
+  const iDate = head.indexOf("TIME_PERIOD");
+  const iVal = head.indexOf("OBS_VALUE");
+  const last = csvRow(lines[lines.length - 1]);
+  const value = Number(last[iVal]);
+  if (lines.length < 2 || iDate < 0 || iVal < 0 || !Number.isFinite(value) || value <= 0) throw new Error("EZB ohne Kurs");
+  return { value, date: last[iDate] };
+}
+
+/** Faktor „1 Einheit FROM = x Einheiten TO“ über den Euro als Brücke */
+export async function exchangeRate(from: string, to: string, date: string, fetcher: typeof fetch = fetch): Promise<{ rate: number; date: string }> {
+  if (from === to) return { rate: 1, date };
+  const [a, b] = await Promise.all([ecbPerEur(from, date, fetcher), ecbPerEur(to, date, fetcher)]);
+  return { rate: Math.round((b.value / a.value) * 1e6) / 1e6, date: from === "EUR" ? b.date : a.date };
+}
+
+/** Eine CSV-Zeile aufteilen (Felder in Anführungszeichen dürfen Kommas enthalten) */
+export function csvRow(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) {
+      if (ch === '"' && line[i + 1] === '"') (cur += '"', i++);
+      else if (ch === '"') q = false;
+      else cur += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") (out.push(cur), (cur = ""));
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
 }

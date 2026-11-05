@@ -4,7 +4,8 @@
 //
 // POST …/functions/v1/receipt-ai   Authorization: Bearer <Login-Token eines Admins>
 //   Body: { file_path: "<tenant_id>/<datei>" }   (Datei vorher in den Bucket „receipts“ hochgeladen)
-//   -> { ok, data: { receipt_date, supplier, gross_amount, tax_rate, tax_amount, category, description, payment_method }, used, limit }
+//   -> { ok, data: { receipt_date, supplier, gross_amount, tax_rate, tax_amount, category, description, payment_method, currency }, used, limit }
+//   Body: { action: "rate", from: "USD", to: "EUR", date: "2026-11-03" } -> { ok, rate, date }  (EZB-Referenzkurs, alle Tarife)
 // Es wird nichts gespeichert außer einem Zähler (expense_ai_log) – der Admin prüft die Vorschläge im Formular.
 // Tarif: ab Business (Business, Enterprise) und in der Testphase.
 // Secrets (vorhanden): ANTHROPIC_API_KEY
@@ -14,7 +15,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { SYSTEM_PROMPT, TOOL, cleanResult, encodeBase64, mediaTypeFor, toolInput } from "./logic.ts";
+import { SYSTEM_PROMPT, TOOL, cleanResult, currencyCode, encodeBase64, exchangeRate, mediaTypeFor, toolInput } from "./logic.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -66,12 +67,28 @@ serve(async (req) => {
     const { data: user } = await db.from("app_users").select("id, tenant_id, role_id").eq("auth_user_id", authData.user.id).maybeSingle();
     if (!user || ![1, 2].includes(Number(user.role_id))) return json({ ok: false, error: "Nur Admins dürfen Belege erfassen." }, 403);
 
+    const body = await req.json().catch(() => ({}));
+
+    // ---------- Umrechnungskurs (alle Tarife) ----------
+    if (body.action === "rate") {
+      const from = currencyCode(body.from);
+      const to = currencyCode(body.to);
+      const date = String(body.date ?? "");
+      if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ ok: false, error: "Ungültige Angaben für den Kurs." }, 400);
+      try {
+        const r = await exchangeRate(from, to, date);
+        return json({ ok: true, rate: r.rate, date: r.date, source: "EZB" });
+      } catch (e) {
+        console.error("ezb", from, to, date, e);
+        return json({ ok: false, error: `Für ${from} gibt es keinen EZB-Kurs. Bitte den Betrag in ${to} selbst eintragen (z. B. laut Kontoauszug).` }, 502);
+      }
+    }
+
     // ---------- Tarif ----------
     const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", user.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
     if (!planOk(sub)) return json({ ok: false, error: "Die automatische Belegerkennung gibt es ab dem Tarif Business." }, 403);
 
     // ---------- Datei ----------
-    const body = await req.json().catch(() => ({}));
     const path = String(body.file_path ?? "");
     if (!path.startsWith(`${user.tenant_id}/`) || path.includes("..")) return json({ ok: false, error: "Ungültige Datei." }, 400);
 

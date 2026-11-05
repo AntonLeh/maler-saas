@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Modal } from "../terminkalender/ui";
 import * as api from "./api";
-import type { Country, Expense, ExpenseCategory, ExpenseInput, OrderOption, PaymentMethod } from "./types";
-import { CATEGORY_LABELS, COUNTRY_NAMES, PAYMENT_LABELS, TAX_RATES, isForeignRate, splitAmount } from "./types";
+import type { AiResult, Country, Expense, ExpenseCategory, ExpenseInput, OrderOption, PaymentMethod } from "./types";
+import { CATEGORY_LABELS, COUNTRY_NAMES, CURRENCIES, PAYMENT_LABELS, TAX_RATES, homeCurrency, isForeignRate, splitAmount } from "./types";
 
 const money = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parseAmount = (s: string) => Number(String(s).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
@@ -54,6 +54,16 @@ export default function BelegForm({
   const [payment, setPayment] = useState<PaymentMethod | "">(expense?.payment_method ?? "");
   const [orderId, setOrderId] = useState(expense?.order_id ? String(expense.order_id) : "");
   const [notes, setNotes] = useState(expense?.notes ?? "");
+  // Fremdwährung: Betrag laut Beleg + Kurs -> Betrag in der Währung des Betriebs (gross)
+  const home = homeCurrency(country);
+  const [currency, setCurrency] = useState(expense?.original_currency || home);
+  const [origAmount, setOrigAmount] = useState(expense?.original_amount != null ? money(Number(expense.original_amount)) : "");
+  const [rateInfo, setRateInfo] = useState<{ rate: number; date: string | null } | null>(
+    expense?.exchange_rate ? { rate: Number(expense.exchange_rate), date: null } : null
+  );
+  const [rateBusy, setRateBusy] = useState(false);
+  const [rateNote, setRateNote] = useState("");
+  const foreignCurrency = currency !== home;
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +72,29 @@ export default function BelegForm({
   const grossValue = parseAmount(gross);
   const { net, tax } = splitAmount(Number.isFinite(grossValue) ? grossValue : 0, rateValue, parseAmount(mixedTax) || 0);
 
-  const applyAi = (d: Partial<ExpenseInput>) => {
+  /** Kurs holen und Betrag umrechnen (optional auch einen Steuerbetrag in Fremdwährung) */
+  const convert = async (orig: number, cur: string, d: string, origTax?: number) => {
+    setRateNote("");
+    if (cur === home) {
+      setRateInfo(null);
+      return;
+    }
+    if (!Number.isFinite(orig) || orig < 0) return;
+    setRateBusy(true);
+    try {
+      const r = await api.exchangeRate(cur, home, d);
+      setRateInfo(r);
+      setGross(money(Math.round(orig * r.rate * 100) / 100));
+      if (typeof origTax === "number") setMixedTax(money(Math.round(origTax * r.rate * 100) / 100));
+    } catch (e) {
+      setRateInfo(null);
+      setRateNote((e as Error).message);
+    } finally {
+      setRateBusy(false);
+    }
+  };
+
+  const applyAi = (d: AiResult) => {
     const filled: string[] = [];
     if (d.receipt_date) {
       setDate(d.receipt_date);
@@ -74,9 +106,15 @@ export default function BelegForm({
     }
     if (d.description) setDescription(d.description);
     if (d.category) setCategory(d.category);
+    const aiForeign = !!d.currency && d.currency !== home && CURRENCIES.includes(d.currency);
     if (typeof d.gross_amount === "number") {
-      setGross(money(d.gross_amount));
+      if (aiForeign) setOrigAmount(money(d.gross_amount));
+      else setGross(money(d.gross_amount));
       filled.push("Betrag");
+    }
+    if (aiForeign) {
+      setCurrency(d.currency!);
+      filled.push(`Währung ${d.currency}`);
     }
     if (typeof d.tax_rate === "number") {
       const known = rates.find((r) => Math.abs(r - Number(d.tax_rate)) < 0.01);
@@ -88,8 +126,11 @@ export default function BelegForm({
       filled.push("Steuersatz");
     } else if (typeof d.tax_amount === "number") {
       setRate("mixed");
-      setMixedTax(money(d.tax_amount));
+      if (!aiForeign) setMixedTax(money(d.tax_amount));
       filled.push("Steuer");
+    }
+    if (aiForeign && typeof d.gross_amount === "number") {
+      void convert(d.gross_amount, d.currency!, d.receipt_date || date, typeof d.tax_rate === "number" ? undefined : d.tax_amount);
     }
     if (d.payment_method) setPayment(d.payment_method);
     setAiUsed(true);
@@ -152,7 +193,18 @@ export default function BelegForm({
       payment_method: payment || null,
       order_id: orderId ? Number(orderId) : null,
       notes: notes.trim().slice(0, 1000) || null,
+      original_currency: null,
+      original_amount: null,
+      exchange_rate: null,
     };
+    if (foreignCurrency) {
+      const orig = parseAmount(origAmount);
+      if (origAmount.trim() === "" || !Number.isFinite(orig) || orig < 0) return setError(`Bitte den Betrag laut Beleg (${currency}) angeben.`);
+      values.original_currency = currency;
+      values.original_amount = Math.round(orig * 100) / 100;
+      // tatsächlich verwendeter Kurs (auch wenn der Euro-Betrag von Hand angepasst wurde, z. B. laut Kontoauszug)
+      values.exchange_rate = orig > 0 ? Math.round((values.gross_amount / orig) * 1e6) / 1e6 : rateInfo?.rate ?? null;
+    }
     setSaving(true);
     try {
       if (editing && expense) await api.updateExpense(expense.id, values);
@@ -229,7 +281,13 @@ export default function BelegForm({
         <div className="tk-field-pair">
           <label className="tk-field">
             <span>Belegdatum *</span>
-            <input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
+            <input
+              type="date"
+              value={date}
+              max={today()}
+              onChange={(e) => setDate(e.target.value)}
+              onBlur={() => foreignCurrency && origAmount.trim() !== "" && void convert(parseAmount(origAmount), currency, date)}
+            />
           </label>
           <label className="tk-field">
             <span>Kategorie</span>
@@ -252,8 +310,65 @@ export default function BelegForm({
         </label>
         <div className="tk-field-pair">
           <label className="tk-field">
-            <span>Betrag brutto *</span>
+            <span>Währung des Belegs</span>
+            <select
+              value={currency}
+              onChange={(e) => {
+                const cur = e.target.value;
+                setCurrency(cur);
+                if (cur === home) {
+                  setRateInfo(null);
+                  setRateNote("");
+                } else if (origAmount.trim() !== "") void convert(parseAmount(origAmount), cur, date);
+                else if (gross.trim() !== "") {
+                  // bisher eingetragener Betrag war vermutlich der Betrag laut Beleg
+                  setOrigAmount(gross);
+                  void convert(parseAmount(gross), cur, date);
+                }
+              }}
+            >
+              {[home, ...CURRENCIES.filter((c) => c !== home)].map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                  {c === home ? " (eigene Währung)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          {foreignCurrency ? (
+            <label className="tk-field">
+              <span>Betrag laut Beleg ({currency}) *</span>
+              <input
+                inputMode="decimal"
+                value={origAmount}
+                onChange={(e) => setOrigAmount(e.target.value)}
+                onBlur={() => origAmount.trim() !== "" && void convert(parseAmount(origAmount), currency, date)}
+                placeholder="0,00"
+              />
+            </label>
+          ) : (
+            <span />
+          )}
+        </div>
+        {foreignCurrency && (
+          <p className="bl-rate">
+            {rateBusy
+              ? "Kurs wird geholt …"
+              : rateInfo
+              ? `Kurs${rateInfo.date ? ` EZB vom ${new Date(`${rateInfo.date}T12:00:00`).toLocaleDateString("de-DE")}` : ""}: 1 ${currency} = ${rateInfo.rate.toLocaleString("de-DE", { maximumFractionDigits: 6 })} ${home}`
+              : rateNote || "Noch kein Kurs."}{" "}
+            {!rateBusy && (
+              <button type="button" className="bl-link" onClick={() => void convert(parseAmount(origAmount), currency, date)}>
+                Kurs neu holen
+              </button>
+            )}
+          </p>
+        )}
+        <div className="tk-field-pair">
+          <label className="tk-field">
+            <span>{foreignCurrency ? `Betrag in ${home} *` : "Betrag brutto *"}</span>
             <input inputMode="decimal" value={gross} onChange={(e) => setGross(e.target.value)} placeholder="0,00" />
+            {foreignCurrency && <small className="tk-muted">Mit EZB-Kurs umgerechnet – gern durch den abgebuchten Betrag (Kontoauszug) ersetzen.</small>}
           </label>
           <label className="tk-field">
             <span>Steuersatz</span>
@@ -272,7 +387,7 @@ export default function BelegForm({
         </div>
         {rate === "mixed" && (
           <label className="tk-field">
-            <span>Steuerbetrag gesamt (laut Beleg)</span>
+            <span>Steuerbetrag gesamt{foreignCurrency ? ` (in ${home})` : " (laut Beleg)"}</span>
             <input inputMode="decimal" value={mixedTax} onChange={(e) => setMixedTax(e.target.value)} placeholder="0,00" />
           </label>
         )}

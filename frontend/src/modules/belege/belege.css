@@ -236,6 +236,11 @@
 .bl-summary small {
   font-size: 0.72rem;
 }
+.bl-rate {
+  margin: -4px 0 2px;
+  font-size: 0.85rem;
+  color: var(--tk-muted);
+}
 .bl-check-row {
   display: flex;
   align-items: center;
