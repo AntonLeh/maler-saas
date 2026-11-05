@@ -182,11 +182,20 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    // Details nur ins interne Protokoll, dem Kunden nur verständliche, harmlose Texte zeigen
     console.error("Stripe Checkout Fehler:", error);
+    const SAFE: Record<string, string> = {
+      "Authorization Header fehlt.": "Bitte melden Sie sich neu an und versuchen Sie es noch einmal.",
+      "Benutzer konnte nicht geprüft werden.": "Bitte melden Sie sich neu an und versuchen Sie es noch einmal.",
+      "Kein Plan übergeben.": "Bitte einen Tarif auswählen.",
+      "Ungültiger Plan.": "Dieser Tarif ist nicht verfügbar.",
+      "Das ist bereits Ihr aktueller Tarif.": "Das ist bereits Ihr aktueller Tarif.",
+    };
+    const msg = SAFE[String(error?.message ?? "")] ?? "Bitte versuchen Sie es später noch einmal oder wenden Sie sich an info@maler-saas.com.";
 
     return new Response(
       JSON.stringify({
-        error: error.message || "Unbekannter Fehler",
+        error: msg,
       }),
       {
         status: 400,
