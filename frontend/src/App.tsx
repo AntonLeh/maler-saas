@@ -12376,6 +12376,7 @@ const businessAdvisor = generateBusinessInsights();
   <InvoicesPage
   onBack={openDashboard}
   userProfile={userProfile}
+  onInvoicesChanged={() => loadOrders(userProfile.tenant_id)}
 />
 )}
 

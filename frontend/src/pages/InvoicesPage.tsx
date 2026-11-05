@@ -57,9 +57,11 @@ type UserProfile = {
 type InvoicesPageProps = {
   onBack: () => void;
   userProfile: UserProfile;
+  /** z. B. Auftragsliste neu laden, wenn ein Storno den Auftrag wieder auf „Fertig“ setzt */
+  onInvoicesChanged?: () => void;
 };
 
-export default function InvoicesPage({ onBack, userProfile }: InvoicesPageProps) {
+export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged }: InvoicesPageProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceReminders, setInvoiceReminders] = useState<InvoiceReminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -353,6 +355,7 @@ const handleCancelInvoice = async (invoice: Invoice) => {
     return;
   }
   await loadInvoices();
+  onInvoicesChanged?.();
   alert(
     invoice.invoice_type === "final"
       ? "Die Rechnung wurde storniert. Der Auftrag steht wieder auf „Fertig“ – Sie können jetzt eine neue Rechnung erstellen."
