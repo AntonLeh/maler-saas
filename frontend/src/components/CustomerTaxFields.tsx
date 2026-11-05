@@ -32,12 +32,12 @@ export default function CustomerTaxFields({
         Bei Privatkunden enthält die Rechnung den Lohnanteil (§ 35a EStG) und den Hinweis zur Aufbewahrungspflicht.
       </small>
       {effectiveBusiness && (
-        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 10, fontWeight: 400 }}>
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: "flex-start", marginTop: 10, fontWeight: 400, textAlign: "left" }}>
           <input
             type="checkbox"
             checked={reverseCharge}
             onChange={(e) => onChange({ reverse_charge: e.target.checked })}
-            style={{ width: "auto", marginTop: 3 }}
+            style={{ width: "auto", flex: "none", marginTop: 3 }}
           />
           <span>
             Bauunternehmen – Rechnung ohne Umsatzsteuer (Steuerschuldnerschaft des Leistungsempfängers, § 13b UStG)
