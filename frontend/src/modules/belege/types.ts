@@ -73,6 +73,12 @@ export const TAX_RATES: Record<Country, number[]> = {
   CH: [8.1, 3.8, 2.6, 0],
 };
 
+export const COUNTRY_NAMES: Record<Country, string> = { DE: "Deutschland", AT: "Österreich", CH: "der Schweiz" };
+
+/** Satz gehört nicht zum Firmenland (z. B. 21 % aus Spanien) -> keine inländische Vorsteuer */
+export const isForeignRate = (rate: number | null, country: Country) =>
+  rate !== null && !TAX_RATES[country].some((r) => Math.abs(r - Number(rate)) < 0.01);
+
 export function countryCode(value: unknown): Country {
   const v = String(value ?? "").trim().toLowerCase();
   if (["at", "aut", "österreich", "oesterreich", "austria"].includes(v)) return "AT";

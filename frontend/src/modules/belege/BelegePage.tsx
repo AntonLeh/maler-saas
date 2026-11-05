@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import BelegForm from "./BelegForm";
 import type { Expense, ExpenseCategory, ExpensePeriod, OrderOption } from "./types";
-import { CATEGORY_LABELS, PAYMENT_LABELS, countryCode } from "./types";
+import { CATEGORY_LABELS, PAYMENT_LABELS, countryCode, isForeignRate } from "./types";
 import "../terminkalender/terminkalender.css";
 import "./belege.css";
 
@@ -90,6 +90,9 @@ export default function BelegePage({
   const visible = useMemo(() => (items ?? []).filter((e) => (showVoided || !e.voided) && (!category || e.category === category)), [items, showVoided, category]);
   const valid = visible.filter((e) => !e.voided);
   const sum = (k: "gross_amount" | "net_amount" | "tax_amount") => valid.reduce((a, e) => a + Number(e[k] || 0), 0);
+  // Vorsteuer nur mit inländischen Sätzen (oder „gemischt“); ausländische USt getrennt
+  const foreignTax = valid.filter((e) => isForeignRate(e.tax_rate, cc)).reduce((a, e) => a + Number(e.tax_amount || 0), 0);
+  const inputTax = sum("tax_amount") - foreignTax;
   const openCount = valid.filter((e) => !e.paid).length;
   const orderTitle = (id: number | null) => (id ? orders.find((o) => o.id === id)?.title ?? `Auftrag #${id}` : "");
 
@@ -213,7 +216,8 @@ export default function BelegePage({
           </div>
           <div>
             <span>Vorsteuer</span>
-            <strong>{fmt(sum("tax_amount"))}</strong>
+            <strong>{fmt(inputTax)}</strong>
+            {foreignTax > 0 && <small className="tk-muted">+ {fmt(foreignTax)} ausländische USt</small>}
           </div>
           <div>
             <span>Noch zu bezahlen</span>
@@ -264,7 +268,7 @@ export default function BelegePage({
                   <strong>{fmt(Number(e.gross_amount))}</strong>
                   <span className="tk-muted">
                     netto {fmt(Number(e.net_amount))} · VSt {fmt(Number(e.tax_amount))}
-                    {e.tax_rate !== null ? ` (${Number(e.tax_rate).toLocaleString("de-DE")} %)` : " (gemischt)"}
+                    {e.tax_rate !== null ? ` (${Number(e.tax_rate).toLocaleString("de-DE")} %${isForeignRate(e.tax_rate, cc) ? ", Ausland" : ""})` : " (gemischt)"}
                   </span>
                   <span className={`bl-paid${e.paid ? " yes" : ""}`}>
                     {e.paid ? `bezahlt${e.payment_method ? ` · ${PAYMENT_LABELS[e.payment_method]}` : ""}` : "offen"}

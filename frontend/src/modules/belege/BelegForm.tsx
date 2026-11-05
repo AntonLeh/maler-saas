@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Modal } from "../terminkalender/ui";
 import * as api from "./api";
 import type { Country, Expense, ExpenseCategory, ExpenseInput, OrderOption, PaymentMethod } from "./types";
-import { CATEGORY_LABELS, PAYMENT_LABELS, TAX_RATES, splitAmount } from "./types";
+import { CATEGORY_LABELS, COUNTRY_NAMES, PAYMENT_LABELS, TAX_RATES, isForeignRate, splitAmount } from "./types";
 
 const money = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parseAmount = (s: string) => Number(String(s).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
@@ -44,6 +44,10 @@ export default function BelegForm({
   const [description, setDescription] = useState(expense?.description ?? "");
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? "material");
   const [gross, setGross] = useState(expense ? money(Number(expense.gross_amount)) : "");
+  // vom Beleg erkannter Satz, der nicht zum Firmenland gehört (z. B. 21 % spanische IVA)
+  const [extraRate, setExtraRate] = useState<number | null>(
+    expense && expense.tax_rate !== null && !rates.some((r) => Math.abs(r - Number(expense.tax_rate)) < 0.01) ? Number(expense.tax_rate) : null
+  );
   const [rate, setRate] = useState<string>(expense ? (expense.tax_rate === null ? "mixed" : String(Number(expense.tax_rate))) : String(rates[0]));
   const [mixedTax, setMixedTax] = useState(expense && expense.tax_rate === null ? money(Number(expense.tax_amount)) : "");
   const [paid, setPaid] = useState(expense?.paid ?? true);
@@ -54,6 +58,7 @@ export default function BelegForm({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const rateValue = rate === "mixed" ? null : Number(rate);
+  const foreignRate = rateValue !== null && isForeignRate(rateValue, country);
   const grossValue = parseAmount(gross);
   const { net, tax } = splitAmount(Number.isFinite(grossValue) ? grossValue : 0, rateValue, parseAmount(mixedTax) || 0);
 
@@ -76,9 +81,9 @@ export default function BelegForm({
     if (typeof d.tax_rate === "number") {
       const known = rates.find((r) => Math.abs(r - Number(d.tax_rate)) < 0.01);
       if (known !== undefined) setRate(String(known));
-      else if (typeof d.tax_amount === "number") {
-        setRate("mixed");
-        setMixedTax(money(d.tax_amount));
+      else {
+        setExtraRate(Number(d.tax_rate));
+        setRate(String(Number(d.tax_rate)));
       }
       filled.push("Steuersatz");
     } else if (typeof d.tax_amount === "number") {
@@ -133,7 +138,7 @@ export default function BelegForm({
     if (!date) return setError("Bitte das Belegdatum angeben.");
     if (date > today()) return setError("Das Belegdatum liegt in der Zukunft.");
     if (!supplier.trim()) return setError("Bitte den Lieferanten angeben.");
-    if (!Number.isFinite(grossValue) || grossValue <= 0) return setError("Bitte einen gültigen Betrag (brutto) angeben.");
+    if (gross.trim() === "" || !Number.isFinite(grossValue) || grossValue < 0) return setError("Bitte einen gültigen Betrag (brutto) angeben.");
     if (rateValue === null && (parseAmount(mixedTax) < 0 || parseAmount(mixedTax) > grossValue)) return setError("Der Steuerbetrag ist ungültig.");
     const values: ExpenseInput = {
       receipt_date: date,
@@ -258,6 +263,9 @@ export default function BelegForm({
                   {r.toLocaleString("de-DE")} %
                 </option>
               ))}
+              {extraRate !== null && (
+                <option value={String(extraRate)}>{extraRate.toLocaleString("de-DE")} % (laut Beleg)</option>
+              )}
               <option value="mixed">gemischt / Betrag eingeben</option>
             </select>
           </label>
@@ -269,8 +277,17 @@ export default function BelegForm({
           </label>
         )}
         <p className="bl-split">
-          Netto <strong>{money(net)}</strong> · Vorsteuer <strong>{money(tax)}</strong>
+          Netto <strong>{money(net)}</strong> · {foreignRate ? "Steuer" : "Vorsteuer"} <strong>{money(tax)}</strong>
         </p>
+        {foreignRate && (
+          <p className="bl-hint">
+            {rateValue?.toLocaleString("de-DE")} % ist kein Steuersatz von {COUNTRY_NAMES[country]} – vermutlich ausländische Umsatzsteuer. Diese ist meist
+            nicht als Vorsteuer abziehbar und zählt deshalb in der Übersicht nicht zur Vorsteuer. Bitte im Zweifel mit dem Steuerberater klären.
+          </p>
+        )}
+        {gross.trim() !== "" && grossValue === 0 && (
+          <p className="bl-hint">Beleg über 0,00 € – wird nur zur Aufbewahrung abgelegt und zählt in den Summen nicht mit.</p>
+        )}
         <div className="tk-field-pair">
           <label className="tk-field">
             <span>Zahlungsart</span>

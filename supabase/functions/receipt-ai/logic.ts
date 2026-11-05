@@ -57,7 +57,7 @@ export function cleanResult(input: any): { ok: true; data: Record<string, unknow
   const supplier = String(input.supplier ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
   if (supplier) out.supplier = supplier;
   const gross = num(input.gross_amount);
-  if (gross !== null && gross > 0 && gross < 1_000_000) out.gross_amount = gross;
+  if (gross !== null && gross >= 0 && gross < 1_000_000) out.gross_amount = gross; // 0 € erlaubt (z. B. Gutschrift/kostenloser Monat – nur zur Aufbewahrung)
   const rate = num(input.tax_rate);
   if (rate !== null && rate >= 0 && rate <= 30) out.tax_rate = rate;
   const tax = num(input.tax_amount);
