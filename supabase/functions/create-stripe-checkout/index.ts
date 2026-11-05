@@ -63,7 +63,7 @@ serve(async (req) => {
       throw new Error("Kein Plan übergeben.");
     }
 
-    if (!["starter", "professional", "business"].includes(plan)) {
+    if (!["starter", "professional", "business", "enterprise"].includes(plan)) {
       throw new Error("Ungültiger Plan.");
     }
 
@@ -90,6 +90,47 @@ serve(async (req) => {
 
     const origin =
       req.headers.get("origin") || "http://localhost:5173";
+
+    // =====================================================
+    // TARIFWECHSEL bei bestehendem Stripe-Abo:
+    // bestehendes Abo umstellen (anteilige Verrechnung) statt ein zweites Abo anzulegen
+    // =====================================================
+    const { data: currentSub } = await supabase
+      .from("subscriptions")
+      .select("plan, status, stripe_subscription_id")
+      .eq("tenant_id", appUser.tenant_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (currentSub?.stripe_subscription_id) {
+      let stripeSub = null;
+      try {
+        stripeSub = await stripe.subscriptions.retrieve(currentSub.stripe_subscription_id);
+      } catch (_e) {
+        stripeSub = null; // Abo bei Stripe nicht (mehr) vorhanden -> normaler Checkout
+      }
+      if (stripeSub && ["active", "trialing", "past_due"].includes(stripeSub.status)) {
+        const item = stripeSub.items?.data?.[0];
+        if (!item) throw new Error("Das bestehende Abo hat keine Position.");
+        if (item.price?.id === priceId && currentSub.plan === plan) {
+          throw new Error("Das ist bereits Ihr aktueller Tarif.");
+        }
+        await stripe.subscriptions.update(stripeSub.id, {
+          items: [{ id: item.id, price: priceId }],
+          proration_behavior: "create_prorations",
+          metadata: { tenant_id: String(appUser.tenant_id), plan },
+        });
+        const { error: activateError } = await supabase.rpc("activate_subscription_plan", {
+          p_tenant_id: appUser.tenant_id,
+          p_plan: plan,
+        });
+        if (activateError) throw activateError;
+        await supabase.from("subscriptions").update({ stripe_price_id: priceId }).eq("tenant_id", appUser.tenant_id);
+        return new Response(JSON.stringify({ url: `${origin}/?stripe=success&changed=1`, changed: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

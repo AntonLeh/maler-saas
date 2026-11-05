@@ -222,6 +222,28 @@ serve(async (req) => {
       if (subscriptionUpdateError) {
         throw subscriptionUpdateError;
       }
+
+      // Tarif nachziehen, falls der Preis in Stripe geändert wurde (z. B. über das Kundenportal)
+      const newPriceId = subscription.items.data[0]?.price.id ?? null;
+      if (newPriceId && ["active", "trialing", "past_due"].includes(subscription.status)) {
+        const { data: row } = await supabase
+          .from("subscriptions")
+          .select("tenant_id, plan")
+          .eq("stripe_subscription_id", subscription.id)
+          .maybeSingle();
+        if (row) {
+          for (const p of ["starter", "professional", "business", "enterprise"]) {
+            const { data: pid } = await supabase.rpc("get_stripe_price_id_for_plan", { p_plan: p });
+            if (pid === newPriceId) {
+              if (row.plan !== p) {
+                const { error: actErr } = await supabase.rpc("activate_subscription_plan", { p_tenant_id: row.tenant_id, p_plan: p });
+                if (actErr) throw actErr;
+              }
+              break;
+            }
+          }
+        }
+      }
     }
 
     return new Response(

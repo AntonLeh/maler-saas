@@ -148,19 +148,26 @@ const canActivateCurrentTrialPlan =
   type="button"
   className="btn btn-primary"
   onClick={() => {
-    if (plan.id === "enterprise") {
-      window.location.href = "mailto:info@maler-saas.com?subject=Enterprise-Anfrage";
-      return;
+    // Bezahltes Abo: Tarif wird umgestellt (anteilige Verrechnung durch Stripe)
+    const paid = subscriptionStatus === "active" && !isTrialing;
+    if (paid && currentPlan && currentPlan !== plan.id) {
+      const order = ["starter", "professional", "business", "enterprise"];
+      const down = order.indexOf(plan.id) < order.indexOf(currentPlan);
+      const loseWebsite = currentPlan === "enterprise" && plan.id !== "enterprise";
+      const text =
+        `Ihren Tarif auf ${plan.name} (${plan.price}/Monat netto) umstellen?\n\n` +
+        `Die Umstellung gilt sofort. Die Differenz wird anteilig mit der nächsten Rechnung verrechnet${down ? " (Gutschrift)" : ""}.` +
+        (loseWebsite ? "\n\nAchtung: Firmen-Website, KI-Chat, Online-Terminbuchung, Stellenanzeigen und Fachkräfte-Pool gibt es nur in Enterprise – Ihre Website geht dann offline (die Inhalte bleiben gespeichert)." : "");
+      if (!window.confirm(text)) return;
     }
-
     onUpgrade?.(plan.id);
   }}
 >
-  {plan.id === "enterprise"
-    ? "Vertrieb kontaktieren"
-    : canActivateCurrentTrialPlan
+  {canActivateCurrentTrialPlan
       ? `${plan.name} jetzt aktivieren`
-      : "Plan wählen"}
+      : subscriptionStatus === "active" && !isTrialing && currentPlan && currentPlan !== plan.id
+        ? `Zu ${plan.name} wechseln`
+        : "Plan wählen"}
 </button>
 )}
           </div>
