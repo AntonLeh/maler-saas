@@ -11987,7 +11987,16 @@ const businessAdvisor = generateBusinessInsights();
 
     if (error) {
       console.error("Stripe Checkout Fehler:", error);
-      alert("Stripe Checkout konnte nicht gestartet werden.");
+      // genaue Meldung der Server-Funktion anzeigen (z. B. „Das ist bereits Ihr aktueller Tarif.“)
+      let detail = "";
+      try {
+        const ctx = (error as { context?: Response }).context;
+        const body = ctx ? await ctx.json() : null;
+        detail = body?.error ? String(body.error) : "";
+      } catch {
+        /* keine Details */
+      }
+      alert(`Stripe Checkout konnte nicht gestartet werden.${detail ? `\n\n${detail}` : ""}`);
       return;
     }
 
