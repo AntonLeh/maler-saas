@@ -869,6 +869,16 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const canEditOrders = isAdmin || isProjectManager;
   const canAssignOrders = isAdmin || isProjectManager;
 
+  // Hilfe-Chat (components/HelpChat) kann die Datenschutzerklärung öffnen
+  useEffect(() => {
+    const open = () => {
+      setCurrentPage("datenschutz");
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("malersaas:datenschutz", open);
+    return () => window.removeEventListener("malersaas:datenschutz", open);
+  }, []);
+
   useEffect(() => {
     const initAuth = async () => {
       setLoadingApp(true);

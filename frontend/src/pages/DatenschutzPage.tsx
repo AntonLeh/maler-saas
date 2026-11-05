@@ -18,7 +18,7 @@ export default function DatenschutzPage({
             </p>
 
             <p>
-              <strong>Stand: 4. November 2026</strong>
+              <strong>Stand: 5. November 2026</strong>
             </p>
           </div>
 
@@ -796,6 +796,22 @@ export default function DatenschutzPage({
             betrifft, erfolgt die Verarbeitung auf Grundlage des
             berechtigten Interesses an der Bearbeitung geschäftlicher
             Anfragen gemäß Artikel 6 Absatz 1 Buchstabe f DSGVO.
+          </p>
+
+          <p id="hilfe-chat">
+            Auf maler-saas.com und in der App gibt es einen
+            KI-Hilfe-Chat. Die eingegebenen Nachrichten werden zur
+            Erzeugung der Antworten an Anthropic (Anbieter des
+            KI-Modells Claude, USA) übermittelt. Bei angemeldeten Nutzern
+            werden dafür zusätzlich Name, Rolle, Unternehmensname und
+            Tarif verwendet, damit die Antworten zum Konto passen. Der
+            Verlauf wird bei uns gespeichert, um den Chat fortzusetzen,
+            Missbrauch zu verhindern und den Dienst zu verbessern, und
+            nach 90 Tagen automatisch gelöscht. Bitten Sie im Chat um
+            Kontakt, werden Ihre Angaben und der Verlauf per E-Mail (über
+            Brevo) an unser Support-Team geschickt. Bitte geben Sie im
+            Chat keine sensiblen Daten ein. Rechtsgrundlage ist Artikel 6
+            Absatz 1 Buchstabe b bzw. f DSGVO.
           </p>
         </section>
 
