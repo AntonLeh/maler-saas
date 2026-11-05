@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 type PricingPageProps = {
   currentPlan?: string;
@@ -89,6 +89,8 @@ export default function PricingPage({
   onBack,
   onUpgrade,
 }: PricingPageProps) {
+  // Rückmeldung nach dem Klick, bis die Stripe-Seite geladen ist (dauert einige Sekunden)
+  const [busyPlan, setBusyPlan] = useState<string | null>(null);
   return (
   <section className="single-page-section">
     <div className="page-topbar">
@@ -161,10 +163,17 @@ const canActivateCurrentTrialPlan =
         (loseWebsite ? "\n\nAchtung: Firmen-Website, KI-Chat, Online-Terminbuchung, Stellenanzeigen und Fachkräfte-Pool gibt es nur in Enterprise – Ihre Website geht dann offline (die Inhalte bleiben gespeichert)." : "");
       if (!window.confirm(text)) return;
     }
-    onUpgrade?.(plan.id);
+    setBusyPlan(plan.id);
+    // nach dem Neuzeichnen starten, damit „Wird geöffnet …“ sofort sichtbar ist
+    window.setTimeout(() => {
+      Promise.resolve(onUpgrade?.(plan.id)).finally(() => window.setTimeout(() => setBusyPlan(null), 8000));
+    }, 0);
   }}
+  disabled={busyPlan !== null}
 >
-  {canActivateCurrentTrialPlan
+  {busyPlan === plan.id
+    ? "Wird geöffnet …"
+    : canActivateCurrentTrialPlan
       ? `${plan.name} jetzt aktivieren`
       : subscriptionStatus === "active" && !isTrialing && currentPlan && currentPlan !== plan.id
         ? `Zu ${plan.name} wechseln`
