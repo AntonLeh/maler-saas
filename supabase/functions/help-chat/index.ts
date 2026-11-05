@@ -14,7 +14,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { SUPPORT_TOOL, cleanSupport, cutToSentence, planName, replyText, roleName, systemPrompt, toApiMessages } from "./prompt.ts";
+import { SUPPORT_TOOL, cleanSupport, cutToSentence, leaksPrice, planName, replyText, roleName, systemPrompt, toApiMessages } from "./prompt.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -209,6 +209,11 @@ serve(async (req) => {
         results.push({ type: "tool_result", tool_use_id: u.id, content: result });
       }
       messages = [...messages, { role: "assistant", content: data.content }, { role: "user", content: results }];
+    }
+    // Besucher: Preise nur, wenn der Besucher selbst einen genannt hat – sonst sicherer Ersatztext
+    if (mode === "public" && reply && leaksPrice(reply, history.filter((m: any) => m.role === "user").map((m: any) => String(m.text ?? "")))) {
+      console.warn("help-chat: Preis ohne Nachfrage entfernt");
+      reply = "Die Preise sehen Sie nach der kostenlosen Registrierung in der App unter „Preise & Pläne“. Sie können MalerSaaS vorher 14 Tage kostenlos und unverbindlich testen. Gern sage ich Ihnen, welcher Tarif zu Ihrem Betrieb passt.";
     }
     if (!reply) reply = sent ? "Vielen Dank! Ihre Anfrage ist bei unserem Team angekommen – wir melden uns per E-Mail." : FALLBACK;
     reply = reply.slice(0, 2500);
