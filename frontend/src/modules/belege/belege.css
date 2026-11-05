@@ -270,3 +270,106 @@
     width: 100%;
   }
 }
+
+/* ---------- Buchhaltung: Reiter + Umsatzsteuer ---------- */
+.bl-tabs {
+  margin: 4px 0 16px;
+}
+.ust-result {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--tk-border);
+  background: var(--tk-surface-2);
+  margin-bottom: 16px;
+  text-align: left;
+}
+.ust-result span {
+  font-size: 0.85rem;
+  color: var(--tk-muted);
+}
+.ust-result strong {
+  font-size: 1.35rem;
+}
+.ust-result small {
+  color: var(--tk-muted);
+}
+.ust-result.pay {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+.ust-result.refund {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+.ust-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.ust-box {
+  border: 1px solid var(--tk-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  text-align: left;
+}
+.ust-box h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+.ust-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.ust-table th,
+.ust-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--tk-border);
+  text-align: right;
+}
+.ust-table th:first-child,
+.ust-table td:first-child {
+  text-align: left;
+}
+.ust-table th {
+  font-size: 0.78rem;
+  color: var(--tk-muted);
+  font-weight: 600;
+}
+.ust-table tfoot td {
+  font-weight: 700;
+  border-bottom: 0;
+}
+.ust-elster {
+  margin-top: 14px;
+}
+.ust-elster td:nth-child(2) {
+  text-align: left;
+}
+.ust-kz {
+  white-space: nowrap;
+  font-weight: 700;
+  width: 64px;
+}
+.ust-detail {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.ust-detail li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+}
+@media (max-width: 760px) {
+  .ust-grid {
+    grid-template-columns: 1fr;
+  }
+}

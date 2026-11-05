@@ -44,7 +44,7 @@ import RechnungenPage from "./pages/RechnungenPage";
 import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import CustomerTaxFields from "./components/CustomerTaxFields";
-import { BelegeButton, BelegePage } from "./modules/belege";
+import { BelegeButton, BuchhaltungPage } from "./modules/belege";
 import { isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
@@ -12167,7 +12167,7 @@ const businessAdvisor = generateBusinessInsights();
 )}
 
 {currentPage === "belege" && isAdmin && userProfile?.tenant_id && (
-  <BelegePage
+  <BuchhaltungPage
     tenantId={userProfile.tenant_id}
     country={companySettings?.country}
     currencySymbol={companySettings?.currency_symbol}

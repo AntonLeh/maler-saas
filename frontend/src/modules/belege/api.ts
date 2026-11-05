@@ -1,6 +1,7 @@
 // Belege & Ausgaben – Datenzugriff
 import { supabase, supabaseUrl } from "../../lib/supabase";
 import type { AiResult, Expense, ExpenseInput, ExpensePeriod, OrderOption } from "./types";
+import type { TaxMethod, VatExpense, VatInvoice } from "./vat";
 
 const BUCKET = "receipts";
 const fail = (e: { message?: string } | null, fallback: string) => {
@@ -163,4 +164,52 @@ export async function recognize(path: string): Promise<AiResult> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) throw new Error(data.error || `Belegerkennung fehlgeschlagen (Status ${res.status}).`);
   return data.data ?? {};
+}
+
+// ---------------------------------------------------------------------
+// Umsatzsteuer-Übersicht
+// ---------------------------------------------------------------------
+
+export async function loadVatInvoices(tenantId: number): Promise<VatInvoice[]> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, invoice_number, invoice_date, paid_at, status, document_type, invoice_type, subtotal, tax_rate, tax_amount, total_amount, reverse_charge, cancels_invoice_id, customer_id")
+    .eq("tenant_id", tenantId)
+    .order("invoice_date", { ascending: true })
+    .limit(20000);
+  if (error) {
+    // vor dem Rechnungs-Update gibt es manche Spalten noch nicht
+    const { data: old, error: e2 } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, invoice_date, paid_at, status, invoice_type, subtotal, tax_rate, tax_amount, total_amount, customer_id")
+      .eq("tenant_id", tenantId)
+      .limit(20000);
+    fail(e2, "Rechnungen konnten nicht geladen werden.");
+    return (old ?? []) as VatInvoice[];
+  }
+  return (data ?? []) as VatInvoice[];
+}
+
+export async function loadVatExpenses(tenantId: number, from: string, to: string): Promise<VatExpense[]> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("id, receipt_date, supplier, net_amount, tax_amount, gross_amount, tax_rate, voided")
+    .eq("tenant_id", tenantId)
+    .gte("receipt_date", from)
+    .lte("receipt_date", to)
+    .order("receipt_date", { ascending: true });
+  fail(error, "Belege konnten nicht geladen werden.");
+  return (data ?? []) as VatExpense[];
+}
+
+export async function loadTaxMethod(tenantId: number): Promise<TaxMethod> {
+  const { data, error } = await supabase.from("company_settings").select("tax_method").eq("tenant_id", tenantId).maybeSingle();
+  if (error) return "soll";
+  return (data as { tax_method?: string } | null)?.tax_method === "ist" ? "ist" : "soll";
+}
+
+export async function saveTaxMethod(tenantId: number, method: TaxMethod) {
+  const { error } = await supabase.from("company_settings").update({ tax_method: method }).eq("tenant_id", tenantId);
+  if (error && /tax_method/.test(error.message)) throw new Error("Für die Versteuerungsart fehlt noch ein Datenbank-Update (20261105190000_umsatzsteuer.sql).");
+  fail(error, "Einstellung konnte nicht gespeichert werden.");
 }

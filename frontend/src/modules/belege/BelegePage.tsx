@@ -26,12 +26,14 @@ export default function BelegePage({
   aiAllowed,
   currencySymbol,
   onBack,
+  embedded = false,
 }: {
   tenantId: number;
   country?: string | null;
   aiAllowed: boolean;
   currencySymbol?: string | null;
   onBack: () => void;
+  embedded?: boolean;
 }) {
   const cc = countryCode(country);
   const [month, setMonth] = useState(monthNow());
@@ -148,19 +150,8 @@ export default function BelegePage({
     }
   };
 
-  return (
-    <section className="single-page-section tk-root bl-app">
-      <div className="card form-page-card tk-card">
-        <div className="page-topbar">
-          <div>
-            <h1>Belege &amp; Ausgaben</h1>
-            <p className="tk-muted">Eingangsrechnungen und Quittungen fotografieren, Aufträgen zuordnen und die Vorsteuer im Blick behalten.</p>
-          </div>
-          <button type="button" className="btn btn-secondary" onClick={onBack}>
-            Zurück zum Dashboard
-          </button>
-        </div>
-
+  const content = (
+    <>
         {error && <div className="tk-notice tk-notice-error">{error}</div>}
         {success && <div className="tk-notice tk-notice-success">{success}</div>}
 
@@ -319,7 +310,6 @@ export default function BelegePage({
           Belege werden geschützt gespeichert und können nicht gelöscht oder ausgetauscht werden (Aufbewahrungspflicht 10 Jahre). Fehlerfassungen
           markieren Sie als „ungültig“.
         </p>
-      </div>
 
       {form && (
         <BelegForm
@@ -336,6 +326,25 @@ export default function BelegePage({
           }}
         />
       )}
+    </>
+  );
+
+  // eingebettet in „Buchhaltung“ (Reiter) – ohne eigenen Rahmen
+  if (embedded) return content;
+  return (
+    <section className="single-page-section tk-root bl-app">
+      <div className="card form-page-card tk-card">
+        <div className="page-topbar">
+          <div>
+            <h1>Belege &amp; Ausgaben</h1>
+            <p className="tk-muted">Eingangsrechnungen und Quittungen fotografieren, Aufträgen zuordnen und die Vorsteuer im Blick behalten.</p>
+          </div>
+          <button type="button" className="btn btn-secondary" onClick={onBack}>
+            Zurück zum Dashboard
+          </button>
+        </div>
+        {content}
+      </div>
     </section>
   );
 }
