@@ -391,6 +391,29 @@ const valueX = 196;
 doc.setFontSize(9);
 doc.setFont("helvetica", "normal");
 
+// Rabatt aus dem Angebot (nur neue Rechnungen): Positionssumme -> Rabatt -> Auftragswert netto
+const quoteDiscount = Number(invoice?.snapshot?.quote?.discount_amount ?? 0);
+if (frozen && !isCancellation && quoteDiscount > 0) {
+  const itemsNet = Number(invoice?.snapshot?.quote?.subtotal ?? 0);
+  doc.text("Summe Positionen (netto):", labelX, y);
+  doc.text(formatMoney(itemsNet, currencySymbol), valueX, y, { align: "right" });
+  y += 7;
+  const discountType = invoice?.snapshot?.quote?.discount_type;
+  const discountValue = Number(invoice?.snapshot?.quote?.discount_value ?? 0);
+  doc.text(
+    discountType === "percent" && discountValue > 0
+      ? `Rabatt ${discountValue.toLocaleString("de-DE", { maximumFractionDigits: 2 })} %:`
+      : "Rabatt:",
+    labelX,
+    y
+  );
+  doc.text(`- ${formatMoney(quoteDiscount, currencySymbol)}`, valueX, y, { align: "right" });
+  y += 7;
+  doc.text("Auftragswert netto:", labelX, y);
+  doc.text(formatMoney(itemsNet - quoteDiscount, currencySymbol), valueX, y, { align: "right" });
+  y += 12;
+}
+
 if (isPartialInvoice && !isCancellation) {
   const baseAmount = Number(invoice?.base_amount ?? 0);
   const partialAmount = Number(invoice?.total_amount ?? 0);
