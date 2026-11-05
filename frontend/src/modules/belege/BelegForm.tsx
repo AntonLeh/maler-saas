@@ -321,9 +321,9 @@ export default function BelegForm({
                   setRateNote("");
                 } else if (origAmount.trim() !== "") void convert(parseAmount(origAmount), cur, date);
                 else if (gross.trim() !== "") {
-                  // bisher eingetragener Betrag war vermutlich der Betrag laut Beleg
+                  // bisher eingetragene Beträge waren vermutlich die Beträge laut Beleg -> beide umrechnen
                   setOrigAmount(gross);
-                  void convert(parseAmount(gross), cur, date);
+                  void convert(parseAmount(gross), cur, date, rate === "mixed" && mixedTax.trim() !== "" ? parseAmount(mixedTax) : undefined);
                 }
               }}
             >
