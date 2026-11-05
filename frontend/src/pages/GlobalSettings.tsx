@@ -9,6 +9,8 @@ type CompanySettings = {
   currency: string;
   currency_symbol: string | null;
   tax_rate_default: number;
+  country?: string | null;
+  labor_share_percent?: number | null;
   payment_term_days: number;
   partial_payment_term_days: number;
   default_hourly_rate: number | null;
@@ -41,6 +43,20 @@ created_at: string;
 updated_at: string;
 };
 
+const COUNTRY_PRESETS: Record<string, { tax: number; currency: string; symbol: string }> = {
+  Deutschland: { tax: 19, currency: "EUR", symbol: "€" },
+  Österreich: { tax: 20, currency: "EUR", symbol: "€" },
+  Schweiz: { tax: 8.1, currency: "CHF", symbol: "CHF" },
+};
+
+/** Freitext aus der Registrierung („Deutschland“, „DE“, „Austria“ …) auf die Auswahl abbilden */
+function normalizeCountry(value: unknown): string {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (["at", "aut", "österreich", "oesterreich", "austria"].includes(v)) return "Österreich";
+  if (["ch", "che", "schweiz", "switzerland", "suisse", "svizzera"].includes(v)) return "Schweiz";
+  return "Deutschland";
+}
+
 type AdditionalQuotePosition = {
   id: number;
   tenant_id: number;
@@ -70,6 +86,8 @@ GlobalSettingsProps) {
   const [defaultCustomerHourlyRate, setDefaultCustomerHourlyRate] = useState("0");
   const [defaultSpecialHourlyRate, setDefaultSpecialHourlyRate] = useState("0");
   const [taxRateDefault, setTaxRateDefault] = useState("19");
+  const [country, setCountry] = useState("Deutschland");
+  const [laborShare, setLaborShare] = useState("70");
   const [paymentTermDays, setPaymentTermDays] = useState("14");
   const [partialPaymentTermDays, setPartialPaymentTermDays] = useState("14");
   const [companyName, setCompanyName] = useState("");
@@ -155,6 +173,8 @@ setDefaultSpecialHourlyRate(
     : "0"
 );
 
+setCountry(normalizeCountry(loadedSettings.country));
+setLaborShare(String(loadedSettings.labor_share_percent ?? 70));
 setTaxRateDefault(
   loadedSettings.tax_rate_default !== null &&
     loadedSettings.tax_rate_default !== undefined
@@ -201,6 +221,8 @@ setQuoteTermsText(loadedSettings.quote_terms_text || "");
         setDefaultCustomerHourlyRate("0");
         setDefaultSpecialHourlyRate("0");
         setTaxRateDefault("19");
+        setCountry("Deutschland");
+        setLaborShare("70");
         setCompanyName("");
         setCompanyStreet("");
         setCompanyZip("");
@@ -410,6 +432,12 @@ if (
       return;
     }
 
+    const laborShareValue = Number(String(laborShare).replace(",", "."));
+    if (Number.isNaN(laborShareValue) || laborShareValue < 0 || laborShareValue > 100) {
+      setErrorMessage("Der Lohnanteil muss zwischen 0 und 100 % liegen.");
+      return;
+    }
+
     const payload = {
       tenant_id: tenantId,
       currency: currency.trim() || "EUR",
@@ -419,6 +447,9 @@ if (
       default_customer_hourly_rate: customerHourlyRateValue,
       default_special_hourly_rate: specialHourlyRateValue,
       tax_rate_default: taxRateValue,
+      country,
+      // erst nach dem Datenbank-Update vorhanden
+      ...(settings && "labor_share_percent" in settings ? { labor_share_percent: laborShareValue } : {}),
       payment_term_days: paymentTermDaysValue,
       partial_payment_term_days: partialPaymentTermDaysValue,
       company_name: companyName.trim(),
@@ -469,6 +500,8 @@ if (
     );
     setDefaultSpecialHourlyRate(String(savedSettings.default_special_hourly_rate ?? 0));
     setTaxRateDefault(String(savedSettings.tax_rate_default ?? 19));
+    setCountry(normalizeCountry(savedSettings.country));
+    setLaborShare(String(savedSettings.labor_share_percent ?? 70));
 
     setCompanyName(savedSettings.company_name || "");
     setCompanyStreet(savedSettings.street || "");
@@ -612,6 +645,51 @@ if (
     placeholder="0.00"
   />
 </div>
+
+<div className="form-group">
+  <label htmlFor="companyCountry">Firmenland</label>
+  <select
+    id="companyCountry"
+    value={country}
+    onChange={(e) => {
+      const next = e.target.value;
+      setCountry(next);
+      const preset = COUNTRY_PRESETS[next];
+      if (preset && window.confirm(`Steuersatz und Währung für ${next} übernehmen (${preset.tax} %, ${preset.symbol})?`)) {
+        setTaxRateDefault(String(preset.tax));
+        setCurrency(preset.currency);
+        setCurrencySymbol(preset.symbol);
+      }
+    }}
+  >
+    <option value="Deutschland">Deutschland</option>
+    <option value="Österreich">Österreich</option>
+    <option value="Schweiz">Schweiz</option>
+  </select>
+  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+    Danach richten sich die Pflichthinweise auf den Rechnungen.
+  </small>
+</div>
+
+{country === "Deutschland" && (
+  <div className="form-group">
+    <label htmlFor="laborShare">Standard-Lohnanteil für Privatkunden (%)</label>
+    <input
+      id="laborShare"
+      type="number"
+      step="1"
+      min="0"
+      max="100"
+      value={laborShare}
+      onChange={(e) => setLaborShare(e.target.value)}
+      placeholder="70"
+    />
+    <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+      Anteil der Arbeitskosten am Rechnungsbetrag. Wird auf Rechnungen an Privatkunden für den Steuerabzug nach § 35a EStG ausgewiesen und
+      kann beim Erstellen jeder Rechnung angepasst werden.
+    </small>
+  </div>
+)}
 
 <div className="form-group">
   <label htmlFor="taxRateDefault">Standard-MwSt (%)</label>

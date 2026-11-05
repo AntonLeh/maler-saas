@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { generateInvoicePdf } from "../lib/invoicePdf";
+import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 import { generateReminderPdf } from "../lib/reminderPdf";
 
 type InvoiceReminder = {
@@ -34,6 +34,18 @@ type Invoice = {
   total_amount: number;
   status: string;
   paid_at: string | null;
+  // ab dem Update „rechtssichere Rechnungen“
+  document_type?: "invoice" | "cancellation";
+  snapshot?: Record<string, unknown> | null;
+  cancels_invoice_id?: number | null;
+  cancelled_by_invoice_id?: number | null;
+  cancel_reason?: string | null;
+  reverse_charge?: boolean;
+  is_private_customer?: boolean | null;
+  labor_amount?: number | null;
+  labor_share_percent?: number | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
 };
 
 type UserProfile = {
@@ -103,6 +115,12 @@ export default function InvoicesPage({ onBack, userProfile }: InvoicesPageProps)
   };
 
     const handleCreatePdf = async (invoice: Invoice) => {
+    // Neue Rechnungen: nur die beim Erstellen eingefrorenen Angaben verwenden (GoBD)
+    const frozen = snapshotSources(invoice);
+    if (frozen) {
+      generateInvoicePdf({ invoice, ...frozen });
+      return;
+    }
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
@@ -318,6 +336,31 @@ const handleMarkReminderSent = async (
   await loadInvoices();
 };
 
+const handleCancelInvoice = async (invoice: Invoice) => {
+  const reason = window.prompt(
+    `Rechnung ${invoice.invoice_number} stornieren?\n\nEs wird eine Stornorechnung mit eigener Nummer erstellt. Danach können Sie eine neue, korrigierte Rechnung erstellen. Das lässt sich nicht rückgängig machen.\n\nGrund (optional, erscheint auf der Stornorechnung):`,
+    ""
+  );
+  if (reason === null) return;
+
+  const { data, error } = await supabase.rpc("cancel_invoice", {
+    p_invoice_id: invoice.id,
+    p_reason: reason.trim() || null,
+  });
+  if (error) {
+    console.error("Fehler beim Stornieren:", error);
+    alert(error.message || "Die Rechnung konnte nicht storniert werden.");
+    return;
+  }
+  await loadInvoices();
+  alert(
+    invoice.invoice_type === "final"
+      ? "Die Rechnung wurde storniert. Der Auftrag steht wieder auf „Fertig“ – Sie können jetzt eine neue Rechnung erstellen."
+      : "Die Rechnung wurde storniert."
+  );
+  console.log("Stornorechnung ID:", data);
+};
+
 const handleMarkInvoicePaid = async (invoice: Invoice) => {
   const confirmed = window.confirm(
     `Möchten Sie die Rechnung ${invoice.invoice_number} als bezahlt markieren?`
@@ -411,6 +454,17 @@ const getInvoiceReminders = (invoiceId: number) => {
                     <td>
   <strong>{invoice.invoice_number}</strong>
 
+  {invoice.document_type === "cancellation" && (
+    <div>
+      <span className="invoice-partial-badge">
+        Stornorechnung
+        {invoices.find((i) => i.id === invoice.cancels_invoice_id)
+          ? ` zu ${invoices.find((i) => i.id === invoice.cancels_invoice_id)?.invoice_number}`
+          : ""}
+      </span>
+    </div>
+  )}
+
   {invoice.invoice_type === "partial" && (
   <div>
     <span className="invoice-partial-badge">
@@ -475,6 +529,10 @@ const getInvoiceReminders = (invoiceId: number) => {
       ? "Bezahlt"
       : invoice.status === "credited"
       ? "In Schlussrechnung übernommen"
+      : invoice.status === "cancelled"
+      ? invoice.document_type === "cancellation"
+        ? "Storno"
+        : "Storniert"
       : invoice.status}
   </span>
 
@@ -510,6 +568,17 @@ const getInvoiceReminders = (invoiceId: number) => {
     Als bezahlt markieren
   </button>
 )} 
+
+   {invoice.document_type !== "cancellation" &&
+    (invoice.status === "open" || invoice.status === "paid") && (
+  <button
+    type="button"
+    className="btn btn-secondary"
+    onClick={() => handleCancelInvoice(invoice)}
+  >
+    Stornieren
+  </button>
+)}
 
    {invoice.status === "open" && (() => {
   const reminders = getInvoiceReminders(invoice.id);

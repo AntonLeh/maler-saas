@@ -36,6 +36,70 @@ const formatDate = (value: string | null | undefined) => {
   });
 };
 
+/** Firmenland aus den Einstellungen (Freitext) -> DE | AT | CH */
+export const countryCode = (value: unknown): "DE" | "AT" | "CH" => {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (["at", "aut", "österreich", "oesterreich", "austria"].includes(v)) return "AT";
+  if (["ch", "che", "schweiz", "switzerland", "suisse", "svizzera"].includes(v)) return "CH";
+  return "DE";
+};
+
+const vatIdLabel = (country: "DE" | "AT" | "CH") => (country === "AT" ? "UID-Nr." : country === "CH" ? "MWST-Nr." : "USt-IdNr.");
+
+/** Hinweise unter der Summe (nur für Rechnungen mit eingefrorenen Angaben) */
+export function legalNotes(invoice: any, country: "DE" | "AT" | "CH", currencySymbol: string): string[] {
+  const notes: string[] = [];
+  if (invoice?.reverse_charge) {
+    notes.push(
+      country === "AT"
+        ? "Übergang der Steuerschuld auf den Leistungsempfänger gemäß § 19 Abs. 1a UStG (Bauleistungen)."
+        : "Steuerschuldnerschaft des Leistungsempfängers gemäß § 13b UStG."
+    );
+  }
+  if (country === "DE" && invoice?.is_private_customer && invoice?.document_type !== "cancellation") {
+    if (invoice?.labor_amount != null && Number(invoice.labor_amount) > 0) {
+      notes.push(
+        `Im Rechnungsbetrag enthaltene Arbeitskosten (§ 35a EStG): ${formatMoney(invoice.labor_amount, currencySymbol)} inkl. USt (${Number(
+          invoice.labor_share_percent ?? 0
+        ).toLocaleString("de-DE", { maximumFractionDigits: 2 })} % des Rechnungsbetrags).`
+      );
+    }
+    notes.push(
+      "Hinweis: Sie sind gesetzlich verpflichtet, diese Rechnung, einen Zahlungsbeleg oder eine andere beweiskräftige Unterlage zwei Jahre lang aufzubewahren (§ 14b Abs. 1 Satz 5 UStG)."
+    );
+  }
+  return notes;
+}
+
+/** Leistungszeitraum als Text */
+export function servicePeriodText(invoice: any): string | null {
+  const start = invoice?.service_period_start;
+  const end = invoice?.service_period_end;
+  if (!start && !end) return null;
+  const label = invoice?.invoice_type === "partial" ? "Voraussichtlicher Leistungszeitraum" : start && end && start !== end ? "Leistungszeitraum" : "Leistungsdatum";
+  if (start && end && start !== end) return `${label}: ${formatDate(start)} – ${formatDate(end)}`;
+  return `${label}: ${formatDate(end ?? start)}`;
+}
+
+/** Eingefrorene Angaben einer Rechnung (null = alte Rechnung, Daten wie bisher live laden) */
+export function snapshotSources(invoice: any): Omit<InvoicePdfParams, "invoice" | "currencySymbol"> & { currencySymbol: string } | null {
+  const snap = invoice?.snapshot;
+  if (!snap || typeof snap !== "object") return null;
+  const company = snap.company ?? {};
+  return {
+    invoiceItems: Array.isArray(snap.items) ? snap.items : [],
+    order: snap.order ?? null,
+    customer: snap.customer ?? null,
+    companySettings: company,
+    // Abschläge, die bei Erstellung noch offen waren, sind in der Schlussrechnung aufgegangen
+    partialInvoices: (Array.isArray(snap.partials) ? snap.partials : []).map((p: any) => ({
+      ...p,
+      status: p.status === "paid" ? "paid" : "credited",
+    })),
+    currencySymbol: company.currency_symbol || "€",
+  };
+}
+
 const getInvoiceNumber = (invoice: any) => {
   return (
     invoice?.invoice_number ??
@@ -62,6 +126,11 @@ export function generateInvoicePdf({
   const marginRight = 14;
 
   const invoiceNumber = getInvoiceNumber(invoice);
+  // Neue Rechnungen (mit eingefrorenen Angaben) bekommen die Pflichtangaben; alte bleiben wie bisher
+  const frozen = !!invoice?.snapshot;
+  const isCancellation = invoice?.document_type === "cancellation";
+  const country = countryCode(companySettings?.country);
+  const cancelsRef = invoice?.snapshot?.cancels ?? null;
 
   const companyName =
     companySettings?.company_name ??
@@ -100,10 +169,12 @@ const isFinalInvoiceWithPartials =
     Number(invoice?.open_partial_amount ?? 0) > 0
   );
 
-doc.setFontSize(isPartialInvoice || isFinalInvoiceWithPartials ? 20 : 24);
+doc.setFontSize(isCancellation || isPartialInvoice || isFinalInvoiceWithPartials ? 20 : 24);
 doc.setFont("helvetica", "bold");
 
-const documentTitle = isPartialInvoice
+const documentTitle = isCancellation
+  ? "STORNORECHNUNG"
+  : isPartialInvoice
   ? "ABSCHLAGSRECHNUNG"
   : isFinalInvoiceWithPartials
   ? "SCHLUSSRECHNUNG"
@@ -126,12 +197,14 @@ doc.text(
     33,
     { align: "right" }
   );
-  doc.text(
-    `Fällig bis: ${formatDate(invoice?.due_date)}`,
-    pageWidth - marginRight,
-    39,
-    { align: "right" }
-  );
+  if (!isCancellation) {
+    doc.text(
+      `Fällig bis: ${formatDate(invoice?.due_date)}`,
+      pageWidth - marginRight,
+      39,
+      { align: "right" }
+    );
+  }
 
   // Linie
   doc.setLineWidth(0.3);
@@ -176,20 +249,21 @@ doc.text(
     }`.trim(),
   ].filter(Boolean);
 
-  doc.text(
-    orderAddressLines.length > 0
-      ? orderAddressLines
-      : [`Auftrag-ID: ${invoice?.order_id ?? "-"}`],
-    112,
-    66
-  );
+  const orderLines = orderAddressLines.length > 0 ? orderAddressLines : [`Auftrag-ID: ${invoice?.order_id ?? "-"}`];
+  doc.text(orderLines, 112, 66);
+  const periodText = frozen ? servicePeriodText(invoice) : null;
+  if (periodText) {
+    doc.text(periodText, 112, 66 + orderLines.length * 4.5 + 1);
+  }
 
   // Einleitung
   let y = 92;
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  const invoiceHeading = isPartialInvoice
+  const invoiceHeading = isCancellation
+  ? "Stornorechnung"
+  : isPartialInvoice
   ? "Abschlagsrechnung"
   : isFinalInvoiceWithPartials
   ? "Schlussrechnung"
@@ -206,7 +280,13 @@ doc.text(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
 
-  const introText = isPartialInvoice
+  const introText = isCancellation
+  ? `Hiermit stornieren wir die Rechnung ${cancelsRef?.invoice_number ?? ""}${
+      cancelsRef?.invoice_date ? ` vom ${formatDate(cancelsRef.invoice_date)}` : ""
+    } vollständig. Der Rechnungsbetrag wird mit dieser Stornorechnung aufgehoben.${
+      invoice?.cancel_reason ? ` Grund: ${invoice.cancel_reason}` : ""
+    }`
+  : isPartialInvoice
   ? `Gemäß der vereinbarten Zahlungsregelung berechnen wir mit dieser Abschlagsrechnung ${
       invoice?.partial_type === "percent"
         ? `${Number(invoice?.partial_value ?? 0).toLocaleString("de-DE", {
@@ -236,12 +316,13 @@ doc.text(
   y += introLines.length * 5 + 6;
 
   // Positionen / Summen
-   const tableRows =
-    invoiceItems.length > 0
+   const tableRows = isCancellation
+    ? [["-", `Storno der Rechnung ${cancelsRef?.invoice_number ?? ""}`.trim(), "1,00", formatMoney(invoice?.subtotal, currencySymbol), formatMoney(invoice?.subtotal, currencySymbol)]]
+    : invoiceItems.length > 0
       ? invoiceItems.map((item: any) => {
           const quantity = Number(item.quantity ?? 0);
           const unitPrice = Number(item.unit_price ?? 0);
-          const total = Number(item.total_price ?? quantity * unitPrice);
+          const total = Number(item.total_price ?? item.line_total ?? quantity * unitPrice);
 
           const parts = String(item.title ?? "").split("–");
           const area =
@@ -310,7 +391,7 @@ const valueX = 196;
 doc.setFontSize(9);
 doc.setFont("helvetica", "normal");
 
-if (isPartialInvoice) {
+if (isPartialInvoice && !isCancellation) {
   const baseAmount = Number(invoice?.base_amount ?? 0);
   const partialAmount = Number(invoice?.total_amount ?? 0);
   const remainingAmount = Math.max(baseAmount - partialAmount, 0);
@@ -354,7 +435,7 @@ if (isPartialInvoice) {
   doc.setFont("helvetica", "normal");
 }
 
-if (isFinalInvoiceWithPartials) {
+if (isFinalInvoiceWithPartials && !isCancellation) {
   const baseAmount = Number(invoice?.base_amount ?? 0);
   const paidPartialAmount = Number(invoice?.paid_partial_amount ?? 0);
   const openPartialAmount = Number(invoice?.open_partial_amount ?? 0);
@@ -449,26 +530,48 @@ doc.text(formatMoney(invoice?.subtotal, currencySymbol), valueX, y, {
 
 y += 7;
 
-doc.text(
-  `MwSt. ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`,
-  labelX,
-  y
-);
+if (frozen && invoice?.reverse_charge) {
+  doc.text(country === "AT" ? "USt. (Reverse Charge):" : "USt. (§ 13b UStG):", labelX, y);
+  doc.text("entfällt", valueX, y, { align: "right" });
+} else {
+  doc.text(
+    `MwSt. ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`,
+    labelX,
+    y
+  );
 
-doc.text(formatMoney(invoice?.tax_amount, currencySymbol), valueX, y, {
-  align: "right",
-});
+  doc.text(formatMoney(invoice?.tax_amount, currencySymbol), valueX, y, {
+    align: "right",
+  });
+}
 
 y += 9;
 
 doc.setFontSize(12);
 doc.setFont("helvetica", "bold");
 
-doc.text("Zu zahlen:", labelX, y);
+doc.text(isCancellation ? "Gesamt (Storno):" : "Zu zahlen:", labelX, y);
 
 doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
   align: "right",
 });
+
+// Pflichthinweise (§ 13b / § 35a / § 14b)
+const notes = frozen ? legalNotes(invoice, country, currencySymbol) : [];
+if (notes.length) {
+  y += 12;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  for (const note of notes) {
+    const lines = doc.splitTextToSize(note, pageWidth - marginLeft - marginRight);
+    if (y + lines.length * 4 > 270) {
+      doc.addPage();
+      y = 30;
+    }
+    doc.text(lines, marginLeft, y);
+    y += lines.length * 4 + 2;
+  }
+}
 
   // Seitenfuß
   const pageCount = doc.getNumberOfPages();
@@ -484,7 +587,7 @@ doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
     companySettings?.tax_number
       ? `Steuernummer: ${companySettings.tax_number}`
       : "",
-    companySettings?.vat_id ? `MwSt-Nr.: ${companySettings.vat_id}` : "",
+    companySettings?.vat_id ? `${frozen ? vatIdLabel(country) : "MwSt-Nr."}: ${companySettings.vat_id}` : "",
   ].filter(Boolean);
 
   const footerRight = [
@@ -527,5 +630,5 @@ doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
     doc.setTextColor(0);
   }
 
-  doc.save(`Rechnung-${invoiceNumber}.pdf`);
+  doc.save(`${isCancellation ? "Stornorechnung" : "Rechnung"}-${invoiceNumber}.pdf`);
 }

@@ -43,6 +43,8 @@ import MaterialverwaltungPage from "./pages/MaterialverwaltungPage";
 import RechnungenPage from "./pages/RechnungenPage";
 import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
+import CustomerTaxFields from "./components/CustomerTaxFields";
+import { isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
@@ -106,6 +108,8 @@ type Customer = {
   discount_type?: "percent" | "amount";
   discount_value?: number | null;
   discount_note?: string | null;
+  is_business?: boolean | null;
+  reverse_charge?: boolean;
 };
 
 type Order = {
@@ -168,6 +172,8 @@ type CustomerFormData = {
   discount_type: "percent" | "amount";
   discount_value: string;
   discount_note: string;
+  customer_kind: CustomerKind;
+  reverse_charge: boolean;
 };
 
 type OrderFormData = {
@@ -253,6 +259,8 @@ type CompanySettings = {
   default_internal_hourly_rate: number | null;
   default_customer_hourly_rate: number | null;
   default_material_markup: number | null;
+  labor_share_percent?: number | null;
+  country?: string | null;
   logo_url: string | null;
   primary_color: string | null;
   created_at: string;
@@ -708,6 +716,8 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
     discount_type: "percent",
     discount_value: "",
     discount_note: "",
+    customer_kind: "auto",
+    reverse_charge: false,
   });
 
   if (window.location.pathname === "/customer-view") {
@@ -1024,6 +1034,8 @@ initializedUserIdRef.current = session.user.id;
       discount_type: "percent",
       discount_value: "",
       discount_note: "",
+      customer_kind: "auto",
+      reverse_charge: false,
     });
   };
 
@@ -3373,17 +3385,46 @@ const handleReturnOrderToWork = async (orderId: string | number) => {
   return data;
 };
 
+/**
+ * § 35a EStG: Bei Privatkunden (Deutschland) den Lohnanteil abfragen.
+ * undefined = abgebrochen, null = keine Abfrage nötig (Firma/§ 13b/anderes Land), Zahl = Anteil in %
+ */
+const askLaborShare = (orderId: string | number): number | null | undefined => {
+  const order = orders.find((o) => String(o.id) === String(orderId));
+  const customer = customers.find((c) => String(c.id) === String(order?.customer_id));
+  const country = String(companySettings?.country ?? "Deutschland").trim().toLowerCase();
+  const isGermany = !["at", "österreich", "oesterreich", "austria", "ch", "schweiz", "switzerland"].includes(country);
+  if (!customer || !isGermany) return null;
+  const isBusiness = customer.reverse_charge || (customer.is_business ?? !!String(customer.company_name ?? "").trim());
+  if (isBusiness) return null;
+  const standard = Number(companySettings?.labor_share_percent ?? 70);
+  for (;;) {
+    const answer = window.prompt(
+      `Privatkunde: Wie hoch ist der Anteil der Arbeitskosten (Lohnanteil) am Rechnungsbetrag in %?\n\nDer Betrag wird für den Steuerabzug nach § 35a EStG auf der Rechnung ausgewiesen. Standard aus den Einstellungen: ${standard} %.`,
+      String(standard)
+    );
+    if (answer === null) return undefined;
+    const value = Number(answer.replace(",", ".").replace("%", "").trim());
+    if (Number.isFinite(value) && value >= 0 && value <= 100) return value;
+    window.alert("Bitte eine Zahl zwischen 0 und 100 eingeben.");
+  }
+};
+
 const handleCreateInvoice = async (orderId: string | number) => {
   if (!userProfile) return;
 
   const confirmCreate = window.confirm(
-    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?"
+    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?\n\nHinweis: Eine erstellte Rechnung kann nicht mehr geändert werden – nur noch storniert."
   );
 
   if (!confirmCreate) return;
 
+  const laborShare = askLaborShare(orderId);
+  if (laborShare === undefined) return;
+
   const { data, error } = await supabase.rpc("create_invoice_from_order", {
     p_order_id: Number(orderId),
+    ...(laborShare !== null ? { p_labor_share: laborShare } : {}),
   });
 
   if (error) {
@@ -3415,9 +3456,13 @@ const handleCreatePartialInvoice = async (
 ) => {
   if (!userProfile) return;
 
-  if (subscription?.plan !== "business") {
+  const partialAllowed =
+    subscription?.status === "trialing" ||
+    subscription?.plan === "business" ||
+    subscription?.plan === "enterprise";
+  if (!partialAllowed) {
   alert(
-    "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen."
+    "Abschlagsrechnungen sind ab dem Tarif Business verfügbar. Bitte wechseln Sie den Tarif, um diese Funktion zu nutzen."
   );
   return;
 }
@@ -3428,10 +3473,14 @@ const handleCreatePartialInvoice = async (
 
   if (!confirmCreate) return;
 
+  const laborShare = askLaborShare(orderId);
+  if (laborShare === undefined) return;
+
   const { data, error } = await supabase.rpc(
     "create_partial_invoice_from_order",
     {
       p_order_id: Number(orderId),
+      ...(laborShare !== null ? { p_labor_share: laborShare } : {}),
     }
   );
 
@@ -4736,6 +4785,8 @@ const openEmployeeOrders = () => {
         discount_type: customer.discount_type || "percent",
         discount_value: customer.discount_value ? String(customer.discount_value) : "",
         discount_note: customer.discount_note || "",
+        customer_kind: kindFromCustomer(customer.is_business),
+        reverse_charge: customer.reverse_charge === true,
       });
 
       setCurrentPage("edit-customer");
@@ -4849,6 +4900,8 @@ const openEmployeeOrders = () => {
           ? Number(customerForm.discount_value)
           : 0,
         discount_note: customerForm.discount_note.trim() || null,
+        is_business: isBusinessFromKind(customerForm.customer_kind),
+        reverse_charge: customerForm.customer_kind !== "private" && customerForm.reverse_charge,
       };
 
       const { error } = await supabase.from("customers").insert([newCustomer]);
@@ -4899,6 +4952,8 @@ const openEmployeeOrders = () => {
           ? Number(customerForm.discount_value)
           : 0,
         discount_note: customerForm.discount_note.trim() || null,
+        is_business: isBusinessFromKind(customerForm.customer_kind),
+        reverse_charge: customerForm.customer_kind !== "private" && customerForm.reverse_charge,
       };
 
       const { error } = await supabase
@@ -10891,6 +10946,13 @@ const businessAdvisor = generateBusinessInsights();
                         />
                       </div>
 
+                      <CustomerTaxFields
+                        kind={customerForm.customer_kind}
+                        reverseCharge={customerForm.reverse_charge}
+                        companyName={customerForm.company_name}
+                        onChange={(values) => setCustomerForm((prev) => ({ ...prev, ...values }))}
+                      />
+
                       <div className="form-row two-cols">
                         <div className="form-group">
                           <label>Vorname</label>
@@ -11068,6 +11130,13 @@ const businessAdvisor = generateBusinessInsights();
                           onChange={handleCustomerChange}
                         />
                       </div>
+
+                      <CustomerTaxFields
+                        kind={customerForm.customer_kind}
+                        reverseCharge={customerForm.reverse_charge}
+                        companyName={customerForm.company_name}
+                        onChange={(values) => setCustomerForm((prev) => ({ ...prev, ...values }))}
+                      />
                       <div className="form-row two-cols">
                         <div className="form-group">
                           <label>Vorname</label>

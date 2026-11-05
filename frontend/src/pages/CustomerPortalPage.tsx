@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { generateQuotePdf } from "../lib/quotePdf";
-import { generateInvoicePdf } from "../lib/invoicePdf";
+import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 
 type PortalData = {
   quote?: any;
@@ -483,7 +483,12 @@ export default function CustomerPortalPage() {
     <button
   type="button"
   className="btn btn-secondary"
-  onClick={() =>
+  onClick={() => {
+    const frozen = snapshotSources(invoice);
+    if (frozen) {
+      generateInvoicePdf({ invoice, ...frozen });
+      return;
+    }
     generateInvoicePdf({
       invoice,
       invoiceItems: quoteItems || [],
@@ -491,8 +496,8 @@ export default function CustomerPortalPage() {
       customer,
       companySettings,
       currencySymbol: companySettings.currency_symbol || "CHF",
-    })
-  }
+    });
+  }}
 >
   📄 PDF-Rechnung ansehen
 </button>
