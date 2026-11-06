@@ -29,7 +29,14 @@ export function cleanFileName(v: unknown): string | null {
 }
 
 /** Text der E-Mail (vom Nutzer bearbeitbar) als einfaches HTML */
-export function bodyHtml(text: string, footer: string[]): string {
+/** Nur öffentliche https-Bild-URLs als Logo zulassen */
+export function logoUrl(v: unknown): string | null {
+  const u = String(v ?? "").trim();
+  if (!/^https:\/\/[^\s"'<>]+$/i.test(u) || u.length > 1000) return null;
+  return u;
+}
+
+export function bodyHtml(text: string, footer: string[], logo?: { url: string | null; alt: string }): string {
   const paras = text
     .replace(/\r\n/g, "\n")
     .trim()
@@ -37,8 +44,11 @@ export function bodyHtml(text: string, footer: string[]): string {
     .map((p) => `<p style="margin:0 0 12px">${esc(p).replace(/\n/g, "<br>")}</p>`)
     .join("\n");
   const foot = footer.filter(Boolean).map(esc).join(" · ");
+  const head = logo?.url
+    ? `<p style="margin:0 0 20px"><img src="${esc(logo.url)}" alt="${esc(logo.alt)}" style="max-width:200px;max-height:80px;width:auto;height:auto;border:0;display:block"></p>\n`
+    : "";
   return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#0f172a">
-${paras}
+${head}${paras}
 ${foot ? `<p style="margin:24px 0 0;padding-top:10px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px">${foot}</p>` : ""}
 </div>`;
 }

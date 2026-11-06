@@ -7,7 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { base64Size, bodyHtml, cleanEmail, cleanFileName, cleanSubject, MAX_ATTACHMENT_BYTES, MAX_PER_DAY, senderName } from "./logic.ts";
+import { base64Size, bodyHtml, logoUrl, cleanEmail, cleanFileName, cleanSubject, MAX_ATTACHMENT_BYTES, MAX_PER_DAY, senderName } from "./logic.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -77,7 +77,7 @@ serve(async (req) => {
     if ((count ?? 0) >= MAX_PER_DAY) return json({ ok: false, error: `Tageslimit erreicht (${MAX_PER_DAY} E-Mails in 24 Stunden). Bitte später erneut versuchen.` }, 429);
 
     // ---------- Firmendaten ----------
-    const { data: company } = await db.from("company_settings").select("company_name, email, phone, street, zip, city").eq("tenant_id", tenantId).maybeSingle();
+    const { data: company } = await db.from("company_settings").select("company_name, email, phone, street, zip, city, logo_url").eq("tenant_id", tenantId).maybeSingle();
     const replyTo = cleanEmail(company?.email);
     if (!replyTo) return json({ ok: false, error: "Bitte zuerst unter „Einstellungen“ die E-Mail-Adresse der Firma eintragen – an sie gehen die Antworten Ihrer Kunden." }, 400);
     const copyTo = body.copy && replyTo.toLowerCase() !== to.toLowerCase() ? replyTo : null;
@@ -96,7 +96,7 @@ serve(async (req) => {
         to: [{ email: to }],
         ...(copyTo ? { bcc: [{ email: copyTo }] } : {}),
         subject,
-        htmlContent: bodyHtml(text, footer),
+        htmlContent: bodyHtml(text, footer, { url: logoUrl(company?.logo_url), alt: senderName(company?.company_name) }),
         textContent: `${text.trim()}\n\n--\n${footer.filter(Boolean).join("\n")}`,
         attachment: atts,
         tags: [kind === "invoice" ? "rechnung" : "mahnung"],
