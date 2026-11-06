@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { drawGiroCode, epcPayload } from "./giroCode";
+import { creditorReference, drawQrBill, ibanOf, isQrIban, qrBillProblem, qrReference, splitStreet, type QrBillData } from "./qrBill";
 import autoTable from "jspdf-autotable";
 
 type InvoicePdfParams = {
@@ -52,8 +53,18 @@ export const countryCode = (value: unknown): "DE" | "AT" | "CH" => {
 const vatIdLabel = (country: "DE" | "AT" | "CH") => (country === "AT" ? "UID-Nr." : country === "CH" ? "MWST-Nr." : "USt-IdNr.");
 
 /** Hinweise unter der Summe (nur für Rechnungen mit eingefrorenen Angaben) */
+/** Kleinunternehmer (keine Umsatzsteuer) – laut eingefrorenen Firmenangaben */
+export const isSmallBusiness = (invoice: any) => invoice?.snapshot?.company?.small_business === true;
+
+export function smallBusinessNote(country: "DE" | "AT" | "CH"): string {
+  if (country === "AT") return "Gemäß § 6 Abs. 1 Z 27 UStG 1994 wird keine Umsatzsteuer in Rechnung gestellt (Kleinunternehmerregelung).";
+  if (country === "CH") return "Nicht mehrwertsteuerpflichtig – es wird keine Mehrwertsteuer berechnet.";
+  return "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).";
+}
+
 export function legalNotes(invoice: any, country: "DE" | "AT" | "CH", currencySymbol: string): string[] {
   const notes: string[] = [];
+  if (isSmallBusiness(invoice) && !invoice?.reverse_charge) notes.push(smallBusinessNote(country));
   if (invoice?.reverse_charge) {
     notes.push(
       country === "AT"
@@ -249,6 +260,8 @@ doc.text(
     }`.trim(),
   ].filter(Boolean);
 
+  const customerVatId = frozen ? String(customer?.vat_id ?? "").trim() : "";
+  if (customerVatId && !invoice?.is_private_customer) billingAddressLines.push(`${vatIdLabel(country)} des Kunden: ${customerVatId}`);
   doc.text(billingAddressLines.length > 0 ? billingAddressLines : ["-"], marginLeft, 66);
 
   // Auftragsdaten
@@ -600,9 +613,12 @@ y += 7;
 if (frozen && invoice?.reverse_charge) {
   doc.text(country === "AT" ? "USt. (Reverse Charge):" : "USt. (§ 13b UStG):", labelX, y);
   doc.text("entfällt", valueX, y, { align: "right" });
+} else if (frozen && isSmallBusiness(invoice)) {
+  doc.text(country === "CH" ? "MWST:" : "USt.:", labelX, y);
+  doc.text("keine (siehe Hinweis)", valueX, y, { align: "right" });
 } else {
   doc.text(
-    `MwSt. ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`,
+    `${frozen && country === "CH" ? "MWST" : "MwSt."} ${Number(invoice?.tax_rate ?? 0).toFixed(2)} %:`,
     labelX,
     y
   );
@@ -640,6 +656,36 @@ if (notes.length) {
   }
 }
 
+  // Schweizer QR-Rechnung (Zahlteil) unten auf der letzten Seite – passt sie nicht, auf eine eigene Seite
+  let qrPage = 0;
+  let qrBill: QrBillData | null = null;
+  if (frozen && !isCancellation && country === "CH" && Number(invoice?.total_amount ?? 0) > 0) {
+    const iban = ibanOf(companySettings?.iban);
+    const cStreet = splitStreet(companySettings?.street);
+    const dStreet = splitStreet(customer?.street);
+    const debtorOk = !!(customerName && customer?.zip && customer?.city);
+    const curr = String(companySettings?.currency ?? (currencySymbol === "€" ? "EUR" : "CHF")).toUpperCase() === "EUR" ? "EUR" : "CHF";
+    const data: QrBillData = {
+      iban,
+      creditor: { name: companyName, street: cStreet.street, houseNo: cStreet.houseNo, zip: String(companySettings?.zip ?? ""), city: String(companySettings?.city ?? ""), country: iban.startsWith("LI") ? "LI" : "CH" },
+      amount: Math.round(Number(invoice?.total_amount ?? 0) * 100) / 100,
+      currency: curr,
+      debtor: debtorOk
+        ? { name: customerName, street: dStreet.street, houseNo: dStreet.houseNo, zip: String(customer?.zip ?? ""), city: String(customer?.city ?? ""), country: countryCode(customer?.country || companySettings?.country) }
+        : null,
+      refType: isQrIban(iban) ? "QRR" : "SCOR",
+      reference: isQrIban(iban) ? qrReference(String(invoice?.id ?? "")) : creditorReference(String(invoiceNumber)),
+      message: `Rechnung ${invoiceNumber}`,
+    };
+    const problem = qrBillProblem(data);
+    if (problem) console.warn("QR-Rechnung nicht möglich:", problem);
+    else {
+      qrBill = data;
+      if (y > 166) doc.addPage();
+      qrPage = doc.getNumberOfPages();
+    }
+  }
+
   // Seitenfuß
   const pageCount = doc.getNumberOfPages();
 
@@ -665,36 +711,44 @@ if (notes.length) {
 
   for (let i = 1; i <= pageCount; i += 1) {
     doc.setPage(i);
+    // auf der Seite mit dem QR-Zahlteil steht der Fuß über dem Zahlteil
+    const fy = i === qrPage ? -105 : 0;
 
     doc.setDrawColor(180);
-    doc.line(marginLeft, 276, pageWidth - marginRight, 276);
+    doc.setLineWidth(0.2);
+    doc.line(marginLeft, 276 + fy, pageWidth - marginRight, 276 + fy);
 
     doc.setFont(FONT, "normal");
     doc.setFontSize(7);
     doc.setTextColor(90);
 
     if (footerLeft.length) {
-      doc.text(footerLeft, marginLeft, 281);
+      doc.text(footerLeft, marginLeft, 281 + fy);
     }
 
     if (footerCenter.length) {
-      doc.text(footerCenter, pageWidth / 2, 281, {
+      doc.text(footerCenter, pageWidth / 2, 281 + fy, {
         align: "center",
       });
     }
 
     if (footerRight.length) {
-      doc.text(footerRight, pageWidth - marginRight, 281, {
+      doc.text(footerRight, pageWidth - marginRight, 281 + fy, {
         align: "right",
       });
     }
 
     doc.setFontSize(7);
-    doc.text(`Seite ${i} von ${pageCount}`, pageWidth - marginRight, 292, {
+    doc.text(`Seite ${i} von ${pageCount}`, pageWidth - marginRight, 292 + fy, {
       align: "right",
     });
 
     doc.setTextColor(0);
+  }
+
+  if (qrBill && qrPage) {
+    doc.setPage(qrPage);
+    drawQrBill(doc, qrBill, FONT);
   }
 
   if (output === "blob") return doc.output("blob");

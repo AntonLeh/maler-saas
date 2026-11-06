@@ -11,6 +11,7 @@ type CompanySettings = {
   currency_symbol: string | null;
   tax_rate_default: number;
   country?: string | null;
+  small_business?: boolean | null;
   labor_share_percent?: number | null;
   payment_term_days: number;
   partial_payment_term_days: number;
@@ -88,6 +89,7 @@ GlobalSettingsProps) {
   const [defaultSpecialHourlyRate, setDefaultSpecialHourlyRate] = useState("0");
   const [taxRateDefault, setTaxRateDefault] = useState("19");
   const [country, setCountry] = useState("Deutschland");
+  const [smallBusiness, setSmallBusiness] = useState(false);
   const [laborShare, setLaborShare] = useState("70");
   const [paymentTermDays, setPaymentTermDays] = useState("14");
   const [partialPaymentTermDays, setPartialPaymentTermDays] = useState("14");
@@ -175,6 +177,7 @@ setDefaultSpecialHourlyRate(
 );
 
 setCountry(normalizeCountry(loadedSettings.country));
+setSmallBusiness(loadedSettings.small_business === true);
 setLaborShare(String(loadedSettings.labor_share_percent ?? 70));
 setTaxRateDefault(
   loadedSettings.tax_rate_default !== null &&
@@ -457,7 +460,9 @@ if (
       default_internal_hourly_rate: internalHourlyRateValue,
       default_customer_hourly_rate: customerHourlyRateValue,
       default_special_hourly_rate: specialHourlyRateValue,
-      tax_rate_default: taxRateValue,
+      tax_rate_default: smallBusiness ? 0 : taxRateValue,
+      // Kleinunternehmer – erst nach dem Update „Kleinunternehmer“ vorhanden, vorher weglassen
+      ...(smallBusiness || (settings && "small_business" in settings) ? { small_business: smallBusiness } : {}),
       country,
       // erst nach dem Datenbank-Update vorhanden
       ...(settings && "labor_share_percent" in settings ? { labor_share_percent: laborShareValue } : {}),
@@ -512,6 +517,7 @@ if (
     setDefaultSpecialHourlyRate(String(savedSettings.default_special_hourly_rate ?? 0));
     setTaxRateDefault(String(savedSettings.tax_rate_default ?? 19));
     setCountry(normalizeCountry(savedSettings.country));
+    setSmallBusiness(savedSettings.small_business === true);
     setLaborShare(String(savedSettings.labor_share_percent ?? 70));
 
     setCompanyName(savedSettings.company_name || "");
@@ -667,7 +673,7 @@ if (
       setCountry(next);
       const preset = COUNTRY_PRESETS[next];
       if (preset && window.confirm(`Steuersatz und Währung für ${next} übernehmen (${preset.tax} %, ${preset.symbol})?`)) {
-        setTaxRateDefault(String(preset.tax));
+        if (!smallBusiness) setTaxRateDefault(String(preset.tax));
         setCurrency(preset.currency);
         setCurrencySymbol(preset.symbol);
       }
@@ -703,13 +709,38 @@ if (
 )}
 
 <div className="form-group">
+  <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <input
+      type="checkbox"
+      checked={smallBusiness}
+      onChange={(e) => {
+        const on = e.target.checked;
+        setSmallBusiness(on);
+        setTaxRateDefault(on ? "0" : String(COUNTRY_PRESETS[country]?.tax ?? 19));
+      }}
+    />
+    {country === "Schweiz" ? "Nicht MWST-pflichtig (keine Mehrwertsteuer)" : "Kleinunternehmer (keine Umsatzsteuer)"}
+  </label>
+  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+    {country === "Österreich"
+      ? "Kleinunternehmerregelung nach § 6 Abs. 1 Z 27 UStG (Umsatz bis 55.000 € im Jahr)."
+      : country === "Schweiz"
+      ? "Für Betriebe unter 100.000 CHF Jahresumsatz, die nicht im MWST-Register eingetragen sind."
+      : "Kleinunternehmerregelung nach § 19 UStG (Vorjahr bis 25.000 €, laufendes Jahr bis 100.000 €)."}{" "}
+    Angebote und Rechnungen werden dann ohne Steuer erstellt, die Rechnung erhält den passenden Pflichthinweis. Bitte im Zweifel mit dem
+    Steuerberater klären.
+  </small>
+</div>
+
+<div className="form-group">
   <label htmlFor="taxRateDefault">Standard-MwSt (%)</label>
   <input
     id="taxRateDefault"
     type="number"
     step="0.01"
     min="0"
-    value={taxRateDefault}
+    value={smallBusiness ? "0" : taxRateDefault}
+    disabled={smallBusiness}
     onChange={(e) => setTaxRateDefault(e.target.value)}
     placeholder="19"
   />
@@ -881,6 +912,9 @@ if (
       placeholder="IBAN"
     />
     {ibanError(companyIban) && <small style={{ color: "#b91c1c" }}>{ibanError(companyIban)}</small>}
+    {country === "Schweiz" && companyIban.trim() && !/^(CH|LI)/i.test(companyIban.trim()) && (
+      <small style={{ color: "#b45309", display: "block" }}>Für die QR-Rechnung (Zahlteil) wird eine Schweizer oder Liechtensteiner IBAN benötigt.</small>
+    )}
   </div>
 
   <div className="form-group">

@@ -158,7 +158,13 @@ export function buildCii(invoice: any, profile: EInvoiceProfile): string {
   const exemption = rc
     ? `<ram:ExemptionReason>Steuerschuldnerschaft des Leistungsempfängers</ram:ExemptionReason>`
     : cat === "E"
-    ? `<ram:ExemptionReason>Kein Ausweis von Umsatzsteuer, da Kleinunternehmer gemäß § 19 UStG</ram:ExemptionReason>`
+    ? `<ram:ExemptionReason>${
+        countryIso(c.country) === "AT"
+          ? "Gemäß § 6 Abs. 1 Z 27 UStG 1994 wird keine Umsatzsteuer in Rechnung gestellt (Kleinunternehmerregelung)"
+          : countryIso(c.country) === "CH"
+          ? "Nicht mehrwertsteuerpflichtig"
+          : "Kein Ausweis von Umsatzsteuer, da Kleinunternehmer gemäß § 19 UStG"
+      }</ram:ExemptionReason>`
     : "";
   const vatCat = (withRate = true) =>
     `<ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${cat}</ram:CategoryCode>${withRate ? `<ram:RateApplicablePercent>${amt(rate)}</ram:RateApplicablePercent>` : ""}`;

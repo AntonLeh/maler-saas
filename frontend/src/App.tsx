@@ -3433,6 +3433,29 @@ const askLaborShare = (orderId: string | number): number | null | undefined => {
   }
 };
 
+/** Österreich: Firmenrechnung über 10.000 € brutto braucht die UID des Kunden (§ 11 UStG) – false = abbrechen */
+const confirmAustrianUid = async (orderId: string | number): Promise<boolean> => {
+  const country = String(companySettings?.country ?? "").trim().toLowerCase();
+  if (!["at", "österreich", "oesterreich", "austria"].includes(country)) return true;
+  const order = orders.find((o) => String(o.id) === String(orderId));
+  const customer = customers.find((c) => String(c.id) === String(order?.customer_id));
+  if (!customer) return true;
+  const isBusiness = customer.reverse_charge || (customer.is_business ?? !!String(customer.company_name ?? "").trim());
+  if (!isBusiness || String(customer.vat_id ?? "").trim()) return true;
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("total_amount")
+    .eq("order_id", Number(orderId))
+    .eq("status", "accepted")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (Number(quote?.total_amount ?? 0) <= 10000) return true;
+  return window.confirm(
+    "Hinweis: In Österreich muss auf Firmenrechnungen über 10.000 € (brutto) die UID-Nummer des Kunden stehen.\n\nBeim Kunden ist noch keine UID eingetragen (Kunde bearbeiten → „E-Rechnung (optional)“ → USt-IdNr.).\n\nTrotzdem jetzt ohne UID erstellen?"
+  );
+};
+
 const handleCreateInvoice = async (orderId: string | number) => {
   if (!userProfile) return;
 
@@ -3441,6 +3464,7 @@ const handleCreateInvoice = async (orderId: string | number) => {
   );
 
   if (!confirmCreate) return;
+  if (!(await confirmAustrianUid(orderId))) return;
 
   const laborShare = askLaborShare(orderId);
   if (laborShare === undefined) return;

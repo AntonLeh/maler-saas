@@ -352,10 +352,16 @@ y += introLines.length * 4.2 + 3;
   }
 
   y += 7;
-  doc.text(`MwSt. ${taxRate.toFixed(2)} %:`, labelX, y);
-  doc.text(formatMoney(taxAmount, currencySymbol), valueX, y, {
-    align: "right",
-  });
+  const smallBusiness = companySettings?.small_business === true && taxRate === 0;
+  if (smallBusiness) {
+    doc.text("USt.:", labelX, y);
+    doc.text("keine (nicht steuerpflichtig)", valueX, y, { align: "right" });
+  } else {
+    doc.text(`MwSt. ${taxRate.toFixed(2)} %:`, labelX, y);
+    doc.text(formatMoney(taxAmount, currencySymbol), valueX, y, {
+      align: "right",
+    });
+  }
 
   y += 9;
   doc.setFontSize(12);
