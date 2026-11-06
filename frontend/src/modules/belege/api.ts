@@ -193,7 +193,7 @@ export async function loadVatInvoices(tenantId: number): Promise<VatInvoice[]> {
 export async function loadVatExpenses(tenantId: number, from: string, to: string): Promise<VatExpense[]> {
   const { data, error } = await supabase
     .from("expenses")
-    .select("id, receipt_date, supplier, net_amount, tax_amount, gross_amount, tax_rate, voided")
+    .select("id, receipt_date, supplier, net_amount, tax_amount, gross_amount, tax_rate, voided, category")
     .eq("tenant_id", tenantId)
     .gte("receipt_date", from)
     .lte("receipt_date", to)
@@ -206,6 +206,35 @@ export async function loadTaxMethod(tenantId: number): Promise<TaxMethod> {
   const { data, error } = await supabase.from("company_settings").select("tax_method").eq("tenant_id", tenantId).maybeSingle();
   if (error) return "soll";
   return (data as { tax_method?: string } | null)?.tax_method === "ist" ? "ist" : "soll";
+}
+
+/** Schweiz: Abrechnungsmethode + Saldosteuersatz; Kleinunternehmer-Schalter (beides aus den Firmeneinstellungen) */
+export type VatReportSettings = { chMethod: "effective" | "saldo"; saldoRate: number; smallBusiness: boolean };
+
+export async function loadVatReportSettings(tenantId: number): Promise<VatReportSettings> {
+  const def: VatReportSettings = { chMethod: "effective", saldoRate: 5.3, smallBusiness: false };
+  const { data, error } = await supabase.from("company_settings").select("vat_report, small_business").eq("tenant_id", tenantId).maybeSingle();
+  if (error) {
+    // vor dem Datenbank-Update: wenigstens den Kleinunternehmer-Schalter lesen
+    const { data: d2 } = await supabase.from("company_settings").select("small_business").eq("tenant_id", tenantId).maybeSingle();
+    return { ...def, smallBusiness: (d2 as { small_business?: boolean } | null)?.small_business === true };
+  }
+  const row = data as { vat_report?: { ch_method?: string; saldo_rate?: number } | null; small_business?: boolean } | null;
+  const rate = Number(row?.vat_report?.saldo_rate);
+  return {
+    chMethod: row?.vat_report?.ch_method === "saldo" ? "saldo" : "effective",
+    saldoRate: Number.isFinite(rate) && rate > 0 ? rate : def.saldoRate,
+    smallBusiness: row?.small_business === true,
+  };
+}
+
+export async function saveVatReportSettings(tenantId: number, v: { chMethod: "effective" | "saldo"; saldoRate: number }) {
+  const { error } = await supabase
+    .from("company_settings")
+    .update({ vat_report: { ch_method: v.chMethod, saldo_rate: v.saldoRate } })
+    .eq("tenant_id", tenantId);
+  if (error && /vat_report/.test(error.message)) throw new Error("Für die Abrechnungsmethode fehlt noch ein Datenbank-Update (20261106190000_mwst_abrechnung.sql).");
+  fail(error, "Einstellung konnte nicht gespeichert werden.");
 }
 
 export async function saveTaxMethod(tenantId: number, method: TaxMethod) {

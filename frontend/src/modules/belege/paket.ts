@@ -8,6 +8,7 @@ import { loadInvoicePdfSources } from "../../lib/invoiceSources";
 import { CATEGORY_LABELS, PAYMENT_LABELS } from "./types";
 import type { Country, Expense, ExpenseCategory, PaymentMethod } from "./types";
 import { computeVat } from "./vat";
+import { loadVatReportSettings } from "./api";
 import type { TaxMethod } from "./vat";
 import { buildCsv, buildRows, encodeCp1252 } from "./datev";
 import type { DatevSettings } from "./datev";
@@ -96,7 +97,7 @@ function vatPdf(result: ReturnType<typeof computeVat>, o: PackageOptions, compan
   const doc = new jsPDF("p", "mm", "a4");
   const money = (n: number) => `${num(n)} ${o.currencySymbol}`;
   doc.setFontSize(16);
-  doc.text(`Umsatzsteuer-Übersicht ${o.label}`, 14, 20);
+  doc.text(`${o.country === "CH" ? "MWST-Übersicht" : "Umsatzsteuer-Übersicht"} ${o.label}`, 14, 20);
   doc.setFontSize(10);
   doc.text(`${company} · ${o.method === "ist" ? "Ist-Versteuerung (nach Zahlungseingang)" : "Soll-Versteuerung (nach Rechnungsdatum)"}`, 14, 27);
   doc.text(`Zeitraum ${deDate(o.from)} – ${deDate(o.to)} · erstellt am ${new Date().toLocaleDateString("de-DE")} mit MalerSaaS`, 14, 32);
@@ -105,7 +106,7 @@ function vatPdf(result: ReturnType<typeof computeVat>, o: PackageOptions, compan
     head: [["Umsatzsteuer aus Rechnungen", "Anzahl", "Netto", "Steuer"]],
     body: [
       ...result.sales.map((l) => [l.label, String(l.count), money(l.net), money(l.tax)]),
-      ...(result.reverseChargeNet ? [["§ 13b (Steuer schuldet Kunde)", "", money(result.reverseChargeNet), "–"]] : []),
+      ...(result.reverseChargeNet ? [[o.country === "AT" ? "§ 19 Abs. 1a (Steuer schuldet Kunde)" : "§ 13b (Steuer schuldet Kunde)", "", money(result.reverseChargeNet), "–"]] : []),
       ["Summe", "", money(result.salesNet + result.reverseChargeNet), money(result.salesTax)],
     ],
     styles: { fontSize: 9 },
@@ -123,14 +124,23 @@ function vatPdf(result: ReturnType<typeof computeVat>, o: PackageOptions, compan
   let y = (doc as any).lastAutoTable.finalY + 10;
   doc.setFontSize(12);
   doc.text(`${result.balance >= 0 ? "Zahllast" : "Erstattung"}: ${money(Math.abs(result.balance))}`, 14, y);
-  if (result.elster) {
-    autoTable(doc, {
-      startY: y + 6,
-      head: [["Kz", "ELSTER (Umsatzsteuer-Voranmeldung)", "Wert"]],
-      body: result.elster.map((e) => [e.kz, e.label, e.wholeEuro ? `${Math.trunc(e.value)} €` : money(e.value)]),
-      styles: { fontSize: 9 },
-    });
-    y = (doc as any).lastAutoTable.finalY + 8;
+  if (result.form) {
+    const f = result.form;
+    if (f.rows.length) {
+      autoTable(doc, {
+        startY: y + 6,
+        head: [[f.codeLabel, f.title, "Wert"]],
+        body: f.rows.map((e) => [e.kz, e.label, e.wholeEuro ? `${Math.trunc(e.value)} €` : money(e.value)]),
+        styles: { fontSize: 9 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 4;
+    } else {
+      y += 6;
+    }
+    doc.setFontSize(8);
+    const lines = doc.splitTextToSize(f.note, 180);
+    doc.text(lines, 14, y + 4);
+    y += lines.length * 3.5 + 2;
   }
   doc.setFontSize(8);
   doc.text(
@@ -221,7 +231,8 @@ export async function buildPackage(o: PackageOptions): Promise<{ blob: Blob; war
   );
 
   // ---------- Umsatzsteuer ----------
-  const vat = computeVat(invoices, expenses as any, o.from, o.to, o.method, o.country);
+  const report = await loadVatReportSettings(o.tenantId);
+  const vat = computeVat(invoices, expenses as any, o.from, o.to, o.method, o.country, report);
   files[`${p}/Umsatzsteuer-Uebersicht.pdf`] = [vatPdf(vat, o, company), { level: 0 }];
 
   // ---------- DATEV ----------

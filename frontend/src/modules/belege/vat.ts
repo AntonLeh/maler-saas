@@ -35,7 +35,14 @@ export type VatExpense = {
   gross_amount: number;
   tax_rate: number | null;
   voided: boolean;
+  category?: string | null;
 };
+
+/** Schweiz: effektive Methode oder Saldosteuersatz; Kleinunternehmer: keine Voranmeldung */
+export type VatOptions = { chMethod?: "effective" | "saldo"; saldoRate?: number | null; smallBusiness?: boolean };
+
+export type FormRow = { kz: string; label: string; value: number; wholeEuro?: boolean; strong?: boolean };
+export type VatForm = { title: string; codeLabel: string; rows: FormRow[]; note: string };
 
 export type TaxMethod = "soll" | "ist";
 export type Country = "DE" | "AT" | "CH";
@@ -54,6 +61,10 @@ export type VatResult = {
   invoiceIds: number[];
   expenseIds: number[];
   elster: { kz: string; label: string; value: number; wholeEuro?: boolean }[] | null;
+  /** amtliche Kennzahlen/Ziffern des Landes (DE: ELSTER, AT: U30, CH: MWST-Abrechnung) */
+  form: VatForm | null;
+  /** Schweiz mit Saldosteuersatz: Steuer = Umsatz inkl. MWST × Satz, ohne Vorsteuer */
+  saldo: { rate: number; grossSales: number; tax: number } | null;
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -77,7 +88,8 @@ export function computeVat(
   from: string,
   to: string,
   method: TaxMethod,
-  country: Country
+  country: Country,
+  opts: VatOptions = {}
 ): VatResult {
   const byId = new Map(invoices.map((i) => [i.id, i]));
   const sales = new Map<string, RateLine>();
@@ -123,6 +135,7 @@ export function computeVat(
   }
 
   let foreignTax = 0;
+  let inputTaxMaterial = 0; // Schweiz Ziffer 400: Material- und Dienstleistungsaufwand
   for (const e of expenses) {
     if (e.voided || !inRange(day(e.receipt_date), from, to)) continue;
     expenseIds.push(e.id);
@@ -137,6 +150,7 @@ export function computeVat(
     line.tax += Number(e.tax_amount) || 0;
     line.count += 1;
     inputs.set(key, line);
+    if (e.category === "material" || e.category === "subunternehmer") inputTaxMaterial += Number(e.tax_amount) || 0;
   }
 
   const order = (a: RateLine, b: RateLine) => (b.rate ?? -1) - (a.rate ?? -1);
@@ -157,11 +171,99 @@ export function computeVat(
     invoiceIds,
     expenseIds,
     elster: null,
+    form: null,
+    saldo: null,
   };
+  const net = (rate: number) => salesList.filter((l) => Math.abs((l.rate ?? -1) - rate) < 0.01).reduce((a, l) => a + l.net, 0);
+  const tax = (rate: number) => salesList.filter((l) => Math.abs((l.rate ?? -1) - rate) < 0.01).reduce((a, l) => a + l.tax, 0);
+  const note = "Die Werte stammen nur aus den in MalerSaaS erfassten Rechnungen und Belegen – bitte vor der Abgabe prüfen bzw. vom Steuerberater/Treuhänder prüfen lassen. Keine Steuerberatung.";
+
+  if (opts.smallBusiness) {
+    result.form = {
+      title: country === "CH" ? "MWST-Abrechnung" : "Umsatzsteuer-Voranmeldung",
+      codeLabel: "",
+      rows: [],
+      note:
+        country === "CH"
+          ? "Ihr Betrieb ist in den Einstellungen als „nicht MWST-pflichtig“ eingetragen – es ist keine MWST-Abrechnung nötig."
+          : country === "AT"
+          ? "Ihr Betrieb ist in den Einstellungen als Kleinunternehmer eingetragen – eine Umsatzsteuer-Voranmeldung ist in der Regel nicht nötig (bei Umsätzen bis 55.000 € im Jahr)."
+          : "Ihr Betrieb ist in den Einstellungen als Kleinunternehmer eingetragen – eine Umsatzsteuer-Voranmeldung ist in der Regel nicht nötig.",
+    };
+    return result;
+  }
+
+  if (country === "AT") {
+    result.form = {
+      title: "Für die Umsatzsteuer-Voranmeldung (U30, FinanzOnline)",
+      codeLabel: "KZ",
+      rows: [
+        { kz: "000", label: "Gesamtbetrag der Bemessungsgrundlagen (Lieferungen und sonstige Leistungen)", value: r2(result.salesNet + result.reverseChargeNet) },
+        { kz: "021", label: "davon Umsätze mit Übergang der Steuerschuld (Bauleistungen § 19 Abs. 1a)", value: result.reverseChargeNet },
+        { kz: "022", label: "Bemessungsgrundlage zu 20 %", value: r2(net(20)) },
+        { kz: "", label: "Umsatzsteuer darauf", value: r2(tax(20)) },
+        { kz: "006", label: "Bemessungsgrundlage zu 13 %", value: r2(net(13)) },
+        { kz: "", label: "Umsatzsteuer darauf", value: r2(tax(13)) },
+        { kz: "029", label: "Bemessungsgrundlage zu 10 %", value: r2(net(10)) },
+        { kz: "", label: "Umsatzsteuer darauf", value: r2(tax(10)) },
+        { kz: "060", label: "Gesamtbetrag der Vorsteuern", value: inputTax },
+        { kz: "095", label: "Vorauszahlung (positiv) bzw. Überschuss (negativ)", value: result.balance, strong: true },
+      ],
+      note: `Beträge in Euro mit Cent. ${note}`,
+    };
+  }
+
+  if (country === "CH") {
+    const salesNetAll = result.salesNet;
+    const salesGross = r2(result.salesNet + result.salesTax);
+    if (opts.chMethod === "saldo") {
+      const rate = Number(opts.saldoRate) || 0;
+      const sTax = r2((salesGross * rate) / 100);
+      result.saldo = { rate, grossSales: salesGross, tax: sTax };
+      result.balance = sTax;
+      result.form = {
+        title: `Für die MWST-Abrechnung (Saldosteuersatz ${rate.toLocaleString("de-DE")} %)`,
+        codeLabel: "Ziffer",
+        rows: [
+          { kz: "200", label: "Total der Entgelte (inkl. MWST)", value: salesGross },
+          { kz: "299", label: "Steuerbarer Gesamtumsatz (inkl. MWST)", value: salesGross },
+          { kz: "322", label: `Umsatz zum Saldosteuersatz ${rate.toLocaleString("de-DE")} % (inkl. MWST)`, value: salesGross },
+          { kz: "323", label: "Steuer darauf", value: sTax },
+          { kz: "399", label: "Total geschuldete Steuer", value: sTax },
+          { kz: "500", label: "Zu bezahlender Betrag", value: sTax, strong: true },
+        ],
+        note: `Beim Saldosteuersatz wird keine Vorsteuer abgezogen – die Belege dienen nur der Buchhaltung. Massgebend ist der von der ESTV bewilligte Satz. ${note}`,
+      };
+    } else {
+      const t400 = r2(inputTaxMaterial);
+      const t405 = r2(inputTax - inputTaxMaterial);
+      result.form = {
+        title: "Für die MWST-Abrechnung (effektive Methode)",
+        codeLabel: "Ziffer",
+        rows: [
+          { kz: "200", label: "Total der Entgelte (exkl. MWST)", value: salesNetAll },
+          { kz: "", label: "zum Vergleich inkl. MWST", value: salesGross },
+          { kz: "299", label: "Steuerbarer Gesamtumsatz (exkl. MWST)", value: salesNetAll },
+          { kz: "302", label: "Leistungen zum Normalsatz 8,1 %", value: r2(net(8.1)) },
+          { kz: "", label: "Steuer darauf", value: r2(tax(8.1)) },
+          { kz: "312", label: "Leistungen zum reduzierten Satz 2,6 %", value: r2(net(2.6)) },
+          { kz: "", label: "Steuer darauf", value: r2(tax(2.6)) },
+          { kz: "342", label: "Leistungen zum Beherbergungssatz 3,8 %", value: r2(net(3.8)) },
+          { kz: "", label: "Steuer darauf", value: r2(tax(3.8)) },
+          { kz: "399", label: "Total geschuldete Steuer", value: result.salesTax },
+          { kz: "400", label: "Vorsteuer auf Material- und Dienstleistungsaufwand", value: t400 },
+          { kz: "405", label: "Vorsteuer auf Investitionen und übrigem Betriebsaufwand", value: t405 },
+          { kz: "", label: "Total Vorsteuer (Ziffern 400 bis 420)", value: inputTax },
+          result.balance >= 0
+            ? { kz: "500", label: "Zu bezahlender Betrag", value: result.balance, strong: true }
+            : { kz: "510", label: "Guthaben der steuerpflichtigen Person", value: -result.balance, strong: true },
+        ],
+        note: `Ob das ESTV-Portal die Umsätze in Ziffer 200/299 mit oder ohne MWST erwartet, bitte mit dem Treuhänder klären – die Steuerbeträge sind davon nicht betroffen. Ziffer 400: Belege der Kategorien Material und Subunternehmer, Ziffer 405: alle übrigen. ${note}`,
+      };
+    }
+  }
 
   if (country === "DE") {
-    const net = (rate: number) => salesList.find((l) => l.rate === rate)?.net ?? 0;
-    const tax = (rate: number) => salesList.find((l) => l.rate === rate)?.tax ?? 0;
     result.elster = [
       { kz: "81", label: "Umsätze zu 19 % (Bemessungsgrundlage)", value: net(19), wholeEuro: true },
       { kz: "", label: "Steuer darauf", value: tax(19) },
@@ -171,17 +273,28 @@ export function computeVat(
       { kz: "66", label: "Vorsteuerbeträge aus Rechnungen", value: inputTax },
       { kz: "83", label: "Verbleibende Umsatzsteuer-Vorauszahlung (negativ = Erstattung)", value: result.balance },
     ];
+    result.form = {
+      title: "Für die Umsatzsteuer-Voranmeldung (ELSTER)",
+      codeLabel: "Kz",
+      rows: result.elster.map((e) => ({ ...e, strong: e.kz === "83" })),
+      note: `Bemessungsgrundlagen (Kz 81, 86, 60) werden in ELSTER in vollen Euro eingetragen. ${note}`,
+    };
   }
   return result;
 }
 
 /** Zeitraum aus Auswahl: Monat „2026-11“, Quartal „2026-Q4“, Jahr „2026“ */
-export function periodRange(kind: "month" | "quarter" | "year", value: string): { from: string; to: string; label: string } {
+export function periodRange(kind: "month" | "quarter" | "half" | "year", value: string): { from: string; to: string; label: string } {
   const pad = (n: number) => String(n).padStart(2, "0");
   const lastDay = (y: number, m: number) => new Date(y, m, 0).getDate();
   if (kind === "year") {
     const y = Number(value);
     return { from: `${y}-01-01`, to: `${y}-12-31`, label: `Jahr ${y}` };
+  }
+  if (kind === "half") {
+    const [ys, hs] = value.split("-H");
+    const y = Number(ys);
+    return hs === "2" ? { from: `${y}-07-01`, to: `${y}-12-31`, label: `2. Halbjahr ${y}` } : { from: `${y}-01-01`, to: `${y}-06-30`, label: `1. Halbjahr ${y}` };
   }
   if (kind === "quarter") {
     const [ys, qs] = value.split("-Q");
