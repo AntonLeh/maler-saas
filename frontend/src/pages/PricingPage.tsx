@@ -20,6 +20,7 @@ const plans = [
       "Auftragsverwaltung",
       "Angebote & Rechnungen",
       "Buchhaltung: Belege, Umsatzsteuer, offene Posten",
+      "E-Rechnung (ZUGFeRD & XRechnung)",
       "Zeiterfassung",
       "PWA App",
       "Fortschrittsnotizen",

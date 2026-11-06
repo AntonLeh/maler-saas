@@ -1,3 +1,4 @@
+import { bicError, ibanError } from "../lib/bankCheck";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -373,6 +374,16 @@ const handleLogoUpload = async (file: File) => {
     console.log("SESSION USER:", session?.user);
     console.log("APP METADATA:", session?.user?.app_metadata);
     console.log("USER METADATA:", session?.user?.user_metadata);
+
+    const bankProblem = ibanError(companyIban) || bicError(companyBic);
+    if (bankProblem) {
+      setMessage(null);
+      setErrorMessage(bankProblem);
+      const field = document.getElementById(ibanError(companyIban) ? "companyIban" : "companyBic");
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      field?.focus();
+      return;
+    }
 
     setSaving(true);
     setErrorMessage(null);
@@ -869,6 +880,7 @@ if (
       onChange={(e) => setCompanyIban(e.target.value)}
       placeholder="IBAN"
     />
+    {ibanError(companyIban) && <small style={{ color: "#b91c1c" }}>{ibanError(companyIban)}</small>}
   </div>
 
   <div className="form-group">
@@ -880,6 +892,7 @@ if (
       onChange={(e) => setCompanyBic(e.target.value)}
       placeholder="BIC"
     />
+    {bicError(companyBic) && <small style={{ color: "#b91c1c" }}>{bicError(companyBic)}</small>}
   </div>
   <div className="form-group">
   <label htmlFor="companyLogo">Firmenlogo</label>

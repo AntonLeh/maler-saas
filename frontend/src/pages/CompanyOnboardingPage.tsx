@@ -1,3 +1,4 @@
+import { bicError, ibanError } from "../lib/bankCheck";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -63,6 +64,11 @@ export default function CompanyOnboardingPage({ tenantId, onCompleted }: Props) 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const bankProblem = ibanError(iban) || bicError(bic);
+    if (bankProblem) {
+      setMessage(bankProblem);
+      return;
+    }
     setSaving(true);
     setMessage("");
 
@@ -224,6 +230,7 @@ await supabase.rpc(
             value={iban}
             onChange={(e) => setIban(e.target.value)}
           />
+          {ibanError(iban) && <small style={{ color: "#b91c1c" }}>{ibanError(iban)}</small>}
 
           <input
             type="text"
@@ -231,6 +238,7 @@ await supabase.rpc(
             value={bic}
             onChange={(e) => setBic(e.target.value)}
           />
+          {bicError(bic) && <small style={{ color: "#b91c1c" }}>{bicError(bic)}</small>}
 
           {message && <p style={{ color: "red" }}>{message}</p>}
 
