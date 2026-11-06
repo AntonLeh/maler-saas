@@ -142,7 +142,16 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
     // Neue Rechnungen: nur die beim Erstellen eingefrorenen Angaben verwenden (GoBD)
     const frozen = snapshotSources(invoice);
     if (frozen) {
-      generateInvoicePdf({ invoice, ...frozen });
+      // neue Rechnungen: ZUGFeRD-PDF (E-Rechnung mit eingebetteten Rechnungsdaten)
+      try {
+        const { downloadInvoicePdf, zugferdHint } = await import("../lib/einvoiceFiles");
+        const res = await downloadInvoicePdf(invoice, frozen);
+        const hint = zugferdHint(res, invoice);
+        if (hint) alert(hint);
+      } catch (e) {
+        console.error("PDF", e);
+        alert("Das PDF konnte nicht erstellt werden.");
+      }
       return;
     }
     const { data: order, error: orderError } = await supabase
@@ -590,6 +599,24 @@ const getInvoiceReminders = (invoiceId: number) => {
     >
       PDF erstellen
     </button>
+
+    {invoice.snapshot && invoice.is_private_customer === false && (
+      <button
+        type="button"
+        className="btn btn-secondary"
+        title="E-Rechnung als XML-Datei, z. B. für Behörden oder Firmen, die eine XRechnung verlangen"
+        onClick={async () => {
+          try {
+            const { downloadXRechnung } = await import("../lib/einvoiceFiles");
+            downloadXRechnung(invoice);
+          } catch (e) {
+            alert(e instanceof Error ? e.message : "Die XRechnung konnte nicht erstellt werden.");
+          }
+        }}
+      >
+        XRechnung
+      </button>
+    )}
 
    {invoice.status === "open" && (
   <button

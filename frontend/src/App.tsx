@@ -45,7 +45,7 @@ import KundenportalPage from "./pages/KundenportalPage";
 import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import CustomerTaxFields from "./components/CustomerTaxFields";
 import { BelegeButton, BuchhaltungPage } from "./modules/belege";
-import { isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
+import { einvoiceCustomerFields, isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
 import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
@@ -96,6 +96,9 @@ type Subscription = {
 type Customer = {
   id: string;
   tenant_id: number;
+  vat_id?: string | null;
+  einvoice_email?: string | null;
+  buyer_reference?: string | null;
   first_name: string;
   last_name: string;
   email: string | null;
@@ -175,6 +178,11 @@ type CustomerFormData = {
   discount_note: string;
   customer_kind: CustomerKind;
   reverse_charge: boolean;
+  // E-Rechnung (Spalten ab Update „E-Rechnung“)
+  vat_id: string;
+  einvoice_email: string;
+  buyer_reference: string;
+  einvoice_had: boolean;
 };
 
 type OrderFormData = {
@@ -720,6 +728,10 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
     discount_note: "",
     customer_kind: "auto",
     reverse_charge: false,
+    vat_id: "",
+    einvoice_email: "",
+    buyer_reference: "",
+    einvoice_had: false,
   });
 
   if (window.location.pathname === "/customer-view") {
@@ -1043,6 +1055,10 @@ initializedUserIdRef.current = session.user.id;
       discount_note: "",
       customer_kind: "auto",
       reverse_charge: false,
+      vat_id: "",
+      einvoice_email: "",
+      buyer_reference: "",
+      einvoice_had: false,
     });
   };
 
@@ -4794,6 +4810,10 @@ const openEmployeeOrders = () => {
         discount_note: customer.discount_note || "",
         customer_kind: kindFromCustomer(customer.is_business),
         reverse_charge: customer.reverse_charge === true,
+        vat_id: customer.vat_id || "",
+        einvoice_email: customer.einvoice_email || "",
+        buyer_reference: customer.buyer_reference || "",
+        einvoice_had: !!(customer.vat_id || customer.einvoice_email || customer.buyer_reference),
       });
 
       setCurrentPage("edit-customer");
@@ -4909,6 +4929,7 @@ const openEmployeeOrders = () => {
         discount_note: customerForm.discount_note.trim() || null,
         is_business: isBusinessFromKind(customerForm.customer_kind),
         reverse_charge: customerForm.customer_kind !== "private" && customerForm.reverse_charge,
+        ...einvoiceCustomerFields(customerForm),
       };
 
       const { error } = await supabase.from("customers").insert([newCustomer]);
@@ -4961,6 +4982,7 @@ const openEmployeeOrders = () => {
         discount_note: customerForm.discount_note.trim() || null,
         is_business: isBusinessFromKind(customerForm.customer_kind),
         reverse_charge: customerForm.customer_kind !== "private" && customerForm.reverse_charge,
+        ...einvoiceCustomerFields(customerForm),
       };
 
       const { error } = await supabase
@@ -10964,6 +10986,9 @@ const businessAdvisor = generateBusinessInsights();
                         kind={customerForm.customer_kind}
                         reverseCharge={customerForm.reverse_charge}
                         companyName={customerForm.company_name}
+                        vatId={customerForm.vat_id}
+                        einvoiceEmail={customerForm.einvoice_email}
+                        buyerReference={customerForm.buyer_reference}
                         onChange={(values) => setCustomerForm((prev) => ({ ...prev, ...values }))}
                       />
 
@@ -11149,6 +11174,9 @@ const businessAdvisor = generateBusinessInsights();
                         kind={customerForm.customer_kind}
                         reverseCharge={customerForm.reverse_charge}
                         companyName={customerForm.company_name}
+                        vatId={customerForm.vat_id}
+                        einvoiceEmail={customerForm.einvoice_email}
+                        buyerReference={customerForm.buyer_reference}
                         onChange={(values) => setCustomerForm((prev) => ({ ...prev, ...values }))}
                       />
                       <div className="form-row two-cols">

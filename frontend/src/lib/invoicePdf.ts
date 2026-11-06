@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawGiroCode, epcPayload } from "./giroCode";
 import autoTable from "jspdf-autotable";
 
 type InvoicePdfParams = {
@@ -10,7 +11,9 @@ type InvoicePdfParams = {
   partialInvoices?: any[];
   currencySymbol?: string;
   /** "blob": PDF nicht herunterladen, sondern als Blob zurückgeben (z. B. für das Steuerberater-Paket) */
-  output?: "save" | "blob";
+  output?: "save" | "blob" | "arraybuffer";
+  /** Eingebettete Schrift (Base64 der TTF-Dateien) – nötig für ZUGFeRD/PDF-A; ohne: Standardschrift wie bisher */
+  fonts?: { regular: string; bold: string } | null;
 };
 
 const formatMoney = (
@@ -121,8 +124,18 @@ export function generateInvoicePdf({
   partialInvoices = [],
   currencySymbol = "€",
   output = "save",
-}: InvoicePdfParams): Blob | void {
+  fonts = null,
+}: InvoicePdfParams): Blob | ArrayBuffer | void {
   const doc = new jsPDF("p", "mm", "a4");
+  let FONT = "helvetica";
+  if (fonts) {
+    doc.addFileToVFS("LiberationSans-Regular.ttf", fonts.regular);
+    doc.addFont("LiberationSans-Regular.ttf", "LiberationSans", "normal");
+    doc.addFileToVFS("LiberationSans-Bold.ttf", fonts.bold);
+    doc.addFont("LiberationSans-Bold.ttf", "LiberationSans", "bold");
+    FONT = "LiberationSans";
+  }
+  doc.setFont(FONT, "normal");
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginLeft = 14;
@@ -152,7 +165,7 @@ export function generateInvoicePdf({
     companySettings?.email ?? "",
   ].filter(Boolean);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
 
   // Logo oben links
   if (companySettings?.logo_url) {
@@ -173,7 +186,7 @@ const isFinalInvoiceWithPartials =
   );
 
 doc.setFontSize(isCancellation || isPartialInvoice || isFinalInvoiceWithPartials ? 20 : 24);
-doc.setFont("helvetica", "bold");
+doc.setFont(FONT, "bold");
 
 const documentTitle = isCancellation
   ? "STORNORECHNUNG"
@@ -189,7 +202,7 @@ doc.text(
   18,
   { align: "right" }
 );
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
   doc.text(`Nr.: ${invoiceNumber}`, pageWidth - marginRight, 27, {
     align: "right",
@@ -215,10 +228,10 @@ doc.text(
 
   // Rechnungsadresse
   doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.text("Rechnungsadresse", marginLeft, 58);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
 
     const customerName =
@@ -240,10 +253,10 @@ doc.text(
 
   // Auftragsdaten
   doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.text("Auftragsdaten", 112, 58);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
     const orderAddressLines = [
     order?.address_street ?? order?.object_street ?? "",
@@ -263,7 +276,7 @@ doc.text(
   let y = 92;
 
   doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   const invoiceHeading = isCancellation
   ? "Stornorechnung"
   : isPartialInvoice
@@ -280,7 +293,7 @@ doc.text(
 
   y += 8;
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.setFontSize(9);
 
   const introText = isCancellation
@@ -354,6 +367,7 @@ doc.text(
     head: [["Bereich", "Leistung", "Menge", "Einzelpreis", "Gesamt"]],
     body: tableRows,
     styles: {
+      font: FONT,
       fontSize: 8,
       cellPadding: 2.2,
       overflow: "linebreak",
@@ -368,7 +382,7 @@ doc.text(
     },
     columnStyles: {
       0: { cellWidth: 34 },
-      1: { cellWidth: 70 },
+      1: { cellWidth: 67 },
       2: { cellWidth: 25, halign: "right" },
       3: { cellWidth: 28, halign: "right" },
       4: { cellWidth: 28, halign: "right" },
@@ -392,7 +406,7 @@ doc.text(
 const valueX = 196;
 
 doc.setFontSize(9);
-doc.setFont("helvetica", "normal");
+doc.setFont(FONT, "normal");
 
 // Rabatt aus dem Angebot (nur neue Rechnungen): Positionssumme -> Rabatt -> Auftragswert netto
 const quoteDiscount = Number(invoice?.snapshot?.quote?.discount_amount ?? 0);
@@ -451,14 +465,14 @@ if (isPartialInvoice && !isCancellation) {
 
   y += 7;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.text("Verbleibender Auftragswert:", labelX, y);
   doc.text(formatMoney(remainingAmount, currencySymbol), valueX, y, {
     align: "right",
   });
 
   y += 12;
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
 }
 
 if (isFinalInvoiceWithPartials && !isCancellation) {
@@ -544,6 +558,33 @@ if (isFinalInvoiceWithPartials && !isCancellation) {
   y += 5;
 }
 
+// GiroCode zum Bezahlen (nur neue Rechnungen in Euro mit IBAN)
+const giro =
+  frozen && !isCancellation && country !== "CH"
+    ? epcPayload({
+        name: companyName,
+        iban: companySettings?.iban,
+        bic: companySettings?.bic,
+        amount: Number(invoice?.total_amount ?? 0),
+        reference: `Rechnung ${invoiceNumber}`,
+      })
+    : null;
+if (giro) {
+  const qrSize = 26;
+  const qrTop = y - 6;
+  try {
+    drawGiroCode(doc, giro, marginLeft, qrTop, qrSize);
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(90);
+    doc.text("GiroCode: mit der Banking-App scannen", marginLeft + 1, qrTop + qrSize + 3);
+    doc.setTextColor(0);
+    doc.setFontSize(9);
+  } catch (e) {
+    console.warn("GiroCode konnte nicht erstellt werden", e);
+  }
+}
+
 doc.text(
   isPartialInvoice ? "Netto Abschlagsrechnung:" : "Netto:",
   labelX,
@@ -574,7 +615,7 @@ if (frozen && invoice?.reverse_charge) {
 y += 9;
 
 doc.setFontSize(12);
-doc.setFont("helvetica", "bold");
+doc.setFont(FONT, "bold");
 
 doc.text(isCancellation ? "Gesamt (Storno):" : "Zu zahlen:", labelX, y);
 
@@ -585,8 +626,8 @@ doc.text(formatMoney(invoice?.total_amount, currencySymbol), valueX, y, {
 // Pflichthinweise (§ 13b / § 35a / § 14b)
 const notes = frozen ? legalNotes(invoice, country, currencySymbol) : [];
 if (notes.length) {
-  y += 12;
-  doc.setFont("helvetica", "normal");
+  y += giro ? 15 : 12;
+  doc.setFont(FONT, "normal");
   doc.setFontSize(8);
   for (const note of notes) {
     const lines = doc.splitTextToSize(note, pageWidth - marginLeft - marginRight);
@@ -628,7 +669,7 @@ if (notes.length) {
     doc.setDrawColor(180);
     doc.line(marginLeft, 276, pageWidth - marginRight, 276);
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7);
     doc.setTextColor(90);
 
@@ -657,5 +698,6 @@ if (notes.length) {
   }
 
   if (output === "blob") return doc.output("blob");
+  if (output === "arraybuffer") return doc.output("arraybuffer");
   doc.save(`${isCancellation ? "Stornorechnung" : "Rechnung"}-${invoiceNumber}.pdf`);
 }

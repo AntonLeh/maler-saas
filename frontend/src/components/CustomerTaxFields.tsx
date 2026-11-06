@@ -2,16 +2,30 @@
 
 import type { CustomerKind } from "../lib/customerKind";
 
+export type CustomerTaxValues = {
+  customer_kind?: CustomerKind;
+  reverse_charge?: boolean;
+  vat_id?: string;
+  einvoice_email?: string;
+  buyer_reference?: string;
+};
+
 export default function CustomerTaxFields({
   kind,
   reverseCharge,
   companyName,
+  vatId = "",
+  einvoiceEmail = "",
+  buyerReference = "",
   onChange,
 }: {
   kind: CustomerKind;
   reverseCharge: boolean;
   companyName: string;
-  onChange: (values: { customer_kind?: CustomerKind; reverse_charge?: boolean }) => void;
+  vatId?: string;
+  einvoiceEmail?: string;
+  buyerReference?: string;
+  onChange: (values: CustomerTaxValues) => void;
 }) {
   const effectiveBusiness = kind === "business" || (kind === "auto" && companyName.trim() !== "");
   return (
@@ -47,6 +61,20 @@ export default function CustomerTaxFields({
             </small>
           </span>
         </label>
+      )}
+      {effectiveBusiness && (
+        <div style={{ marginTop: 12, padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8 }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>E-Rechnung (optional)</strong>
+          <small style={{ display: "block", color: "#64748b", marginBottom: 8 }}>
+            Nur nötig, wenn die Firma eine E-Rechnung verlangt. Die Angaben werden beim Erstellen der Rechnung übernommen.
+          </small>
+          <label style={{ display: "block", marginTop: 6 }}>USt-IdNr. des Kunden</label>
+          <input type="text" value={vatId} placeholder="z. B. DE123456789" onChange={(e) => onChange({ vat_id: e.target.value })} />
+          <label style={{ display: "block", marginTop: 6 }}>E-Mail für E-Rechnungen</label>
+          <input type="email" value={einvoiceEmail} placeholder="z. B. rechnung@firma.de (leer = normale E-Mail)" onChange={(e) => onChange({ einvoice_email: e.target.value })} />
+          <label style={{ display: "block", marginTop: 6 }}>Käuferreferenz / Leitweg-ID</label>
+          <input type="text" value={buyerReference} placeholder="nur wenn der Kunde eine vorgibt (Behörden: Leitweg-ID)" onChange={(e) => onChange({ buyer_reference: e.target.value })} />
+        </div>
       )}
     </div>
   );

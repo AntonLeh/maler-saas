@@ -486,7 +486,12 @@ export default function CustomerPortalPage() {
   onClick={() => {
     const frozen = snapshotSources(invoice);
     if (frozen) {
-      generateInvoicePdf({ invoice, ...frozen });
+      import("../lib/einvoiceFiles")
+        .then(({ downloadInvoicePdf }) => downloadInvoicePdf(invoice, frozen))
+        .catch((e) => {
+        console.error("PDF", e);
+        alert("Das PDF konnte nicht erstellt werden.");
+      });
       return;
     }
     generateInvoicePdf({

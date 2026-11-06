@@ -4,7 +4,6 @@ import { zipSync, strToU8 } from "fflate";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "../../lib/supabase";
-import { generateInvoicePdf } from "../../lib/invoicePdf";
 import { loadInvoicePdfSources } from "../../lib/invoiceSources";
 import { CATEGORY_LABELS, PAYMENT_LABELS } from "./types";
 import type { Country, Expense, ExpenseCategory, PaymentMethod } from "./types";
@@ -235,7 +234,8 @@ export async function buildPackage(o: PackageOptions): Promise<{ blob: Blob; war
     say(`Rechnungs-PDFs werden erstellt (${n}/${inPeriod.length}) …`);
     try {
       const sources = await loadInvoicePdfSources(inv, o.tenantId);
-      const blob = generateInvoicePdf({ invoice: inv, ...sources, output: "blob" }) as Blob;
+      const { buildInvoicePdf } = await import("../../lib/einvoiceFiles");
+      const { blob } = await buildInvoicePdf(inv, sources);
       files[`${p}/Rechnungen/${safeName(inv.invoice_number)}.pdf`] = [new Uint8Array(await blob.arrayBuffer()), { level: 0 }];
     } catch (e) {
       console.error("PDF", inv.invoice_number, e);
