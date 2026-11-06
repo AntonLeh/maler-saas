@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Website, WebsiteApplication, WebsiteJob } from "./types";
 import { EMPLOYMENT_OPTIONS, JOB_TEMPLATES, emptyJob, jobSlug, publicUrl, previewUrl } from "./types";
 import * as api from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 const lines = (v: string) =>
   v
@@ -143,7 +144,9 @@ export default function JobsTab({
     setJobs((list) => [...list, j]);
     setOpen(j.id);
   };
-  const remove = (id: string) => window.confirm("Diese Stelle löschen?") && setJobs((list) => list.filter((x) => x.id !== id));
+  const remove = async (id: string) => {
+    if (await showConfirm("Diese Stelle löschen?", { danger: true, confirmLabel: "Ja, löschen" })) setJobs((list) => list.filter((x) => x.id !== id));
+  };
   const save = () => {
     setError("");
     const bad = jobs.find((j) => !j.title.trim());
@@ -344,7 +347,9 @@ export default function JobsTab({
                     type="button"
                     className="ws-link ws-danger"
                     disabled={busyId === a.id}
-                    onClick={() => window.confirm("Bewerbung endgültig löschen?") && act(a.id, () => api.deleteApplication(tenantId, a.id))}
+                    onClick={async () => {
+                      if (await showConfirm("Bewerbung endgültig löschen?", { danger: true, confirmLabel: "Ja, löschen" })) act(a.id, () => api.deleteApplication(tenantId, a.id));
+                    }}
                   >
                     Löschen
                   </button>

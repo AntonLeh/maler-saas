@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WebsiteLead } from "./types";
 import * as api from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -130,7 +131,9 @@ export default function LeadsTab({
                   type="button"
                   className="ws-link ws-danger"
                   disabled={busyId === l.id}
-                  onClick={() => window.confirm("Anfrage endgültig löschen?") && run(l.id, () => api.deleteLead(tenantId, l.id))}
+                  onClick={async () => {
+                    if (await showConfirm("Anfrage endgültig löschen?", { danger: true, confirmLabel: "Ja, löschen" })) run(l.id, () => api.deleteLead(tenantId, l.id));
+                  }}
                 >
                   Löschen
                 </button>

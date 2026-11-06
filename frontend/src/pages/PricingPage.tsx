@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { showConfirm } from "../lib/dialogs";
 
 type PricingPageProps = {
   currentPlan?: string;
@@ -154,7 +155,7 @@ const canActivateCurrentTrialPlan =
   <button
   type="button"
   className="btn btn-primary"
-  onClick={() => {
+  onClick={async () => {
     // Bezahltes Abo: Tarif wird umgestellt (anteilige Verrechnung durch Stripe)
     const paid = subscriptionStatus === "active" && !isTrialing;
     if (paid && currentPlan && currentPlan !== plan.id) {
@@ -165,7 +166,7 @@ const canActivateCurrentTrialPlan =
         `Ihren Tarif auf ${plan.name} (${plan.price}/Monat netto) umstellen?\n\n` +
         `Die Umstellung gilt sofort. Die Differenz wird anteilig mit der nächsten Rechnung verrechnet${down ? " (Gutschrift)" : ""}.` +
         (loseWebsite ? "\n\nAchtung: Firmen-Website, KI-Chat, Online-Terminbuchung, Stellenanzeigen und Fachkräfte-Pool gibt es nur in Enterprise – Ihre Website geht dann offline (die Inhalte bleiben gespeichert)." : "");
-      if (!window.confirm(text)) return;
+      if (!(await showConfirm(text, { title: "Tarif umstellen?", confirmLabel: `Ja, auf ${plan.name} umstellen`, danger: loseWebsite }))) return;
     }
     setBusyPlan(plan.id);
     // nach dem Neuzeichnen starten, damit „Wird geöffnet …“ sofort sichtbar ist

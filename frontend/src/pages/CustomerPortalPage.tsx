@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { generateQuotePdf } from "../lib/quotePdf";
 import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
+import { showAlert, showConfirm } from "../lib/dialogs";
 
 type PortalData = {
   quote?: any;
@@ -190,7 +191,7 @@ export default function CustomerPortalPage() {
 
   const submitCustomerReview = async () => {
   if (!overallRating) {
-    alert("Bitte geben Sie eine Gesamtbewertung ab.");
+    await showAlert("Bitte geben Sie eine Gesamtbewertung ab.", { tone: "warning", title: "Bitte prüfen" });
     return;
   }
 
@@ -259,19 +260,18 @@ export default function CustomerPortalPage() {
       setReviewSent(true);
       setShowReviewForm(false);
 
-      alert(
-        "Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben."
-      );
+      await showAlert(
+        "Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben.");
     } else if (
       errorMessage.includes("Ungültiger oder abgelaufener Kundenlink") ||
       errorMessage.includes("Ungültiger Kundenlink")
     ) {
-      alert(
-        "Dieser Kundenlink ist nicht mehr gültig. Bitte wenden Sie sich an den ausführenden Betrieb."
-      );
+      await showAlert(
+        "Dieser Kundenlink ist nicht mehr gültig. Bitte wenden Sie sich an den ausführenden Betrieb.");
     } else {
-      alert(
-        "Ihre Bewertung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es später noch einmal."
+      await showAlert(
+        "Ihre Bewertung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es später noch einmal.",
+        { tone: "success", title: "Erledigt" }
       );
     }
   } finally {
@@ -391,8 +391,9 @@ export default function CustomerPortalPage() {
   type="button"
   className="btn btn-primary"
   onClick={async () => {
-    const confirmed = window.confirm(
-      "Möchten Sie dieses Angebot verbindlich bestätigen?"
+    const confirmed = await showConfirm(
+      "Möchten Sie dieses Angebot verbindlich bestätigen?",
+      { title: "Angebot annehmen", confirmLabel: "Ja, verbindlich bestätigen" }
     );
 
     if (!confirmed) return;
@@ -406,11 +407,11 @@ export default function CustomerPortalPage() {
 
     if (error) {
       console.error("Fehler beim Bestätigen des Angebots:", error);
-      alert("Das Angebot konnte nicht bestätigt werden.");
+      await showAlert("Das Angebot konnte nicht bestätigt werden.", { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
 
-    alert(result?.message || "Angebot wurde bestätigt.");
+    await showAlert(result?.message || "Angebot wurde bestätigt.");
 
     window.location.reload();
   }}
@@ -490,7 +491,7 @@ export default function CustomerPortalPage() {
         .then(({ downloadInvoicePdf }) => downloadInvoicePdf(invoice, frozen))
         .catch((e) => {
         console.error("PDF", e);
-        alert("Das PDF konnte nicht erstellt werden.");
+        void showAlert("Das PDF konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
       });
       return;
     }

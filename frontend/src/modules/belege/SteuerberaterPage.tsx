@@ -6,6 +6,7 @@ import type { TaxMethod } from "./vat";
 import { ACCOUNT_LABELS, DEFAULT_ACCOUNTS, defaultSettings, sameFiscalYear } from "./datev";
 import type { DatevAccounts, DatevSettings, Skr } from "./datev";
 import { buildPackage, datevFile, downloadBlob, loadAllInvoices, loadCustomers, loadExpensesRange, safeName } from "./paket";
+import { showConfirm } from "../../lib/dialogs";
 
 type Kind = "month" | "quarter" | "year";
 const now = new Date();
@@ -228,9 +229,10 @@ export default function SteuerberaterPage({ tenantId, country, currencySymbol }:
                   <span>Kontenrahmen</span>
                   <select
                     value={settings.skr}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const skr = e.target.value as Skr;
-                      if (window.confirm(`Kontenzuordnung auf die Standardkonten von ${skr} zurücksetzen?`)) setSettings({ ...settings, skr, accounts: { ...DEFAULT_ACCOUNTS[skr] } });
+                      if (await showConfirm(`Kontenzuordnung auf die Standardkonten von ${skr} zurücksetzen?`, { confirmLabel: "Ja, zurücksetzen", cancelLabel: "Nein" }))
+                        setSettings({ ...settings, skr, accounts: { ...DEFAULT_ACCOUNTS[skr] } });
                       else setSettings({ ...settings, skr });
                     }}
                   >

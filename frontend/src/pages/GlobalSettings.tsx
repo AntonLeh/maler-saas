@@ -1,6 +1,7 @@
 import { bicError, ibanError } from "../lib/bankCheck";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { showConfirm } from "../lib/dialogs";
 
 type CompanySettings = {
   id: number;
@@ -668,11 +669,17 @@ if (
   <select
     id="companyCountry"
     value={country}
-    onChange={(e) => {
+    onChange={async (e) => {
       const next = e.target.value;
       setCountry(next);
       const preset = COUNTRY_PRESETS[next];
-      if (preset && window.confirm(`Steuersatz und Währung für ${next} übernehmen (${preset.tax} %, ${preset.symbol})?`)) {
+      if (
+        preset &&
+        (await showConfirm(`Steuersatz und Währung für ${next} übernehmen (${preset.tax} %, ${preset.symbol})?`, {
+          confirmLabel: "Ja, übernehmen",
+          cancelLabel: "Nein",
+        }))
+      ) {
         if (!smallBusiness) setTaxRateDefault(String(preset.tax));
         setCurrency(preset.currency);
         setCurrencySymbol(preset.symbol);

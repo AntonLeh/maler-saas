@@ -3,6 +3,7 @@ import { Modal } from "../terminkalender/ui";
 import * as api from "./api";
 import type { AiResult, Country, Expense, ExpenseCategory, ExpenseInput, OrderOption, PaymentMethod } from "./types";
 import { CATEGORY_LABELS, COUNTRY_NAMES, CURRENCIES, PAYMENT_LABELS, TAX_RATES, homeCurrency, isForeignRate, splitAmount } from "./types";
+import { showConfirm } from "../../lib/dialogs";
 
 const money = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parseAmount = (s: string) => Number(String(s).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
@@ -212,18 +213,19 @@ export default function BelegForm({
         dups = await api.findDuplicates(tenantId, values.receipt_date, values.gross_amount, values.supplier, expense?.id);
       } catch (e) {
         // Prüfung darf das Speichern nicht verhindern – aber sichtbar machen
-        if (!window.confirm(`Die Prüfung auf doppelte Belege hat nicht geklappt (${(e as Error).message}).\n\nTrotzdem speichern?`)) {
+        if (!await showConfirm(`Die Prüfung auf doppelte Belege hat nicht geklappt (${(e as Error).message}).\n\nTrotzdem speichern?`, { tone: "warning", confirmLabel: "Trotzdem speichern" })) {
           setSaving(false);
           return;
         }
       }
       if (
         dups.length &&
-        !window.confirm(
+        !await showConfirm(
           `Möglicherweise doppelt erfasst:\n\n${dups
             .slice(0, 3)
             .map((d) => `• ${d.supplier}, ${new Date(`${d.receipt_date}T12:00:00`).toLocaleDateString("de-DE")}, ${money(Number(d.gross_amount))}`)
-            .join("\n")}\n\nTrotzdem speichern?`
+            .join("\n")}\n\nTrotzdem speichern?`,
+          { title: "Doppelter Beleg?", tone: "warning", confirmLabel: "Trotzdem speichern" }
         )
       ) {
         setSaving(false);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { showAlert } from "../lib/dialogs";
 
 type AppUser = {
   id: number;
@@ -55,7 +56,7 @@ export default function PerformanceSimulator({
 
       if (error) {
         console.error("Fehler bei Leistungsbewertung:", error);
-        alert("Fehler bei der Leistungsbewertung: " + error.message);
+        await showAlert("Fehler bei der Leistungsbewertung: " + error.message, { tone: "error", title: "Das hat nicht geklappt" });
         return;
       }
 
@@ -63,7 +64,7 @@ export default function PerformanceSimulator({
       setIsOpen(true);
     } catch (err) {
       console.error("Unerwarteter Fehler bei Leistungsbewertung:", err);
-      alert("Unerwarteter Fehler bei der Leistungsbewertung.");
+      await showAlert("Unerwarteter Fehler bei der Leistungsbewertung.", { tone: "error", title: "Das hat nicht geklappt" });
     } finally {
       setLoading(false);
     }

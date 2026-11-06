@@ -3,6 +3,7 @@ import type { Website } from "./types";
 import { DOMAIN_PARTNER_URL, DOMAIN_SHOP_URL, domainSuggestions } from "./types";
 import type { DnsRecord, DomainState } from "./api";
 import { domainAction } from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 /**
  * Eigene Domain verbinden: Domain eingeben → DNS-Einträge beim eigenen Anbieter setzen → prüfen.
@@ -170,9 +171,10 @@ export default function DomainPanel({ website, companyName, city, onError }: { w
               type="button"
               className="ws-link ws-danger"
               disabled={!!busy}
-              onClick={() =>
-                window.confirm("Domain trennen? Ihre Website ist danach wieder nur unter der Maler-SaaS-Adresse erreichbar.") && run("disconnect")
-              }
+              onClick={async () => {
+                if (await showConfirm("Domain trennen? Ihre Website ist danach wieder nur unter der Maler-SaaS-Adresse erreichbar.", { danger: true, confirmLabel: "Ja, trennen" }))
+                  run("disconnect");
+              }}
             >
               Domain trennen
             </button>

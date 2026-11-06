@@ -5,6 +5,7 @@ import type { Expense, ExpenseCategory, ExpensePeriod, OrderOption } from "./typ
 import { CATEGORY_LABELS, PAYMENT_LABELS, countryCode, isForeignRate } from "./types";
 import "../terminkalender/terminkalender.css";
 import "./belege.css";
+import { showConfirm, showPrompt } from "../../lib/dialogs";
 
 const money = (n: number) => n.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 const fmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("de-DE");
@@ -108,9 +109,9 @@ export default function BelegePage({
   };
 
   const voidIt = async (e: Expense) => {
-    const reason = window.prompt(
-      `Beleg „${e.supplier}“ vom ${fmtDate(e.receipt_date)} als ungültig markieren?\n\nBelege werden nicht gelöscht (Aufbewahrungspflicht), sondern bleiben als „ungültig“ sichtbar und zählen nicht mehr mit.\n\nGrund (z. B. „doppelt erfasst“):`,
-      "doppelt erfasst"
+    const reason = await showPrompt(
+      `Belege werden nicht gelöscht (Aufbewahrungspflicht), sondern bleiben als „ungültig“ sichtbar und zählen nicht mehr mit.\n\nGrund:`,
+      { title: `Beleg „${e.supplier}“ vom ${fmtDate(e.receipt_date)} als ungültig markieren?`, tone: "warning", defaultValue: "doppelt erfasst", confirmLabel: "Als ungültig markieren" }
     );
     if (reason === null) return;
     setError("");
@@ -135,8 +136,9 @@ export default function BelegePage({
 
   const lock = async () => {
     if (
-      !window.confirm(
-        `${monthLabel(month)} abschließen?\n\nDanach können die Belege dieses Monats nicht mehr geändert werden und es lassen sich keine neuen Belege mit Datum in diesem Monat erfassen. Nur „bezahlt“ lässt sich noch umstellen.\n\nTipp: Erst abschließen, wenn alle Belege des Monats erfasst sind (z. B. vor der Weitergabe an den Steuerberater).`
+      !await showConfirm(
+        `${monthLabel(month)} abschließen?\n\nDanach können die Belege dieses Monats nicht mehr geändert werden und es lassen sich keine neuen Belege mit Datum in diesem Monat erfassen. Nur „bezahlt“ lässt sich noch umstellen.\n\nTipp: Erst abschließen, wenn alle Belege des Monats erfasst sind (z. B. vor der Weitergabe an den Steuerberater).`,
+        { title: "Monat abschließen?", confirmLabel: "Ja, abschließen" }
       )
     )
       return;

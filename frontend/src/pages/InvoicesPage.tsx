@@ -4,6 +4,7 @@ import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 import { generateReminderPdf } from "../lib/reminderPdf";
 import SendEmailDialog from "../modules/versand/SendEmailDialog";
 import { loadSentInfo, type SentInfo } from "../modules/versand/api";
+import { showAlert, showConfirm, showPrompt } from "../lib/dialogs";
 
 type InvoiceReminder = {
   id: number;
@@ -152,10 +153,10 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
         const { downloadInvoicePdf, zugferdHint } = await import("../lib/einvoiceFiles");
         const res = await downloadInvoicePdf(invoice, frozen);
         const hint = zugferdHint(res, invoice);
-        if (hint) alert(hint);
+        if (hint) await showAlert(hint);
       } catch (e) {
         console.error("PDF", e);
-        alert("Das PDF konnte nicht erstellt werden.");
+        await showAlert("Das PDF konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
       }
       return;
     }
@@ -167,7 +168,7 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
 
     if (orderError) {
       console.error("Fehler beim Laden des Auftrags:", orderError);
-      alert("Auftrag konnte für die Rechnung nicht geladen werden.");
+      await showAlert("Auftrag konnte für die Rechnung nicht geladen werden.");
       return;
     }
 
@@ -269,8 +270,9 @@ if (invoice.invoice_type === "final") {
   };
 
 const handleCreateReminder = async (invoice: Invoice) => {
-  const confirmed = window.confirm(
-    `Möchten Sie für die Rechnung ${invoice.invoice_number} eine Mahnung erstellen?`
+  const confirmed = await showConfirm(
+    `Möchten Sie für die Rechnung ${invoice.invoice_number} eine Mahnung erstellen?`,
+    { title: "Mahnung erstellen?", confirmLabel: "Ja, Mahnung erstellen" }
   );
 
   if (!confirmed) {
@@ -286,12 +288,13 @@ const handleCreateReminder = async (invoice: Invoice) => {
 
   if (error) {
     console.error("Fehler beim Erstellen der Mahnung:", error);
-    alert(error.message || "Die Mahnung konnte nicht erstellt werden.");
+    await showAlert(error.message || "Die Mahnung konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
     return;
   }
 
-  alert(
-    `Mahnung für ${invoice.invoice_number} wurde erfolgreich erstellt.`
+  await showAlert(
+    `Mahnung für ${invoice.invoice_number} wurde erfolgreich erstellt.`,
+    { tone: "success", title: "Erledigt" }
   );
 
   console.log("Erstellte Mahnung ID:", data);
@@ -340,8 +343,9 @@ const handleCreateReminderPdf = async (
 const handleMarkReminderSent = async (
   reminder: InvoiceReminder
 ) => {
-  const confirmed = window.confirm(
-    "Möchten Sie diese Mahnung als versendet markieren?"
+  const confirmed = await showConfirm(
+    "Möchten Sie diese Mahnung als versendet markieren?",
+    { confirmLabel: "Ja" }
   );
 
   if (!confirmed) {
@@ -361,23 +365,24 @@ const handleMarkReminderSent = async (
       error
     );
 
-    alert(
+    await showAlert(
       error.message ||
-        "Die Mahnung konnte nicht als versendet markiert werden."
+        "Die Mahnung konnte nicht als versendet markiert werden.",
+        { tone: "error", title: "Das hat nicht geklappt" }
     );
 
     return;
   }
 
-  alert("Die Mahnung wurde als versendet markiert.");
+  await showAlert("Die Mahnung wurde als versendet markiert.", { tone: "success", title: "Erledigt" });
 
   await loadInvoices();
 };
 
 const handleCancelInvoice = async (invoice: Invoice) => {
-  const reason = window.prompt(
-    `Rechnung ${invoice.invoice_number} stornieren?\n\nEs wird eine Stornorechnung mit eigener Nummer erstellt. Danach können Sie eine neue, korrigierte Rechnung erstellen. Das lässt sich nicht rückgängig machen.\n\nGrund (optional, erscheint auf der Stornorechnung):`,
-    ""
+  const reason = await showPrompt(
+    `Es wird eine Stornorechnung mit eigener Nummer erstellt. Danach können Sie eine neue, korrigierte Rechnung erstellen. Das lässt sich nicht rückgängig machen.\n\nGrund (optional, erscheint auf der Stornorechnung):`,
+    { title: `Rechnung ${invoice.invoice_number} stornieren?`, tone: "warning", placeholder: "z. B. falscher Betrag", confirmLabel: "Ja, stornieren", danger: true }
   );
   if (reason === null) return;
 
@@ -387,22 +392,22 @@ const handleCancelInvoice = async (invoice: Invoice) => {
   });
   if (error) {
     console.error("Fehler beim Stornieren:", error);
-    alert(error.message || "Die Rechnung konnte nicht storniert werden.");
+    await showAlert(error.message || "Die Rechnung konnte nicht storniert werden.", { tone: "error", title: "Das hat nicht geklappt" });
     return;
   }
   await loadInvoices();
   onInvoicesChanged?.();
-  alert(
+  await showAlert(
     invoice.invoice_type === "final"
       ? "Die Rechnung wurde storniert. Der Auftrag steht wieder auf „Fertig“ – Sie können jetzt eine neue Rechnung erstellen."
-      : "Die Rechnung wurde storniert."
-  );
+      : "Die Rechnung wurde storniert.");
   console.log("Stornorechnung ID:", data);
 };
 
 const handleMarkInvoicePaid = async (invoice: Invoice) => {
-  const confirmed = window.confirm(
-    `Möchten Sie die Rechnung ${invoice.invoice_number} als bezahlt markieren?`
+  const confirmed = await showConfirm(
+    `Möchten Sie die Rechnung ${invoice.invoice_number} als bezahlt markieren?`,
+    { confirmLabel: "Ja, bezahlt" }
   );
 
   if (!confirmed) {
@@ -422,17 +427,17 @@ const handleMarkInvoicePaid = async (invoice: Invoice) => {
       error
     );
 
-    alert(
+    await showAlert(
       error.message ||
-        "Die Rechnung konnte nicht als bezahlt markiert werden."
+        "Die Rechnung konnte nicht als bezahlt markiert werden.",
+        { tone: "error", title: "Das hat nicht geklappt" }
     );
 
     return;
   }
 
-  alert(
-    `Die Rechnung ${invoice.invoice_number} wurde als bezahlt markiert.`
-  );
+  await showAlert(
+    `Die Rechnung ${invoice.invoice_number} wurde als bezahlt markiert.`);
 
   await loadInvoices();
 };
@@ -454,7 +459,7 @@ const getInvoiceReminders = (invoiceId: number) => {
           onClose={() => setMailFor(null)}
           onSent={(info) => {
             setMailFor(null);
-            alert(`Die E-Mail wurde an ${info.to} gesendet.`);
+            void showAlert(`Die E-Mail wurde an ${info.to} gesendet.`, { tone: "success", title: "Erledigt" });
             loadInvoices();
           }}
         />
@@ -655,7 +660,7 @@ const getInvoiceReminders = (invoiceId: number) => {
             const { downloadXRechnung } = await import("../lib/einvoiceFiles");
             downloadXRechnung(invoice);
           } catch (e) {
-            alert(e instanceof Error ? e.message : "Die XRechnung konnte nicht erstellt werden.");
+            await showAlert(e instanceof Error ? e.message : "Die XRechnung konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
           }
         }}
       >

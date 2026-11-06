@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import EmployeeMaterialsSection from "./EmployeeMaterialsSection";
+import { showConfirm } from "../lib/dialogs";
 
   const formatDateTime = (value: string) => {
   const hasTimezone = /[zZ]|[+\-]\d{2}:\d{2}$/.test(value);
@@ -854,8 +855,9 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
   <button
     type="button"
     onClick={async () => {
-  const confirmed = window.confirm(
-    "Möchtest du dieses Bild wirklich löschen?"
+  const confirmed = await showConfirm(
+    "Möchtest du dieses Bild wirklich löschen?",
+    { danger: true, confirmLabel: "Ja, löschen" }
   );
 
   if (!confirmed) return;

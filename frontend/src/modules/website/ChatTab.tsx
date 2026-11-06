@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Website, WebsiteChat, WebsiteChatSettings } from "./types";
 import { CHAT_MONTHLY_LIMIT } from "./types";
 import * as api from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const firstQuestion = (c: WebsiteChat) => c.messages.find((m) => m.role === "user")?.text ?? "";
@@ -62,7 +63,7 @@ export default function ChatTab({
   const defaultGreeting = `Hallo! Ich bin der digitale KI-Assistent von ${companyName || "Ihrem Betrieb"}. Ich beantworte gern Ihre Fragen zu unseren Leistungen und nehme Ihre Anfrage auf.`;
 
   const remove = async (id: string) => {
-    if (!window.confirm("Diesen Chat-Verlauf löschen?")) return;
+    if (!await showConfirm("Diesen Chat-Verlauf löschen?", { danger: true, confirmLabel: "Ja, löschen" })) return;
     try {
       await api.deleteChat(tenantId, id);
       setChats((list) => (list ?? []).filter((c) => c.id !== id));

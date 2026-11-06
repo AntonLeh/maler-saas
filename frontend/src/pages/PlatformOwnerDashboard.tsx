@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { showAlert, showConfirm } from "../lib/dialogs";
 
 type Tenant = {
   id: number;
@@ -187,11 +188,11 @@ const handleChangePlan = async (
 
   if (error) {
     console.error("Fehler beim Ändern des Plans:", error);
-    alert("Plan konnte nicht geändert werden.");
+    await showAlert("Plan konnte nicht geändert werden.", { tone: "error", title: "Das hat nicht geklappt" });
     return;
   }
 
-  alert("Plan wurde erfolgreich geändert.");
+  await showAlert("Plan wurde erfolgreich geändert.", { tone: "success", title: "Erledigt" });
 
   await loadTenants();
 };
@@ -347,7 +348,7 @@ const updateTenantStatus = async (tenantId: number, status: string) => {
     .eq("id", tenantId);
 
   if (error) {
-    alert("Status konnte nicht geändert werden.");
+    await showAlert("Status konnte nicht geändert werden.", { tone: "error", title: "Das hat nicht geklappt" });
     console.error(error);
     return;
   }
@@ -359,7 +360,7 @@ const extendTrial = async (tenantId: number) => {
   const subscription = getSubscriptionForTenant(tenantId);
 
   if (!subscription) {
-    alert("Keine Subscription für diese Firma gefunden.");
+    await showAlert("Keine Subscription für diese Firma gefunden.");
     return;
   }
 
@@ -375,7 +376,7 @@ const extendTrial = async (tenantId: number) => {
     .eq("id", subscription.id);
 
   if (error) {
-    alert("Trial konnte nicht verlängert werden.");
+    await showAlert("Trial konnte nicht verlängert werden.", { tone: "error", title: "Das hat nicht geklappt" });
     console.error(error);
     return;
   }
@@ -384,14 +385,16 @@ const extendTrial = async (tenantId: number) => {
 };
 
 const deleteTenantCompletely = async (tenantId: number, companyName: string) => {
-  const firstConfirm = confirm(
-    `Firma "${companyName}" wirklich ENDGÜLTIG löschen? Alle Daten dieser Firma werden gelöscht.`
+  const firstConfirm = await showConfirm(
+    `Firma "${companyName}" wirklich ENDGÜLTIG löschen? Alle Daten dieser Firma werden gelöscht.`,
+    { danger: true, confirmLabel: "Ja, löschen" }
   );
 
   if (!firstConfirm) return;
 
-  const secondConfirm = confirm(
-    `Letzte Warnung: Das kann nicht rückgängig gemacht werden. "${companyName}" endgültig löschen?`
+  const secondConfirm = await showConfirm(
+    `Letzte Warnung: Das kann nicht rückgängig gemacht werden. "${companyName}" endgültig löschen?`,
+    { title: "Letzte Warnung", danger: true, confirmLabel: "Endgültig löschen" }
   );
 
   if (!secondConfirm) return;
@@ -401,7 +404,7 @@ const deleteTenantCompletely = async (tenantId: number, companyName: string) => 
   });
 
   if (error) {
-    alert("Firma konnte nicht gelöscht werden.");
+    await showAlert("Firma konnte nicht gelöscht werden.", { tone: "error", title: "Das hat nicht geklappt" });
     console.error(error);
     return;
   }

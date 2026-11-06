@@ -7,6 +7,7 @@ import * as api from "./api";
 import type { PoolContactForWorker, PoolProfile } from "./types";
 import { EMPTY_PROFILE } from "./types";
 import "./fachkraefte.css";
+import { showConfirm } from "../../lib/dialogs";
 
 /**
  * Öffentliche Seiten des Fachkräfte-Pools auf maler-saas.com:
@@ -359,7 +360,7 @@ function ProfileView({ token, noch, onPrivacy }: { token: string; noch: boolean;
             className="fk-link fk-danger"
             disabled={busy}
             onClick={async () => {
-              if (!window.confirm("Profil endgültig löschen? Das lässt sich nicht rückgängig machen.")) return;
+              if (!await showConfirm("Profil endgültig löschen? Das lässt sich nicht rückgängig machen.", { danger: true, confirmLabel: "Ja, löschen" })) return;
               setBusy(true);
               try {
                 await api.deleteProfile(token);

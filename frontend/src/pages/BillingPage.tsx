@@ -1,5 +1,6 @@
 import React from "react";
 import { supabase } from "../lib/supabase";
+import { showAlert } from "../lib/dialogs";
 
 type Subscription = {
   plan: string;
@@ -143,12 +144,12 @@ export default function BillingPage({
 
               if (error) {
                 console.error("Stripe Portal Fehler:", error);
-                alert("Abo-Verwaltung konnte nicht geöffnet werden.");
+                await showAlert("Abo-Verwaltung konnte nicht geöffnet werden.", { tone: "error", title: "Das hat nicht geklappt" });
                 return;
               }
 
               if (!data?.url) {
-                alert("Keine Portal-URL erhalten.");
+                await showAlert("Keine Portal-URL erhalten.");
                 return;
               }
 

@@ -14,6 +14,7 @@ import StatsTab from "./StatsTab";
 import BookingTab from "./BookingTab";
 import JobsTab from "./JobsTab";
 import ChatTab from "./ChatTab";
+import { showConfirm } from "../../lib/dialogs";
 
 type Tab = "design" | "stats" | "booking" | "chat" | "jobs" | "references" | "reviews" | "leads" | "legal";
 
@@ -129,7 +130,7 @@ export default function WebsitePage({
       setTab("legal");
       return showError(`Vor dem Veröffentlichen bitte ergänzen: ${gaps.join(", ")}.`);
     }
-    if (website.published && !window.confirm("Website wirklich offline nehmen? Besucher sehen dann eine Fehlerseite.")) return;
+    if (website.published && !await showConfirm("Website wirklich offline nehmen? Besucher sehen dann eine Fehlerseite.", { danger: true, confirmLabel: "Ja, offline nehmen" })) return;
     await save({ published: !website.published }, website.published ? "Die Website ist jetzt offline." : "Ihre Website ist jetzt online!");
   };
 

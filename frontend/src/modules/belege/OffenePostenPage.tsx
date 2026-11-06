@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import * as api from "./api";
 import type { OpenInvoice } from "./api";
 import type { Expense } from "./types";
+import { showConfirm } from "../../lib/dialogs";
 
 const DAY = 86_400_000;
 const todayIso = () => new Date().toLocaleDateString("sv-SE");
@@ -64,7 +65,7 @@ export default function OffenePostenPage({ tenantId, currencySymbol, onOpenInvoi
   };
 
   const payInvoice = async (i: OpenInvoice) => {
-    if (!window.confirm(`Rechnung ${i.invoice_number} über ${fmt(Number(i.total_amount))} als bezahlt markieren?`)) return;
+    if (!await showConfirm(`Rechnung ${i.invoice_number} über ${fmt(Number(i.total_amount))} als bezahlt markieren?`, { confirmLabel: "Ja, bezahlt" })) return;
     setBusy(`i${i.id}`);
     setError("");
     try {

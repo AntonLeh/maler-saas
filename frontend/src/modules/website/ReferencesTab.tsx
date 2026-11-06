@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { OrderImage, OrderOption, Website, WebsiteImage, WebsiteReference } from "./types";
 import { previewUrl, publicUrl, referenceSlug } from "./types";
 import * as api from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 type Props = {
   tenantId: number;
@@ -297,7 +298,7 @@ export default function ReferencesTab({ tenantId, userId, references, onChanged,
   };
 
   const remove = async (ref: WebsiteReference) => {
-    if (!window.confirm(`Referenz „${ref.title}“ mit allen Bildern löschen?`)) return;
+    if (!await showConfirm(`Referenz „${ref.title}“ mit allen Bildern löschen?`, { danger: true, confirmLabel: "Ja, löschen" })) return;
     setBusyId(ref.id);
     try {
       await api.deleteReference(tenantId, ref);

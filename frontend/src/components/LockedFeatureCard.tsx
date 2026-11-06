@@ -1,4 +1,5 @@
 import React from "react";
+import { showAlert } from "../lib/dialogs";
 
 type LockedFeatureCardProps = {
   feature: string;
@@ -74,7 +75,7 @@ export default function LockedFeatureCard({
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => alert("Die Upgrade-Seite wird als Nächstes eingebaut.")}
+            onClick={() => void showAlert("Die Upgrade-Seite wird als Nächstes eingebaut.")}
           >
             Mehr erfahren
           </button>

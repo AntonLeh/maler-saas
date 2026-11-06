@@ -50,6 +50,7 @@ import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules
 import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
 import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
+import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -1632,8 +1633,9 @@ const handleSaveDeposit = async () => {
   if (!quoteDetail || !userProfile?.tenant_id) return;
 
   if (subscription?.plan !== "business") {
-    alert(
-      "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar."
+    await showAlert(
+      "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar.",
+      { tone: "warning", title: "Bitte prüfen" }
     );
     return;
   }
@@ -1642,12 +1644,12 @@ const handleSaveDeposit = async () => {
 
   if (depositEnabled) {
     if (!Number.isFinite(value) || value <= 0) {
-      alert("Bitte geben Sie einen gültigen Abschlagswert ein.");
+      await showAlert("Bitte geben Sie einen gültigen Abschlagswert ein.", { tone: "warning", title: "Bitte prüfen" });
       return;
     }
 
     if (depositType === "percent" && value > 100) {
-      alert("Der Abschlag darf nicht mehr als 100 % betragen.");
+      await showAlert("Der Abschlag darf nicht mehr als 100 % betragen.", { tone: "warning", title: "Bitte prüfen" });
       return;
     }
 
@@ -1655,8 +1657,9 @@ const handleSaveDeposit = async () => {
       depositType === "fixed" &&
       value > Number(quoteDetail.total_amount || 0)
     ) {
-      alert(
-        "Der Abschlag darf die aktuelle Angebotssumme nicht überschreiten."
+      await showAlert(
+        "Der Abschlag darf die aktuelle Angebotssumme nicht überschreiten.",
+        { tone: "warning", title: "Bitte prüfen" }
       );
       return;
     }
@@ -1678,9 +1681,10 @@ const handleSaveDeposit = async () => {
       error
     );
 
-    alert(
+    await showAlert(
       error.message ||
-        "Die Abschlagsvereinbarung konnte nicht gespeichert werden."
+        "Die Abschlagsvereinbarung konnte nicht gespeichert werden.",
+        { tone: "error", title: "Das hat nicht geklappt" }
     );
     return;
   }
@@ -1690,7 +1694,7 @@ const handleSaveDeposit = async () => {
     userProfile.tenant_id
   );
 
-  alert("Die Zahlungsvereinbarung wurde gespeichert.");
+  await showAlert("Die Zahlungsvereinbarung wurde gespeichert.", { tone: "success", title: "Erledigt" });
 };
 
   const handleAddAdditionalPositionToQuote = async () => {
@@ -1754,7 +1758,7 @@ const handleCreateCustomerPortalLink = async () => {
 
   if (quoteError || !quote) {
     console.error("Fehler beim Laden des Angebots:", quoteError);
-    alert("Angebot konnte nicht geladen werden.");
+    await showAlert("Angebot konnte nicht geladen werden.", { tone: "error", title: "Das hat nicht geklappt" });
     return;
   }
 
@@ -1767,9 +1771,10 @@ const handleCreateCustomerPortalLink = async () => {
 
   if (error) {
     console.error("Kundenlink konnte nicht erstellt werden:", error);
-    alert(
+    await showAlert(
       error.message ||
-        "Kundenlink konnte nicht erstellt werden."
+        "Kundenlink konnte nicht erstellt werden.",
+        { tone: "error", title: "Das hat nicht geklappt" }
     );
     return;
   }
@@ -1779,7 +1784,7 @@ const handleCreateCustomerPortalLink = async () => {
       "Kundenlink-RPC hat keinen gültigen Token zurückgegeben:",
       token
     );
-    alert("Kundenlink konnte nicht erstellt werden.");
+    await showAlert("Kundenlink konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
     return;
   }
 
@@ -1788,9 +1793,10 @@ const handleCreateCustomerPortalLink = async () => {
 
   await navigator.clipboard.writeText(portalUrl);
 
-  alert(
+  await showAlert(
     "Kundenportal-Link erstellt und in die Zwischenablage kopiert:\n\n" +
-      portalUrl
+      portalUrl,
+      { tone: "success", title: "Erledigt" }
   );
 };
 
@@ -2286,8 +2292,9 @@ const handleSendMessage = async () => {
 const handleDeleteMessage = async (messageId: number) => {
   if (!userProfile) return;
 
-  const confirmDelete = window.confirm(
-    "Möchtest du diese Nachricht wirklich löschen?"
+  const confirmDelete = await showConfirm(
+    "Möchtest du diese Nachricht wirklich löschen?",
+    { danger: true, confirmLabel: "Ja, löschen" }
   );
 
   if (!confirmDelete) return;
@@ -2502,7 +2509,7 @@ const savePerformanceReward = async () => {
   if (!userProfile?.tenant_id) return;
 
   if (!rewardMinPoints || !rewardValue || !rewardDescription || !rewardType) {
-    alert("Bitte alle Pflichtfelder ausfüllen.");
+    await showAlert("Bitte alle Pflichtfelder ausfüllen.", { tone: "warning", title: "Bitte prüfen" });
     return;
   }
 
@@ -2522,7 +2529,7 @@ const savePerformanceReward = async () => {
 
     if (error) throw error;
 
-    alert("Bonusregel gespeichert.");
+    await showAlert("Bonusregel gespeichert.", { tone: "success", title: "Erledigt" });
 
     setShowRewardForm(false);
 
@@ -2538,7 +2545,7 @@ const savePerformanceReward = async () => {
   } catch (error) {
     console.error("Bonusregel-Fehler:", JSON.stringify(error, null, 2));
     console.error(error);
-    alert("Bonusregel konnte nicht gespeichert werden.");
+    await showAlert("Bonusregel konnte nicht gespeichert werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
@@ -2553,7 +2560,7 @@ const togglePerformanceReward = async (rewardId: number) => {
     loadPerformanceRewards();
   } catch (error) {
     console.error("Fehler beim Aktualisieren der Bonusregel:", error);
-    alert("Bonusregel konnte nicht aktualisiert werden.");
+    await showAlert("Bonusregel konnte nicht aktualisiert werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
@@ -2576,8 +2583,9 @@ const editPerformanceReward = (reward: any) => {
 };
 
 const deletePerformanceReward = async (rewardId: number) => {
-  const confirmed = window.confirm(
-    "Möchten Sie diese Bonusregel wirklich löschen?"
+  const confirmed = await showConfirm(
+    "Möchten Sie diese Bonusregel wirklich löschen?",
+    { danger: true, confirmLabel: "Ja, löschen" }
   );
 
   if (!confirmed) return;
@@ -2592,7 +2600,7 @@ const deletePerformanceReward = async (rewardId: number) => {
     loadPerformanceRewards();
   } catch (error) {
     console.error("Fehler beim Löschen der Bonusregel:", error);
-    alert("Bonusregel konnte nicht gelöscht werden.");
+    await showAlert("Bonusregel konnte nicht gelöscht werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
@@ -2721,7 +2729,7 @@ const togglePerformanceCriterion = async (id: number) => {
       error
     );
 
-    alert("Leistungsregel konnte nicht aktualisiert werden.");
+    await showAlert("Leistungsregel konnte nicht aktualisiert werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
@@ -2758,7 +2766,7 @@ const savePerformanceCriterion = async () => {
   if (!userProfile?.tenant_id) return;
 
   if (!criterionCategory || !criterionName || criterionPoints === "") {
-    alert("Bitte Kategorie, Kriterium und Punkte ausfüllen.");
+    await showAlert("Bitte Kategorie, Kriterium und Punkte ausfüllen.", { tone: "warning", title: "Bitte prüfen" });
     return;
   }
 
@@ -2789,11 +2797,10 @@ const savePerformanceCriterion = async () => {
 
     if (error) throw error;
 
-    alert(
+    await showAlert(
       editingCriterionId
         ? "Leistungsregel aktualisiert."
-        : "Leistungsregel erstellt."
-    );
+        : "Leistungsregel erstellt.");
 
     setShowCriterionForm(false);
     setEditingCriterionId(null);
@@ -2808,13 +2815,14 @@ const savePerformanceCriterion = async () => {
 
   } catch (error) {
     console.error(error);
-    alert("Leistungsregel konnte nicht gespeichert werden.");
+    await showAlert("Leistungsregel konnte nicht gespeichert werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
 const deletePerformanceCriterion = async (criterionId: number) => {
-  const confirmed = window.confirm(
-    "Möchten Sie diese Leistungsregel wirklich löschen?"
+  const confirmed = await showConfirm(
+    "Möchten Sie diese Leistungsregel wirklich löschen?",
+    { danger: true, confirmLabel: "Ja, löschen" }
   );
 
   if (!confirmed) return;
@@ -2832,7 +2840,7 @@ const deletePerformanceCriterion = async (criterionId: number) => {
     loadPerformanceCriteria();
   } catch (error) {
     console.error(error);
-    alert("Leistungsregel konnte nicht gelöscht werden.");
+    await showAlert("Leistungsregel konnte nicht gelöscht werden.", { tone: "error", title: "Das hat nicht geklappt" });
   }
 };
 
@@ -3335,8 +3343,9 @@ useEffect(() => {
 const handleReturnOrderToWork = async (orderId: string | number) => {
   if (!userProfile) return;
 
-  const confirmed = window.confirm(
-    "Möchtest du diesen Auftrag wirklich zur Nacharbeit zurückgeben?"
+  const confirmed = await showConfirm(
+    "Möchtest du diesen Auftrag wirklich zur Nacharbeit zurückgeben?",
+    { confirmLabel: "Ja, zurückgeben" }
   );
 
   if (!confirmed) return;
@@ -3412,7 +3421,7 @@ const handleReturnOrderToWork = async (orderId: string | number) => {
  * § 35a EStG: Bei Privatkunden (Deutschland) den Lohnanteil abfragen.
  * undefined = abgebrochen, null = keine Abfrage nötig (Firma/§ 13b/anderes Land), Zahl = Anteil in %
  */
-const askLaborShare = (orderId: string | number): number | null | undefined => {
+const askLaborShare = async (orderId: string | number): Promise<number | null | undefined> => {
   const order = orders.find((o) => String(o.id) === String(orderId));
   const customer = customers.find((c) => String(c.id) === String(order?.customer_id));
   const country = String(companySettings?.country ?? "Deutschland").trim().toLowerCase();
@@ -3421,16 +3430,23 @@ const askLaborShare = (orderId: string | number): number | null | undefined => {
   const isBusiness = customer.reverse_charge || (customer.is_business ?? !!String(customer.company_name ?? "").trim());
   if (isBusiness) return null;
   const standard = Number(companySettings?.labor_share_percent ?? 70);
-  for (;;) {
-    const answer = window.prompt(
-      `Privatkunde: Wie hoch ist der Anteil der Arbeitskosten (Lohnanteil) am Rechnungsbetrag in %?\n\nDer Betrag wird für den Steuerabzug nach § 35a EStG auf der Rechnung ausgewiesen. Standard aus den Einstellungen: ${standard} %.`,
-      String(standard)
-    );
-    if (answer === null) return undefined;
-    const value = Number(answer.replace(",", ".").replace("%", "").trim());
-    if (Number.isFinite(value) && value >= 0 && value <= 100) return value;
-    window.alert("Bitte eine Zahl zwischen 0 und 100 eingeben.");
-  }
+  const parse = (v: string) => Number(v.replace(",", ".").replace("%", "").trim());
+  const answer = await showPrompt(
+    `Wie hoch ist der Anteil der Arbeitskosten am Rechnungsbetrag?\n\nDer Betrag wird für den Steuerabzug nach § 35a EStG auf der Rechnung ausgewiesen (Standard aus den Einstellungen: ${standard} %).`,
+    {
+      title: "Privatkunde: Lohnanteil",
+      defaultValue: String(standard),
+      suffix: "%",
+      inputMode: "decimal",
+      confirmLabel: "Weiter",
+      validate: (v) => {
+        const n = parse(v);
+        return v.trim() !== "" && Number.isFinite(n) && n >= 0 && n <= 100 ? null : "Bitte eine Zahl zwischen 0 und 100 eingeben.";
+      },
+    }
+  );
+  if (answer === null) return undefined;
+  return parse(answer);
 };
 
 /** Österreich: Firmenrechnung über 10.000 € brutto braucht die UID des Kunden (§ 11 UStG) – false = abbrechen */
@@ -3451,22 +3467,24 @@ const confirmAustrianUid = async (orderId: string | number): Promise<boolean> =>
     .limit(1)
     .maybeSingle();
   if (Number(quote?.total_amount ?? 0) <= 10000) return true;
-  return window.confirm(
-    "Hinweis: In Österreich muss auf Firmenrechnungen über 10.000 € (brutto) die UID-Nummer des Kunden stehen.\n\nBeim Kunden ist noch keine UID eingetragen (Kunde bearbeiten → „E-Rechnung (optional)“ → USt-IdNr.).\n\nTrotzdem jetzt ohne UID erstellen?"
+  return await showConfirm(
+    "Hinweis: In Österreich muss auf Firmenrechnungen über 10.000 € (brutto) die UID-Nummer des Kunden stehen.\n\nBeim Kunden ist noch keine UID eingetragen (Kunde bearbeiten → „E-Rechnung (optional)“ → USt-IdNr.).\n\nTrotzdem jetzt ohne UID erstellen?",
+    { title: "UID des Kunden fehlt", tone: "warning", confirmLabel: "Trotzdem erstellen" }
   );
 };
 
 const handleCreateInvoice = async (orderId: string | number) => {
   if (!userProfile) return;
 
-  const confirmCreate = window.confirm(
-    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?\n\nHinweis: Eine erstellte Rechnung kann nicht mehr geändert werden – nur noch storniert."
+  const confirmCreate = await showConfirm(
+    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?\n\nHinweis: Eine erstellte Rechnung kann nicht mehr geändert werden – nur noch storniert.",
+    { title: "Rechnung erstellen?", confirmLabel: "Ja, Rechnung erstellen" }
   );
 
   if (!confirmCreate) return;
   if (!(await confirmAustrianUid(orderId))) return;
 
-  const laborShare = askLaborShare(orderId);
+  const laborShare = await askLaborShare(orderId);
   if (laborShare === undefined) return;
 
   const { data, error } = await supabase.rpc("create_invoice_from_order", {
@@ -3508,19 +3526,21 @@ const handleCreatePartialInvoice = async (
     subscription?.plan === "business" ||
     subscription?.plan === "enterprise";
   if (!partialAllowed) {
-  alert(
-    "Abschlagsrechnungen sind ab dem Tarif Business verfügbar. Bitte wechseln Sie den Tarif, um diese Funktion zu nutzen."
+  await showAlert(
+    "Abschlagsrechnungen sind ab dem Tarif Business verfügbar. Bitte wechseln Sie den Tarif, um diese Funktion zu nutzen.",
+    { tone: "warning", title: "Bitte prüfen" }
   );
   return;
 }
 
-  const confirmCreate = window.confirm(
-    "Möchtest du für diesen Auftrag jetzt die vereinbarte Abschlagsrechnung erstellen?"
+  const confirmCreate = await showConfirm(
+    "Möchtest du für diesen Auftrag jetzt die vereinbarte Abschlagsrechnung erstellen?",
+    { title: "Abschlagsrechnung erstellen?", confirmLabel: "Ja, erstellen" }
   );
 
   if (!confirmCreate) return;
 
-  const laborShare = askLaborShare(orderId);
+  const laborShare = await askLaborShare(orderId);
   if (laborShare === undefined) return;
 
   const { data, error } = await supabase.rpc(
@@ -4352,8 +4372,9 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
   const handleDeleteSiteVisit = async () => {
     if (!editingSiteVisitId) return;
 
-    const confirmDelete = window.confirm(
-      "Möchten Sie diese Besichtigung wirklich löschen?"
+    const confirmDelete = await showConfirm(
+      "Möchten Sie diese Besichtigung wirklich löschen?",
+      { danger: true, confirmLabel: "Ja, löschen" }
     );
 
     if (!confirmDelete) return;
@@ -4482,8 +4503,9 @@ setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort ei
       let siteVisitData;
 
       if (editingSiteVisitId) {
-        const confirmUpdate = window.confirm(
-          "Möchten Sie die bestehende Besichtigung wirklich überschreiben?"
+        const confirmUpdate = await showConfirm(
+          "Möchten Sie die bestehende Besichtigung wirklich überschreiben?",
+          { confirmLabel: "Ja, überschreiben" }
         );
 
         if (!confirmUpdate) {
@@ -5412,8 +5434,9 @@ if (maxUsers > 0 && currentUsers >= maxUsers) {
     const handleDeleteCustomer = async (customerId: string) => {
       if (!userProfile) return;
 
-      const confirmed = window.confirm(
-        "Soll dieser Kunde wirklich gelöscht werden?"
+      const confirmed = await showConfirm(
+        "Soll dieser Kunde wirklich gelöscht werden?",
+        { danger: true, confirmLabel: "Ja, löschen" }
       );
 
       if (!confirmed) return;
@@ -5467,8 +5490,9 @@ if (maxUsers > 0 && currentUsers >= maxUsers) {
     const handleDeleteEmployee = async (employeeId: number) => {
       if (!userProfile) return;
 
-      const confirmed = window.confirm(
-        "Soll dieser Mitarbeiter wirklich gelöscht werden?"
+      const confirmed = await showConfirm(
+        "Soll dieser Mitarbeiter wirklich gelöscht werden?",
+        { danger: true, confirmLabel: "Ja, löschen" }
       );
 
       if (!confirmed) return;
@@ -8961,8 +8985,9 @@ onReloadOrders={async () => {
         checked={depositEnabled}
         onChange={(e) => {
           if (subscription?.plan !== "business") {
-            alert(
-              "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen."
+            void showAlert(
+              "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen.",
+              { tone: "warning", title: "Bitte prüfen" }
             );
             return;
           }
@@ -12125,7 +12150,7 @@ const businessAdvisor = generateBusinessInsights();
     const { data: fresh } = await supabase.auth.refreshSession();
     const accessToken = fresh.session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
     if (!accessToken) {
-      alert("Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich neu an und versuchen Sie es noch einmal.");
+      await showAlert("Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich neu an und versuchen Sie es noch einmal.", { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
     const { data, error } = await supabase.functions.invoke(
@@ -12149,13 +12174,13 @@ const businessAdvisor = generateBusinessInsights();
       } catch {
         /* keine Details */
       }
-      alert(`Stripe Checkout konnte nicht gestartet werden.${detail ? `\n\n${detail}` : ""}`);
+      await showAlert(`Stripe Checkout konnte nicht gestartet werden.${detail ? `\n\n${detail}` : ""}`, { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
 
     if (!data?.url) {
       console.error("Keine Stripe Checkout URL erhalten:", data);
-      alert("Keine Stripe Checkout URL erhalten.");
+      await showAlert("Keine Stripe Checkout URL erhalten.", { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
 

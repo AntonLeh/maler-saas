@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WebsiteReview, WebsiteReviewOverview } from "./types";
 import * as api from "./api";
+import { showConfirm } from "../../lib/dialogs";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -85,11 +86,15 @@ export default function ReviewsTab({
           type="button"
           className="ws-link ws-danger"
           disabled={busyId === r.review_id}
-          onClick={() =>
-            window.confirm(
-              "Zustimmung entfernen? Nutzen Sie das, wenn der Kunde seine Einwilligung widerruft. Die Bewertung bleibt intern erhalten, kann aber nicht mehr veröffentlicht werden."
-            ) && run(r.review_id, () => api.removeReviewConsent(tenantId, r.review_id), "Zustimmung entfernt.")
-          }
+          onClick={async () => {
+            if (
+              await showConfirm(
+                "Zustimmung entfernen? Nutzen Sie das, wenn der Kunde seine Einwilligung widerruft. Die Bewertung bleibt intern erhalten, kann aber nicht mehr veröffentlicht werden.",
+                { danger: true, confirmLabel: "Ja, entfernen" }
+              )
+            )
+              run(r.review_id, () => api.removeReviewConsent(tenantId, r.review_id), "Zustimmung entfernt.");
+          }}
         >
           Widerruf: Zustimmung entfernen
         </button>
