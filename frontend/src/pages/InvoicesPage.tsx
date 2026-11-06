@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 import { generateReminderPdf } from "../lib/reminderPdf";
+import SendEmailDialog from "../modules/versand/SendEmailDialog";
+import { loadSentInfo, type SentInfo } from "../modules/versand/api";
 
 type InvoiceReminder = {
   id: number;
@@ -70,6 +72,8 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceReminders, setInvoiceReminders] = useState<InvoiceReminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sentInfo, setSentInfo] = useState<SentInfo[]>([]);
+  const [mailFor, setMailFor] = useState<{ kind: "invoice" | "reminder"; invoice: Invoice; reminder?: InvoiceReminder } | null>(null);
 
   const loadInvoices = async () => {
   setLoading(true);
@@ -101,6 +105,7 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
     );
   }
 
+  setSentInfo(await loadSentInfo());
   setInvoices((data as Invoice[]) || []);
   setLoading(false);
 };
@@ -440,6 +445,20 @@ const getInvoiceReminders = (invoiceId: number) => {
 
   return (
     <section className="single-page-section">
+      {mailFor && (
+        <SendEmailDialog
+          kind={mailFor.kind}
+          invoice={mailFor.invoice}
+          reminder={mailFor.reminder}
+          tenantId={userProfile.tenant_id}
+          onClose={() => setMailFor(null)}
+          onSent={(info) => {
+            setMailFor(null);
+            alert(`Die E-Mail wurde an ${info.to} gesendet.`);
+            loadInvoices();
+          }}
+        />
+      )}
       <div className="card form-page-card">
         <div className="page-topbar">
           <div>
@@ -544,7 +563,10 @@ const getInvoiceReminders = (invoiceId: number) => {
     >
       {reminder.reminder_level}. Mahnung
       {reminder.status === "sent" && reminder.sent_at
-        ? ` · versendet ${formatDate(reminder.sent_at)}`
+        ? ` · versendet ${formatDate(reminder.sent_at)}${(() => {
+            const m = sentInfo.find((x) => x.reminder_id === reminder.id);
+            return m ? ` per E-Mail an ${m.recipient}` : "";
+          })()}`
         : reminder.status === "created"
         ? " · erstellt"
         : ""}
@@ -589,6 +611,14 @@ const getInvoiceReminders = (invoiceId: number) => {
       am {formatDate(invoice.paid_at)}
     </div>
   )}
+  {(() => {
+    const last = sentInfo.find((m) => m.invoice_id === invoice.id && m.kind === "invoice");
+    return last ? (
+      <div className="table-subtitle" title={last.recipient}>
+        ✉ versendet {formatDate(last.sent_at)} an {last.recipient}
+      </div>
+    ) : null;
+  })()}
 </td>
 
                     <td>
@@ -605,6 +635,14 @@ const getInvoiceReminders = (invoiceId: number) => {
       onClick={() => handleCreatePdf(invoice)}
     >
       PDF erstellen
+    </button>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => setMailFor({ kind: "invoice", invoice })}
+    >
+      Per E-Mail senden
     </button>
 
     {invoice.snapshot && invoice.is_private_customer === false && (
@@ -685,6 +723,14 @@ const getInvoiceReminders = (invoiceId: number) => {
         onClick={() => handleCreateReminderPdf(invoice, reminder)}
       >
         Mahnung PDF
+      </button>
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => setMailFor({ kind: "reminder", invoice, reminder })}
+      >
+        Mahnung per E-Mail
       </button>
 
       {reminder.status === "created" && (

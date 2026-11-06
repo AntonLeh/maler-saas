@@ -960,6 +960,18 @@ export default function DatenschutzPage({
           </p>
 
           <p>
+            Versendet ein Malerbetrieb Rechnungen oder Mahnungen aus
+            MalerSaaS per E-Mail an seine Kunden, erfolgt der Versand
+            ebenfalls über Brevo im Auftrag des Malerbetriebs. Dabei
+            werden die E-Mail-Adresse des Empfängers, Betreff, Text und
+            die angehängte Rechnung bzw. Mahnung (mit den darin
+            enthaltenen Daten wie Name, Anschrift und Beträgen)
+            verarbeitet. Antworten gehen direkt an die E-Mail-Adresse
+            des Malerbetriebs. Zum Nachweis speichert MalerSaaS, wann
+            welches Dokument an welche Adresse versendet wurde.
+          </p>
+
+          <p>
             Dabei können insbesondere Name, E-Mail-Adresse,
             Nachrichteninhalt, Versandzeitpunkt, Zustellstatus und
             technische Versandinformationen verarbeitet werden.

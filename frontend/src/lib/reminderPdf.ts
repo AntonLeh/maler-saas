@@ -6,6 +6,7 @@ type ReminderPdfParams = {
   customer?: any;
   companySettings?: any;
   currencySymbol?: string;
+  output?: "save" | "blob";
 };
 
 const formatMoney = (
@@ -98,7 +99,8 @@ export function generateReminderPdf({
   customer = null,
   companySettings = {},
   currencySymbol = "€",
-}: ReminderPdfParams) {
+  output = "save",
+}: ReminderPdfParams): Blob | void {
   const doc = new jsPDF("p", "mm", "a4");
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -577,6 +579,8 @@ export function generateReminderPdf({
   );
 
   doc.setTextColor(0);
+
+  if (output === "blob") return doc.output("blob");
 
   // Dateiname
   doc.save(
