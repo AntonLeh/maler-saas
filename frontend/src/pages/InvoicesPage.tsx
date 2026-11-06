@@ -459,6 +459,13 @@ const getInvoiceReminders = (invoiceId: number) => {
           </div>
         </div>
 
+        {!loading && invoices.some((i) => i.snapshot && i.is_private_customer === false) && (
+          <p style={{ margin: "4px 0 12px", padding: "8px 12px", borderRadius: 8, background: "#f1f5f9", color: "#475569", fontSize: 13 }}>
+            Hinweis zur <strong>XRechnung</strong>: Ihr Browser fragt beim Herunterladen eventuell, ob Sie die Datei behalten möchten. Die
+            Datei enthält nur Ihre Rechnungsdaten und ist sicher – bitte „Beibehalten“ wählen.
+          </p>
+        )}
+
         {loading ? (
           <p className="info-text">Rechnungen werden geladen...</p>
         ) : invoices.length === 0 ? (
