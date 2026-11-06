@@ -106,7 +106,12 @@ export function contextText(c: HelpContext): string {
       u.company ? `Firma: ${clip(u.company, 120)}` : "",
       u.plan ? `Tarif: ${planName(u.plan)}${status ? ` (${status})` : ""}` : "",
       u.role ? `Rolle: ${u.role}` : "",
-      "Beziehe dich bei Fragen zu Funktionen auf seinen Tarif (z. B. „In Ihrem Tarif … ist das enthalten“ oder „Das gibt es ab Business“).",
+      u.plan
+        ? `WICHTIG: Der Tarif dieses Kunden ist ${planName(u.plan)} – nichts anderes. Sag „Ihr Tarif“ nur für ${planName(u.plan)} und rate nie einen anderen Tarif. Prüfe bei JEDER Funktion, die du erklärst, anhand der Tarifliste unten, ob sie in ${planName(u.plan)} enthalten ist. Ist sie es nicht, sag das gleich in derselben Antwort (z. B. „Die automatische Erkennung gibt es ab Business – in Ihrem Tarif ${planName(u.plan)} tragen Sie die Angaben selbst ein.“).`
+        : "",
+      u.status === "trialing"
+        ? "Der Kunde ist in der kostenlosen Testphase: Dort sind auch die Funktionen der größeren Tarife freigeschaltet (z. B. KI-Belegerkennung, Abschlagsrechnungen, Firmen-Website, Fachkräfte-Pool). Sag in dem Fall: „In Ihrer Testphase können Sie das schon nutzen – danach gehört es zum Tarif …“."
+        : "",
     ]
       .filter(Boolean)
       .join("\n");
