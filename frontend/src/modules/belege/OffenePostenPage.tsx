@@ -15,7 +15,7 @@ const bucketOf = (days: number): Bucket => (days === 0 ? "notdue" : days <= 30 ?
 const BUCKET_LABELS: Record<Bucket, string> = { notdue: "Noch nicht fällig", d30: "1–30 Tage überfällig", d60: "31–60 Tage überfällig", older: "über 60 Tage überfällig" };
 
 /** Buchhaltung → Offene Posten: unbezahlte Kundenrechnungen und eigene offene Belege */
-export default function OffenePostenPage({ tenantId, currencySymbol, onOpenInvoices }: { tenantId: number; currencySymbol?: string | null; onOpenInvoices?: () => void }) {
+export default function OffenePostenPage({ tenantId, currencySymbol, onOpenInvoices }: { tenantId: number; currencySymbol?: string | null; onOpenInvoices?: (invoiceId?: number) => void }) {
   const [invoices, setInvoices] = useState<OpenInvoice[] | null>(null);
   const [levels, setLevels] = useState<Map<number, number>>(new Map());
   const [names, setNames] = useState<Map<number, string>>(new Map());
@@ -171,7 +171,7 @@ export default function OffenePostenPage({ tenantId, currencySymbol, onOpenInvoi
                       als bezahlt markieren
                     </button>
                     {days > 0 && onOpenInvoices && (
-                      <button type="button" className="bl-link" onClick={onOpenInvoices}>
+                      <button type="button" className="bl-link" onClick={() => onOpenInvoices(i.id)}>
                         {level >= 3 ? "zu den Rechnungen" : "Mahnung erstellen"}
                       </button>
                     )}

@@ -881,6 +881,9 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const canEditOrders = isAdmin || isProjectManager;
   const canAssignOrders = isAdmin || isProjectManager;
 
+  // Offene Posten -> Rechnungsliste: diese Rechnung hervorheben
+  const [highlightInvoiceId, setHighlightInvoiceId] = useState<number | null>(null);
+
   // Hilfe-Chat (components/HelpChat) kann die Datenschutzerklärung öffnen
   useEffect(() => {
     const open = () => {
@@ -12168,7 +12171,10 @@ const businessAdvisor = generateBusinessInsights();
 
 {currentPage === "belege" && isAdmin && userProfile?.tenant_id && (
   <BuchhaltungPage
-    onOpenInvoices={() => setCurrentPage("invoices-list")}
+    onOpenInvoices={(invoiceId) => {
+      setHighlightInvoiceId(invoiceId ?? null);
+      setCurrentPage("invoices-list");
+    }}
     tenantId={userProfile.tenant_id}
     country={companySettings?.country}
     currencySymbol={companySettings?.currency_symbol}
@@ -12395,6 +12401,8 @@ const businessAdvisor = generateBusinessInsights();
   onBack={openDashboard}
   userProfile={userProfile}
   onInvoicesChanged={() => loadOrders(userProfile.tenant_id)}
+  highlightInvoiceId={highlightInvoiceId}
+  onHighlightShown={() => setHighlightInvoiceId(null)}
 />
 )}
 

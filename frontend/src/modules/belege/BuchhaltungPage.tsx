@@ -14,7 +14,7 @@ export default function BuchhaltungPage(props: {
   aiAllowed: boolean;
   currencySymbol?: string | null;
   onBack: () => void;
-  onOpenInvoices?: () => void;
+  onOpenInvoices?: (invoiceId?: number) => void;
 }) {
   const [tab, setTab] = useState<Tab>(() => {
     try {

@@ -2815,3 +2815,12 @@ code {
 .order-employee-icon {
   flex: 0 0 auto;
 }
+
+/* Rechnungsliste: aus „Offene Posten“ angesprungene Rechnung */
+.orders-table tr.invoice-row-highlight td {
+  background: #fef3c7 !important;
+  transition: background 0.6s ease;
+}
+.orders-table tr.invoice-row-highlight td:first-child {
+  box-shadow: inset 4px 0 0 #f59e0b;
+}

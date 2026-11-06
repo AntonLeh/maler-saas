@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 import { generateReminderPdf } from "../lib/reminderPdf";
@@ -59,9 +59,12 @@ type InvoicesPageProps = {
   userProfile: UserProfile;
   /** z. B. Auftragsliste neu laden, wenn ein Storno den Auftrag wieder auf „Fertig“ setzt */
   onInvoicesChanged?: () => void;
+  /** Rechnung, die nach dem Öffnen ins Bild gescrollt und markiert wird (z. B. aus „Offene Posten“) */
+  highlightInvoiceId?: number | null;
+  onHighlightShown?: () => void;
 };
 
-export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged }: InvoicesPageProps) {
+export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, highlightInvoiceId = null, onHighlightShown }: InvoicesPageProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceReminders, setInvoiceReminders] = useState<InvoiceReminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +106,23 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged }:
   useEffect(() => {
     loadInvoices();
   }, []);
+
+  // aus „Offene Posten“: gewünschte Rechnung ins Bild holen und kurz hervorheben
+  // bleibt markiert, solange die Rechnungsliste offen ist
+  const [flashId] = useState<number | null>(highlightInvoiceId);
+  const scrolledRef = useRef(false);
+  const shownRef = useRef(onHighlightShown);
+  useEffect(() => {
+    shownRef.current = onHighlightShown;
+  });
+  useEffect(() => {
+    if (!flashId || loading || scrolledRef.current) return;
+    const row = document.getElementById(`invoice-row-${flashId}`);
+    if (!row) return;
+    scrolledRef.current = true;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    shownRef.current?.();
+  }, [flashId, loading, invoices]);
 
   const formatCurrency = (value: number | null | undefined) => {
     return new Intl.NumberFormat("de-DE", {
@@ -453,7 +473,7 @@ const getInvoiceReminders = (invoiceId: number) => {
 
               <tbody>
                 {invoices.map((invoice) => (
-                  <tr key={invoice.id}>
+                  <tr key={invoice.id} id={`invoice-row-${invoice.id}`} className={flashId === invoice.id ? "invoice-row-highlight" : undefined}>
                     <td>
   <strong>{invoice.invoice_number}</strong>
 
