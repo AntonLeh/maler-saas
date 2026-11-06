@@ -213,3 +213,72 @@ export async function saveTaxMethod(tenantId: number, method: TaxMethod) {
   if (error && /tax_method/.test(error.message)) throw new Error("Für die Versteuerungsart fehlt noch ein Datenbank-Update (20261105190000_umsatzsteuer.sql).");
   fail(error, "Einstellung konnte nicht gespeichert werden.");
 }
+
+// ---------------------------------------------------------------------
+// Offene Posten
+// ---------------------------------------------------------------------
+export type OpenInvoice = {
+  id: number;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string | null;
+  total_amount: number;
+  invoice_type: string | null;
+  customer_id: number | null;
+  order_id: number | null;
+};
+
+/** Offene Kundenrechnungen (nicht bezahlt, nicht storniert, nicht in Schlussrechnung aufgegangen) */
+export async function loadOpenInvoices(tenantId: number): Promise<OpenInvoice[]> {
+  const cols = "id, invoice_number, invoice_date, due_date, total_amount, invoice_type, customer_id, order_id";
+  let res = await supabase
+    .from("invoices")
+    .select(cols)
+    .eq("tenant_id", tenantId)
+    .eq("status", "open")
+    .is("paid_at", null)
+    .eq("document_type", "invoice")
+    .order("due_date", { ascending: true });
+  if (res.error && /document_type/.test(res.error.message)) {
+    res = await supabase.from("invoices").select(cols).eq("tenant_id", tenantId).eq("status", "open").is("paid_at", null).order("due_date", { ascending: true });
+  }
+  fail(res.error, "Offene Rechnungen konnten nicht geladen werden.");
+  return (res.data ?? []) as OpenInvoice[];
+}
+
+/** Höchste laufende Mahnstufe je Rechnung */
+export async function loadReminderLevels(): Promise<Map<number, number>> {
+  const { data } = await supabase.rpc("get_my_invoice_reminders");
+  const map = new Map<number, number>();
+  for (const r of (data ?? []) as { invoice_id: number; reminder_level: number }[]) {
+    map.set(Number(r.invoice_id), Math.max(map.get(Number(r.invoice_id)) ?? 0, Number(r.reminder_level) || 0));
+  }
+  return map;
+}
+
+export async function loadCustomerNames(tenantId: number): Promise<Map<number, string>> {
+  const { data } = await supabase.from("customers").select("id, company_name, first_name, last_name").eq("tenant_id", tenantId).limit(5000);
+  const map = new Map<number, string>();
+  for (const c of (data ?? []) as { id: number; company_name: string | null; first_name: string | null; last_name: string | null }[]) {
+    map.set(Number(c.id), (c.company_name || "").trim() || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || `Kunde #${c.id}`);
+  }
+  return map;
+}
+
+/** Noch nicht bezahlte, gültige Belege (alle Monate) */
+export async function loadUnpaidExpenses(tenantId: number): Promise<Expense[]> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("paid", false)
+    .eq("voided", false)
+    .order("receipt_date", { ascending: true });
+  fail(error, "Offene Belege konnten nicht geladen werden.");
+  return (data ?? []) as Expense[];
+}
+
+export async function markInvoicePaid(invoiceId: number) {
+  const { error } = await supabase.rpc("mark_invoice_paid", { p_invoice_id: invoiceId });
+  fail(error, "Rechnung konnte nicht als bezahlt markiert werden.");
+}

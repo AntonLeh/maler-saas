@@ -12168,6 +12168,7 @@ const businessAdvisor = generateBusinessInsights();
 
 {currentPage === "belege" && isAdmin && userProfile?.tenant_id && (
   <BuchhaltungPage
+    onOpenInvoices={() => setCurrentPage("invoices-list")}
     tenantId={userProfile.tenant_id}
     country={companySettings?.country}
     currencySymbol={companySettings?.currency_symbol}
