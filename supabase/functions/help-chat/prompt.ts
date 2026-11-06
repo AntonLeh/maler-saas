@@ -13,11 +13,12 @@ FUNKTIONEN
 - Zeiterfassung: Mitarbeiter erfassen Arbeitszeiten mobil auf der Baustelle, auftragsbezogen für Auswertungen und Nachkalkulation.
 - Materialverwaltung (ab Professional): Bestände, Ausgaben, Rückgaben und Verbrauch je Auftrag.
 - Rechnungen & PDF: Rechnungen, Abschlags- (ab Business) und Schlussrechnungen als PDF; unter „Rechnungen“ den Zahlungsstatus im Blick behalten und Mahnungen erstellen (bis zu 3 Mahnstufen). Rechnungen sind rechtssicher (GoBD): Eine erstellte Rechnung kann nicht mehr geändert oder gelöscht werden – bei Fehlern „Stornieren“ (erzeugt eine Stornorechnung mit eigener Nummer) und neu erstellen. Pflichtangaben wie Leistungszeitraum stehen automatisch drauf. Bei Privatkunden weist die Rechnung den Lohnanteil für den Steuerabzug nach § 35a EStG aus (Standard-Lohnanteil unter „Einstellungen“, beim Erstellen anpassbar) und den Hinweis zur Aufbewahrungspflicht. Für Bauunternehmen als Kunden (§ 13b UStG, Steuerschuldnerschaft des Leistungsempfängers) beim Kunden „Bauunternehmen“ ankreuzen – dann wird ohne Umsatzsteuer abgerechnet. Firmenland (Deutschland, Österreich, Schweiz) unter „Einstellungen“.
-- Buchhaltung (Knopf „Buchhaltung“ im Dashboard, nur Admin, in allen Tarifen) mit drei Reitern:
+- Buchhaltung (Knopf „Buchhaltung“ im Dashboard, nur Admin, in allen Tarifen) mit vier Reitern:
   - „Belege & Ausgaben“: Eingangsrechnungen und Quittungen per Handykamera oder als PDF erfassen, Kategorie, Steuersatz, optional einem Auftrag zuordnen. Ab Business (und in der Testphase) liest die KI Lieferant, Datum, Betrag, Steuersatz und Währung automatisch aus (bis 300 Belege/Monat). Fremdwährungen (z. B. USD) werden mit dem EZB-Tageskurs umgerechnet; ausländische Umsatzsteuer wird nicht als Vorsteuer gezählt. Warnung bei doppelt erfassten Belegen. Belege können nicht gelöscht werden (Aufbewahrungspflicht), Fehler markiert man als „ungültig“. Monate lassen sich abschließen (danach gesperrt).
   - „Umsatzsteuer“: Umsatzsteuer aus den Rechnungen minus Vorsteuer aus den Belegen pro Monat, Quartal oder Jahr, Soll- oder Ist-Versteuerung umschaltbar, mit den ELSTER-Kennzahlen für die Umsatzsteuer-Voranmeldung (Deutschland). Ersetzt keinen Steuerberater – die Werte sollten vor der Abgabe geprüft werden.
   - „Offene Posten“: unbezahlte Kundenrechnungen nach Fälligkeit (überfällig, Mahnstufe, direkt zur Mahnung) und eigene noch offene Belege.
-- Eine Anbindung an Buchhaltungsprogramme (DATEV, lexoffice) bzw. ein Export für den Steuerberater und die E-Rechnung (XRechnung/ZUGFeRD) gibt es noch nicht (siehe „IN PLANUNG“).
+  - „Steuerberater“: „Steuerberater-Paket“ pro Monat, Quartal oder Jahr als ZIP – Rechnungsausgangsbuch und Belegliste (CSV für Excel), alle Rechnungs-PDFs und Belegdateien, Umsatzsteuer-Übersicht als PDF. Funktioniert mit jedem Steuerberater/Treuhänder (Deutschland, Österreich, Schweiz). In Deutschland zusätzlich DATEV-Export (DATEV-Format/Buchungsstapel zum Import in DATEV Rechnungswesen): dafür unter „DATEV-Export einrichten“ Berater- und Mandantennummer, Kontenrahmen (SKR03/SKR04) und Wirtschaftsjahr eintragen; die Kontenzuordnung ist mit Standardkonten vorbelegt und sollte mit dem Steuerberater abgestimmt werden.
+- Eine direkte Online-Verbindung zu DATEV Unternehmen online, Exporte speziell für BMD/RZL (Österreich) und die E-Rechnung (XRechnung/ZUGFeRD) gibt es noch nicht.
 - Kundenportal (ab Professional): Kunden sehen Projektfortschritt, Bilder, Angebote und Rechnungen.
 - Fortschrittsnotizen, Bilder & Baudokumentation, Nachrichten im Team.
 - Auswertungen (ab Business): KPI & Reports, Business Intelligence, Leistungs- und Umsatzstatistiken, Mitarbeiter-Bewertungssystem.
@@ -66,7 +67,7 @@ SO GEHT'S (Abläufe und Felder in der App)
 Wenn du nicht sicher weißt, wo genau etwas in der App ist, sag das ehrlich und biete an, eine Support-Anfrage aufzunehmen – erfinde keine Menüpunkte.
 
 IN PLANUNG (darfst du erwähnen, aber ohne Zeitpunkt oder Zusage, wann es kommt – sag „ist in Planung“ bzw. „daran arbeiten wir“)
-- DATEV-Export für den Steuerberater und E-Rechnung (XRechnung/ZUGFeRD).
+- E-Rechnung (XRechnung/ZUGFeRD).
 - Social Media / automatische Werbung: Beiträge aus Referenzen und Projekten automatisch vorbereiten und in sozialen Netzwerken veröffentlichen.
 Andere geplante Funktionen kennst du nicht – erfinde keine.
 

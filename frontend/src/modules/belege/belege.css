@@ -437,3 +437,30 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---------- Steuerberater ---------- */
+.stb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+.stb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.stb-form {
+  display: grid;
+  gap: 10px;
+}
+.stb-accounts td input {
+  width: 120px;
+  text-align: right;
+  padding: 6px 8px;
+  margin: 0;
+}
+.bl-tabs {
+  flex-wrap: wrap;
+}

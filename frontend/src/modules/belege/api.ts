@@ -282,3 +282,18 @@ export async function markInvoicePaid(invoiceId: number) {
   const { error } = await supabase.rpc("mark_invoice_paid", { p_invoice_id: invoiceId });
   fail(error, "Rechnung konnte nicht als bezahlt markiert werden.");
 }
+
+// ---------------------------------------------------------------------
+// DATEV-Einstellungen (company_settings.datev_settings)
+// ---------------------------------------------------------------------
+export async function loadDatevSettings(tenantId: number): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabase.from("company_settings").select("datev_settings").eq("tenant_id", tenantId).maybeSingle();
+  if (error) return null;
+  return ((data as { datev_settings?: Record<string, unknown> | null } | null)?.datev_settings ?? null) || null;
+}
+
+export async function saveDatevSettings(tenantId: number, settings: unknown) {
+  const { error } = await supabase.from("company_settings").update({ datev_settings: settings }).eq("tenant_id", tenantId);
+  if (error && /datev_settings/.test(error.message)) throw new Error("Für den DATEV-Export fehlt noch ein Datenbank-Update (20261106120000_datev_export.sql).");
+  fail(error, "Einstellungen konnten nicht gespeichert werden.");
+}

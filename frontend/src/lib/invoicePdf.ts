@@ -9,6 +9,8 @@ type InvoicePdfParams = {
   companySettings?: any;
   partialInvoices?: any[];
   currencySymbol?: string;
+  /** "blob": PDF nicht herunterladen, sondern als Blob zurückgeben (z. B. für das Steuerberater-Paket) */
+  output?: "save" | "blob";
 };
 
 const formatMoney = (
@@ -118,7 +120,8 @@ export function generateInvoicePdf({
   companySettings = {},
   partialInvoices = [],
   currencySymbol = "€",
-}: InvoicePdfParams) {
+  output = "save",
+}: InvoicePdfParams): Blob | void {
   const doc = new jsPDF("p", "mm", "a4");
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -653,5 +656,6 @@ if (notes.length) {
     doc.setTextColor(0);
   }
 
+  if (output === "blob") return doc.output("blob");
   doc.save(`${isCancellation ? "Stornorechnung" : "Rechnung"}-${invoiceNumber}.pdf`);
 }
