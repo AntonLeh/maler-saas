@@ -883,6 +883,8 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
 
   // Offene Posten -> Rechnungsliste: diese Rechnung hervorheben
   const [highlightInvoiceId, setHighlightInvoiceId] = useState<number | null>(null);
+  // Rechnungsliste aus der Buchhaltung geöffnet -> Knopf „Zurück zur Buchhaltung“
+  const [invoicesFromBuchhaltung, setInvoicesFromBuchhaltung] = useState(false);
 
   // Hilfe-Chat (components/HelpChat) kann die Datenschutzerklärung öffnen
   useEffect(() => {
@@ -6435,7 +6437,10 @@ onReloadOrders={async () => {
                     <button
                       type="button"
                       className="stat-card stat-card-clickable"
-                      onClick={() => setCurrentPage("invoices-list")}
+                      onClick={() => {
+                        setInvoicesFromBuchhaltung(false);
+                        setCurrentPage("invoices-list");
+                      }}
                     >
                       <span className="stat-label">Rechnungen</span>
                       <strong className="stat-value">{stats.totalInvoices}</strong>
@@ -6703,7 +6708,10 @@ onReloadOrders={async () => {
   <button
     type="button"
     className="btn btn-primary"
-    onClick={() => setCurrentPage("invoices-list")}
+    onClick={() => {
+                        setInvoicesFromBuchhaltung(false);
+                        setCurrentPage("invoices-list");
+                      }}
   >
     Rechnungen
   </button>
@@ -12172,6 +12180,7 @@ const businessAdvisor = generateBusinessInsights();
 {currentPage === "belege" && isAdmin && userProfile?.tenant_id && (
   <BuchhaltungPage
     onOpenInvoices={(invoiceId) => {
+      setInvoicesFromBuchhaltung(true);
       setHighlightInvoiceId(invoiceId ?? null);
       setCurrentPage("invoices-list");
     }}
@@ -12403,6 +12412,7 @@ const businessAdvisor = generateBusinessInsights();
   onInvoicesChanged={() => loadOrders(userProfile.tenant_id)}
   highlightInvoiceId={highlightInvoiceId}
   onHighlightShown={() => setHighlightInvoiceId(null)}
+  onBackToBuchhaltung={invoicesFromBuchhaltung ? () => setCurrentPage("belege") : undefined}
 />
 )}
 

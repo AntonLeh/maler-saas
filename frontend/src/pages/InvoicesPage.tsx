@@ -62,9 +62,11 @@ type InvoicesPageProps = {
   /** Rechnung, die nach dem Öffnen ins Bild gescrollt und markiert wird (z. B. aus „Offene Posten“) */
   highlightInvoiceId?: number | null;
   onHighlightShown?: () => void;
+  /** gesetzt, wenn die Liste aus der Buchhaltung geöffnet wurde */
+  onBackToBuchhaltung?: () => void;
 };
 
-export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, highlightInvoiceId = null, onHighlightShown }: InvoicesPageProps) {
+export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, highlightInvoiceId = null, onHighlightShown, onBackToBuchhaltung }: InvoicesPageProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoiceReminders, setInvoiceReminders] = useState<InvoiceReminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -436,9 +438,16 @@ const getInvoiceReminders = (invoiceId: number) => {
             <p>Verwaltung aller Rechnungen.</p>
           </div>
 
-          <button type="button" className="btn btn-secondary" onClick={onBack}>
-            Zurück zum Dashboard
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {onBackToBuchhaltung && (
+              <button type="button" className="btn btn-secondary" onClick={onBackToBuchhaltung}>
+                Zurück zur Buchhaltung
+              </button>
+            )}
+            <button type="button" className="btn btn-secondary" onClick={onBack}>
+              Zurück zum Dashboard
+            </button>
+          </div>
         </div>
 
         {loading ? (
