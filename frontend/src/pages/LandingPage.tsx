@@ -314,10 +314,23 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
               <span>Belege, Telefon, Texte</span>
             </div>
 
-            <div className="hero-phone-mockup">
-              <div></div>
-              <strong>Auf dem Handy</strong>
-              <span>direkt auf der Baustelle</span>
+            <div className="hero-phone-mockup lp-phone" aria-label="Zeiterfassung auf dem Handy">
+              <div className="lp-phone-screen">
+                <small>Auftrag</small>
+                <b>Wohnung Müller</b>
+                <em>Wohnzimmer streichen</em>
+                <div className="lp-phone-timer">
+                  <i aria-hidden="true" />
+                  <span>Läuft</span>
+                  <strong>2:15 h</strong>
+                </div>
+                <div className="lp-phone-btn lp-phone-btn-light">Pause</div>
+                <div className="lp-phone-btn">Feierabend</div>
+                <div className="lp-phone-photos">📷 3 Fotos</div>
+              </div>
+              <p className="lp-phone-caption">
+                <strong>Auf dem Handy</strong> direkt auf der Baustelle
+              </p>
             </div>
           </div>
         </section>
