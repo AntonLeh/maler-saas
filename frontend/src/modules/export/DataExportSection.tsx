@@ -6,7 +6,7 @@ import type { Country } from "../belege/types";
 
 const toCountry = (c: string): Country => (/schweiz|^ch$/i.test(c) ? "CH" : /österreich|oesterreich|^at$/i.test(c) ? "AT" : "DE");
 
-export default function DataExportSection(props: { tenantId: number; country: string; currencySymbol: string }) {
+export default function DataExportSection(props: { tenantId: number; country: string; currencySymbol: string; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
 
@@ -37,9 +37,9 @@ export default function DataExportSection(props: { tenantId: number; country: st
   };
 
   return (
-    <div className="settings-section">
-      <h3>Datenexport</h3>
-      <p style={{ marginTop: 0, color: "#475569" }}>
+    <div className={props.compact ? undefined : "settings-section"}>
+      {!props.compact && <h3>Datenexport</h3>}
+      <p style={{ marginTop: 0, color: "#475569", display: props.compact ? "none" : undefined }}>
         Laden Sie alle Daten Ihres Betriebs als ZIP-Datei herunter: Rechnungen (PDF), Belege, Rechnungsausgangsbuch und alle Listen
         (Kunden, Aufträge, Angebote, Zeiten, Website …) als Tabellen für Excel. Sinnvoll als Sicherung – und vor einer Kündigung.
       </p>

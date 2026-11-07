@@ -169,6 +169,26 @@ serve(async (req) => {
     // z. B. monatliche Verlängerung
     // =====================================================
 
+    // Abo ist endgültig beendet (nach Kündigung zum Periodenende oder sofort)
+    if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as Stripe.Subscription;
+      const endedAt =
+        (subscription as any).ended_at ??
+        subscription.items?.data?.[0]?.current_period_end ??
+        Math.floor(Date.now() / 1000);
+      const { error: delErr } = await supabase
+        .from("subscriptions")
+        .update({ status: "canceled", expires_at: new Date(endedAt * 1000).toISOString() })
+        .eq("stripe_subscription_id", subscription.id);
+      if (delErr) throw delErr;
+      const { error: flagErr } = await supabase
+        .from("subscriptions")
+        .update({ cancel_at_period_end: false, cancel_at: new Date(endedAt * 1000).toISOString() })
+        .eq("stripe_subscription_id", subscription.id);
+      if (flagErr) console.error("cancel flags:", flagErr.message);
+      console.log("=== SUBSCRIPTION DELETED ===", subscription.id);
+    }
+
     if (
       event.type ===
       "customer.subscription.updated"
@@ -221,6 +241,19 @@ serve(async (req) => {
 
       if (subscriptionUpdateError) {
         throw subscriptionUpdateError;
+      }
+
+      // Kündigung vorgemerkt / zurückgenommen (Spalten ab Update „Abo-Kündigung“ – Fehler nur protokollieren)
+      {
+        const cancelAt = subscription.cancel_at ?? (subscription.cancel_at_period_end ? currentPeriodEnd : null);
+        const { error: cancelErr } = await supabase
+          .from("subscriptions")
+          .update({
+            cancel_at_period_end: !!subscription.cancel_at_period_end || !!subscription.cancel_at,
+            cancel_at: cancelAt ? new Date(cancelAt * 1000).toISOString() : null,
+          })
+          .eq("stripe_subscription_id", subscription.id);
+        if (cancelErr) console.error("cancel_at_period_end:", cancelErr.message);
       }
 
       // Tarif nachziehen, falls der Preis in Stripe geändert wurde (z. B. über das Kundenportal)

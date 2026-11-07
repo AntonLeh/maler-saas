@@ -12205,6 +12205,9 @@ const businessAdvisor = generateBusinessInsights();
     subscription={subscription}
     onBack={openDashboard}
     onOpenPricing={() => setCurrentPage("pricing")}
+    tenantId={userProfile?.tenant_id ?? null}
+    country={companySettings?.country ?? null}
+    currencySymbol={companySettings?.currency_symbol ?? null}
   />
 )}
 
