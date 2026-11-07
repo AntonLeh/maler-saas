@@ -138,13 +138,28 @@ export default function BillingPage({
             type="button"
             className="btn btn-secondary"
             onClick={async () => {
-              const { data, error } = await supabase.functions.invoke(
-                "create-stripe-portal-session"
-              );
+              // frische Anmeldung mitschicken und die genaue Meldung des Servers anzeigen
+              const { data: fresh } = await supabase.auth.refreshSession();
+              const accessToken = fresh.session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
+              if (!accessToken) {
+                await showAlert("Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich neu an.", { tone: "error", title: "Das hat nicht geklappt" });
+                return;
+              }
+              const { data, error } = await supabase.functions.invoke("create-stripe-portal-session", {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              });
 
               if (error) {
                 console.error("Stripe Portal Fehler:", error);
-                await showAlert("Abo-Verwaltung konnte nicht geöffnet werden.", { tone: "error", title: "Das hat nicht geklappt" });
+                let detail = "";
+                try {
+                  const ctx = (error as { context?: Response }).context;
+                  const body = ctx ? await ctx.json() : null;
+                  detail = body?.error ? String(body.error) : "";
+                } catch {
+                  /* keine Details */
+                }
+                await showAlert(detail || "Abo-Verwaltung konnte nicht geöffnet werden.", { tone: "error", title: "Abo-Verwaltung nicht möglich" });
                 return;
               }
 

@@ -79,21 +79,19 @@ serve(async (req) => {
       );
     }
 
-    const {
-      data: subscription,
-      error: subscriptionError,
-    } = await supabase
+    // neuester Abo-Eintrag (es kann mehrere geben – .single() würde dann scheitern)
+    const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, status")
       .eq("tenant_id", appUser.tenant_id)
-      .single();
+      .not("stripe_customer_id", "is", null)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (
-      subscriptionError ||
-      !subscription?.stripe_customer_id
-    ) {
+    if (!subscription?.stripe_customer_id) {
       throw new Error(
-        "Stripe Kunde nicht vorhanden."
+        "Sie haben noch kein bezahltes Abo – in der kostenlosen Testphase gibt es nichts zu verwalten oder zu kündigen. Ein Abo können Sie unter „Tarif ändern“ abschließen."
       );
     }
 
@@ -101,13 +99,24 @@ serve(async (req) => {
       req.headers.get("origin") ||
       "http://localhost:5173";
 
-    const session =
-      await stripe.billingPortal.sessions.create({
-        customer:
-          subscription.stripe_customer_id,
-
+    let session;
+    try {
+      session = await stripe.billingPortal.sessions.create({
+        customer: subscription.stripe_customer_id,
         return_url: `${origin}/`,
       });
+    } catch (e) {
+      console.error("Stripe billingPortal:", e?.message);
+      if (/configuration/i.test(String(e?.message))) {
+        throw new Error(
+          "Das Stripe-Kundenportal ist noch nicht eingerichtet (Stripe → Einstellungen → Billing → Kundenportal → Speichern)."
+        );
+      }
+      if (/No such customer/i.test(String(e?.message))) {
+        throw new Error("Der Stripe-Kunde wurde nicht gefunden. Bitte beim MalerSaaS-Support melden.");
+      }
+      throw new Error(`Stripe: ${e?.message ?? "unbekannter Fehler"}`);
+    }
 
     return new Response(
       JSON.stringify({
