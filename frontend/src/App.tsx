@@ -31,6 +31,8 @@ import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
 import TrialBanner from "./components/TrialBanner";
 import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
+import FeatureLandingPage from "./pages/feature/FeatureLandingPage";
+import { featurePageFor } from "./pages/feature/featurePages";
 import MalerSoftwarePage from "./pages/MalerSoftwarePage";
 import AufmassAngebotePage from "./pages/AufmassAngebotePage";
 import PerformanceSimulator from "./components/PerformanceSimulator";
@@ -5997,6 +5999,23 @@ if (showResetPassword) {
     />
   );
 }
+
+      // Funktions-Unterseiten (/buchhaltung, /ki-telefon, /firmen-website, /fachkraefte-finden, /auswertungen)
+      {
+        const featurePage = featurePageFor(window.location.pathname);
+        if (featurePage && !showLoginPage && !showCompanyRegister) {
+          return (
+            <FeatureLandingPage
+              page={featurePage}
+              onRegister={() => setShowCompanyRegister(true)}
+              onLogin={() => setShowLoginPage(true)}
+              onOpenImpressum={() => setCurrentPage("impressum")}
+              onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+              onOpenAgb={() => setCurrentPage("agb")}
+            />
+          );
+        }
+      }
 
       if (
   window.location.pathname === "/maler-software" &&

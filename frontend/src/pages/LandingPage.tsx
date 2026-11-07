@@ -68,6 +68,7 @@ const features: { title: string; text: string; href?: string }[] = [
   {
     title: "Buchhaltung & Steuerberater",
     text: "Belege per Handy erfassen, Umsatzsteuer-Übersicht, offene Posten und ein fertiges Paket für den Steuerberater mit DATEV-Export.",
+    href: "/buchhaltung",
   },
   {
     title: "Kundenportal",
@@ -82,18 +83,22 @@ const features: { title: string; text: string; href?: string }[] = [
   {
     title: "KI-Telefonassistent",
     text: "Nimmt Anrufe an, wenn Sie auf der Leiter stehen: beantwortet Fragen, vergibt freie Besichtigungstermine und trägt sie direkt in Ihren Kalender ein, notiert Rückrufwünsche und schickt Ihnen eine Zusammenfassung.",
+    href: "/ki-telefon",
   },
   {
     title: "Eigene Firmen-Website",
     text: "Ihre Website mit eigener Domain, Referenzen, Online-Terminbuchung für Besichtigungen, Stellenanzeigen und KI-Chat.",
+    href: "/firmen-website",
   },
   {
     title: "Fachkräfte-Pool",
     text: "Maler, Gesellen und Subunternehmer in Ihrer Region finden, wenn es eng wird.",
+    href: "/fachkraefte-finden",
   },
   {
     title: "Auswertungen",
     text: "Umsatz, offene Angebote, Auslastung und Kundenwerte auf einen Blick – damit Sie wissen, wo Ihr Betrieb steht.",
+    href: "/auswertungen",
   },
 ];
 
