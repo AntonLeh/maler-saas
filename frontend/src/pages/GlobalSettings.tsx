@@ -2,6 +2,7 @@ import { bicError, ibanError } from "../lib/bankCheck";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { showConfirm } from "../lib/dialogs";
+import DataExportSection from "../modules/export/DataExportSection";
 
 type CompanySettings = {
   id: number;
@@ -1092,6 +1093,8 @@ if (
     {saving ? "Speichert..." : "Zusatzpositionen speichern"}
   </button>
 </div>
+
+        <DataExportSection tenantId={tenantId} country={country} currencySymbol={currencySymbol} />
 
         <div className="settings-section">
           <h3>Aktuelle Werte</h3>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase, supabaseUrl } from "../lib/supabase";
 import { showAlert, showPrompt } from "../lib/dialogs";
+import DeletionDeadlines from "../modules/loeschfristen/DeletionDeadlines";
 
 type Tenant = {
   id: number;
@@ -384,6 +385,8 @@ const extendTrial = async (tenantId: number) => {
   await loadTenants();
 };
 
+const [deletionReload, setDeletionReload] = useState(0);
+
 const deleteTenantCompletely = async (tenantId: number, companyName: string) => {
   const typed = await showPrompt(
     `Alle Daten der Firma werden endgültig gelöscht: Kunden, Aufträge, Angebote, Rechnungen, Belege, Website, Dateien und die Zugänge aller Mitarbeiter. Telefonnummer, KI-Assistent und eigene Domain werden freigegeben, ein laufendes Abo gekündigt.\n\nDas lässt sich nicht rückgängig machen. Zur Bestätigung bitte den Firmennamen eingeben:\n${companyName}`,
@@ -426,6 +429,7 @@ const deleteTenantCompletely = async (tenantId: number, companyName: string) => 
   }
 
   await loadTenants();
+  setDeletionReload((n) => n + 1);
 };
 
   return (
@@ -477,6 +481,8 @@ const deleteTenantCompletely = async (tenantId: number, companyName: string) => 
   </div>
 </div>
         </section>
+
+        <DeletionDeadlines reloadKey={deletionReload} onDelete={deleteTenantCompletely} />
         <section
   className="stats-grid stats-grid-5"
   style={{ marginTop: "18px" }}

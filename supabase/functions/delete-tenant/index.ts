@@ -112,7 +112,7 @@ serve(async (req) => {
       return json({ ok: false, error: `Datenbank: ${dbErr.message} – es wurde nichts gelöscht.` }, 500);
     }
     const rows = Object.values((counts ?? {}) as Record<string, number>).reduce((a, b) => a + Number(b || 0), 0);
-    steps.push({ step: "Datenbank", ok: true, detail: `${rows} Einträge in ${Object.keys(counts ?? {}).length} Tabellen gelöscht` });
+    steps.push({ step: "Datenbank", ok: true, detail: `${rows} Einträge gelöscht (${Object.values((counts ?? {}) as Record<string, number>).filter((n) => Number(n) > 0).length} Tabellen betroffen)` });
 
     // ---------- 3) alles außerhalb der Datenbank ----------
     const run = async (step: string, fn: () => Promise<string>) => {
