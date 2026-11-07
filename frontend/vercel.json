@@ -20,8 +20,16 @@
       "destination": "/api/site?slug=:slug&page=:page*"
     },
     {
+      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen)",
+      "destination": "/seo/:page/index.html"
+    },
+    {
+      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen)/",
+      "destination": "/seo/:page/index.html"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
     }
   ]
 }

@@ -52,6 +52,12 @@ export default function SeoMeta({
 
     if (canonicalLink) {
       canonicalLink.href = canonical;
+    } else {
+      // app.html enthält keine feste Angabe – dann hier anlegen
+      const link = document.createElement("link");
+      link.rel = "canonical";
+      link.href = canonical;
+      document.head.appendChild(link);
     }
 
     if (robotsMeta) {
