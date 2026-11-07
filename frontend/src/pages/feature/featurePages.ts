@@ -11,6 +11,8 @@ export type FeaturePageData = {
   plan: string;
   /** kleine Übersicht rechts neben dem Titel */
   visual: { title: string; rows: { label: string; value: string }[]; chips: string[] };
+  /** statt der Übersichtsbox die Vorher/Nachher-Fotos zeigen */
+  beforeAfter?: boolean;
   highlightsTitle: string;
   highlights: { title: string; text: string }[];
   stepsTitle?: string;
@@ -266,6 +268,7 @@ export const FEATURE_PAGES: FeaturePageData[] = [
       ],
       chips: ["Instagram", "Facebook", "Google-Profil", "WhatsApp"],
     },
+    beforeAfter: true,
     highlightsTitle: "Was die KI für Sie erledigt",
     highlights: [
       {

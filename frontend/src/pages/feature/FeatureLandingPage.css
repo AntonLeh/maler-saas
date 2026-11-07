@@ -66,3 +66,7 @@
 @media (max-width: 700px) {
   .fp-grid, .fp-steps { grid-template-columns: 1fr; }
 }
+
+/* Vorher/Nachher-Fotos statt Übersichtsbox */
+.fp-ba { width: min(440px, 100%); display: grid; gap: 14px; }
+.fp-ba .lp-ba { border-radius: 22px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25); }

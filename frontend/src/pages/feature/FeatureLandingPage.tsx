@@ -1,6 +1,7 @@
 // Gemeinsame Vorlage für die Funktions-Unterseiten (/buchhaltung, /ki-telefon, …)
 import { useEffect, useState } from "react";
 import SeoMeta from "../../components/SeoMeta";
+import BeforeAfter from "../../components/BeforeAfter";
 import type { FeaturePageData } from "./featurePages";
 import "../LandingPage.css";
 import "./FeatureLandingPage.css";
@@ -14,7 +15,14 @@ type Props = {
   onOpenAgb: () => void;
 };
 
-export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenImpressum, onOpenDatenschutz, onOpenAgb }: Props) {
+export default function FeatureLandingPage({
+  page,
+  onRegister,
+  onLogin,
+  onOpenImpressum,
+  onOpenDatenschutz,
+  onOpenAgb,
+}: Props) {
   const [menu, setMenu] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -26,7 +34,11 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
     el.text = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: page.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      mainEntity: page.faqs.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
     });
     document.getElementById("faq-schema")?.remove();
     document.head.appendChild(el);
@@ -36,17 +48,37 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
 
   return (
     <>
-      <SeoMeta title={page.seoTitle} description={page.seoDescription} canonical={`https://maler-saas.com${page.path}`} />
+      <SeoMeta
+        title={page.seoTitle}
+        description={page.seoDescription}
+        canonical={`https://maler-saas.com${page.path}`}
+      />
       <div className="landing-page">
         <header className="landing-header">
-          <a href="/" className="landing-logo" style={{ textDecoration: "none", color: "inherit" }}>
-            <img src="/images/logo.webp" alt="MalerSaaS Logo" className="landing-logo-image" width="56" height="56" />
+          <a
+            href="/"
+            className="landing-logo"
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+            <img
+              src="/images/logo.webp"
+              alt="MalerSaaS Logo"
+              className="landing-logo-image"
+              width="56"
+              height="56"
+            />
             <div className="landing-logo-text">
               <strong>MalerSaaS</strong>
               <span>Software für Malerbetriebe</span>
             </div>
           </a>
-          <button type="button" className="landing-menu-toggle" aria-label="Menü öffnen" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+          <button
+            type="button"
+            className="landing-menu-toggle"
+            aria-label="Menü öffnen"
+            aria-expanded={menu}
+            onClick={() => setMenu((m) => !m)}
+          >
             <span></span>
             <span></span>
             <span></span>
@@ -56,7 +88,11 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
             <a href="/#funktionen">Funktionen</a>
             <a href="/#preise">Preise</a>
             <a href="/#kontakt">Kontakt</a>
-            <button type="button" className="landing-login-btn" onClick={onLogin}>
+            <button
+              type="button"
+              className="landing-login-btn"
+              onClick={onLogin}
+            >
               Login
             </button>
           </nav>
@@ -64,7 +100,9 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
 
         <main>
           <nav className="fp-crumbs" aria-label="Brotkrumen">
-            <a href="/">Startseite</a> <span>›</span> <a href="/#funktionen">Funktionen</a> <span>›</span> <span>{page.badge}</span>
+            <a href="/">Startseite</a> <span>›</span>{" "}
+            <a href="/#funktionen">Funktionen</a> <span>›</span>{" "}
+            <span>{page.badge}</span>
           </nav>
 
           <section className="landing-hero fp-hero">
@@ -77,32 +115,53 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
                 </p>
               ))}
               <div className="landing-hero-actions">
-                <button type="button" className="landing-primary-btn" onClick={onRegister}>
+                <button
+                  type="button"
+                  className="landing-primary-btn"
+                  onClick={onRegister}
+                >
                   14 Tage kostenlos testen
                 </button>
-                <a href="/#kontakt" className="landing-secondary-btn" style={{ textDecoration: "none" }}>
+                <a
+                  href="/#kontakt"
+                  className="landing-secondary-btn"
+                  style={{ textDecoration: "none" }}
+                >
                   Frage stellen
                 </a>
               </div>
               <p className="fp-plan">{page.plan}</p>
             </div>
 
-            <div className="fp-visual" aria-hidden="true">
-              <div className="fp-visual-card">
-                <strong>{page.visual.title}</strong>
-                {page.visual.rows.map((r) => (
-                  <div key={r.label} className="fp-visual-row">
-                    <span>{r.label}</span>
-                    <b>{r.value}</b>
+            {page.beforeAfter ? (
+              <div className="fp-visual">
+                <div className="fp-ba">
+                  <BeforeAfter />
+                  <div className="lp-social-chips">
+                    {["Website", ...page.visual.chips].map((c) => (
+                      <span key={c}>{c} ✓</span>
+                    ))}
                   </div>
-                ))}
-                <div className="lp-doc-foot">
-                  {page.visual.chips.map((c) => (
-                    <span key={c}>{c} ✓</span>
-                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="fp-visual" aria-hidden="true">
+                <div className="fp-visual-card">
+                  <strong>{page.visual.title}</strong>
+                  {page.visual.rows.map((r) => (
+                    <div key={r.label} className="fp-visual-row">
+                      <span>{r.label}</span>
+                      <b>{r.value}</b>
+                    </div>
+                  ))}
+                  <div className="lp-doc-foot">
+                    {page.visual.chips.map((c) => (
+                      <span key={c}>{c} ✓</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="landing-section">
@@ -143,8 +202,15 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
                 </ul>
               </div>
               <div className="fp-cta-box">
-                <p>Testen Sie MalerSaaS 14 Tage kostenlos – ohne Kreditkarte, endet automatisch.</p>
-                <button type="button" className="landing-primary-btn lp-final-btn" onClick={onRegister}>
+                <p>
+                  Testen Sie MalerSaaS 14 Tage kostenlos – ohne Kreditkarte,
+                  endet automatisch.
+                </p>
+                <button
+                  type="button"
+                  className="landing-primary-btn lp-final-btn"
+                  onClick={onRegister}
+                >
                   Jetzt kostenlos testen
                 </button>
               </div>
@@ -155,8 +221,15 @@ export default function FeatureLandingPage({ page, onRegister, onLogin, onOpenIm
             <h2>Häufige Fragen</h2>
             <div className="lp-faq-list">
               {page.faqs.map((f, i) => (
-                <div key={f.q} className={`lp-faq-item ${openFaq === i ? "is-open" : ""}`}>
-                  <button type="button" aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                <div
+                  key={f.q}
+                  className={`lp-faq-item ${openFaq === i ? "is-open" : ""}`}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={openFaq === i}
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  >
                     <span>{f.q}</span>
                     <span aria-hidden="true">{openFaq === i ? "−" : "+"}</span>
                   </button>
