@@ -180,10 +180,32 @@ function useFaqSchema() {
   }, []);
 }
 
+/** Aufruf mit #kontakt, #preise usw. (z. B. Link aus dem Hilfe-Chat): direkt zum Abschnitt springen */
+function useScrollToHash() {
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!/^[a-z0-9-]+$/i.test(id)) return;
+    // kurz warten, bis Seite und Bilder aufgebaut sind (sonst verschiebt sich die Position)
+    const timers = [50, 400, 1200].map((ms) =>
+      setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), ms)
+    );
+    const stop = () => timers.forEach(clearTimeout);
+    // sobald der Besucher selbst scrollt, nicht mehr eingreifen
+    window.addEventListener("wheel", stop, { once: true, passive: true });
+    window.addEventListener("touchstart", stop, { once: true, passive: true });
+    return () => {
+      stop();
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchstart", stop);
+    };
+  }, []);
+}
+
 export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOpenDatenschutz, onOpenAgb }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   useFaqSchema();
+  useScrollToHash();
   const close = () => setMobileMenuOpen(false);
 
   return (
