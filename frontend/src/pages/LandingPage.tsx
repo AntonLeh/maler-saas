@@ -189,6 +189,61 @@ function useFaqSchema() {
   }, []);
 }
 
+/** Vorher/Nachher-Vergleich zum Ziehen (Werbung mit KI); fährt beim ersten Sichtbarwerden einmal hin und her */
+function BeforeAfter() {
+  const [pos, setPos] = useState(50);
+  const [touched, setTouched] = useState(false);
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!el || touched) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        obs.disconnect();
+        const t0 = performance.now();
+        const run = (t: number) => {
+          const k = Math.min(1, (t - t0) / 2600);
+          // 50 → 85 → 15 → 50
+          const v = k < 0.25 ? 50 + 35 * (k / 0.25) : k < 0.75 ? 85 - 70 * ((k - 0.25) / 0.5) : 15 + 35 * ((k - 0.75) / 0.25);
+          setPos(v);
+          if (k < 1) raf = requestAnimationFrame(run);
+        };
+        raf = requestAnimationFrame(run);
+      },
+      { threshold: 0.6 }
+    );
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [el, touched]);
+  return (
+    <div className="lp-ba" ref={setEl} style={{ ["--pos" as string]: `${pos}%` }}>
+      <img src="/images/werbung-nachher.webp" srcSet="/images/werbung-nachher.webp 800w, /images/werbung-nachher-1200.webp 1200w" sizes="(max-width: 640px) 90vw, 360px" alt="Fassade nach dem Anstrich" width="800" height="597" loading="lazy" decoding="async" />
+      <img className="lp-ba-before" src="/images/werbung-vorher.webp" srcSet="/images/werbung-vorher.webp 800w, /images/werbung-vorher-1200.webp 1200w" sizes="(max-width: 640px) 90vw, 360px" alt="Fassade vor dem Anstrich mit Gerüst" width="800" height="597" loading="lazy" decoding="async" />
+      <em className="lp-ba-tag lp-ba-tag-before">Vorher</em>
+      <em className="lp-ba-tag lp-ba-tag-after">Nachher</em>
+      <span className="lp-ba-line" aria-hidden="true">
+        <span>↔</span>
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(pos)}
+        aria-label="Vorher und Nachher vergleichen"
+        onChange={(e) => {
+          setTouched(true);
+          setPos(Number(e.target.value));
+        }}
+      />
+    </div>
+  );
+}
+
 /** Aufruf mit #kontakt, #preise usw. (z. B. Link aus dem Hilfe-Chat): direkt zum Abschnitt springen */
 function useScrollToHash() {
   useEffect(() => {
@@ -465,30 +520,50 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                 So funktioniert die Werbung mit KI →
               </a>
             </div>
-            <div className="lp-social-visual" aria-hidden="true">
-              <div className="lp-insta">
-                <div className="lp-insta-head">
-                  <i />
-                  <span>
-                    <b>malerbetrieb_muster</b>
-                    <small>Trier</small>
-                  </span>
-                </div>
-                <div className="lp-insta-img">
-                  <div className="lp-insta-before">
-                    <em>Vorher</em>
+            <div className="lp-social-visual">
+              <div className="lp-stack">
+                <div className="lp-card lp-card-fb" aria-hidden="true">
+                  <div className="lp-card-head">
+                    <b className="lp-fb-logo">f</b>
+                    <span>
+                      <b>Malerbetrieb Muster</b>
+                      <small>Gerade eben · 🌍</small>
+                    </span>
                   </div>
-                  <div className="lp-insta-after">
-                    <em>Nachher</em>
-                  </div>
+                  <p>Frisch gestrichen: Fassade in warmem Sandton. Sie planen auch einen Anstrich? Jetzt anfragen …</p>
+                  <img src="/images/werbung-nachher.webp" alt="" width="800" height="597" loading="lazy" decoding="async" />
                 </div>
-                <div className="lp-insta-icons">♡ 💬 ➤</div>
-                <p className="lp-insta-text">
-                  <b>malerbetrieb_muster</b> Diese Altbau-Fassade strahlt wieder: Risse saniert, mit Silikatfarbe in Hellgrau gestrichen.
-                  <span> #maler #fassade #trier #handwerk</span>
-                </p>
+                <div className="lp-card lp-card-google" aria-hidden="true">
+                  <div className="lp-card-head">
+                    <b className="lp-g-logo">G</b>
+                    <span>
+                      <b>Google-Unternehmensprofil</b>
+                      <small>Neues Update</small>
+                    </span>
+                  </div>
+                  <img src="/images/werbung-nachher.webp" alt="" width="800" height="597" loading="lazy" decoding="async" />
+                  <p>Fassadenanstrich abgeschlossen – Putzschäden ausgebessert, neu gestrichen.</p>
+                </div>
+                <div className="lp-insta">
+                  <div className="lp-insta-head" aria-hidden="true">
+                    <i />
+                    <span>
+                      <b>malerbetrieb_muster</b>
+                      <small>Trier</small>
+                    </span>
+                  </div>
+                  <BeforeAfter />
+                  <div className="lp-insta-icons" aria-hidden="true">
+                    ♡ 💬 ➤
+                  </div>
+                  <p className="lp-insta-text">
+                    <b>malerbetrieb_muster</b> Vorher – nachher: Diese Fassade strahlt wieder! Putzschäden ausgebessert, gereinigt und in warmem
+                    Sandton gestrichen.
+                    <span> #maler #fassade #vorhernachher #handwerk</span>
+                  </p>
+                </div>
               </div>
-              <div className="lp-social-chips">
+              <div className="lp-social-chips" aria-label="Kanäle">
                 <span>Website ✓</span>
                 <span>Instagram ✓</span>
                 <span>Facebook ✓</span>
