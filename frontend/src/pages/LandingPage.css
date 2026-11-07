@@ -1295,3 +1295,21 @@
   .lp-form-row { grid-template-columns: 1fr; }
   .lp-form { padding: 20px; }
 }
+
+.lp-tiers {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.lp-tiers li {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 9px 12px;
+  color: #334155;
+  font-size: 15px;
+}
+.lp-tiers b { color: #1d4ed8; margin-right: 4px; }
+@media (max-width: 640px) { .lp-tiers { grid-template-columns: 1fr; } }

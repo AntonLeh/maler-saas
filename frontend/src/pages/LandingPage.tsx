@@ -115,7 +115,7 @@ const audiences = [
   },
   {
     title: "Betrieb mit Büro und Außenauftritt",
-    sub: "ab 21 Mitarbeitern",
+    sub: "ab 21 Mitarbeitern – ohne Obergrenze",
     text: "Alles aus einer Hand – inklusive eigener Website mit Terminbuchung und Stellenanzeigen sowie dem Fachkräfte-Pool.",
   },
 ];
@@ -123,7 +123,7 @@ const audiences = [
 const faqs = [
   {
     q: "Was kostet MalerSaaS?",
-    a: "Die Tarife beginnen bei 79 € im Monat zzgl. MwSt. (bis 3 Mitarbeiter). Je nach Betriebsgröße und Funktionen gibt es vier Tarife. Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
+    a: "Die Tarife beginnen bei 79 € im Monat zzgl. MwSt. (bis 3 Mitarbeiter). Je nach Betriebsgröße gibt es vier Tarife: bis 3, bis 8 und bis 20 Mitarbeiter sowie Enterprise ab 21 Mitarbeitern ohne Obergrenze. Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
   },
   {
     q: "Brauche ich für den Test eine Kreditkarte?",
@@ -479,10 +479,22 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
               <h2>
                 Ab 79 € im Monat <small>zzgl. MwSt.</small>
               </h2>
-              <p>
-                Vier Tarife je nach Betriebsgröße – von 3 bis über 20 Mitarbeiter. Monatlich kündbar. Alle Tarife
-                und Funktionen sehen Sie nach der Registrierung unter „Tarife“.
-              </p>
+              <p>Für Betriebe jeder Größe – vom Ein-Mann-Betrieb bis zum Unternehmen mit 50 oder mehr Mitarbeitern:</p>
+              <ul className="lp-tiers">
+                <li>
+                  <b>Starter</b> bis 3 Mitarbeiter
+                </li>
+                <li>
+                  <b>Professional</b> bis 8 Mitarbeiter
+                </li>
+                <li>
+                  <b>Business</b> bis 20 Mitarbeiter
+                </li>
+                <li>
+                  <b>Enterprise</b> ab 21 Mitarbeitern – ohne Obergrenze
+                </li>
+              </ul>
+              <p>Monatlich kündbar. Alle Preise und Funktionen sehen Sie nach der Registrierung unter „Tarife“.</p>
             </div>
             <div className="lp-price-cta">
               <button type="button" className="landing-primary-btn" onClick={onRegister}>
