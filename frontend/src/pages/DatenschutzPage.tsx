@@ -812,6 +812,19 @@ export default function DatenschutzPage({
             Anfragen gemäß Artikel 6 Absatz 1 Buchstabe f DSGVO.
           </p>
 
+          <p id="kontaktformular">
+            Über das Kontaktformular auf maler-saas.com werden Name,
+            E-Mail-Adresse, optional Firma und Telefonnummer sowie Ihre
+            Nachricht verarbeitet. Die Nachricht wird per E-Mail (über
+            Brevo) an unser Postfach gesendet und zum Nachweis sowie
+            zum Schutz vor massenhaftem Missbrauch bei uns gespeichert.
+            Ihre IP-Adresse speichern wir dabei nicht, sondern nur einen
+            nicht umkehrbaren Prüfwert, um zu viele Anfragen in kurzer
+            Zeit zu begrenzen. Die Angaben werden gelöscht, sobald die
+            Anfrage abschließend bearbeitet ist und keine gesetzlichen
+            Aufbewahrungspflichten bestehen.
+          </p>
+
           <p id="hilfe-chat">
             Auf maler-saas.com und in der App gibt es einen
             KI-Hilfe-Chat. Die eingegebenen Nachrichten werden zur
