@@ -45,6 +45,27 @@ Jeder Betrieb bekommt eine fertige, für Handy und Google optimierte Firmen-Webs
 - **SEO:** Server-HTML, Titel/Beschreibung, Canonical, Open Graph, JSON-LD `HousePainter`, `sitemap.xml`, `robots.txt`.
 - Unveröffentlichte Website nur per Vorschau-Link (`?vorschau=<token>`, `noindex`). Ohne aktives Abo ist die Seite offline.
 
+## Werbung (Reiter „Werbung“)
+
+KI erstellt aus Baustellenfotos eines Auftrags (oder eigenen Fotos) einen Beitrag: Bildauswahl inkl. Vorher/Nachher,
+Datenschutz-Hinweise (Gesichter, Kennzeichen, Hausnummern) und Texte für Website, Instagram, Facebook, Google-Profil und
+WhatsApp-Status. Der Betrieb prüft, bestätigt die Zustimmung des Kunden und
+- veröffentlicht auf der eigenen Website (legt eine Referenz/Projektseite an, Bilder werden bereinigt kopiert),
+- teilt in sozialen Netzwerken über das Teilen-Menü des Handys (`navigator.share` mit Bildern; Text wird zusätzlich kopiert,
+  weil Instagram/Facebook ihn nicht übernehmen) bzw. am Computer „Bilder laden + Text kopieren“ (`share.ts`).
+Kein direkter Zugriff auf Facebook/Instagram/Google – dafür wären App-Zulassungen der Plattformen nötig (spätere Stufe).
+
+| Teil | Ort |
+| --- | --- |
+| Tabelle `marketing_posts`, `websites.marketing_auto`, Zeitplan | `supabase/migrations/20261107200000_werbung.sql` |
+| KI + tägliche Vorschläge | `supabase/functions/website-marketing` (`logic.ts` testbar) |
+| Oberfläche | `MarketingTab.tsx`, `share.ts` |
+
+Vorschläge: täglich 8:00 UTC per pg_cron (`?hook=<DELETION_HOOK_TOKEN>`), höchstens 2 pro Betrieb und Woche, nur
+abgeschlossene Aufträge der letzten 45 Tage mit mind. 2 Fotos, ohne vorhandenen Beitrag/Referenz; E-Mail über Brevo.
+Abschaltbar im Reiter. Zählt zum gemeinsamen KI-Monatslimit (`website_ai_usage`, kind `werbung`).
+Deploy: `npx supabase functions deploy website-marketing --no-verify-jwt`
+
 ## KI-Schreibhilfe
 
 „✨ Mit KI schreiben“ bei jeder Leistung (Kurztext, ausführlicher Text, Enthalten, Fragen), bei „Über uns“ und für

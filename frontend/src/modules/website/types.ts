@@ -70,11 +70,36 @@ export type Website = {
   /** eigene Domain (nur über die Funktion website-domain änderbar) */
   custom_domain?: string | null;
   custom_domain_status?: "pending" | "active" | "error" | null;
+  /** Werbung: tägliche Vorschläge der KI aus abgeschlossenen Aufträgen (Standard an) */
+  marketing_auto?: boolean;
   custom_domain_checked_at?: string | null;
   custom_domain_error?: string | null;
 };
 
 export type WebsiteImage = { url: string; path: string; alt?: string; kind?: "vorher" | "nachher" | null };
+
+// ---------------------------------------------------------------------
+// Werbung (KI-Beiträge für Website und soziale Netzwerke)
+// ---------------------------------------------------------------------
+export type MarketingChannel = "website" | "instagram" | "facebook" | "google" | "whatsapp";
+export type MarketingImage = { image_id?: number; url?: string; path?: string; kind?: "vorher" | "nachher" | null };
+export type MarketingPost = {
+  id: number;
+  tenant_id: number;
+  order_id: string | null;
+  reference_id: number | null;
+  source: "manuell" | "vorschlag";
+  status: "vorschlag" | "entwurf" | "veroeffentlicht" | "verworfen";
+  title: string | null;
+  city: string | null;
+  texts: Partial<Record<MarketingChannel, string>>;
+  images: MarketingImage[];
+  warnings: string[];
+  shared: Partial<Record<MarketingChannel, string>>;
+  consent_confirmed: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export type WebsiteReference = {
   id: number;

@@ -232,7 +232,7 @@ export default function AvvPage({ onBack }: Props) {
         <section className="legal-section">
           <h2>Anlage 3: Unterauftragsverarbeiter</h2>
           <p>
-            Stripe ist nicht aufgeführt, weil Stripe Zahlungsdaten als eigener Verantwortlicher verarbeitet. Anthropic, ElevenLabs und Twilio werden nur genutzt, wenn der Kunde die jeweilige Funktion verwendet (KI-Belegerkennung, KI-Telefon, Website-Chat, Schreibhilfe).
+            Stripe ist nicht aufgeführt, weil Stripe Zahlungsdaten als eigener Verantwortlicher verarbeitet. Anthropic, ElevenLabs und Twilio werden nur genutzt, wenn der Kunde die jeweilige Funktion verwendet (KI-Belegerkennung, KI-Telefon, Website-Chat, Schreibhilfe, Werbe-Beiträge).
           </p>
           <div className="avv-table-wrap">
             <table className="avv-table">
@@ -249,7 +249,7 @@ export default function AvvPage({ onBack }: Props) {
                   ["Supabase (Supabase Inc., USA)", "Datenbank, Anmeldung, Dateispeicher, Serverfunktionen", "Irland (AWS eu-west-1)", "Auftragsverarbeitungsvertrag mit EU-Standardvertragsklauseln"],
                   ["Vercel (Vercel Inc., USA)", "Auslieferung von Website und App, Serverfunktionen", "weltweites Auslieferungsnetz, Serverfunktionen ggf. USA", "Auftragsverarbeitungsvertrag mit EU-Standardvertragsklauseln"],
                   ["Brevo (Sendinblue, Deutschland/Frankreich)", "E-Mail- und SMS-Versand, u. a. Rechnungen im Auftrag des Kunden", "EU", "Datenschutzvereinbarung als Teil der Nutzungsbedingungen"],
-                  ["Anthropic (USA)", "KI: Belegerkennung, Hilfe-Chat, Website-Chat, Schreibhilfe", "USA", "Auftragsverarbeitungsvertrag als Teil der Geschäftsbedingungen; keine Nutzung für KI-Training"],
+                  ["Anthropic (USA)", "KI: Belegerkennung, Hilfe-Chat, Website-Chat, Schreibhilfe, Werbe-Beiträge (Auswertung von Baustellenfotos)", "USA", "Auftragsverarbeitungsvertrag als Teil der Geschäftsbedingungen; keine Nutzung für KI-Training"],
                   ["ElevenLabs (Eleven Labs Inc., USA)", "Sprach-KI des KI-Telefonassistenten", "USA", "Auftragsverarbeitungsvertrag über die Nutzungsbedingungen"],
                   ["Twilio (USA)", "Telefonnummern und Anrufweiterleitung", "USA", "Data Protection Addendum"],
                   ["IONOS (IONOS SE, Deutschland)", "Postfach info@maler-saas.com (Support-E-Mails)", "Deutschland", "Auftragsverarbeitungsvertrag als Teil der AGB"],

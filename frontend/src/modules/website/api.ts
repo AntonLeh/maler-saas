@@ -1,5 +1,5 @@
 import { supabase, supabaseUrl } from "../../lib/supabase";
-import type { CompanyInfo, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview, WebsiteApplication, WebsiteChat } from "./types";
+import type { CompanyInfo, MarketingPost, OrderImage, OrderOption, Website, WebsiteImage, WebsiteLead, WebsiteReference, WebsiteReviewOverview, WebsiteApplication, WebsiteChat } from "./types";
 import { DEFAULT_HIGHLIGHTS, DEFAULT_SECTIONS, DEFAULT_SERVICES } from "./types";
 
 const BUCKET = "website-media";
@@ -422,4 +422,95 @@ export async function loadChats(tenantId: number): Promise<WebsiteChat[]> {
 export async function deleteChat(tenantId: number, id: string) {
   const { error } = await supabase.from("website_chats").delete().eq("id", id).eq("tenant_id", tenantId);
   if (error) fail("Chat löschen", error);
+}
+
+// ---------------------------------------------------------------------
+// Werbung (Funktion website-marketing + Tabelle marketing_posts)
+// ---------------------------------------------------------------------
+function failMarketing(context: string, error: { message: string; code?: string } | null): never {
+  const msg = error?.message ?? "";
+  if (msg.includes("marketing_posts") && (msg.includes("does not exist") || msg.includes("schema cache"))) {
+    throw new Error("Für die Werbung fehlt noch ein Datenbank-Update. Bitte die SQL-Datei supabase/migrations/20261107200000_werbung.sql im Supabase SQL-Editor ausführen.");
+  }
+  fail(context, error);
+}
+
+export async function loadMarketingPosts(tenantId: number): Promise<MarketingPost[]> {
+  const { data, error } = await supabase
+    .from("marketing_posts")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .neq("status", "verworfen")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) failMarketing("Beiträge laden", error);
+  return (data ?? []) as MarketingPost[];
+}
+
+export async function countMarketingSuggestions(tenantId: number): Promise<number> {
+  const { count, error } = await supabase
+    .from("marketing_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .eq("status", "vorschlag");
+  return error ? 0 : (count ?? 0);
+}
+
+export async function saveMarketingPost(tenantId: number, id: number, values: Partial<MarketingPost>): Promise<MarketingPost> {
+  const payload = { ...values, updated_at: new Date().toISOString() } as Record<string, unknown>;
+  delete payload.id;
+  delete payload.tenant_id;
+  const { data, error } = await supabase.from("marketing_posts").update(payload).eq("id", id).eq("tenant_id", tenantId).select("*").single();
+  if (error) failMarketing("Beitrag speichern", error);
+  return data as MarketingPost;
+}
+
+export async function aiMarketingPost(input: {
+  order_id?: string | null;
+  uploads?: WebsiteImage[];
+  keywords?: string;
+  title?: string;
+  city?: string;
+  site_url?: string;
+}): Promise<{ post: MarketingPost; used: number; limit: number }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/website-marketing`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ action: "generate", ...input, uploads: (input.uploads ?? []).map((u) => ({ url: u.url, path: u.path })) }),
+    });
+  } catch {
+    throw new Error("Die KI-Werbung ist nicht erreichbar. Ist die Funktion website-marketing veröffentlicht?");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || `KI-Beitrag fehlgeschlagen (Status ${res.status}).`);
+  return { post: data.post as MarketingPost, used: data.used ?? 0, limit: data.limit ?? 0 };
+}
+
+/** KI-Nutzung in diesem Monat (gemeinsam für Schreibhilfe und Werbung) */
+export async function aiUsageThisMonth(tenantId: number): Promise<number | null> {
+  const d = new Date();
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+  const { count, error } = await supabase.from("website_ai_usage").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", start);
+  return error ? null : (count ?? 0);
+}
+
+/** Signierte Adressen einzelner Baustellenbilder (für Vorschaubilder der Beiträge) */
+export async function orderImageUrls(ids: number[]): Promise<Record<number, string>> {
+  const uniq = [...new Set(ids.filter((n) => Number.isFinite(n)))];
+  if (!uniq.length) return {};
+  const { data, error } = await supabase.from("order_progress_images").select("id, image_url, file_path").in("id", uniq);
+  if (error) return {};
+  const out: Record<number, string> = {};
+  for (const img of (data ?? []) as { id: number; image_url: string | null; file_path: string | null }[]) {
+    const path = progressPath(img.file_path, img.image_url);
+    if (!path) continue;
+    const { data: s } = await supabase.storage.from("order-progress-images").createSignedUrl(path, 3600);
+    if (s?.signedUrl) out[img.id] = s.signedUrl;
+  }
+  return out;
 }

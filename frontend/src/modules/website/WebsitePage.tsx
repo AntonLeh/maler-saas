@@ -14,9 +14,10 @@ import StatsTab from "./StatsTab";
 import BookingTab from "./BookingTab";
 import JobsTab from "./JobsTab";
 import ChatTab from "./ChatTab";
+import MarketingTab from "./MarketingTab";
 import { showConfirm } from "../../lib/dialogs";
 
-type Tab = "design" | "stats" | "booking" | "chat" | "jobs" | "references" | "reviews" | "leads" | "legal";
+type Tab = "design" | "stats" | "booking" | "chat" | "jobs" | "references" | "marketing" | "reviews" | "leads" | "legal";
 
 export default function WebsitePage({
   tenantId,
@@ -41,6 +42,7 @@ export default function WebsitePage({
   const [tab, setTab] = useState<Tab>("design");
   const [slug, setSlug] = useState("");
   const [newApps, setNewApps] = useState(0);
+  const [newSuggestions, setNewSuggestions] = useState(0);
 
   const flash = (msg: string) => {
     setSuccess(msg);
@@ -76,6 +78,7 @@ export default function WebsitePage({
           setReferences(r);
           setLeads(l);
           api.countNewApplications(tenantId).then((n) => !cancelled && setNewApps(n));
+          api.countMarketingSuggestions(tenantId).then((n) => !cancelled && setNewSuggestions(n));
         }
       } catch (e) {
         if (!cancelled) setError((e as Error).message);
@@ -234,6 +237,7 @@ export default function WebsitePage({
                   ["chat", "Chat"],
                   ["jobs", `Stellen${newApps ? ` (${newApps} neu)` : ""}`],
                   ["references", `Referenzen (${references.length})`],
+                  ["marketing", `Werbung${newSuggestions ? ` (${newSuggestions} neu)` : ""}`],
                   ["reviews", "Bewertungen"],
                   ["leads", `Anfragen${newLeads ? ` (${newLeads} neu)` : ""}`],
                   ["legal", "Impressum & Datenschutz"],
@@ -250,6 +254,20 @@ export default function WebsitePage({
             )}
             {tab === "references" && (
               <ReferencesTab tenantId={tenantId} userId={currentUserId} references={references} onChanged={reloadRefs} onError={showError} onSuccess={flash} website={website} />
+            )}
+            {tab === "marketing" && (
+              <MarketingTab
+                tenantId={tenantId}
+                userId={currentUserId}
+                website={website}
+                references={references}
+                saving={busy}
+                onSaveWebsite={(v) => save(v, v.marketing_auto === false ? "Automatische Vorschläge sind ausgeschaltet." : "Automatische Vorschläge sind eingeschaltet.")}
+                onRefsChanged={reloadRefs}
+                onSuggestionCount={setNewSuggestions}
+                onError={showError}
+                onSuccess={flash}
+              />
             )}
             {tab === "chat" && (
               <ChatTab key={website.updated_at} tenantId={tenantId} website={website} companyName={company?.company_name} saving={busy} onSave={(v) => save(v, "Chat-Einstellungen gespeichert.")} onError={showError} />

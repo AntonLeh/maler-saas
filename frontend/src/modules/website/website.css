@@ -1348,3 +1348,106 @@
     grid-column: 1 / -1;
   }
 }
+
+/* =========================
+   Werbung (MarketingTab)
+   ========================= */
+.ws-root .ws-grid-small {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+}
+.ws-root .ws-busy {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--tk-primary-soft);
+  color: #3730a3;
+  font-weight: 600;
+}
+.ws-root .ws-mk-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+.ws-root .ws-mk-warn ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.ws-root .ws-mk-first {
+  position: absolute;
+  top: 4px;
+  right: 34px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 23, 42, 0.75);
+  color: #fde68a;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ws-root .ws-mk-more summary {
+  cursor: pointer;
+  color: var(--tk-primary);
+  font-size: 14px;
+  margin: 8px 0;
+}
+.ws-root .ws-mk-texts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.ws-root .ws-mk-texts .tk-field > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ws-root .ws-mk-texts textarea {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ws-root .ws-mk-count.over {
+  color: #b91c1c;
+  font-weight: 700;
+}
+.ws-root .ws-mk-share {
+  border-top: 1px solid var(--tk-border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-root .ws-mk-share h4 {
+  margin: 0;
+}
+.ws-root .ws-mk-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.ws-root .ws-mk-channel {
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--tk-surface);
+}
+.ws-root .ws-mk-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--tk-border);
+  border-radius: 12px;
+  background: var(--tk-surface);
+}
+.ws-root .ws-ref.ws-mk-new {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+@media (max-width: 600px) {
+  .ws-root .ws-mk-texts {
+    grid-template-columns: 1fr;
+  }
+}

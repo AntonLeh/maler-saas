@@ -715,7 +715,7 @@ export default function DatenschutzPage({
         </section>
 
         <section className="legal-section">
-          <h2>20. KI-Schreibhilfe für Website-Texte</h2>
+          <h2>20. KI-Schreibhilfe und Werbe-Beiträge</h2>
 
           <p>
             Unternehmen können Texte für ihre Firmen-Website mit einer
@@ -740,6 +740,25 @@ export default function DatenschutzPage({
               Datenschutzerklärung von Anthropic
             </a>
             .
+          </p>
+
+          <p>
+            <strong>Werbe-Beiträge:</strong> Unternehmen können aus
+            Baustellenfotos eines Auftrags oder eigenen Fotos Beiträge
+            für ihre Website und soziale Netzwerke erstellen lassen –
+            auf Knopfdruck oder als automatischer Vorschlag nach
+            abgeschlossenen Aufträgen. Dazu werden bis zu zehn
+            verkleinerte Fotos, Titel und Ort des Auftrags (ohne
+            Straße), die Angaben des Unternehmens sowie Firmenname,
+            Ort und Leistungsnamen an Anthropic übermittelt. Die KI
+            wählt Fotos aus, schreibt Texte und weist auf erkennbare
+            Personen, Kennzeichen oder Hausnummern hin. Name und
+            Anschrift des Endkunden werden nicht übermittelt.
+            Veröffentlicht oder geteilt wird nur durch das Unternehmen
+            selbst, nachdem es die Zustimmung seines Kunden bestätigt
+            hat; das Teilen in sozialen Netzwerken erfolgt über das
+            Gerät des Unternehmens, MalerSaaS ist mit diesen Netzwerken
+            nicht verbunden.
           </p>
         </section>
 
