@@ -239,10 +239,90 @@ export const FEATURE_PAGES: FeaturePageData[] = [
       },
     ],
     related: [
+      { href: "/werbung-mit-ki", label: "Werbung mit KI" },
       { href: "/ki-telefon", label: "KI-Telefonassistent" },
       { href: "/fachkraefte-finden", label: "Fachkräfte-Pool" },
     ],
   },
+
+  {
+    path: "/werbung-mit-ki",
+    seoTitle: "Social Media für Malerbetriebe – Werbung mit KI aus Baustellenfotos | MalerSaaS",
+    seoDescription:
+      "Instagram, Facebook, Google-Profil und Website ohne Agentur: Die KI macht aus Ihren Baustellenfotos fertige Beiträge mit passenden Texten – Sie prüfen und teilen mit wenigen Fingertipps.",
+    badge: "Werbung mit KI",
+    h1: "Aus Baustellenfotos wird Werbung – für Website, Instagram, Facebook und Google.",
+    intro: [
+      "Gute Arbeit überzeugt am meisten, wenn man sie sieht. MalerSaaS macht aus den Fotos Ihrer Aufträge fertige Beiträge: Die KI wählt die besten Bilder, erkennt Vorher und Nachher und schreibt Texte, die zu jedem Kanal passen.",
+      "Sie prüfen den Beitrag, veröffentlichen ihn mit einem Klick als Projekt auf Ihrer Website und teilen ihn mit wenigen Fingertipps bei Instagram, Facebook, in Ihrem Google-Unternehmensprofil oder als WhatsApp-Status.",
+    ],
+    plan: "Im Tarif Enterprise enthalten – zusammen mit der eigenen Firmen-Website. In der kostenlosen Testphase zum Ausprobieren.",
+    visual: {
+      title: "Neuer Beitrag bereit",
+      rows: [
+        { label: "Fotos", value: "4 von 12 ausgewählt" },
+        { label: "Texte", value: "5 Kanäle fertig" },
+        { label: "Hinweis", value: "Hausnummer auf Bild 3" },
+      ],
+      chips: ["Instagram", "Facebook", "Google-Profil", "WhatsApp"],
+    },
+    highlightsTitle: "Was die KI für Sie erledigt",
+    highlights: [
+      {
+        title: "Die besten Fotos auswählen",
+        text: "Aus allen Baustellenbildern eines Auftrags wählt die KI die aussagekräftigsten aus und erkennt Vorher- und Nachher-Bilder.",
+      },
+      {
+        title: "Texte für jeden Kanal",
+        text: "Sachlich für die Website und das Google-Profil, locker mit Hashtags für Instagram, mit Aufforderung zur Anfrage für Facebook, kurz für WhatsApp.",
+      },
+      {
+        title: "Datenschutz im Blick",
+        text: "Die KI weist auf Gesichter, Autokennzeichen oder Hausnummern hin. Veröffentlicht wird nur, wenn Sie die Zustimmung Ihres Kunden bestätigen.",
+      },
+      {
+        title: "Vorschläge von selbst",
+        text: "Nach abgeschlossenen Aufträgen mit Fotos bereitet die KI bis zu zwei Beiträge pro Woche vor und sagt Ihnen per E-Mail Bescheid.",
+      },
+    ],
+    stepsTitle: "So entsteht ein Beitrag",
+    steps: [
+      { title: "Fotos machen", text: "Wie gewohnt auf der Baustelle – die Bilder landen direkt beim Auftrag." },
+      { title: "KI erstellt den Beitrag", text: "Bildauswahl und Texte für fünf Kanäle in weniger als einer Minute." },
+      { title: "Prüfen", text: "Texte anpassen, Fotos tauschen, Zustimmung des Kunden bestätigen." },
+      { title: "Veröffentlichen & teilen", text: "Mit einem Klick auf die Website, mit wenigen Fingertipps in die sozialen Netzwerke." },
+    ],
+    benefitsTitle: "Warum sich das lohnt",
+    benefits: [
+      "Regelmäßige Beiträge zeigen, dass Ihr Betrieb aktiv ist – Kunden sehen echte Arbeiten statt Werbesprüche.",
+      "Neue Projekte auf der Website und im Google-Profil helfen, in Ihrer Region gefunden zu werden.",
+      "Ohne Agentur und ohne stundenlanges Texten – die Fotos haben Sie ohnehin schon.",
+      "Ohne Ihre Freigabe wird nichts veröffentlicht.",
+    ],
+    faqs: [
+      {
+        q: "Postet MalerSaaS ohne mich?",
+        a: "Nein. Die KI bereitet Beiträge vor, veröffentlicht und geteilt wird nur von Ihnen. Am Handy öffnet „Teilen“ die jeweilige App mit den Bildern, der Text ist schon kopiert – Sie fügen ihn ein und tippen auf „Posten“.",
+      },
+      {
+        q: "Für welche Kanäle gibt es Texte?",
+        a: "Für die Projektseite auf Ihrer eigenen Website, Instagram, Facebook, Ihr Google-Unternehmensprofil und den WhatsApp-Status.",
+      },
+      {
+        q: "Brauche ich die Zustimmung meines Kunden?",
+        a: "Ja. Fotos vom Haus oder der Wohnung eines Kunden sollten Sie nur mit seiner Zustimmung zeigen. MalerSaaS fragt diese Bestätigung vor jedem Veröffentlichen ab, nennt nie Namen oder Adresse und entfernt Standortdaten aus den Fotos.",
+      },
+      {
+        q: "Was kostet die Werbung mit KI?",
+        a: "Sie ist im Tarif Enterprise enthalten, zusammen mit der eigenen Firmen-Website. Die KI-Texte zählen zu einem großzügigen Monatskontingent.",
+      },
+    ],
+    related: [
+      { href: "/firmen-website", label: "Eigene Firmen-Website" },
+      { href: "/ki-telefon", label: "KI-Telefonassistent" },
+    ],
+  },
+
 
   {
     path: "/fachkraefte-finden",

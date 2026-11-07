@@ -79,6 +79,7 @@ SEITEN ZUM NACHLESEN (öffentlich, ohne Anmeldung)
 - Buchhaltung, Belege, Umsatzsteuer, Steuerberater/DATEV: maler-saas.com/buchhaltung
 - KI-Telefonassistent: maler-saas.com/ki-telefon
 - Firmen-Website, Terminbuchung, Stellenanzeigen: maler-saas.com/firmen-website
+- Werbung mit KI (Beiträge für Website, Instagram, Facebook, Google-Profil, WhatsApp): maler-saas.com/werbung-mit-ki
 - Fachkräfte-Pool für Betriebe (Maler und Subunternehmer finden): maler-saas.com/fachkraefte-finden
 - Auswertungen, Kennzahlen, Deckungsbeitrag: maler-saas.com/auswertungen
 - Für Fachkräfte, die sich eintragen möchten: maler-saas.com/fachkraefte

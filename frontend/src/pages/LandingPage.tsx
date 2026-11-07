@@ -91,6 +91,11 @@ const features: { title: string; text: string; href?: string }[] = [
     href: "/firmen-website",
   },
   {
+    title: "Werbung mit KI",
+    text: "Aus Baustellenfotos werden fertige Beiträge für Website, Instagram, Facebook, Google-Profil und WhatsApp – die KI wählt die Bilder und schreibt die Texte.",
+    href: "/werbung-mit-ki",
+  },
+  {
     title: "Fachkräfte-Pool",
     text: "Maler, Gesellen und Subunternehmer in Ihrer Region finden, wenn es eng wird.",
     href: "/fachkraefte-finden",
@@ -116,7 +121,7 @@ const audiences = [
   {
     title: "Betrieb mit Büro und Außenauftritt",
     sub: "ab 21 Mitarbeitern – ohne Obergrenze",
-    text: "Alles aus einer Hand – inklusive eigener Website mit Terminbuchung und Stellenanzeigen sowie dem Fachkräfte-Pool.",
+    text: "Alles aus einer Hand – inklusive eigener Website mit Terminbuchung und Stellenanzeigen, Werbung mit KI sowie dem Fachkräfte-Pool.",
   },
 ];
 
@@ -136,6 +141,10 @@ const faqs = [
   {
     q: "Ist MalerSaaS bereit für die E-Rechnungspflicht?",
     a: "Ja. Jede neue Rechnung wird automatisch als E-Rechnung im ZUGFeRD-Format erstellt (ein normales PDF mit eingebetteten Rechnungsdaten). Für Behörden und Firmen, die eine XRechnung verlangen, gibt es diese zusätzlich. Seit 2025 müssen Betriebe E-Rechnungen empfangen können; ab 2027 bzw. 2028 müssen sie Rechnungen an Firmen als E-Rechnung stellen.",
+  },
+  {
+    q: "Kann MalerSaaS Werbung für meinen Betrieb machen?",
+    a: "Ja, im Tarif Enterprise. Aus Ihren Baustellenfotos erstellt die KI fertige Beiträge für Ihre Website, Instagram, Facebook, Ihr Google-Unternehmensprofil und den WhatsApp-Status – mit passender Bildauswahl und Texten für jeden Kanal. Sie prüfen jeden Beitrag und teilen ihn mit wenigen Fingertipps. Ohne Ihre Freigabe wird nichts veröffentlicht.",
   },
   {
     q: "Funktioniert das auf Handy und Tablet?",
@@ -430,6 +439,66 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           </p>
         </section>
 
+        {/* ---------- Schwerpunkt Werbung mit KI ---------- */}
+        <section className="landing-section">
+          <div className="lp-social">
+            <div>
+              <p className="landing-section-label">Neu: Werbung mit KI</p>
+              <h2>Aus Baustellenfotos wird Werbung – mit einem Klick.</h2>
+              <p>
+                Ihre besten Arbeiten verdienen Aufmerksamkeit. MalerSaaS macht aus den Fotos Ihrer Aufträge fertige Beiträge – für Ihre
+                Website, Instagram, Facebook, Ihr Google-Unternehmensprofil und den WhatsApp-Status. Ohne Agentur, ohne stundenlanges Texten.
+              </p>
+              <ol className="lp-social-steps">
+                <li>
+                  <b>Fotos wählen</b> – aus dem Auftrag oder vom Handy. Nach abgeschlossenen Aufträgen macht die KI auch von selbst Vorschläge.
+                </li>
+                <li>
+                  <b>KI erstellt den Beitrag</b> – wählt die besten Bilder, erkennt Vorher/Nachher und schreibt passende Texte für jeden Kanal.
+                </li>
+                <li>
+                  <b>Prüfen und teilen</b> – mit einem Klick auf Ihre Website, mit wenigen Fingertipps in Instagram, Facebook und Co.
+                </li>
+              </ol>
+              <p className="lp-social-note">Die KI weist Sie auf Gesichter, Autokennzeichen oder Hausnummern auf den Fotos hin.</p>
+              <a className="lp-more" href="/werbung-mit-ki">
+                So funktioniert die Werbung mit KI →
+              </a>
+            </div>
+            <div className="lp-social-visual" aria-hidden="true">
+              <div className="lp-insta">
+                <div className="lp-insta-head">
+                  <i />
+                  <span>
+                    <b>malerbetrieb_muster</b>
+                    <small>Trier</small>
+                  </span>
+                </div>
+                <div className="lp-insta-img">
+                  <div className="lp-insta-before">
+                    <em>Vorher</em>
+                  </div>
+                  <div className="lp-insta-after">
+                    <em>Nachher</em>
+                  </div>
+                </div>
+                <div className="lp-insta-icons">♡ 💬 ➤</div>
+                <p className="lp-insta-text">
+                  <b>malerbetrieb_muster</b> Diese Altbau-Fassade strahlt wieder: Risse saniert, mit Silikatfarbe in Hellgrau gestrichen.
+                  <span> #maler #fassade #trier #handwerk</span>
+                </p>
+              </div>
+              <div className="lp-social-chips">
+                <span>Website ✓</span>
+                <span>Instagram ✓</span>
+                <span>Facebook ✓</span>
+                <span>Google ✓</span>
+                <span>WhatsApp ✓</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ---------- Schwerpunkt E-Rechnung ---------- */}
         <section className="landing-section">
           <div className="lp-einvoice">
@@ -526,7 +595,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                   <b>Business</b> bis 20 Mitarbeiter
                 </li>
                 <li>
-                  <b>Enterprise</b> ab 21 Mitarbeitern – ohne Obergrenze
+                  <b>Enterprise</b> ab 21 Mitarbeitern – ohne Obergrenze, mit Website und Werbung mit KI
                 </li>
               </ul>
               <p>Monatlich kündbar. Alle Preise und Funktionen sehen Sie nach der Registrierung unter „Tarife“.</p>
