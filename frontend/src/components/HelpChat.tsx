@@ -38,26 +38,40 @@ const store = (key: string, s: State) => {
   }
 };
 
-/** Links im Text klickbar machen (nur http/https) */
-function Linkified({ text }: { text: string }) {
-  const parts: (string | { href: string })[] = [];
-  const re = /(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g;
+/** Links im Text klickbar machen: http/https, Adressen auf maler-saas.com (auch ohne https://) und E-Mail-Adressen */
+const LINK_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)"“”„])|((?:www\.)?maler-saas\.com(?:\/[^\s<]*[^\s<.,;:!?)"“”„])?)|([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+
+function linkParts(text: string): (string | { href: string; label: string })[] {
+  const parts: (string | { href: string; label: string })[] = [];
+  const re = new RegExp(LINK_RE.source, "g");
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
+    // „maler-saas.com“ mitten in einer E-Mail (info@maler-saas.com) nicht einzeln verlinken
+    if (m[2] && m.index > 0 && text[m.index - 1] === "@") continue;
     if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push({ href: m[1] });
-    last = m.index + m[1].length;
+    if (m[1]) parts.push({ href: m[1], label: m[1].replace(/^https?:\/\//, "") });
+    else if (m[2]) parts.push({ href: "https://" + m[2], label: m[2] });
+    else parts.push({ href: "mailto:" + m[3], label: m[3] });
+    last = m.index + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function Linkified({ text }: { text: string }) {
   return (
     <>
-      {parts.map((p, i) =>
+      {linkParts(text).map((p, i) =>
         typeof p === "string" ? (
           p
+        ) : p.href.startsWith("mailto:") ? (
+          <a key={i} href={p.href}>
+            {p.label}
+          </a>
         ) : (
           <a key={i} href={p.href} target="_blank" rel="noopener noreferrer">
-            {p.href.replace(/^https?:\/\//, "")}
+            {p.label}
           </a>
         )
       )}
