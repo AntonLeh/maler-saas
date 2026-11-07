@@ -20,6 +20,7 @@ import { generateQuotePdf } from "./lib/quotePdf";
 import InvoicesPage from "./pages/InvoicesPage";
 import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
 import AgbPage from "./pages/AgbPage";
+import AvvPage from "./modules/avv/AvvPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
 import ImpressumPage from "./pages/ImpressumPage";
 import MaterialsPage from "./pages/MaterialsPage";
@@ -741,13 +742,14 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   return <CustomerPortalPage />;
 }
 
-  // Rechtstexte mit eigener Adresse (z. B. für Links im Stripe-Kundenportal): /agb, /datenschutz, /impressum
+  // Rechtstexte mit eigener Adresse (z. B. für Links im Stripe-Kundenportal): /agb, /avv, /datenschutz, /impressum
   {
     const legal = window.location.pathname.replace(/\/+$/, "");
     const home = () => {
       window.location.href = "/";
     };
     if (legal === "/agb") return <AgbPage onBack={home} />;
+    if (legal === "/avv") return <AvvPage onBack={home} />;
     if (legal === "/datenschutz") return <DatenschutzPage onBack={home} />;
     if (legal === "/impressum") return <ImpressumPage onBack={home} />;
   }

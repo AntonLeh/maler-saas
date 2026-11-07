@@ -34,7 +34,7 @@ export default function CompanyRegisterPage({
 }
 
     if (!acceptTerms) {
-  setMessage("Bitte akzeptiere die AGB und Datenschutzbestimmungen.");
+  setMessage("Bitte akzeptiere die AGB, den Auftragsverarbeitungsvertrag und die Datenschutzbestimmungen.");
   return;
 }
 
@@ -162,7 +162,11 @@ if (emailAvailable === false) {
     Ich akzeptiere die{" "}
     <button type="button" className="link-button" onClick={onOpenAgb}>
       AGB
-    </button>{" "}
+    </button>
+    , den{" "}
+    <a className="link-button" href="/avv" target="_blank" rel="noopener noreferrer">
+      Auftragsverarbeitungsvertrag
+    </a>{" "}
     und die{" "}
     <button type="button" className="link-button" onClick={onOpenDatenschutz}>
       Datenschutzbestimmungen

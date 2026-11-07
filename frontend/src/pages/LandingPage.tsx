@@ -602,6 +602,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <button type="button" onClick={onOpenAgb}>
             AGB
           </button>
+          <a href="/avv">AVV</a>
           <a href="/fachkraefte">Arbeit gesucht? Fachkräfte-Pool</a>
         </div>
       </footer>

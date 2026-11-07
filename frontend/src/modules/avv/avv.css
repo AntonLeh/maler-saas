@@ -1,0 +1,97 @@
+/* Auftragsverarbeitungsvertrag (/avv) – ergänzt die Rechtstext-Stile aus App.css */
+
+.avv-page .legal-section ol {
+  padding-left: 22px;
+}
+.avv-page .legal-section ol li {
+  margin-bottom: 6px;
+}
+.avv-page .legal-section a {
+  color: #2563eb;
+}
+
+.avv-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.avv-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 16px;
+}
+.avv-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #334155;
+}
+.avv-table th,
+.avv-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.avv-table thead th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+}
+.avv-table tbody th {
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .avv-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .avv-table tbody th {
+    white-space: normal;
+  }
+}
+
+@media print {
+  .avv-page {
+    background: #fff;
+    padding: 0;
+  }
+  .avv-page .legal-card {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+  .avv-actions,
+  .hc-open,
+  .hc-panel {
+    display: none !important;
+  }
+  .avv-table {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .avv-table-wrap {
+    overflow: visible;
+  }
+  .avv-page .legal-section {
+    break-inside: auto;
+  }
+  .avv-table tr {
+    break-inside: avoid;
+  }
+}
+
+/* langes Wort im Titel darf auf dem Handy umbrechen */
+.avv-page .legal-topbar > div:first-child {
+  min-width: 0;
+}
+.avv-page .legal-topbar h1 {
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}

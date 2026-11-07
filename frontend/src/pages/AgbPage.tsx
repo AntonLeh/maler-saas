@@ -468,7 +468,10 @@ export default function AgbPage({
             Soweit MalerSaaS personenbezogene Daten im Auftrag des
             Kunden verarbeitet, schließen die Parteien eine
             gesonderte Auftragsverarbeitungsvereinbarung gemäß
-            Artikel 28 DSGVO.
+            Artikel 28 DSGVO. Sie ist unter{" "}
+            <a href="/avv">maler-saas.com/avv</a> abrufbar und wird
+            bei der Registrierung zusammen mit diesen AGB
+            abgeschlossen.
           </p>
 
           <p>
