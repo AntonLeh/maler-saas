@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { showAlert, showConfirm } from "../lib/dialogs";
+import { supabase, supabaseUrl } from "../lib/supabase";
+import { showAlert, showPrompt } from "../lib/dialogs";
 
 type Tenant = {
   id: number;
@@ -385,28 +385,44 @@ const extendTrial = async (tenantId: number) => {
 };
 
 const deleteTenantCompletely = async (tenantId: number, companyName: string) => {
-  const firstConfirm = await showConfirm(
-    `Firma "${companyName}" wirklich ENDGÜLTIG löschen? Alle Daten dieser Firma werden gelöscht.`,
-    { danger: true, confirmLabel: "Ja, löschen" }
+  const typed = await showPrompt(
+    `Alle Daten der Firma werden endgültig gelöscht: Kunden, Aufträge, Angebote, Rechnungen, Belege, Website, Dateien und die Zugänge aller Mitarbeiter. Telefonnummer, KI-Assistent und eigene Domain werden freigegeben, ein laufendes Abo gekündigt.\n\nDas lässt sich nicht rückgängig machen. Zur Bestätigung bitte den Firmennamen eingeben:\n${companyName}`,
+    {
+      title: `„${companyName}“ endgültig löschen?`,
+      tone: "error",
+      placeholder: companyName,
+      confirmLabel: "Endgültig löschen",
+      danger: true,
+      validate: (v) =>
+        v.replace(/\s+/g, " ").trim().toLowerCase() === companyName.replace(/\s+/g, " ").trim().toLowerCase()
+          ? null
+          : "Der Name stimmt nicht überein.",
+    }
   );
+  if (typed === null) return;
 
-  if (!firstConfirm) return;
-
-  const secondConfirm = await showConfirm(
-    `Letzte Warnung: Das kann nicht rückgängig gemacht werden. "${companyName}" endgültig löschen?`,
-    { title: "Letzte Warnung", danger: true, confirmLabel: "Endgültig löschen" }
-  );
-
-  if (!secondConfirm) return;
-
-  const { error } = await supabase.rpc("delete_tenant_completely", {
-    p_tenant_id: tenantId,
-  });
-
-  if (error) {
-    await showAlert("Firma konnte nicht gelöscht werden.", { tone: "error", title: "Das hat nicht geklappt" });
-    console.error(error);
-    return;
+  try {
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) throw new Error("Bitte erneut anmelden.");
+    const res = await fetch(`${supabaseUrl}/functions/v1/delete-tenant`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ tenant_id: tenantId, confirm_name: typed }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.ok) throw new Error(out.error || `Fehler ${res.status}`);
+    const lines = (out.steps as { step: string; ok: boolean; detail: string }[]).map((st) => `${st.ok ? "✓" : "✗"} ${st.step}: ${st.detail}`);
+    await showAlert(
+      `${lines.join("\n")}${out.complete ? "" : "\n\nBei den mit ✗ markierten Punkten bitte von Hand nachsehen (die Firma selbst ist gelöscht)."}`,
+      { title: `„${out.name}“ wurde gelöscht`, tone: out.complete ? "success" : "warning" }
+    );
+  } catch (e) {
+    console.error(e);
+    await showAlert(
+      `${e instanceof Error ? e.message : String(e)}\n\nIst die Funktion „delete-tenant“ veröffentlicht?`,
+      { tone: "error", title: "Firma konnte nicht gelöscht werden" }
+    );
   }
 
   await loadTenants();
