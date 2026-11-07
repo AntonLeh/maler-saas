@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { LEGAL_VERSIONS } from "../lib/legalVersions";
 
 type Props = {
   onBackToLogin: () => void;
@@ -69,6 +70,9 @@ if (emailAvailable === false) {
     first_name: firstName,
     last_name: lastName,
     phone: phone,
+    // Nachweis der Zustimmung: welche Fassung von AGB, AVV und Datenschutz akzeptiert wurde
+    // (Zeitpunkt = Anlage des Zugangs, siehe legal_acceptances() in der Datenbank)
+    legal_accepted: { ...LEGAL_VERSIONS },
   },
 },
     });

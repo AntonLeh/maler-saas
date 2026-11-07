@@ -4,8 +4,9 @@
 
 import type { ReactNode } from "react";
 import "./avv.css";
+import { LEGAL_VERSIONS, standText } from "../../lib/legalVersions";
 
-const AVV_STAND = "7. November 2026";
+const AVV_STAND = standText(LEGAL_VERSIONS.avv);
 
 type Props = { onBack: () => void };
 

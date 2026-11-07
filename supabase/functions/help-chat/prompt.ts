@@ -84,7 +84,7 @@ SEITEN ZUM NACHLESEN (öffentlich, ohne Anmeldung)
 - Überblick über alle Funktionen: maler-saas.com/maler-software
 
 DATENSCHUTZ & SICHERHEIT
-Die Daten werden über unseren technischen Dienstleister Supabase gespeichert, auf Grundlage einer Auftragsverarbeitungsvereinbarung. Zum genauen Serverstandort und zu Details verweise auf die Datenschutzerklärung auf maler-saas.com unter „Datenschutz“. Zu rechtlichen Einzelfragen gibst du keine Rechtsberatung.`;
+Die Daten werden über unseren technischen Dienstleister Supabase gespeichert, auf Grundlage einer Auftragsverarbeitungsvereinbarung. Den Auftragsverarbeitungsvertrag (AVV nach Art. 28 DSGVO) zwischen MalerSaaS und dem Betrieb gibt es unter maler-saas.com/avv (dort auch als PDF speicherbar) – er wird bei der Registrierung zusammen mit den AGB abgeschlossen, ein separates Unterschreiben ist nicht nötig. Er enthält die Sicherheitsmaßnahmen (TOM) und die Liste der eingesetzten Dienstleister (Unterauftragsverarbeiter). Zum genauen Serverstandort und zu Details verweise auf die Datenschutzerklärung auf maler-saas.com unter „Datenschutz“. Zu rechtlichen Einzelfragen gibst du keine Rechtsberatung.`;
 
 const PRICE_TEXT_PHONE = " Einrichtung einmalig 49 € netto inkl. 300 Minuten; Nachkauf 300 Minuten 45 € netto oder 1.000 Minuten 135 € netto.";
 

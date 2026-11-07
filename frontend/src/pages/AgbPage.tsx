@@ -1,3 +1,5 @@
+import { LEGAL_VERSIONS, standText } from "../lib/legalVersions";
+
 type AgbPageProps = {
   onBack: () => void;
 };
@@ -16,7 +18,7 @@ export default function AgbPage({
               MalerSaaS
             </p>
             <p>
-              <strong>Stand: 13. September 2026</strong>
+              <strong>Stand: {standText(LEGAL_VERSIONS.agb)}</strong>
             </p>
           </div>
 

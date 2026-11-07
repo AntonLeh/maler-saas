@@ -1,3 +1,5 @@
+import { LEGAL_VERSIONS, standText } from "../lib/legalVersions";
+
 type DatenschutzPageProps = {
   onBack: () => void;
 };
@@ -18,7 +20,7 @@ export default function DatenschutzPage({
             </p>
 
             <p>
-              <strong>Stand: 5. November 2026</strong>
+              <strong>Stand: {standText(LEGAL_VERSIONS.datenschutz)}</strong>
             </p>
           </div>
 
