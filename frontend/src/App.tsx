@@ -739,6 +739,17 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   return <CustomerPortalPage />;
 }
 
+  // Rechtstexte mit eigener Adresse (z. B. für Links im Stripe-Kundenportal): /agb, /datenschutz, /impressum
+  {
+    const legal = window.location.pathname.replace(/\/+$/, "");
+    const home = () => {
+      window.location.href = "/";
+    };
+    if (legal === "/agb") return <AgbPage onBack={home} />;
+    if (legal === "/datenschutz") return <DatenschutzPage onBack={home} />;
+    if (legal === "/impressum") return <ImpressumPage onBack={home} />;
+  }
+
   // Fachkräfte-Pool: öffentliche Seiten (Anmeldung, eigenes Profil, Kontaktanfrage beantworten)
   if (/^\/fachkraefte(\/|$)/.test(window.location.pathname)) {
     return <PublicPoolPage />;
