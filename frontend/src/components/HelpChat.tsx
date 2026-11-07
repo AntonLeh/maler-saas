@@ -59,22 +59,53 @@ function linkParts(text: string): (string | { href: string; label: string })[] {
   return parts;
 }
 
-function Linkified({ text }: { text: string }) {
+/** Adresse auf maler-saas.com → gleiche Seite in der aktuellen Umgebung (Vorschau bleibt Vorschau) */
+function ownSiteUrl(href: string): URL | null {
+  try {
+    const u = new URL(href);
+    if (!/^(www\.)?maler-saas\.com$/.test(u.hostname)) return null;
+    return new URL(u.pathname + u.search + u.hash, window.location.origin);
+  } catch {
+    return null;
+  }
+}
+
+function Linkified({ text, onLocalJump }: { text: string; onLocalJump?: () => void }) {
   return (
     <>
-      {linkParts(text).map((p, i) =>
-        typeof p === "string" ? (
-          p
-        ) : p.href.startsWith("mailto:") ? (
-          <a key={i} href={p.href}>
+      {linkParts(text).map((p, i) => {
+        if (typeof p === "string") return p;
+        if (p.href.startsWith("mailto:")) {
+          return (
+            <a key={i} href={p.href}>
+              {p.label}
+            </a>
+          );
+        }
+        const own = ownSiteUrl(p.href);
+        const href = own ? own.toString() : p.href;
+        return (
+          <a
+            key={i}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              // Abschnitt auf derselben Seite (z. B. #kontakt auf der Startseite): direkt hinscrollen
+              if (!own || own.pathname !== window.location.pathname || !own.hash) return;
+              const el = document.getElementById(decodeURIComponent(own.hash.slice(1)));
+              if (!el) return;
+              e.preventDefault();
+              onLocalJump?.();
+              history.replaceState(null, "", own.hash);
+              // Bilder unterwegs laden nach und verschieben die Position – deshalb mehrmals nachjustieren
+              [60, 500, 1200].forEach((ms) => setTimeout(() => el.scrollIntoView({ block: "start" }), ms));
+            }}
+          >
             {p.label}
           </a>
-        ) : (
-          <a key={i} href={p.href} target="_blank" rel="noopener noreferrer">
-            {p.label}
-          </a>
-        )
-      )}
+        );
+      })}
     </>
   );
 }
@@ -257,7 +288,7 @@ function ChatBox({ mode }: { mode: Mode }) {
             <div className="hc-msg bot">{GREETING[mode]}</div>
             {state.m.map((x, i) => (
               <div key={i} className={`hc-msg ${x.r === "u" ? "me" : "bot"}`}>
-                <Linkified text={x.t} />
+                <Linkified text={x.t} onLocalJump={() => setOpen(false)} />
               </div>
             ))}
             {busy && <div className="hc-msg bot typing">…</div>}
