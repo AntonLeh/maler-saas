@@ -81,7 +81,7 @@ const features: { title: string; text: string; href?: string }[] = [
   },
   {
     title: "KI-Telefonassistent",
-    text: "Nimmt Anrufe an, wenn Sie auf der Leiter stehen: beantwortet Fragen, notiert Rückrufwünsche und schickt Ihnen eine Zusammenfassung.",
+    text: "Nimmt Anrufe an, wenn Sie auf der Leiter stehen: beantwortet Fragen, vergibt freie Besichtigungstermine und trägt sie direkt in Ihren Kalender ein, notiert Rückrufwünsche und schickt Ihnen eine Zusammenfassung.",
   },
   {
     title: "Eigene Firmen-Website",
