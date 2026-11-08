@@ -39,8 +39,9 @@
 .am-num { position: relative; }
 .am-num input { padding-right: 34px; }
 .am-num em { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--am-muted); font-size: 14px; pointer-events: none; }
-.am-inline { display: flex; gap: 8px; }
-.am-inline input { flex: 1; }
+.am-inline { display: flex; gap: 8px; flex-wrap: wrap; }
+.am-inline input { flex: 1 1 200px; min-width: 0; }
+.am-inline .btn { flex: 0 0 auto; width: auto !important; }
 .am-subhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid #f1f5f9; padding-top: 10px; }
 .am-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; cursor: pointer; }
 .am-toggle input { width: 20px; height: 20px; }

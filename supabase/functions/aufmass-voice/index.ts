@@ -36,22 +36,30 @@ const monthStart = () => {
 async function transcribe(file: File): Promise<string> {
   const key = Deno.env.get("ELEVENLABS_API_KEY");
   if (!key) throw new Error("ELEVENLABS_API_KEY fehlt");
-  const fd = new FormData();
-  fd.append("file", file, file.name || "aufmass.webm");
-  fd.append("model_id", Deno.env.get("AUFMASS_STT_MODEL") || "scribe_v2");
-  fd.append("language_code", "deu");
-  fd.append("tag_audio_events", "false");
-  const res = await fetch(`${Deno.env.get("ELEVENLABS_API_URL") || "https://api.elevenlabs.io"}/v1/speech-to-text`, {
-    method: "POST",
-    headers: { "xi-api-key": key },
-    body: fd,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    console.error("elevenlabs stt", res.status, JSON.stringify(data).slice(0, 400));
-    throw new Error(`stt ${res.status}`);
+  const base = Deno.env.get("ELEVENLABS_API_URL") || "https://api.elevenlabs.io";
+  // Modelle der Reihe nach probieren; bei Problemen mit der Sprachangabe ohne Sprache (automatische Erkennung)
+  const models = [...new Set([Deno.env.get("AUFMASS_STT_MODEL") || "scribe_v2", "scribe_v1"])];
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const name = file.name || "aufmass.webm";
+  const type = (file.type || "audio/webm").split(";")[0];
+  let lastStatus = 0;
+  for (const model of models) {
+    for (const lang of ["de", null]) {
+      const fd = new FormData();
+      fd.append("file", new File([bytes], name, { type }));
+      fd.append("model_id", model);
+      if (lang) fd.append("language_code", lang);
+      fd.append("tag_audio_events", "false");
+      const res = await fetch(`${base}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key }, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) return String(data?.text ?? "").trim();
+      lastStatus = res.status;
+      console.error("elevenlabs stt", model, lang ?? "auto", res.status, type, bytes.length, JSON.stringify(data).slice(0, 500));
+      // Schlüssel ohne Berechtigung / Guthaben: weitere Versuche bringen nichts
+      if (res.status === 401 || res.status === 403 || res.status === 402 || res.status === 429) throw new Error(`stt ${res.status}`);
+    }
   }
-  return String(data?.text ?? "").trim();
+  throw new Error(`stt ${lastStatus}`);
 }
 
 async function callClaude(body: Record<string, unknown>) {
