@@ -100,7 +100,6 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
     console.error("Fehler beim Laden der Mahnungen:", remindersError);
     setInvoiceReminders([]);
   } else {
-    console.log("Geladene Mahnungen:", remindersData);
     setInvoiceReminders(
       (remindersData as InvoiceReminder[]) || []
     );
@@ -297,7 +296,6 @@ const handleCreateReminder = async (invoice: Invoice) => {
     { tone: "success", title: "Erledigt" }
   );
 
-  console.log("Erstellte Mahnung ID:", data);
   await loadInvoices();
 };
 
@@ -401,7 +399,6 @@ const handleCancelInvoice = async (invoice: Invoice) => {
     invoice.invoice_type === "final"
       ? "Die Rechnung wurde storniert. Der Auftrag steht wieder auf „Fertig“ – Sie können jetzt eine neue Rechnung erstellen."
       : "Die Rechnung wurde storniert.");
-  console.log("Stornorechnung ID:", data);
 };
 
 const handleMarkInvoicePaid = async (invoice: Invoice) => {

@@ -659,8 +659,14 @@ const [criterionActive, setCriterionActive] = useState(true);
 const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState<string | null>(null);
 
   const [showBusinessImages, setShowBusinessImages] = useState(false);
+  const [tenantBlocked, setTenantBlocked] = useState(false);
 
   const loadSubscription = async (_tenantId: number, roleId?: number) => {
+  // Firma vom Plattform-Inhaber gesperrt? (Funktion my_tenant_status; fehlt sie noch, gilt „nicht gesperrt“)
+  supabase.rpc("my_tenant_status").then(({ data, error }) => {
+    setTenantBlocked(!error && data === "blocked" && roleId !== PLATFORM_OWNER_ROLE_ID);
+  });
+
   const { data, error } = await supabase.rpc("get_my_subscription");
 
   if (error) {
@@ -672,7 +678,6 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const subscriptionData = data as Subscription;
 
   setSubscription(subscriptionData);
-  console.log("Subscription:", subscriptionData);
   // Nur Admins/Inhaber landen bei gesperrtem Abo auf der Tarif-Seite.
   // Projektleiter und Mitarbeiter haben eine Übergangszeit (lib/staffAccess.ts).
   if (subscriptionData?.status === "blocked" && (roleId === ADMIN_ROLE_ID || roleId === PLATFORM_OWNER_ROLE_ID)) {
@@ -1179,7 +1184,6 @@ const saveEmployeePerformance = async () => {
   setUserProfile(data as AppUser);
 
   if (data?.tenant_id) {
-    console.log("Subscription wird geladen für Tenant:", data.tenant_id);
     await loadSubscription(data.tenant_id, Number(data.role_id));
   }
 
@@ -3289,8 +3293,6 @@ useEffect(() => {
       throw new Error("Benutzerprofil nicht geladen.");
     }
 
-    console.log("USER:", userProfile.id);
-    console.log("ORDER:", orderId);
 
     const allowedStatuses = ["in_arbeit", "pausiert", "zur_pruefung"];
 
@@ -3298,14 +3300,12 @@ useEffect(() => {
       throw new Error("Dieser Status ist für Mitarbeiter nicht erlaubt.");
     }
 
-    console.log("RPC Aufruf:", { orderId, newStatus, userId: userProfile.id });
 
     const { data, error } = await supabase.rpc("employee_update_order_status", {
       p_order_id: orderId,
       p_new_status: newStatus,
     });
 
-    console.log("RPC Antwort:", { data, error });
 
     if (error) {
       console.error("Fehler beim Aktualisieren des Auftragsstatus:", error);
@@ -4091,8 +4091,6 @@ const handleDeleteProgressImage = async (
         .select("*")
         .eq("site_visit_id", siteVisitId);
 
-      console.log("GELADENE RÄUME:", rooms);
-      console.log("GELADENE BILDER:", images);
 
       if (imagesError) {
         throw imagesError;
@@ -4134,7 +4132,6 @@ const handleDeleteProgressImage = async (
       }
 
       setSavedRoomImages(groupedSavedImages);
-      console.log("GRUPPIERTE BILDER:", groupedSavedImages);
 
       setSiteVisitForm((prev) => ({
         ...prev,
@@ -4211,8 +4208,6 @@ const handleDeleteProgressImage = async (
     siteVisitId: number,
     roomIdMap: Record<number, number>
   ) => {
-    console.log("UPLOAD FUNKTION GESTARTET:", siteVisitId);
-    console.log("ROOM IMAGES IN UPLOAD:", roomImages);
     if (!userProfile) return;
 
     const bucket = "site-visit-images";
@@ -4508,8 +4503,6 @@ const handleDeleteProgressImage = async (
           paint_ceiling: room.paint_ceiling,
         };
         if (siteVisitData) {
-          console.log("SITE VISIT ID:", siteVisitData.id);
-          console.log("ROOM IMAGES VOR UPLOAD:", roomImages);
 
         }
 
@@ -4900,7 +4893,7 @@ const openEmployeeOrders = () => {
       };
 
       const { error } = await supabase.from("customers").insert([newCustomer]);
-        console.log("Read update error:", error);
+        console.error("Read update error:", error);
       if (error) {
         console.error("Fehler beim Speichern des Kunden:", error);
         setCustomerMessage(`Kunde konnte nicht gespeichert werden: ${error.message}`);
@@ -5215,13 +5208,6 @@ if (assignments.length > 0) {
       setSavingEmployee(true);
 
       try {
-        console.log("session access token vorhanden:", !!session?.access_token);
-        console.log("token prefix:", session?.access_token?.slice(0, 20));
-        console.log("function url:", `${supabaseUrl}/functions/v1/create-employee-auth`);
-        console.log("anon key prefix:", supabaseAnonKey?.slice(0, 20));
-        console.log("Create employee - session vorhanden:", !!session);
-        console.log("Create employee - access token vorhanden:", !!session?.access_token);
-        console.log("Create employee - access token prefix:", session?.access_token?.slice(0, 20));
 
         const { count: activeEmployeeCount, error: countEmployeesError } = await supabase
   .from("app_users")
@@ -5277,8 +5263,6 @@ if (maxUsers > 0 && currentUsers >= maxUsers) {
 
         const result = await response.json().catch(() => ({}));
 
-        console.log("create-employee-auth status:", response.status);
-        console.log("create-employee-auth response:", result);
 
         if (!response.ok) {
           const message = result?.error || result?.message || `HTTP-Fehler ${response.status}`;
@@ -6073,6 +6057,9 @@ if (
     // Abo gesperrt: Projektleiter/Mitarbeiter nach der Übergangszeit nur noch Sperrseite
     const staffAcc =
       userProfile && (isEmployee || isProjectManager) ? staffAccess(subscription) : ({ state: "ok" } as const);
+    if (!loadingData && userProfile && tenantBlocked) {
+      return <StaffLockedPage onLogout={handleLogout} tenantBlocked />;
+    }
     if (!loadingData && userProfile && staffAcc.state === "locked") {
       return <StaffLockedPage onLogout={handleLogout} />;
     }

@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          error: `Keine Berechtigung zum Anlegen von Benutzern. role_id=${callerProfile.role_id}`,
+          error: "Nur Admins dürfen Mitarbeiter anlegen.",
         }),
         {
           status: 403,
@@ -126,13 +126,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 console.log("Request body received", {
-  first_name: body?.first_name ?? null,
-  last_name: body?.last_name ?? null,
-  email: body?.email ?? null,
   hasPassword: !!body?.password,
-  phone: body?.phone ?? null,
   role_id: body?.role_id ?? null,
-  hourly_rate: body?.hourly_rate ?? null,
 });
 
 const first_name = String(body.first_name || "").trim();
@@ -182,6 +177,42 @@ const hourly_rate =
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // ---------- Abo und Mitarbeiter-Limit (wird hier auf dem Server geprüft, nicht nur im Browser) ----------
+    const { data: sub } = await adminClient
+      .from("subscriptions")
+      .select("status, max_users")
+      .eq("tenant_id", callerProfile.tenant_id)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!sub || !["active", "trialing", "past_due"].includes(String(sub.status))) {
+      return new Response(
+        JSON.stringify({ error: "Für das Anlegen von Mitarbeitern wird ein aktiver Tarif benötigt." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const maxUsers = Number(sub.max_users || 0);
+    if (maxUsers > 0) {
+      const { count: activeCount, error: countError } = await adminClient
+        .from("app_users")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", callerProfile.tenant_id)
+        .eq("is_active", true)
+        .in("role_id", [3, 4]);
+      if (countError) {
+        return new Response(
+          JSON.stringify({ error: "Das Mitarbeiter-Limit konnte nicht geprüft werden. Bitte später erneut versuchen." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (Number(activeCount || 0) >= maxUsers) {
+        return new Response(
+          JSON.stringify({ error: `Mitarbeiter-Limit erreicht: Ihr Tarif erlaubt höchstens ${maxUsers} aktive Mitarbeiter. Für mehr Mitarbeiter wechseln Sie bitte den Tarif.` }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const { data: existingAppUser, error: existingError } = await adminClient

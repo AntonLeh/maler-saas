@@ -138,8 +138,6 @@ export default function CustomerPortalPage() {
 }
 
       setData(data as PortalData);
-      console.log("PortalData:", data);
-      console.log("Progress:", data?.progress);
       setLoading(false);
     };
 
@@ -235,7 +233,6 @@ export default function CustomerPortalPage() {
 
     if (error) throw error;
 
-    console.log(result);
 
     // Einwilligung zur Veröffentlichung separat speichern (Fehler hier dürfen die Bewertung nicht stören)
     if (publishConsent && publishInfo?.available && result?.review_id) {

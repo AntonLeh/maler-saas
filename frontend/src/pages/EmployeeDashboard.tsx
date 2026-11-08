@@ -247,8 +247,6 @@ setFinishNoteErrorOrderId(null);
       orderId,
       note || "Fortschrittsbild hochgeladen."
     );
-    console.log("SAVED PROGRESS:", savedProgress);
-    console.log("IMAGE FILE:", imageFiles);
 
     if (imageFiles.length > 0 && savedProgress?.id) {
   for (const imageFile of imageFiles) {

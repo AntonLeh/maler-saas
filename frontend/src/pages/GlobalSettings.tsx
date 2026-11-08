@@ -376,9 +376,6 @@ const handleLogoUpload = async (file: File) => {
       data: { session },
     } = await supabase.auth.getSession();
 
-    console.log("SESSION USER:", session?.user);
-    console.log("APP METADATA:", session?.user?.app_metadata);
-    console.log("USER METADATA:", session?.user?.user_metadata);
 
     const bankProblem = ibanError(companyIban) || bicError(companyBic);
     if (bankProblem) {

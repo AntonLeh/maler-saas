@@ -14,15 +14,24 @@ export function StaffGraceBanner({ access }: { access: StaffAccess }) {
   );
 }
 
-export function StaffLockedPage({ onLogout }: { onLogout: () => void }) {
+export function StaffLockedPage({ onLogout, tenantBlocked = false }: { onLogout: () => void; tenantBlocked?: boolean }) {
   return (
     <div className="staff-locked">
       <div className="staff-locked-card">
         <div className="staff-locked-icon" aria-hidden>🔒</div>
-        <h1>Zugang vorübergehend gesperrt</h1>
-        <p>Das Abo Ihres Betriebs muss erneuert werden – bitte wenden Sie sich an Ihren Admin.</p>
+        <h1>{tenantBlocked ? "Zugang gesperrt" : "Zugang vorübergehend gesperrt"}</h1>
+        {tenantBlocked ? (
+          <p>
+            Der Zugang Ihres Betriebs zu MalerSaaS wurde gesperrt. Bitte wenden Sie sich an{" "}
+            <a href="mailto:info@maler-saas.com">info@maler-saas.com</a>.
+          </p>
+        ) : (
+          <p>Das Abo Ihres Betriebs muss erneuert werden – bitte wenden Sie sich an Ihren Admin.</p>
+        )}
         <p className="staff-locked-muted">
-          Sobald das Abo erneuert ist, können Sie sich wieder anmelden und wie gewohnt weiterarbeiten. Ihre Daten bleiben erhalten.
+          {tenantBlocked
+            ? "Ihre Daten bleiben erhalten."
+            : "Sobald das Abo erneuert ist, können Sie sich wieder anmelden und wie gewohnt weiterarbeiten. Ihre Daten bleiben erhalten."}
         </p>
         <button type="button" className="btn btn-secondary" onClick={onLogout}>
           Abmelden
