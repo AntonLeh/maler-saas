@@ -57,6 +57,8 @@ import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-t
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
 import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
+import QuotesList from "./modules/angebote/QuotesList";
+import { depositAllowed, quoteStatusKey, quoteStatusLabel } from "./modules/angebote/status";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
 const ADMIN_ROLE_ID = 2;
@@ -383,6 +385,8 @@ type QuoteListItem = {
   tax_amount: number;
   total_amount: number;
   customer_id: number;
+  valid_until?: string | null;
+  accepted_at?: string | null;
 };
 
 type OrdersFilterMode =
@@ -1430,7 +1434,9 @@ const loadOrderAnalysis = async () => {
         subtotal,
         tax_amount,
         total_amount,
-        customer_id
+        customer_id,
+        valid_until,
+        accepted_at
       `)
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
@@ -1597,9 +1603,9 @@ const handleSaveValidUntil = async () => {
 const handleSaveDeposit = async () => {
   if (!quoteDetail || !userProfile?.tenant_id) return;
 
-  if (subscription?.plan !== "business") {
+  if (!depositAllowed(subscription)) {
     await showAlert(
-      "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar.",
+      "Abschlagszahlungen sind ab dem Tarif Business verfügbar.",
       { tone: "warning", title: "Bitte prüfen" }
     );
     return;
@@ -1800,6 +1806,11 @@ if (existingOrder) {
   return;
 }
 
+  // Schlägt ein Schritt fehl, wird alles zurückgesetzt (Angebot wieder auf den alten Status,
+  // neuer Auftrag entfernt) – so gibt es nie ein angenommenes Angebot ohne Auftrag.
+  const previousQuoteStatus = quoteDetail.status;
+  let quoteMarkedAccepted = false;
+  let createdOrderId: number | null = null;
   try {
     setQuoteDetailMessage("");
 
@@ -1817,6 +1828,7 @@ if (existingOrder) {
     if (quoteError) {
       throw quoteError;
     }
+    quoteMarkedAccepted = true;
 
     const { data: newOrder, error: orderError } = await supabase
       .from("orders")
@@ -1844,6 +1856,7 @@ if (existingOrder) {
     if (orderError) {
       throw orderError;
     }
+    createdOrderId = Number(newOrder.id);
 
     const finalEmployeeIds = projectManagerWorksToo
   ? Array.from(
@@ -1874,6 +1887,9 @@ if (existingOrder) {
       throw assignmentError;
     }
 
+    createdOrderId = null;
+    quoteMarkedAccepted = false;
+
     setQuoteDetailMessage("Angebot wurde bestätigt und ein Auftrag wurde erzeugt.");
 
     setShowAcceptQuoteForm(false);
@@ -1887,6 +1903,19 @@ if (existingOrder) {
 
   } catch (error: any) {
     console.error("Fehler beim Bestätigen des Angebots:", error);
+    if (createdOrderId != null) {
+      await supabase.from("order_assignments").delete().eq("order_id", createdOrderId).eq("tenant_id", userProfile.tenant_id);
+      const { error: rollbackError } = await supabase.from("orders").delete().eq("id", createdOrderId).eq("tenant_id", userProfile.tenant_id);
+      if (rollbackError) console.error("Auftrag konnte nach Fehler nicht entfernt werden:", rollbackError);
+    }
+    if (quoteMarkedAccepted) {
+      const { error: resetError } = await supabase
+        .from("quotes")
+        .update({ status: previousQuoteStatus || "draft", accepted_at: null })
+        .eq("id", quoteDetail.id)
+        .eq("tenant_id", userProfile.tenant_id);
+      if (resetError) console.error("Angebotsstatus konnte nicht zurückgesetzt werden:", resetError);
+    }
     setQuoteDetailMessage(
       error?.message || "Das Angebot konnte nicht bestätigt werden."
     );
@@ -6317,7 +6346,7 @@ onReloadOrders={async () => {
     }
 
     const currencyCode = companySettings?.currency || "EUR";
-    const currencySymbol = companySettings?.currency_symbol || "{currencySymbol}";
+    const currencySymbol = companySettings?.currency_symbol || "€";
 
     const defaultInternalHourlyRate =
       companySettings?.default_internal_hourly_rate ??
@@ -7575,8 +7604,8 @@ onReloadOrders={async () => {
                               <p>{quoteDetail.title}</p>
                             </div>
 
-                            <div className="quote-detail-status">
-                              {quoteDetail.status}
+                            <div className={`quote-detail-status ag-badge s-${quoteStatusKey(quoteDetail)}`}>
+                              {quoteStatusLabel(quoteDetail)}
                             </div>
                           </div>
 
@@ -7776,9 +7805,9 @@ onReloadOrders={async () => {
         type="checkbox"
         checked={depositEnabled}
         onChange={(e) => {
-          if (subscription?.plan !== "business") {
+          if (!depositAllowed(subscription)) {
             void showAlert(
-              "Abschlagsrechnungen sind im BUSINESS-Plan verfügbar. Bitte wechseln Sie zum BUSINESS-Plan, um diese Funktion zu nutzen.",
+              "Abschlagszahlungen sind ab dem Tarif Business verfügbar. Bitte wechseln Sie den Tarif, um diese Funktion zu nutzen.",
               { tone: "warning", title: "Bitte prüfen" }
             );
             return;
@@ -7792,7 +7821,7 @@ onReloadOrders={async () => {
     </label>
   </div>
 
-  {depositEnabled && subscription?.plan === "business" && (
+  {depositEnabled && depositAllowed(subscription) && (
     <>
       <div className="form-row two-cols">
         <div className="form-group">
@@ -7926,76 +7955,15 @@ onReloadOrders={async () => {
                 userProfile?.role_id === 1 ||
                 userProfile?.role_id === 2
               ) && (
-                  <section className="single-page-section">
-                    <div className="card">
-                      <div className="page-topbar">
-                        <div>
-                          <h2>Angebote</h2>
-                          <p>Übersicht über alle erzeugten Angebote.</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          onClick={openDashboard}
-                        >
-                          Zurück zum Dashboard
-                        </button>
-                      </div>
-
-                      {loadingQuotes && <p className="info-text">Angebote werden geladen...</p>}
-                      {quotesMessage && <p className="info-text">{quotesMessage}</p>}
-
-                      <div className="table-wrapper">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Angebotsnr.</th>
-                              <th>Datum</th>
-                              <th>Titel</th>
-                              <th>Kunde</th>
-                              <th>Netto</th>
-                              <th>MwSt</th>
-                              <th>Brutto</th>
-                              <th>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {quotes.length === 0 ? (
-                              <tr>
-                                <td colSpan={8}>Keine Angebote vorhanden.</td>
-                              </tr>
-                            ) : (
-                              quotes.map((quote) => (
-                                <tr key={quote.id}>
-                                  <td>
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={() => openQuoteDetail(quote.id)}
-                                    >
-                                      {quote.quote_number || "-"}
-                                    </button>
-                                  </td>
-                                  <td>
-                                    {quote.quote_date
-                                      ? new Date(quote.quote_date).toLocaleDateString("de-DE")
-                                      : "-"}
-                                  </td>
-                                  <td>{quote.title}</td>
-                                  <td>{getCustomerDisplayName(quote.customer_id)}</td>
-                                  <td>{quote.subtotal?.toFixed(2) ?? "0.00"}</td>
-                                  <td>{quote.tax_amount?.toFixed(2) ?? "0.00"}</td>
-                                  <td>{quote.total_amount?.toFixed(2) ?? "0.00"}</td>
-                                  <td>{quote.status}</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </section>
+                  <QuotesList
+                    quotes={quotes}
+                    loading={loadingQuotes}
+                    message={quotesMessage}
+                    currencySymbol={currencySymbol}
+                    customerName={getCustomerDisplayName}
+                    onOpen={(id) => openQuoteDetail(id)}
+                    onBack={openDashboard}
+                  />
                 )}
 
               {currentPage === "employees-list" && isAdmin && (
