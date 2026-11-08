@@ -60,6 +60,7 @@ import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import QuotesList from "./modules/angebote/QuotesList";
 import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
 import QuoteStatusBar from "./modules/angebote/QuoteStatusBar";
+import QuoteEmailDialog from "./modules/angebote/QuoteEmailDialog";
 import { depositAllowed, quoteStatusKey, quoteStatusLabel } from "./modules/angebote/status";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
@@ -549,6 +550,7 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [editingSiteVisitId, setEditingSiteVisitId] = useState<number | null>(null);
   const [quoteDetail, setQuoteDetail] = useState<QuoteDetail | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItemDetail[]>([]);
+  const [showQuoteEmail, setShowQuoteEmail] = useState(false);
   const [loadingQuoteDetail, setLoadingQuoteDetail] = useState(false);
   const [quoteDetailMessage, setQuoteDetailMessage] = useState("");
 
@@ -7437,6 +7439,15 @@ onReloadOrders={async () => {
                               PDF erstellen
                             </button>
                           )}
+                          {quoteDetail && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() => setShowQuoteEmail(true)}
+                            >
+                              Per E-Mail senden
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="btn btn-secondary"
@@ -7462,6 +7473,23 @@ onReloadOrders={async () => {
                           </button>
                         </div>
                       </div>
+
+                      {showQuoteEmail && quoteDetail && userProfile?.tenant_id && (
+                        <QuoteEmailDialog
+                          quote={quoteDetail}
+                          items={quoteItems}
+                          tenantId={userProfile.tenant_id}
+                          customers={customers}
+                          canPortal={hasFeature("customerPortal")}
+                          onClose={() => setShowQuoteEmail(false)}
+                          onSent={async (info) => {
+                            setShowQuoteEmail(false);
+                            await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
+                            await loadQuotes(userProfile.tenant_id);
+                            await showAlert(`Das Angebot wurde an ${info.to} gesendet.`, { tone: "success", title: "Gesendet" });
+                          }}
+                        />
+                      )}
 
                       {quoteDetail && userProfile?.tenant_id && (
                         <QuoteStatusBar

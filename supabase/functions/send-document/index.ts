@@ -1,7 +1,7 @@
-// Rechnungen und Mahnungen per E-Mail versenden (Brevo)
-//   POST { kind: "invoice"|"reminder", invoice_id, reminder_id?, to, subject, text, copy: boolean,
+// Rechnungen, Mahnungen und Angebote per E-Mail versenden (Brevo)
+//   POST { kind: "invoice"|"reminder"|"quote", invoice_id?, reminder_id?, quote_id?, to, subject, text, copy: boolean,
 //          attachments: [{ name, content (Base64) }] }
-// Anhänge (ZUGFeRD-PDF, XRechnung, Mahnungs-PDF) erzeugt die App im Browser.
+// Anhänge (ZUGFeRD-PDF, XRechnung, Mahnungs-PDF, Angebots-PDF) erzeugt die App im Browser.
 // Secrets: BREVO_API_KEY, BREVO_SENDER_EMAIL (bereits vorhanden),
 //          optional BREVO_INVOICE_SENDER_EMAIL (z. B. rechnung@maler-saas.com, in Brevo bestätigt)
 
@@ -31,19 +31,28 @@ serve(async (req) => {
     const { data: authData, error: authErr } = await db.auth.getUser(token);
     if (authErr || !authData?.user) return json({ ok: false, error: "Bitte erneut anmelden." }, 401);
     const { data: user } = await db.from("app_users").select("id, tenant_id, role_id").eq("auth_user_id", authData.user.id).maybeSingle();
-    if (!user || ![1, 2].includes(Number(user.role_id))) return json({ ok: false, error: "Nur Admins dürfen Rechnungen versenden." }, 403);
+    if (!user || ![1, 2].includes(Number(user.role_id))) return json({ ok: false, error: "Nur Admins dürfen Dokumente versenden." }, 403);
     const tenantId = Number(user.tenant_id);
 
     const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", tenantId).order("id", { ascending: false }).limit(1).maybeSingle();
     if (!sub || !ALLOWED_STATUS.includes(sub.status)) return json({ ok: false, error: "Für den Versand wird ein aktives Abo benötigt." }, 403);
 
     const body = await req.json().catch(() => ({}));
-    const kind = body.kind === "reminder" ? "reminder" : body.kind === "invoice" ? "invoice" : null;
+    const kind = body.kind === "reminder" ? "reminder" : body.kind === "invoice" ? "invoice" : body.kind === "quote" ? "quote" : null;
     if (!kind) return json({ ok: false, error: "Unbekannte Art." }, 400);
 
-    // ---------- Rechnung / Mahnung gehört zum Betrieb? ----------
-    const { data: invoice } = await db.from("invoices").select("id, tenant_id, invoice_number, status").eq("id", Number(body.invoice_id)).maybeSingle();
-    if (!invoice || Number(invoice.tenant_id) !== tenantId) return json({ ok: false, error: "Rechnung nicht gefunden." }, 404);
+    // ---------- Angebot / Rechnung / Mahnung gehört zum Betrieb? ----------
+    let quote: any = null;
+    let invoice: any = null;
+    if (kind === "quote") {
+      const { data } = await db.from("quotes").select("id, tenant_id, quote_number, status").eq("id", Number(body.quote_id)).maybeSingle();
+      if (!data || Number(data.tenant_id) !== tenantId) return json({ ok: false, error: "Angebot nicht gefunden." }, 404);
+      quote = data;
+    } else {
+      const { data } = await db.from("invoices").select("id, tenant_id, invoice_number, status").eq("id", Number(body.invoice_id)).maybeSingle();
+      if (!data || Number(data.tenant_id) !== tenantId) return json({ ok: false, error: "Rechnung nicht gefunden." }, 404);
+      invoice = data;
+    }
     let reminder: any = null;
     if (kind === "reminder") {
       const { data } = await db.from("invoice_reminders").select("id, tenant_id, invoice_id, status, reminder_level").eq("id", Number(body.reminder_id)).maybeSingle();
@@ -99,7 +108,7 @@ serve(async (req) => {
         htmlContent: bodyHtml(text, footer, { url: logoUrl(company?.logo_url), alt: senderName(company?.company_name) }),
         textContent: `${text.trim()}\n\n--\n${footer.filter(Boolean).join("\n")}`,
         attachment: atts,
-        tags: [kind === "invoice" ? "rechnung" : "mahnung"],
+        tags: [kind === "invoice" ? "rechnung" : kind === "quote" ? "angebot" : "mahnung"],
       }),
       signal: AbortSignal.timeout(20000),
     });
@@ -113,7 +122,8 @@ serve(async (req) => {
     const { error: logErr } = await db.from("document_emails").insert({
       tenant_id: tenantId,
       kind,
-      invoice_id: invoice.id,
+      invoice_id: invoice?.id ?? null,
+      quote_id: quote?.id ?? null,
       reminder_id: reminder?.id ?? null,
       recipient: to,
       copy_to: copyTo,
@@ -126,6 +136,10 @@ serve(async (req) => {
     if (logErr) console.error("log", logErr.message);
     if (reminder && reminder.status === "created") {
       await db.from("invoice_reminders").update({ status: "sent", sent_at: sentAt, updated_at: sentAt }).eq("id", reminder.id).eq("tenant_id", tenantId);
+    }
+    // Angebot: Entwurf → "Gesendet" (abgelehnte/angenommene bleiben, wie sie sind)
+    if (quote && (quote.status === "draft" || !quote.status)) {
+      await db.from("quotes").update({ status: "sent" }).eq("id", quote.id).eq("tenant_id", tenantId);
     }
     return json({ ok: true, sent_at: sentAt, to, copy_to: copyTo });
   } catch (e) {

@@ -13,9 +13,10 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 export async function sendDocument(body: {
-  kind: "invoice" | "reminder";
-  invoice_id: number;
+  kind: "invoice" | "reminder" | "quote";
+  invoice_id?: number;
   reminder_id?: number;
+  quote_id?: number;
   to: string;
   subject: string;
   text: string;

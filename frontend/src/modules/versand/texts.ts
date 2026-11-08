@@ -52,3 +52,19 @@ export function reminderMail(p: { invoice: any; reminder: any; customer: any; co
     text: `${greeting(customer, invoice.is_private_customer)}\n\n${intro}\n\nBitte überweisen Sie den offenen Betrag${until ? ` bis zum ${until}` : " umgehend"}. Die Mahnung finden Sie im Anhang.\n\nSollten Sie die Zahlung bereits veranlasst haben, betrachten Sie diese E-Mail bitte als gegenstandslos.\n\nMit freundlichen Grüßen\n${companyName}`,
   };
 }
+
+export function quoteMail(p: { quote: any; customer: any; companyName: string; symbol?: string }) {
+  const { quote, customer, companyName, symbol } = p;
+  const nr = quote.quote_number || "";
+  const isPrivate = !(customer?.is_business ?? !!String(customer?.company_name ?? "").trim());
+  const valid = date(quote.valid_until);
+  return {
+    subject: `Angebot ${nr}${companyName ? ` – ${companyName}` : ""}`.replace(/\s+/g, " ").trim(),
+    text:
+      `${greeting(customer, isPrivate)}\n\n` +
+      `vielen Dank für Ihre Anfrage. Anbei erhalten Sie unser Angebot ${nr} über ${money(quote.total_amount, symbol)} (brutto).` +
+      `${valid ? ` Das Angebot ist gültig bis zum ${valid}.` : ""}\n\n` +
+      `Bei Fragen melden Sie sich gerne. Wir freuen uns auf Ihren Auftrag!\n\n` +
+      `Mit freundlichen Grüßen\n${companyName}`,
+  };
+}

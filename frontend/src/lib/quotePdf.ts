@@ -7,6 +7,7 @@ type QuotePdfParams = {
   companySettings: any;
   currencySymbol: string;
   customers?: any[];
+  output?: "save" | "blob";
 };
 
 const formatMoney = (
@@ -88,7 +89,8 @@ export function generateQuotePdf({
   companySettings,
   currencySymbol,
   customers = [],
-}: QuotePdfParams) {
+  output = "save",
+}: QuotePdfParams): Blob | void {
   const doc = new jsPDF("p", "mm", "a4");
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -526,5 +528,6 @@ for (let i = 1; i <= pageCount; i += 1) {
   doc.setTextColor(0);
 }
 
+  if (output === "blob") return doc.output("blob");
   doc.save(`Angebot-${quoteNumber}.pdf`);
 }
