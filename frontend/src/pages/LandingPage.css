@@ -1522,3 +1522,9 @@
 }
 .lp-social > div:first-child { text-align: left; }
 .lp-social > div:first-child .landing-section-label { margin-left: 0; }
+
+/* zwei Karten in der letzten Reihe mittig */
+@media (min-width: 901px) {
+  .landing-feature-grid article:nth-last-child(2):nth-child(3n + 1),
+  .landing-feature-grid article:last-child:nth-child(3n + 2) { transform: translateX(calc(50% + 9px)); }
+}

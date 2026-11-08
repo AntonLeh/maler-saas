@@ -357,6 +357,23 @@ export default function DatenschutzPage({
             Unternehmens zur Vorbereitung, Durchführung und
             Dokumentation seiner Kundenaufträge.
           </p>
+
+          <p>
+            <strong>Aufmaß per Sprache:</strong> Nutzt ein Unternehmen
+            die Funktion „Aufmaß diktieren“, wird die Sprachaufnahme
+            zur Umwandlung in Text an ElevenLabs übermittelt. Der
+            erkannte Text wird anschließend an Anthropic (Anbieter des
+            KI-Modells Claude) übermittelt, um daraus Räume, Maße und
+            Arbeiten für das Aufmaß-Formular zu erstellen. Beide
+            Anbieter haben ihren Sitz in den USA (siehe Datenübermittlung
+            in Drittländer). Die Aufnahme und der erkannte Text werden
+            von MalerSaaS nicht gespeichert; gespeichert werden nur die
+            Angaben, die das Unternehmen anschließend im Formular
+            übernimmt, sowie ein Zähler (Unternehmen, Benutzer,
+            Zeitpunkt, Textlänge) für das monatliche Kontingent. Die
+            Funktion ist freiwillig; ein Aufmaß kann jederzeit auch von
+            Hand erfasst werden.
+          </p>
         </section>
 
         <section className="legal-section">

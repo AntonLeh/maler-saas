@@ -38,7 +38,7 @@ function ForwardingHelp({ number }: { number: string }) {
   ];
   return (
     <details className="kt-forward" open>
-      <summary>So leitest du Anrufe an die KI weiter</summary>
+      <summary>So leiten Sie Anrufe an die KI weiter</summary>
       <p>
         <strong>Handy:</strong> Code im Telefon-Tastenfeld eintippen und die grüne Anruftaste drücken. Die Codes sind Standard und gelten bei
         Telekom, Vodafone und O2 sowie deren Marken. Die bisherige Mailbox wird dabei ersetzt.
@@ -199,8 +199,8 @@ export default function NumberPanel({
         <h3>Telefonnummer</h3>
         <div className="tk-notice tk-notice-error" role="status">
           <span>
-            <strong>Deine eigene Telefonnummer mit deiner Ortsvorwahl kommt in Kürze.</strong> Wir richten sie für dich ein und melden uns,
-            sobald du sie beantragen kannst. Bis dahin kannst du den KI-Assistenten im Browser testen.
+            <strong>Ihre eigene Telefonnummer mit Ihrer Ortsvorwahl kommt in Kürze.</strong> Wir richten sie für Sie ein und melden uns,
+            sobald Sie sie beantragen können. Bis dahin können Sie den KI-Assistenten im Browser testen.
           </span>
         </div>
       </section>
@@ -219,7 +219,7 @@ export default function NumberPanel({
       {enabled && status === "aktiv" && row?.phone_number && (
         <>
           <div className="kt-number-active">
-            <span>Deine KI-Telefonnummer</span>
+            <span>Ihre KI-Telefonnummer</span>
             <strong>{prettyNumber(row.phone_number)}</strong>
             <span className="tk-muted">aktiv seit {formatDate(row.activated_at)}</span>
           </div>
@@ -231,7 +231,7 @@ export default function NumberPanel({
         <div className="kt-number-wait">
           <p>
             <strong>Antrag eingereicht</strong> am {formatDate(row?.submitted_at ?? null)}. Die Unterlagen werden geprüft –
-            das dauert meist 1–3 Werktage. Du bekommst eine E-Mail, sobald die Nummer bereit ist.
+            das dauert meist 1–3 Werktage. Sie bekommen eine E-Mail, sobald die Nummer bereit ist.
           </p>
           <button type="button" className="btn btn-secondary btn-small" disabled={busy} onClick={() => refresh(true)}>
             Status prüfen
@@ -242,7 +242,7 @@ export default function NumberPanel({
       {enabled && status === "freigegeben" && (
         <div className="kt-number-wait">
           <p>
-            <strong>Unterlagen freigegeben.</strong> Deine Nummer mit der Vorwahl 0{row?.area_code} wird gerade eingerichtet.
+            <strong>Unterlagen freigegeben.</strong> Ihre Nummer mit der Vorwahl 0{row?.area_code} wird gerade eingerichtet.
           </p>
           <button type="button" className="btn btn-secondary btn-small" disabled={busy} onClick={() => refresh(true)}>
             Status prüfen
@@ -268,13 +268,13 @@ export default function NumberPanel({
       {showForm && (
         <form className="kt-number-form" onSubmit={onSubmit}>
           <p>
-            Damit deine Kunden eine vertraute <strong>Ortsnummer mit deiner Vorwahl</strong> sehen, müssen wir die Nummer auf
-            deinen Betrieb anmelden. Das schreibt die Bundesnetzagentur vor. Die laufenden Kosten der Nummer sind im
+            Damit Ihre Kunden eine vertraute <strong>Ortsnummer mit Ihrer Vorwahl</strong> sehen, müssen wir die Nummer auf
+            Ihren Betrieb anmelden. Das schreibt die Bundesnetzagentur vor. Die laufenden Kosten der Nummer sind im
             Business-Tarif enthalten.
           </p>
           <div className="tk-notice tk-notice-info">
             <span>
-              Wichtig: Name und Adresse müssen <strong>genau so</strong> wie auf deinem Nachweis stehen, und die Adresse muss im
+              Wichtig: Name und Adresse müssen <strong>genau so</strong> wie auf Ihrem Nachweis stehen, und die Adresse muss im
               Ortsnetz der gewünschten Vorwahl liegen.
             </span>
           </div>
@@ -345,7 +345,7 @@ export default function NumberPanel({
           <h4>Nachweis</h4>
           <p className="tk-muted">
             Am einfachsten: ein aktueller <strong>Handelsregisterauszug</strong>. Ohne Handelsregister: die{" "}
-            <strong>Gewerbeanmeldung</strong> und zusätzlich ein <strong>Schreiben vom Finanzamt</strong> mit deiner
+            <strong>Gewerbeanmeldung</strong> und zusätzlich ein <strong>Schreiben vom Finanzamt</strong> mit Ihrer
             Steuernummer. PDF, JPG oder PNG, je max. 5 MB. Die Dateien werden nur an den Telefonanbieter weitergegeben und bei uns
             nicht gespeichert.
           </p>

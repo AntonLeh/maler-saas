@@ -132,7 +132,7 @@ await supabase.rpc(
     <div className="auth-wrapper">
       <div className="card" style={{ maxWidth: 760, margin: "40px auto" }}>
         <h1>Willkommen bei MalerSaaS</h1>
-        <p>Bitte vervollständige zuerst deine Firmendaten.</p>
+        <p>Bitte vervollständigen Sie zuerst Ihre Firmendaten.</p>
 
         <form onSubmit={handleSave}>
           <h3>Firma</h3>

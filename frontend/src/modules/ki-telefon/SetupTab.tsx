@@ -44,7 +44,7 @@ function ActivationPanel({
       {!hasAgent && !setupPaid ? (
         <>
           <p>
-            Dein persönlicher KI-Assistent nimmt Anrufe an, wenn ihr nicht abheben könnt, vergibt Besichtigungstermine und
+            Ihr persönlicher KI-Assistent nimmt Anrufe an, wenn Sie nicht abheben können, vergibt Besichtigungstermine und
             notiert Rückrufwünsche.
           </p>
           <div className="kt-offer">
@@ -70,8 +70,8 @@ function ActivationPanel({
         <>
           <p className="kt-paid-note">✓ Einrichtung bezahlt – 300 Minuten sind gutgeschrieben.</p>
           <p>
-            Mit einem Klick wird dein persönlicher KI-Assistent eingerichtet – mit deinem Firmennamen, deiner Begrüßung,
-            deutscher Stimme und Zugriff auf deinen Terminkalender.
+            Mit einem Klick wird Ihr persönlicher KI-Assistent eingerichtet – mit Ihrem Firmennamen, Ihrer Begrüßung,
+            deutscher Stimme und Zugriff auf Ihren Terminkalender.
           </p>
           <button type="button" className="btn btn-primary" onClick={onActivate} disabled={busy}>
             {busy ? "Wird eingerichtet … (bis zu 30 Sek.)" : "KI-Telefon aktivieren"}
@@ -90,8 +90,8 @@ function ActivationPanel({
           {!agent?.phone_number && (
             <p className="tk-muted">
               {NUMBER_REQUESTS_ENABLED
-                ? "Als Nächstes beantragst du unten deine eigene Telefonnummer. Bis dahin kann der Assistent im Browser getestet werden."
-                : "Die Telefonnummer richten wir in Kürze für dich ein. Bis dahin kann der Assistent im Browser getestet werden."}
+                ? "Als Nächstes beantragen Sie unten Ihre eigene Telefonnummer. Bis dahin kann der Assistent im Browser getestet werden."
+                : "Die Telefonnummer richten wir in Kürze für Sie ein. Bis dahin kann der Assistent im Browser getestet werden."}
             </p>
           )}
           <div className="kt-test-row">
@@ -172,7 +172,7 @@ export default function SetupTab({ settings, agent, billing, busy, onBuySetup, o
         <div className="kt-manual-body">
       <div className="tk-notice tk-notice-info">
         <span>
-          Die Adressen enthalten einen geheimen Schlüssel für deinen Betrieb. Gib sie nur im Konto deines KI-Anbieters ein
+          Die Adressen enthalten einen geheimen Schlüssel für Ihren Betrieb. Geben Sie sie nur im Konto Ihres KI-Anbieters ein
           und nirgendwo sonst.
         </span>
       </div>
@@ -207,7 +207,7 @@ export default function SetupTab({ settings, agent, billing, busy, onBuySetup, o
         ))}
         {provider === "elevenlabs" && (
           <p className="tk-muted">
-            Für den Test im Browser reichen die vier Werkzeuge. Die Adresse „Gesprächsende“ trägst du erst ein, wenn die KI
+            Für den Test im Browser reichen die vier Werkzeuge. Die Adresse „Gesprächsende“ tragen Sie erst ein, wenn die KI
             eine echte Telefonnummer hat.
           </p>
         )}

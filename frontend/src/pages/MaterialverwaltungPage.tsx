@@ -315,7 +315,7 @@ export default function MaterialverwaltungPage({
     <h2>Material, Lagerbestand und Verbrauch zentral verwalten</h2>
 
     <p>
-      Mit MalerSaaS behältst du Materialien, Bestände, Lieferanten,
+      Mit MalerSaaS behalten Sie Materialien, Bestände, Lieferanten,
       Lagerorte und auftragsbezogene Materialbewegungen an einem Ort im Blick.
     </p>
 

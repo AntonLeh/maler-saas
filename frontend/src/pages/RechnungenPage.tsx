@@ -344,7 +344,7 @@ export default function RechnungenPage({
     <h2>Rechnungen schneller erstellen und Zahlungen besser verfolgen</h2>
 
     <p>
-      Mit MalerSaaS verwaltest du Rechnungen, Fälligkeiten,
+      Mit MalerSaaS verwalten Sie Rechnungen, Fälligkeiten,
       Abschlagszahlungen, Schlussrechnungen und Zahlungsstatus zentral.
     </p>
 

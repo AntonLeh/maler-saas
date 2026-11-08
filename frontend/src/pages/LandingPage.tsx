@@ -47,6 +47,11 @@ const features: { title: string; text: string; href?: string }[] = [
     href: "/aufmass-angebote",
   },
   {
+    title: "Aufmaß per Sprache",
+    text: "Beim Kunden einfach ansagen: „Wohnzimmer fünf mal vier, Höhe zwei fünfzig, zwei Fenster …“ – die KI legt Räume, Maße, Fenster, Türen und Anstriche im Aufmaß an. Hände frei, kein Tippen. In allen Tarifen.",
+    href: "/aufmass-angebote",
+  },
+  {
     title: "Aufträge & Planung",
     text: "Aufträge planen, Mitarbeiter einteilen, Baufortschritt mit Fotos dokumentieren und jederzeit den Stand sehen.",
     href: "/auftragsverwaltung",
@@ -146,6 +151,10 @@ const faqs = [
   {
     q: "Kann MalerSaaS Werbung für meinen Betrieb machen?",
     a: "Ja, im Tarif Enterprise. Aus Ihren Baustellenfotos erstellt die KI fertige Beiträge für Ihre Website, Instagram, Facebook, Ihr Google-Unternehmensprofil und den WhatsApp-Status – mit passender Bildauswahl und Texten für jeden Kanal. Sie prüfen jeden Beitrag und teilen ihn mit wenigen Fingertipps. Ohne Ihre Freigabe wird nichts veröffentlicht.",
+  },
+  {
+    q: "Kann ich das Aufmaß auch diktieren?",
+    a: "Ja, in allen Tarifen. Im Aufmaß tippen Sie auf „Aufmaß diktieren“ und sagen Raum für Raum Maße, Fenster, Türen, Decke und Anzahl der Anstriche an. Die KI füllt das Formular aus, Sie prüfen kurz und speichern. Die Aufnahme selbst wird nicht gespeichert.",
   },
   {
     q: "Funktioniert das auf Handy und Tablet?",

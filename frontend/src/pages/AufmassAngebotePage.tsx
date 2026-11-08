@@ -144,6 +144,19 @@ export default function AufmassAngebotePage({
         </p>
       </article>
     </div>
+
+    <div className="aufmass-angebote-voice">
+      <h3>🎤 Neu: Aufmaß per Sprache</h3>
+      <p>
+        Beim Kunden einfach ansagen statt tippen – zum Beispiel „Wohnzimmer
+        fünf mal vier, Höhe zwei fünfzig, zwei Fenster eins zwanzig mal eins
+        vierzig, Terrassentür, Decke streichen, zwei Anstriche“. Die KI legt
+        Räume, Maße, Fenster, Türen, Heizkörper und Anstriche im Aufmaß an.
+        Sie prüfen kurz und speichern. Fenster und Türen über 2,5 m² werden
+        nach VOB/C automatisch von der Wandfläche abgezogen. In allen Tarifen
+        enthalten.
+      </p>
+    </div>
   </div>
 </section>
 

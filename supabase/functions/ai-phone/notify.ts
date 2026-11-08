@@ -48,7 +48,7 @@ export function buildMessage(event: NotifyEvent, company: string) {
     return {
       subject: `⚠️ KI-Telefon: nur noch ${event.minutes} Minuten Guthaben`,
       lines: [
-        `Dein KI-Telefon hat nur noch ${event.minutes} Minuten Guthaben.`,
+        `Ihr KI-Telefon hat nur noch ${event.minutes} Minuten Guthaben.`,
         "Bitte rechtzeitig Minuten nachkaufen (KI-Telefon → Übersicht), damit keine Anrufe verloren gehen.",
       ],
       sms: `KI-Telefon (${company}): nur noch ${event.minutes} Minuten Guthaben. Bitte nachkaufen.`,
@@ -59,7 +59,7 @@ export function buildMessage(event: NotifyEvent, company: string) {
     return {
       subject: "❗ KI-Telefon: Guthaben aufgebraucht – Anrufe werden nicht mehr angenommen",
       lines: [
-        "Das Minuten-Guthaben deines KI-Telefons ist aufgebraucht.",
+        "Das Minuten-Guthaben Ihres KI-Telefons ist aufgebraucht.",
         "Anrufer hören jetzt nur noch eine kurze Ansage. Bitte Minuten nachkaufen (KI-Telefon → Übersicht).",
       ],
       sms: `KI-Telefon (${company}): Guthaben aufgebraucht, Anrufe werden nicht mehr angenommen. Bitte nachkaufen.`,
@@ -69,7 +69,7 @@ export function buildMessage(event: NotifyEvent, company: string) {
   if (event.kind === "test") {
     return {
       subject: `Test: Benachrichtigung vom KI-Telefon (${company})`,
-      lines: ["Das ist eine Test-Benachrichtigung.", "Wenn du sie erhältst, ist alles richtig eingerichtet."],
+      lines: ["Das ist eine Test-Benachrichtigung.", "Wenn Sie sie erhalten, ist alles richtig eingerichtet."],
       sms: `Test vom KI-Telefon (${company}): Benachrichtigungen funktionieren.`,
       appUrl,
     };

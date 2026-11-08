@@ -2370,7 +2370,7 @@ const handleDeleteMessage = async (messageId: number) => {
   if (!userProfile) return;
 
   const confirmDelete = await showConfirm(
-    "Möchtest du diese Nachricht wirklich löschen?",
+    "Möchten Sie diese Nachricht wirklich löschen?",
     { danger: true, confirmLabel: "Ja, löschen" }
   );
 
@@ -3417,7 +3417,7 @@ const handleReturnOrderToWork = async (orderId: string | number) => {
   if (!userProfile) return;
 
   const confirmed = await showConfirm(
-    "Möchtest du diesen Auftrag wirklich zur Nacharbeit zurückgeben?",
+    "Möchten Sie diesen Auftrag wirklich zur Nacharbeit zurückgeben?",
     { confirmLabel: "Ja, zurückgeben" }
   );
 
@@ -3552,7 +3552,7 @@ const handleCreateInvoice = async (orderId: string | number) => {
   if (!userProfile) return;
 
   const confirmCreate = await showConfirm(
-    "Möchtest du für diesen fertigen Auftrag jetzt eine Rechnung erstellen?\n\nHinweis: Eine erstellte Rechnung kann nicht mehr geändert werden – nur noch storniert.",
+    "Möchten Sie für diesen fertigen Auftrag jetzt eine Rechnung erstellen?\n\nHinweis: Eine erstellte Rechnung kann nicht mehr geändert werden – nur noch storniert.",
     { title: "Rechnung erstellen?", confirmLabel: "Ja, Rechnung erstellen" }
   );
 
@@ -3609,7 +3609,7 @@ const handleCreatePartialInvoice = async (
 }
 
   const confirmCreate = await showConfirm(
-    "Möchtest du für diesen Auftrag jetzt die vereinbarte Abschlagsrechnung erstellen?",
+    "Möchten Sie für diesen Auftrag jetzt die vereinbarte Abschlagsrechnung erstellen?",
     { title: "Abschlagsrechnung erstellen?", confirmLabel: "Ja, erstellen" }
   );
 
@@ -5271,7 +5271,7 @@ if (assignments.length > 0) {
       }
 
       if (!session?.access_token) {
-        setEmployeeMessage("Deine Sitzung ist nicht mehr gültig. Bitte neu einloggen.");
+        setEmployeeMessage("Ihre Sitzung ist nicht mehr gültig. Bitte melden Sie sich neu an.");
         return;
       }
 
@@ -5304,7 +5304,7 @@ const currentUsers = Number(activeEmployeeCount || 0);
 
 if (maxUsers > 0 && currentUsers >= maxUsers) {
   setEmployeeMessage(
-    `Mitarbeiterlimit erreicht: Dein aktuelles Paket erlaubt maximal ${maxUsers} aktive Mitarbeiter. Bitte upgrade dein Paket.`
+    `Mitarbeiter-Limit erreicht: Ihr Tarif erlaubt höchstens ${maxUsers} aktive Mitarbeiter. Für mehr Mitarbeiter wechseln Sie bitte den Tarif.`
   );
   setSavingEmployee(false);
   return;

@@ -618,3 +618,6 @@
     text-align: center;
   }
 }
+.aufmass-angebote-voice { margin-top: 22px; padding: 18px 20px; border-radius: 18px; border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff, #f5f3ff); text-align: left; }
+.aufmass-angebote-voice h3 { margin: 0 0 8px; }
+.aufmass-angebote-voice p { margin: 0; }

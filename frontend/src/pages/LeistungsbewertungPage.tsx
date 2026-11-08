@@ -310,7 +310,7 @@ export default function LeistungsbewertungPage({
     <h2>Eigene Regeln, Punkte und Bonusmodelle in MalerSaaS abbilden</h2>
 
     <p>
-      Definiere Bewertungskriterien passend zu deinem Betrieb und schaffe eine
+      Definieren Sie Bewertungskriterien passend zu Ihrem Betrieb und schaffen Sie eine
       nachvollziehbare Grundlage für Leistung, Anerkennung und Bonusmodelle.
     </p>
 

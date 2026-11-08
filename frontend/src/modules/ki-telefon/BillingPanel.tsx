@@ -52,7 +52,7 @@ export default function BillingPanel({
         ))}
       </div>
       <p className="tk-muted kt-billing-note">
-        Abgerechnet wird sekundengenau. Gekaufte Minuten verfallen nicht. Bei {LOW_BALANCE_MINUTES} Restminuten bekommst du
+        Abgerechnet wird sekundengenau. Gekaufte Minuten verfallen nicht. Bei {LOW_BALANCE_MINUTES} Restminuten bekommen Sie
         eine E-Mail.
       </p>
 

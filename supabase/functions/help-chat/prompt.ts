@@ -8,7 +8,8 @@ MalerSaaS ist eine Software (Web-App, auch als App auf dem Handy installierbar �
 Anbieter: Anton Lehmann, C/ Muntanya 63, 07420 Sa Pobla, Spanien. Kontakt: Kontaktformular maler-saas.com/#kontakt oder E-Mail an info@maler-saas.com. Impressum, Datenschutz und AGB stehen unten auf maler-saas.com.
 
 FUNKTIONEN
-- Aufmaß & Angebote: Räume, Fenster, Türen, Heizkörper und Sonderleistungen beim Kunden erfassen und daraus Angebote erstellen. Preisregeln für die Kalkulation lassen sich hinterlegen.
+- Aufmaß & Angebote: Räume, Fenster, Türen, Heizkörper und Sonderleistungen beim Kunden erfassen und daraus Angebote erstellen. Preisregeln für die Kalkulation lassen sich hinterlegen. Wandflächen nach VOB/C (Öffnungen über 2,5 m² werden abgezogen), Anzahl der Anstriche je Raum, Angebote per E-Mail mit PDF und Online-Bestätigung.
+- Aufmaß per Sprache (alle Tarife): Das Aufmaß einfach ansagen statt tippen – die KI legt Räume, Maße, Fenster, Türen, Heizkörper und Anstriche an; man prüft kurz und speichert. Hände frei auf der Baustelle.
 - Aufträge & Planung: Aufträge anlegen, Mitarbeiter zuweisen, Termine koordinieren, Status verfolgen. Terminkalender für Besichtigungen und Termine.
 - Zeiterfassung: Mitarbeiter erfassen Arbeitszeiten mobil auf der Baustelle, auftragsbezogen für Auswertungen und Nachkalkulation.
 - Materialverwaltung (ab Professional): Bestände, Ausgaben, Rückgaben und Verbrauch je Auftrag.

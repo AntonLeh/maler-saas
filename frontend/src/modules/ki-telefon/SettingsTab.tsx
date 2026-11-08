@@ -192,7 +192,7 @@ export default function SettingsTab({ settings, saving, onSave }: Props) {
           </p>
         ) : (
           <>
-            <p className="tk-muted">Sofort Bescheid bekommen, wenn die KI etwas für dich aufgenommen hat.</p>
+            <p className="tk-muted">Sofort Bescheid bekommen, wenn die KI etwas für Sie aufgenommen hat.</p>
             <div className="tk-form">
               <label className="tk-field">
                 <span>E-Mail-Adresse</span>

@@ -185,7 +185,7 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
       return;
     }
     if (pkg === "setup") setTab("setup");
-    setSuccess("Danke für deine Zahlung! Das Guthaben wird gerade verbucht …");
+    setSuccess("Danke für Ihre Zahlung! Das Guthaben wird gerade verbucht …");
 
     let cancelled = false;
     (async () => {
@@ -205,7 +205,7 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
         setBusy(true);
         try {
           await api.provisionAgent();
-          setSuccess("Zahlung erhalten – dein KI-Assistent ist eingerichtet und 300 Minuten sind gutgeschrieben.");
+          setSuccess("Zahlung erhalten – Ihr KI-Assistent ist eingerichtet und 300 Minuten sind gutgeschrieben.");
         } catch (e) {
           setError(`Zahlung erhalten, aber der Assistent konnte noch nicht angelegt werden: ${(e as Error).message}`);
         } finally {
@@ -313,7 +313,7 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
                 try {
                   const r = await api.provisionAgent();
                   setAgent(await api.loadAgent(tenantId));
-                  setSuccess(r.created ? "Dein KI-Assistent ist eingerichtet." : "KI-Assistent aktualisiert.");
+                  setSuccess(r.created ? "Ihr KI-Assistent ist eingerichtet." : "KI-Assistent aktualisiert.");
                 } catch (e) {
                   setAgent(await api.loadAgent(tenantId));
                   throw e;
@@ -351,7 +351,7 @@ export default function KiTelefonPage({ tenantId, currentUserId, onBack, onOpenC
               <BillingPanel billing={billing} purchases={purchases} busy={busy} onBuy={buy} />
             ) : billing ? (
               <div className="tk-notice tk-notice-info">
-                <span>Das KI-Telefon ist noch nicht aktiviert. Unter „Einrichtung“ kannst du es freischalten.</span>
+                <span>Das KI-Telefon ist noch nicht aktiviert. Unter „Einrichtung“ können Sie es freischalten.</span>
                 <button type="button" className="btn btn-primary btn-small" onClick={() => setTab("setup")}>
                   Zur Einrichtung
                 </button>
