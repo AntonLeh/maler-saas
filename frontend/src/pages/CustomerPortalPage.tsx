@@ -71,6 +71,23 @@ const getPortalStep = (status?: string) => {
   }
 };
 
+/** Freundliche Meldungen für den Endkunden statt Datenbank-Texten */
+function portalErrorText(raw?: string): string {
+  const m = String(raw ?? "").toLowerCase();
+  if (m.includes("ungültig") || m.includes("abgelaufen"))
+    return "Dieser Link ist ungültig oder abgelaufen. Bitte fordern Sie bei Ihrem Malerbetrieb einen neuen Link an.";
+  return "Dieser Link ist im Moment nicht verfügbar. Bitte wenden Sie sich an Ihren Malerbetrieb.";
+}
+
+function acceptErrorText(raw?: string): string {
+  const m = String(raw ?? "").toLowerCase();
+  if (m.includes("angebot ist abgelaufen"))
+    return "Dieses Angebot ist leider abgelaufen. Bitte wenden Sie sich an Ihren Malerbetrieb für ein aktuelles Angebot.";
+  if (m.includes("abgelehnt"))
+    return "Dieses Angebot wurde als abgelehnt markiert. Bitte wenden Sie sich an Ihren Malerbetrieb.";
+  return "Das Angebot konnte gerade nicht bestätigt werden. Bitte versuchen Sie es später erneut oder wenden Sie sich an Ihren Malerbetrieb.";
+}
+
 export default function CustomerPortalPage() {
     useEffect(() => {
     const robotsMeta = document.querySelector(
@@ -129,9 +146,8 @@ export default function CustomerPortalPage() {
       if (error) {
   console.error("Fehler beim Laden des Kundenportals:", error);
 
-  setErrorMessage(
-    error.message || "Dieser Kundenlink ist ungültig oder abgelaufen."
-  );
+  // Dem Endkunden nie technische Meldungen zeigen
+  setErrorMessage(portalErrorText(error.message));
 
   setLoading(false);
   return;
@@ -406,7 +422,7 @@ export default function CustomerPortalPage() {
 
     if (error) {
       console.error("Fehler beim Bestätigen des Angebots:", error);
-      await showAlert("Das Angebot konnte nicht bestätigt werden.", { tone: "error", title: "Das hat nicht geklappt" });
+      await showAlert(acceptErrorText(error.message), { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
 
