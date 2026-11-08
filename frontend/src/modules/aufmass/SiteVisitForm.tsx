@@ -6,6 +6,8 @@ import type { FormEvent } from "react";
 import type { SiteVisitFormState, SiteVisitRoomForm } from "./types";
 import { OPENING_LIMIT_SQM, calcRoom, calcTotals, fmt, roomLabel, toNum } from "./calc";
 import { hasContent, readDraft, writeDraft } from "./draft";
+import VoiceDictation from "./VoiceDictation";
+import { mergeVoice } from "./voice";
 import "./aufmass.css";
 
 type CustomerLite = { id: string; first_name: string; last_name: string; company_name: string | null; street: string | null; zip: string | null; city: string | null };
@@ -385,6 +387,18 @@ export default function SiteVisitForm(p: Props) {
           {/* ---------------- Schritt 2 ---------------- */}
           {step === 1 && (
             <div className="am-panel">
+              <VoiceDictation
+                onResult={(data) => {
+                  const { next, firstRoomId: first } = mergeVoice(form, data, nextId);
+                  setForm(() => next);
+                  window.setTimeout(() => {
+                    if (first != null) {
+                      setOpenRoom(first);
+                      document.getElementById(`am-room-${first}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }, 80);
+                }}
+              />
               {form.rooms.map((room, index) => {
                 const c = calcRoom(room, form);
                 const open = openRoom === room.temp_id;
