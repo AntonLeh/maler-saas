@@ -2870,3 +2870,13 @@ code {
   .trial-banner-count { width: 60px; height: 60px; }
   .trial-banner-count b { font-size: 24px; }
 }
+
+/* Abo gesperrt: Hinweis/Sperrseite für Projektleiter und Mitarbeiter */
+.staff-grace { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: center; padding: 10px 16px; background: #fffbeb; border-bottom: 1px solid #fcd34d; color: #78350f; font-size: 14px; text-align: center; }
+.staff-grace strong { font-weight: 700; }
+.staff-locked { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: #f8fafc; }
+.staff-locked-card { max-width: 480px; width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 28px 24px; text-align: center; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); }
+.staff-locked-card h1 { font-size: 22px; margin: 8px 0 10px; }
+.staff-locked-card p { margin: 0 0 12px; color: #334155; }
+.staff-locked-icon { font-size: 40px; }
+.staff-locked-muted { color: #64748b !important; font-size: 14px; }

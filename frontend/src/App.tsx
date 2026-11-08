@@ -57,6 +57,8 @@ import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-t
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
 import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
+import { staffAccess } from "./lib/staffAccess";
+import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
 import QuotesList from "./modules/angebote/QuotesList";
 import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
 import QuoteStatusBar from "./modules/angebote/QuoteStatusBar";
@@ -103,6 +105,8 @@ type Subscription = {
   is_trial?: boolean;
   trial_started_at?: string | null;
   trial_ends_at?: string | null;
+  updated_at?: string | null;
+  expires_at?: string | null;
 };
 
 type Customer = {
@@ -659,7 +663,7 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
 
   const [showBusinessImages, setShowBusinessImages] = useState(false);
 
-  const loadSubscription = async (_tenantId: number) => {
+  const loadSubscription = async (_tenantId: number, roleId?: number) => {
   const { data, error } = await supabase.rpc("get_my_subscription");
 
   if (error) {
@@ -672,12 +676,9 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
 
   setSubscription(subscriptionData);
   console.log("Subscription:", subscriptionData);
-  if (subscriptionData.status === "blocked") {
-  console.log("➡️ Trial gesperrt – Wechsel zur PricingPage");
-  setCurrentPage("pricing");
-}
-
-  if (subscriptionData.status === "blocked") {
+  // Nur Admins/Inhaber landen bei gesperrtem Abo auf der Tarif-Seite.
+  // Projektleiter und Mitarbeiter haben eine Übergangszeit (lib/staffAccess.ts).
+  if (subscriptionData?.status === "blocked" && (roleId === ADMIN_ROLE_ID || roleId === PLATFORM_OWNER_ROLE_ID)) {
     setCurrentPage("pricing");
   }
 };
@@ -1182,7 +1183,7 @@ const saveEmployeePerformance = async () => {
 
   if (data?.tenant_id) {
     console.log("Subscription wird geladen für Tenant:", data.tenant_id);
-    await loadSubscription(data.tenant_id);
+    await loadSubscription(data.tenant_id, Number(data.role_id));
   }
 
   return data as AppUser;
@@ -6223,6 +6224,13 @@ if (
       );
     }
 
+    // Abo gesperrt: Projektleiter/Mitarbeiter nach der Übergangszeit nur noch Sperrseite
+    const staffAcc =
+      userProfile && (isEmployee || isProjectManager) ? staffAccess(subscription) : ({ state: "ok" } as const);
+    if (!loadingData && userProfile && staffAcc.state === "locked") {
+      return <StaffLockedPage onLogout={handleLogout} />;
+    }
+
     if (
   !loadingData &&
   userProfile &&
@@ -6235,6 +6243,8 @@ if (
         "Mitarbeiter";
 
       return (
+        <>
+        <StaffGraceBanner access={staffAcc} />
         <EmployeeDashboard
           userName={fullName}
           userEmail={session.user.email || ""}
@@ -6265,6 +6275,7 @@ onReloadOrders={async () => {
           onEndBreak={handleEmployeeEndBreak}
           onEndWork={handleEmployeeEndWork}
         />
+        </>
       );
     }
 
@@ -6280,6 +6291,8 @@ onReloadOrders={async () => {
     "Projektleiter";
 
   return (
+    <>
+    <StaffGraceBanner access={staffAcc} />
     <div className="dashboard-page project-manager-work-orders">
       <div className="dashboard-container">
         <div className="page-topbar">
@@ -6334,15 +6347,19 @@ onReloadOrders={async () => {
         />
       </div>
     </div>
+    </>
   );
 }
 
     if (!loadingData && userProfile && isProjectManager && currentPage === "meine-termine") {
       return (
-        <MeineTerminePage
-          currentUserId={userProfile.id}
-          onBack={() => setCurrentPage("dashboard")}
-        />
+        <>
+          <StaffGraceBanner access={staffAcc} />
+          <MeineTerminePage
+            currentUserId={userProfile.id}
+            onBack={() => setCurrentPage("dashboard")}
+          />
+        </>
       );
     }
 
@@ -6353,6 +6370,8 @@ onReloadOrders={async () => {
         "Projektleiter";
 
       return (
+        <>
+        <StaffGraceBanner access={staffAcc} />
         <ProjectManagerDashboard
   userName={fullName}
   userEmail={session.user.email || ""}
@@ -6377,6 +6396,7 @@ onReloadOrders={async () => {
   currentUserId={userProfile.id}
   onOpenAppointments={() => setCurrentPage("meine-termine")}
 />
+        </>
       );
     }
 
@@ -6484,7 +6504,9 @@ onReloadOrders={async () => {
           {!loadingData && userProfile && (
             <>
 
-{(subscription?.status === "payment_required" ||
+<StaffGraceBanner access={staffAcc} />
+
+{isAdmin && (subscription?.status === "payment_required" ||
   subscription?.status === "blocked") &&
   currentPage !== "pricing" && (
     <div
