@@ -12,7 +12,6 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import AssignOrder from "./pages/AssignOrder";
 import ProjectManagerDashboard from "./pages/ProjectManagerDashboard";
 import PlatformOwnerDashboard from "./pages/PlatformOwnerDashboard";
-import CompanyRegisterPage from "./pages/CompanyRegisterPage";
 import "./App.css";
 import AdminTimeEvaluation from "./components/AdminTimeEvaluation";
 import GlobalSettings from "./pages/GlobalSettings";
@@ -60,6 +59,7 @@ import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import { lockKind, lockedSince, staffAccess } from "./lib/staffAccess";
 import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
 import LoginPage from "./modules/auth/LoginPage";
+import RegisterPage from "./modules/auth/RegisterPage";
 import ResetPasswordPage from "./modules/auth/ResetPasswordPage";
 import QuotesList from "./modules/angebote/QuotesList";
 import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
@@ -5837,14 +5837,15 @@ if (currentPage === "datenschutz") {
 
 if (showCompanyRegister) {
   return (
-    <CompanyRegisterPage
-  onBackToLogin={() => {
-  setShowCompanyRegister(false);
-  setShowLoginPage(true);
-}}
-  onOpenAgb={() => setCurrentPage("agb")}
-  onOpenDatenschutz={() => setCurrentPage("datenschutz")}
-/>
+    <RegisterPage
+      onBackToLogin={() => {
+        setShowCompanyRegister(false);
+        setShowLoginPage(true);
+      }}
+      onOpenAgb={() => setCurrentPage("agb")}
+      onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+      onOpenImpressum={() => setCurrentPage("impressum")}
+    />
   );
 }
 
@@ -5890,10 +5891,14 @@ if (showResetPassword) {
     if (!session) {
       if (showCompanyRegister) {
   return (
-    <CompanyRegisterPage
-      onBackToLogin={() => setShowCompanyRegister(false)}
+    <RegisterPage
+      onBackToLogin={() => {
+        setShowCompanyRegister(false);
+        setShowLoginPage(true);
+      }}
       onOpenAgb={() => setCurrentPage("agb")}
       onOpenDatenschutz={() => setCurrentPage("datenschutz")}
+      onOpenImpressum={() => setCurrentPage("impressum")}
     />
   );
 }

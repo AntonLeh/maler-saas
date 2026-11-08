@@ -41,3 +41,19 @@ export function passwordProblem(pw: string, repeat?: string): string | null {
   if (repeat !== undefined && pw !== repeat) return "Die Passwörter stimmen nicht überein.";
   return null;
 }
+
+export function signupErrorText(err: { message?: string; status?: number; code?: string } | null | undefined): string {
+  const m = String(err?.message ?? "").toLowerCase();
+  const code = String(err?.code ?? "").toLowerCase();
+  if (err?.status === 429 || code.includes("rate_limit") || m.includes("rate limit") || m.includes("security purposes"))
+    return "Zu viele Versuche – bitte warten Sie einige Minuten und versuchen Sie es dann erneut.";
+  if (code === "weak_password" || m.includes("pwned") || m.includes("leaked") || m.includes("weak"))
+    return "Dieses Passwort ist zu unsicher oder schon in Datenlecks aufgetaucht. Bitte wählen Sie ein anderes.";
+  if (m.includes("at least") && m.includes("characters")) return `Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`;
+  if (code === "email_address_invalid" || m.includes("invalid") && m.includes("email")) return "Bitte prüfen Sie die E-Mail-Adresse.";
+  if (code === "signup_disabled" || m.includes("signups not allowed")) return "Neue Registrierungen sind gerade nicht möglich. Bitte schreiben Sie uns an info@maler-saas.com.";
+  if (m.includes("failed to fetch") || m.includes("network")) return "Keine Verbindung zum Server. Bitte prüfen Sie Ihre Internetverbindung.";
+  return "Die Registrierung hat nicht geklappt. Bitte versuchen Sie es erneut oder schreiben Sie uns an info@maler-saas.com.";
+}
+
+export const cleanEmail = (v: string) => v.trim().toLowerCase();
