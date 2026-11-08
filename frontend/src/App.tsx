@@ -6420,18 +6420,13 @@ onReloadOrders={async () => {
   "Plattform-Verwaltung"
 ) : subscription ? (
   <>
-    <strong>{subscription.plan.toUpperCase()}</strong>{" "}
-    Plan aktiv • {subscription.monthly_price} {subscription.currency}/Monat
+    <strong>{subscription.plan.toUpperCase()}</strong>
     {" • "}
-    Max. {subscription.max_users} Mitarbeiter
+    {subscription.status === "trialing" && subscription.trial_ends_at
+      ? `Kostenlose Testphase bis ${new Date(subscription.trial_ends_at).toLocaleDateString("de-DE")}`
+      : `${({ starter: 79, professional: 149, business: 399, enterprise: 799 } as Record<string, number>)[subscription.plan] ?? subscription.monthly_price} € / Monat (netto)`}
     {" • "}
-    {subscription.features?.materials?.enabled
-      ? "Material aktiv"
-      : "Material gesperrt"}
-    {" • "}
-    {subscription.features?.customerPortal?.enabled
-      ? "Kundenportal aktiv"
-      : "Kundenportal gesperrt"}
+    {({ starter: "bis 3", professional: "bis 8", business: "bis 20" } as Record<string, string>)[subscription.plan] ?? "Beliebig viele"} Mitarbeiter
   </>
 ) : (
   "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
