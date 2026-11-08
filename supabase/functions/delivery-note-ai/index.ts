@@ -77,9 +77,15 @@ serve(async (req) => {
     if (!path.startsWith(`${tenantId}/`) || path.includes("..")) return json({ ok: false, error: "Ungültige Datei." }, 400);
 
     // ---------- Monatslimit (gemeinsam mit der Belegerkennung) ----------
-    const limit = monthlyLimit(sub?.plan, (k) => Deno.env.get(k));
+    const limit = monthlyLimit(sub?.plan, (k) => Deno.env.get(k), sub?.status);
     const { count } = await db.from("expense_ai_log").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", monthStart());
-    if ((count ?? 0) >= limit) return json({ ok: false, error: `Das Monatslimit von ${limit} KI-Erkennungen (Belege und Lieferscheine) ist erreicht. Bitte die Mengen von Hand buchen.` }, 429);
+    if ((count ?? 0) >= limit)
+      return json({
+        ok: false,
+        error: sub?.status === "trialing"
+          ? `In der Testphase sind bis zu ${limit} KI-Erkennungen (Belege und Lieferscheine) enthalten. Mit einem Tarif ab Business stehen Ihnen 300 pro Monat zur Verfügung. Bitte die Mengen bis dahin von Hand buchen.`
+          : `Das Monatslimit von ${limit} KI-Erkennungen (Belege und Lieferscheine) ist erreicht. Bitte die Mengen von Hand buchen.`,
+      }, 429);
 
     // ---------- Datei ----------
     const { data: blob, error: dlErr } = await db.storage.from("delivery-notes").download(path);

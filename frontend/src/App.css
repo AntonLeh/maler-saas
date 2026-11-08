@@ -2880,3 +2880,10 @@ code {
 .staff-locked-card p { margin: 0 0 12px; color: #334155; }
 .staff-locked-icon { font-size: 40px; }
 .staff-locked-muted { color: #64748b !important; font-size: 14px; }
+
+/* Kopfzeile: Firmenname (und Logo) linksbündig */
+.topbar-brand { display: flex; align-items: center; gap: 14px; text-align: left; min-width: 0; }
+.topbar-brand h1, .topbar-brand p { text-align: left; }
+.topbar-brand h1 { overflow-wrap: anywhere; }
+.topbar-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: #fff; border: 1px solid #e2e8f0; flex: none; }
+@media (max-width: 640px) { .topbar-logo { width: 44px; height: 44px; } }

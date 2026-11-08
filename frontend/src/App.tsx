@@ -685,7 +685,9 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   }
 };
 
+  // In der kostenlosen Testphase sind alle Funktionen frei (wie im Banner zugesagt)
   const hasFeature = (featureKey: string) => {
+  if (subscription?.status === "trialing") return true;
   return subscription?.features?.[featureKey]?.enabled === true;
   };
 
@@ -6277,8 +6279,16 @@ onReloadOrders={async () => {
       <div className="dashboard-page">
         <div className="dashboard-container">
           <header className="topbar">
-            <div className="topbar-left">
-              <h1>Maler SaaS Plattform</h1>
+            <div className="topbar-left topbar-brand">
+              {userProfile?.role_id !== PLATFORM_OWNER_ROLE_ID && /^https:\/\//.test(String(companySettings?.logo_url ?? "")) && (
+                <img src={String(companySettings?.logo_url)} alt="" className="topbar-logo" />
+              )}
+              <div>
+              <h1>
+                {userProfile?.role_id === PLATFORM_OWNER_ROLE_ID
+                  ? "MalerSaaS"
+                  : String((companySettings as { company_name?: string } | null)?.company_name ?? "").trim() || "MalerSaaS"}
+              </h1>
               <p
   style={{
     fontSize: "13px",
@@ -6303,6 +6313,7 @@ onReloadOrders={async () => {
   "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
 )}
 </p>
+              </div>
             </div>
 
             <div className="topbar-right">
@@ -6318,7 +6329,7 @@ onReloadOrders={async () => {
 </div>
 
               <button onClick={handleLogout} className="btn btn-secondary">
-                Logout
+                Abmelden
               </button>
             </div>
           </header>

@@ -94,13 +94,21 @@ serve(async (req) => {
     if (!path.startsWith(`${user.tenant_id}/`) || path.includes("..")) return json({ ok: false, error: "Ungültige Datei." }, 400);
 
     // ---------- Monatslimit ----------
-    // gemeinsames Kontingent mit der Lieferschein-Erkennung; Enterprise 500, sonst 300
-    const limit =
-      sub?.plan === "enterprise"
+    // gemeinsames Kontingent mit der Lieferschein-Erkennung; Testphase 100, Enterprise 500, sonst 300
+    const trial = sub?.status === "trialing";
+    const limit = trial
+      ? Number(Deno.env.get("RECEIPT_AI_TRIAL_LIMIT") ?? 100) || 100
+      : sub?.plan === "enterprise"
         ? Number(Deno.env.get("RECEIPT_AI_MONTHLY_LIMIT_ENTERPRISE") ?? 500) || 500
         : Number(Deno.env.get("RECEIPT_AI_MONTHLY_LIMIT") ?? 300) || 300;
     const { count } = await db.from("expense_ai_log").select("id", { count: "exact", head: true }).eq("tenant_id", user.tenant_id).gte("created_at", monthStart());
-    if ((count ?? 0) >= limit) return json({ ok: false, error: `Das Monatslimit von ${limit} automatisch erkannten Belegen ist erreicht. Bitte die Angaben selbst eintragen.` }, 429);
+    if ((count ?? 0) >= limit)
+      return json({
+        ok: false,
+        error: trial
+          ? `In der Testphase sind bis zu ${limit} KI-Erkennungen (Belege und Lieferscheine) enthalten. Mit einem Tarif ab Business stehen Ihnen 300 pro Monat zur Verfügung. Bitte die Angaben bis dahin selbst eintragen.`
+          : `Das Monatslimit von ${limit} automatisch erkannten Belegen ist erreicht. Bitte die Angaben selbst eintragen.`,
+      }, 429);
 
     const { data: blob, error: dlErr } = await db.storage.from("receipts").download(path);
     if (dlErr || !blob) return json({ ok: false, error: "Die Beleg-Datei wurde nicht gefunden." }, 404);

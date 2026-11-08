@@ -55,7 +55,8 @@ const monthStart = () => {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 };
-const aiLimit = () => Number(env("WEBSITE_AI_MONTHLY_LIMIT") || 40) || 40;
+const aiLimit = (sub?: { status?: string | null } | null) =>
+  sub?.status === "trialing" ? Number(env("WEBSITE_AI_TRIAL_LIMIT") || 20) || 20 : Number(env("WEBSITE_AI_MONTHLY_LIMIT") || 40) || 40;
 
 class UserError extends Error {
   status: number;
@@ -263,7 +264,8 @@ async function suggestAll(deadline: number) {
     const tenantId = Number(s.tenant_id);
     try {
       if (s.marketing_auto === false) continue;
-      if (!planOk(await latestSub(tenantId))) continue;
+      const tSub = await latestSub(tenantId);
+      if (!planOk(tSub)) continue;
 
       const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
       const { count: recent } = await db
@@ -274,7 +276,7 @@ async function suggestAll(deadline: number) {
         .gte("created_at", weekAgo);
       let room = SUGGESTIONS_PER_WEEK - (recent ?? 0);
       if (room <= 0) continue;
-      room = Math.min(room, aiLimit() - (await usedThisMonth(tenantId)));
+      room = Math.min(room, aiLimit(tSub) - (await usedThisMonth(tenantId)));
       if (room <= 0) continue;
 
       const [{ data: orders }, { data: posts }, { data: refs }] = await Promise.all([
@@ -344,13 +346,20 @@ serve(async (req) => {
     if (!user || ![1, 2].includes(Number(user.role_id))) return json({ ok: false, error: "Nur Admins dürfen Werbe-Beiträge erstellen." }, 403);
     const tenantId = Number(user.tenant_id);
 
-    if (!planOk(await latestSub(tenantId))) return json({ ok: false, error: "Die Werbung gehört zur Website (Tarif Enterprise)." }, 403);
+    const sub = await latestSub(tenantId);
+    if (!planOk(sub)) return json({ ok: false, error: "Die Werbung gehört zur Website (Tarif Enterprise)." }, 403);
     if (String(body.action ?? "generate") !== "generate") return json({ ok: false, error: "Unbekannte Aktion." }, 400);
 
-    const limit = aiLimit();
+    const limit = aiLimit(sub);
     const used = await usedThisMonth(tenantId).catch(() => -1);
     if (used < 0) return json({ ok: false, error: "Für die KI fehlt noch ein Datenbank-Update (website_ai_usage)." }, 500);
-    if (used >= limit) return json({ ok: false, error: `Das Monatslimit von ${limit} KI-Texten ist erreicht. Ab dem 1. des nächsten Monats geht es weiter.` }, 429);
+    if (used >= limit)
+      return json({
+        ok: false,
+        error: sub?.status === "trialing"
+          ? `In der Testphase sind bis zu ${limit} KI-Texte enthalten. Im Tarif Enterprise stehen Ihnen 40 pro Monat zur Verfügung.`
+          : `Das Monatslimit von ${limit} KI-Texten ist erreicht. Ab dem 1. des nächsten Monats geht es weiter.`,
+      }, 429);
 
     // ---------- Eingaben prüfen ----------
     const orderId = body.order_id ? String(body.order_id).slice(0, 64) : null;

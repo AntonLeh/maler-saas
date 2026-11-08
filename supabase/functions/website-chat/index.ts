@@ -50,7 +50,7 @@ async function findSite(site: string) {
   const { data: sub } = await db.from("subscriptions").select("plan, status").eq("tenant_id", w.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
   if (!planOk(sub)) return null;
   const { data: cs } = await db.from("company_settings").select("company_name, street, zip, city, phone, email").eq("tenant_id", w.tenant_id).order("id", { ascending: false }).limit(1).maybeSingle();
-  return { w, cs: cs ?? {} };
+  return { w, cs: cs ?? {}, trial: sub?.status === "trialing" };
 }
 
 function siteUrl(w: any) {
@@ -115,11 +115,13 @@ serve(async (req) => {
     if (!message) return fail("Bitte eine Nachricht eingeben.");
     const found = await findSite(b.site);
     if (!found) return fail("Der Chat ist hier gerade nicht verfügbar.", 404);
-    const { w, cs } = found;
+    const { w, cs, trial } = found;
     const tenantId = w.tenant_id;
 
     // ---------- Monatslimit ----------
-    const limit = Number(Deno.env.get("WEBSITE_CHAT_MONTHLY_LIMIT") ?? 3000) || 3000;
+    const limit = trial
+      ? Number(Deno.env.get("WEBSITE_CHAT_TRIAL_LIMIT") ?? 500) || 500
+      : Number(Deno.env.get("WEBSITE_CHAT_MONTHLY_LIMIT") ?? 3000) || 3000;
     const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
     const { data: usage } = await db.from("website_chats").select("bot_replies").eq("tenant_id", tenantId).gte("updated_at", monthStart).limit(10000);
     const used = (usage ?? []).reduce((a: number, r: any) => a + (Number(r.bot_replies) || 0), 0);

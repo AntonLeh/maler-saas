@@ -169,5 +169,9 @@ export function mediaTypeFor(path: string, blobType = ""): string | null {
   return ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : null;
 }
 
-export const monthlyLimit = (plan: string | undefined, env: (k: string) => string | undefined) =>
-  plan === "enterprise" ? Number(env("RECEIPT_AI_MONTHLY_LIMIT_ENTERPRISE") ?? 500) || 500 : Number(env("RECEIPT_AI_MONTHLY_LIMIT") ?? 300) || 300;
+export const monthlyLimit = (plan: string | undefined, env: (k: string) => string | undefined, status?: string) =>
+  status === "trialing"
+    ? Number(env("RECEIPT_AI_TRIAL_LIMIT") ?? 100) || 100
+    : plan === "enterprise"
+      ? Number(env("RECEIPT_AI_MONTHLY_LIMIT_ENTERPRISE") ?? 500) || 500
+      : Number(env("RECEIPT_AI_MONTHLY_LIMIT") ?? 300) || 300;

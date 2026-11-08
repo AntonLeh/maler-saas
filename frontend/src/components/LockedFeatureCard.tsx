@@ -69,7 +69,7 @@ export default function LockedFeatureCard({
 
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <button type="button" className="btn btn-primary" onClick={onUpgradeClick}>
-            Jetzt upgraden
+            Tarife ansehen
           </button>
 
           <button

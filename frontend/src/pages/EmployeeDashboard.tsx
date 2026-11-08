@@ -472,7 +472,7 @@ const getTotalNetMinutesForOrder = (orderId: string) => {
             </div>
 
             <button onClick={onLogout} className="btn btn-secondary">
-              Logout
+              Abmelden
             </button>
           </div>
         </header>

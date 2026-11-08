@@ -70,10 +70,19 @@ serve(async (req) => {
     if (kind === "service" && !service.title) return json({ ok: false, error: "Bitte zuerst den Namen der Leistung eintragen." }, 400);
 
     // ---------- Monatslimit ----------
-    const limit = Number(Deno.env.get("WEBSITE_AI_MONTHLY_LIMIT") ?? 40) || 40;
+    const trial = sub?.status === "trialing";
+    const limit = trial
+      ? Number(Deno.env.get("WEBSITE_AI_TRIAL_LIMIT") ?? 20) || 20
+      : Number(Deno.env.get("WEBSITE_AI_MONTHLY_LIMIT") ?? 40) || 40;
     const { count, error: cErr } = await db.from("website_ai_usage").select("id", { count: "exact", head: true }).eq("tenant_id", user.tenant_id).gte("created_at", monthStart());
     if (cErr) return json({ ok: false, error: "Für die KI-Schreibhilfe fehlt noch ein Datenbank-Update (website_ai_usage)." }, 500);
-    if ((count ?? 0) >= limit) return json({ ok: false, error: `Das Monatslimit von ${limit} KI-Texten ist erreicht. Ab dem 1. des nächsten Monats geht es weiter.` }, 429);
+    if ((count ?? 0) >= limit)
+      return json({
+        ok: false,
+        error: trial
+          ? `In der Testphase sind bis zu ${limit} KI-Texte enthalten. Im Tarif Enterprise stehen Ihnen 40 pro Monat zur Verfügung.`
+          : `Das Monatslimit von ${limit} KI-Texten ist erreicht. Ab dem 1. des nächsten Monats geht es weiter.`,
+      }, 429);
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ ok: false, error: "Die KI-Schreibhilfe ist noch nicht eingerichtet (Schlüssel fehlt)." }, 503);
