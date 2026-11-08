@@ -57,7 +57,7 @@ import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-t
 import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
 import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
-import { staffAccess } from "./lib/staffAccess";
+import { lockKind, lockedSince, staffAccess } from "./lib/staffAccess";
 import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
 import QuotesList from "./modules/angebote/QuotesList";
 import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
@@ -6506,9 +6506,9 @@ onReloadOrders={async () => {
 
 <StaffGraceBanner access={staffAcc} />
 
-{isAdmin && (subscription?.status === "payment_required" ||
-  subscription?.status === "blocked") &&
-  currentPage !== "pricing" && (
+{isAdmin && lockKind(subscription) &&
+  currentPage !== "pricing" &&
+  currentPage !== "billing" && (
     <div
       style={{
         position: "fixed",
@@ -6519,6 +6519,9 @@ onReloadOrders={async () => {
       }}
     >
       <PaymentRequiredOverlay
+        kind={lockKind(subscription) ?? "trial"}
+        since={lockedSince(subscription)}
+        onOpenBilling={() => setCurrentPage("billing")}
         onChoosePlan={() => setCurrentPage("pricing")}
         onLogout={handleLogout}
       />
