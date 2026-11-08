@@ -4153,6 +4153,8 @@ const handleDeleteProgressImage = async (
             height_m: r.height_m ?? "",
             manual_wall_area_sqm: r.manual_wall_area_sqm ?? "",
             notes: r.notes || "",
+            wall_coats: Number(r.wall_coats) || 1,
+            ceiling_coats: Number(r.ceiling_coats) || 1,
           })) || [],
 
         windows:
@@ -4501,6 +4503,9 @@ const handleDeleteProgressImage = async (
           manual_wall_area_sqm: toNum(room.manual_wall_area_sqm),
           notes: room.notes.trim() || null,
           paint_ceiling: room.paint_ceiling,
+          // Anstriche nur mitschicken, wenn mehr als 1 (Standard in der Datenbank ist 1)
+          ...((room.wall_coats ?? 1) > 1 ? { wall_coats: room.wall_coats } : {}),
+          ...(room.paint_ceiling && (room.ceiling_coats ?? 1) > 1 ? { ceiling_coats: room.ceiling_coats } : {}),
         };
         if (siteVisitData) {
 

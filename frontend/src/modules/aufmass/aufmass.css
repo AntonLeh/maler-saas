@@ -115,3 +115,12 @@
   .am-bar-right { flex-direction: column; }
   .am-bar-right .btn { width: 100%; }
 }
+
+/* Anstriche je Raum */
+.am-coats { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+.am-coat { display: flex; align-items: center; gap: 10px; }
+.am-coat > span { font-size: 14px; font-weight: 600; color: #334155; }
+.am-seg { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
+.am-seg button { border: none; background: #fff; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 700; color: #334155; cursor: pointer; }
+.am-seg button + button { border-left: 1px solid #cbd5e1; }
+.am-seg button.on { background: #1e3a8a; color: #fff; }

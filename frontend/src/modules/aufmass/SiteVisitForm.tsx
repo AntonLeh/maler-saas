@@ -84,6 +84,22 @@ const emptyRoom = (name = "", height = "", ceiling = true): SiteVisitRoomForm =>
 const customerName = (c: CustomerLite) => (c.company_name ? `${c.company_name} – ${c.first_name} ${c.last_name}` : `${c.first_name} ${c.last_name}`.trim());
 
 /** Zahlenfeld mit Komma-Eingabe und Zahlentastatur am Handy */
+/** Auswahl 1× / 2× / 3× Anstrich */
+function CoatPicker({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="am-coat">
+      <span>{label}</span>
+      <div className="am-seg" role="radiogroup" aria-label={label}>
+        {[1, 2, 3].map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={value === n} className={value === n ? "on" : ""} onClick={() => onChange(n)}>
+            {n}×
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Num({ label, value, onChange, placeholder, unit = "m" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; unit?: string }) {
   const bad = value.trim() !== "" && toNum(value) == null;
   return (
@@ -382,8 +398,8 @@ export default function SiteVisitForm(p: Props) {
                         <b>{roomLabel(room, index)}</b>
                       </span>
                       <span className="am-room-chips">
-                        <em className={c.wall == null ? "warn" : ""}>{c.wall == null ? "Maße fehlen" : `Wand ${fmt(c.wall)} m²`}</em>
-                        {c.ceiling > 0 && <em>Decke {fmt(c.ceiling)} m²</em>}
+                        <em className={c.wall == null ? "warn" : ""}>{c.wall == null ? "Maße fehlen" : `Wand ${fmt(c.wall)} m²${(room.wall_coats ?? 1) > 1 ? ` · ${room.wall_coats}×` : ""}`}</em>
+                        {c.ceiling > 0 && <em>Decke {fmt(c.ceiling)} m²{(room.ceiling_coats ?? 1) > 1 ? ` · ${room.ceiling_coats}×` : ""}</em>}
                         {c.windows + c.doors + c.radiators > 0 && <em>🪟 {c.windows} · 🚪 {c.doors} · 🔥 {c.radiators}</em>}
                         {photos > 0 && <em>📷 {photos}</em>}
                       </span>
@@ -422,6 +438,13 @@ export default function SiteVisitForm(p: Props) {
                           <input type="checkbox" checked={room.paint_ceiling} onChange={(e) => updRoom(room.temp_id, { paint_ceiling: e.target.checked })} />
                           <span>Decke streichen</span>
                         </label>
+
+                        <div className="am-coats">
+                          <CoatPicker label="Anstriche Wände" value={room.wall_coats ?? 1} onChange={(n) => updRoom(room.temp_id, { wall_coats: n })} />
+                          {room.paint_ceiling && (
+                            <CoatPicker label="Anstriche Decke" value={room.ceiling_coats ?? 1} onChange={(n) => updRoom(room.temp_id, { ceiling_coats: n })} />
+                          )}
+                        </div>
 
                         <div className="am-calc">
                           {c.manual ? (
@@ -702,8 +725,8 @@ export default function SiteVisitForm(p: Props) {
                           {c.missing.length > 0 && <small className="warn"> Maße fehlen</small>}
                           {c.deduction > 0 && <small> −{fmt(c.deduction)} m² Öffnungen</small>}
                         </td>
-                        <td>{fmt(c.wall)}</td>
-                        <td>{c.ceiling ? fmt(c.ceiling) : "–"}</td>
+                        <td>{fmt(c.wall)}{(room.wall_coats ?? 1) > 1 && c.wall ? <small> · {room.wall_coats}×</small> : null}</td>
+                        <td>{c.ceiling ? fmt(c.ceiling) : "–"}{(room.ceiling_coats ?? 1) > 1 && c.ceiling ? <small> · {room.ceiling_coats}×</small> : null}</td>
                         <td>{c.windows || "–"}</td>
                         <td>{c.doors || "–"}</td>
                         <td>{c.radiators || "–"}</td>

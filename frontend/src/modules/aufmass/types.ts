@@ -9,6 +9,9 @@ export type SiteVisitRoomForm = {
   notes: string;
   paint_ceiling: boolean;
   manual_wall_area_sqm: string;
+  /** Anzahl Anstriche (1–3), fehlt = 1 */
+  wall_coats?: number;
+  ceiling_coats?: number;
 };
 
 export type SiteVisitCustomServiceForm = {
