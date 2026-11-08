@@ -150,3 +150,4 @@
 .ow-plan { display: flex; flex-direction: column; }
 /* E-Mail und Ort dürfen umbrechen statt abgeschnitten zu werden */
 .ow-firm small { white-space: normal; overflow: visible; word-break: break-word; }
+.ow-left { color: #1e40af !important; font-weight: 600; white-space: nowrap; }

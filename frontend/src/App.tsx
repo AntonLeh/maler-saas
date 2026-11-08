@@ -6499,6 +6499,7 @@ onReloadOrders={async () => {
   subscription?.status === "trialing" &&
   getTrialDaysLeft() !== null && (
     <TrialBanner
+      endsAt={subscription.trial_ends_at}
       daysLeft={getTrialDaysLeft() ?? 0}
       onUpgrade={() => setCurrentPage("pricing")}
     />

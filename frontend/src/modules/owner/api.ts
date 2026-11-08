@@ -72,9 +72,13 @@ export async function setTenantStatus(tenantId: number, status: "active" | "bloc
 }
 
 export async function extendTrial(sub: OwnerSub, days: number): Promise<string> {
+  // läuft die Testphase noch: ab ihrem Ende verlängern, sonst ab heute
   const base = Math.max(Date.now(), sub.trial_ends_at ? new Date(sub.trial_ends_at).getTime() : 0);
   const until = new Date(base + days * 86400000).toISOString();
-  const { error } = await supabase.from("subscriptions").update({ trial_ends_at: until, updated_at: new Date().toISOString() }).eq("id", sub.id);
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ trial_ends_at: until, status: "trialing", is_trial: true, updated_at: new Date().toISOString() })
+    .eq("id", sub.id);
   if (error) throw new Error("Testphase konnte nicht verlängert werden.");
   return until;
 }

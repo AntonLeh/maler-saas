@@ -2824,3 +2824,49 @@ code {
 .orders-table tr.invoice-row-highlight td:first-child {
   box-shadow: inset 4px 0 0 #f59e0b;
 }
+
+/* ---------- Testphase-Hinweis (TrialBanner) ---------- */
+.trial-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+.trial-banner-count {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: #1e3a8a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.trial-banner-count b { font-size: 30px; }
+.trial-banner-count span { font-size: 12px; margin-top: 4px; opacity: 0.85; }
+.trial-banner-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.trial-banner-text strong { font-size: 16px; color: #1e3a8a; }
+.trial-banner-text span { font-size: 14px; color: #334155; }
+.trial-banner-bar { height: 6px; border-radius: 999px; background: rgba(30, 58, 138, 0.15); overflow: hidden; margin-top: 4px; max-width: 420px; }
+.trial-banner-bar i { display: block; height: 100%; background: #2563eb; border-radius: 999px; }
+.trial-banner.urgent { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fcd34d; }
+.trial-banner.urgent .trial-banner-count { background: #b45309; }
+.trial-banner.urgent .trial-banner-text strong { color: #92400e; }
+.trial-banner.urgent .trial-banner-bar i { background: #f59e0b; }
+.trial-banner.over { background: #fef2f2; border-color: #fecaca; }
+.trial-banner.over .trial-banner-count { background: #b91c1c; }
+.trial-banner.over .trial-banner-text strong { color: #991b1b; }
+@media (max-width: 640px) {
+  .trial-banner { grid-template-columns: auto 1fr; }
+  .trial-banner .btn { grid-column: 1 / -1; width: 100%; }
+  .trial-banner-count { width: 60px; height: 60px; }
+  .trial-banner-count b { font-size: 24px; }
+}

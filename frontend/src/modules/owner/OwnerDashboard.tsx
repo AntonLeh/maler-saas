@@ -273,7 +273,7 @@ function Detail({
                     ✉ E-Mail schreiben
                   </a>
                 )}
-                {s && s.status === "trialing" && !s.has_stripe && (
+                {s && !s.has_stripe && st.key !== "blocked" && (
                   <>
                     <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => extend(7)}>
                       Test +7 Tage
@@ -555,7 +555,7 @@ export default function OwnerDashboard({ onBack }: Props) {
                     </span>
                     <span>
                       <em className={`ow-badge ${st.tone}`}>{st.label}</em>
-                      {left !== null && left >= 0 && left <= 3 && <small className="ow-warn"> noch {left} T.</small>}
+                      {left !== null && left >= 0 && st.key === "trial" && <small className={left <= 3 ? "ow-warn" : "ow-left"}> noch {left} {left === 1 ? "Tag" : "Tage"}</small>}
                     </span>
                     <span className="ow-plan">
                       {t.subscription ? (
