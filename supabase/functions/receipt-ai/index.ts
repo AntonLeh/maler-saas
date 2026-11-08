@@ -9,7 +9,8 @@
 // Es wird nichts gespeichert außer einem Zähler (expense_ai_log) – der Admin prüft die Vorschläge im Formular.
 // Tarif: ab Business (Business, Enterprise) und in der Testphase.
 // Secrets (vorhanden): ANTHROPIC_API_KEY
-// Optional: RECEIPT_AI_MODEL (Standard claude-sonnet-5-5, Ersatz claude-haiku-5-5), RECEIPT_AI_MONTHLY_LIMIT (Standard 300 je Betrieb)
+// Optional: RECEIPT_AI_MODEL (Standard claude-sonnet-5-5, Ersatz claude-haiku-5-5), RECEIPT_AI_MONTHLY_LIMIT (Standard 300 je Betrieb),
+//           RECEIPT_AI_MONTHLY_LIMIT_ENTERPRISE (Standard 500). Zähler gemeinsam mit delivery-note-ai.
 // Deploy:  npx supabase functions deploy receipt-ai --no-verify-jwt   (Anmeldung wird selbst geprüft)
 // =====================================================================
 
@@ -93,7 +94,11 @@ serve(async (req) => {
     if (!path.startsWith(`${user.tenant_id}/`) || path.includes("..")) return json({ ok: false, error: "Ungültige Datei." }, 400);
 
     // ---------- Monatslimit ----------
-    const limit = Number(Deno.env.get("RECEIPT_AI_MONTHLY_LIMIT") ?? 300) || 300;
+    // gemeinsames Kontingent mit der Lieferschein-Erkennung; Enterprise 500, sonst 300
+    const limit =
+      sub?.plan === "enterprise"
+        ? Number(Deno.env.get("RECEIPT_AI_MONTHLY_LIMIT_ENTERPRISE") ?? 500) || 500
+        : Number(Deno.env.get("RECEIPT_AI_MONTHLY_LIMIT") ?? 300) || 300;
     const { count } = await db.from("expense_ai_log").select("id", { count: "exact", head: true }).eq("tenant_id", user.tenant_id).gte("created_at", monthStart());
     if ((count ?? 0) >= limit) return json({ ok: false, error: `Das Monatslimit von ${limit} automatisch erkannten Belegen ist erreicht. Bitte die Angaben selbst eintragen.` }, 429);
 

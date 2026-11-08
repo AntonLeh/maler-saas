@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import DeliveryNoteImport from "../modules/lieferscheine/DeliveryNoteImport";
 
 type Material = {
   id: number;
@@ -244,6 +245,8 @@ const filteredMaterials = materials.filter((material) => {
         </div>
 
         {message && <div className="message-box info">{message}</div>}
+
+        <DeliveryNoteImport tenantId={tenantId} onBooked={loadMaterials} />
 
         <form onSubmit={handleCreateMaterial} className="form-stack">
           <h3>
