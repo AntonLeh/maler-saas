@@ -6416,7 +6416,9 @@ onReloadOrders={async () => {
     lineHeight: 1.5,
   }}
 >
-  {subscription ? (
+  {userProfile?.role_id === PLATFORM_OWNER_ROLE_ID ? (
+  "Plattform-Verwaltung"
+) : subscription ? (
   <>
     <strong>{subscription.plan.toUpperCase()}</strong>{" "}
     Plan aktiv • {subscription.monthly_price} {subscription.currency}/Monat

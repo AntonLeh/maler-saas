@@ -15,6 +15,7 @@ const FILTERS: { key: "all" | StateKey | "trial_any"; label: string }[] = [
   { key: "all", label: "Alle" },
   { key: "trial", label: "Testphase" },
   { key: "paying", label: "Zahlend" },
+  { key: "free", label: "Ohne Zahlung" },
   { key: "payment", label: "Zahlung offen" },
   { key: "cancelling", label: "Gekündigt" },
   { key: "trial_over", label: "Test abgelaufen" },

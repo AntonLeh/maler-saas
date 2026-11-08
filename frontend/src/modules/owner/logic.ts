@@ -5,7 +5,7 @@ import type { BillingEvent, OwnerTenant } from "./api";
 export const PLAN_LABEL: Record<string, string> = { starter: "Starter", professional: "Professional", business: "Business", enterprise: "Enterprise" };
 export const PLAN_ORDER = ["starter", "professional", "business", "enterprise"];
 
-export type StateKey = "platform" | "blocked" | "payment" | "cancelling" | "paying" | "trial" | "trial_over" | "ended" | "none";
+export type StateKey = "platform" | "blocked" | "payment" | "cancelling" | "paying" | "free" | "trial" | "trial_over" | "ended" | "none";
 export type State = { key: StateKey; label: string; tone: "green" | "blue" | "amber" | "red" | "gray" | "purple" };
 
 const PAYMENT_PROBLEM = ["past_due", "unpaid", "payment_required", "incomplete"];
@@ -31,6 +31,8 @@ export function stateOf(t: OwnerTenant, now = Date.now()): State {
   if (t.is_platform) return { key: "platform", label: "Plattform", tone: "purple" };
   if (t.status === "blocked") return { key: "blocked", label: "Gesperrt", tone: "red" };
   if (!s) return { key: "none", label: "Ohne Abo", tone: "gray" };
+  // ohne Stripe-Abo (Test- oder Geschenkkonto) zählt nichts als Zahlung
+  if (!s.has_stripe && s.status !== "trialing" && !ENDED.includes(s.status)) return { key: "free", label: "Ohne Zahlung", tone: "gray" };
   if (PAYMENT_PROBLEM.includes(s.status)) return { key: "payment", label: "Zahlung offen", tone: "red" };
   if (s.status === "active" && s.cancel_at_period_end) return { key: "cancelling", label: `Gekündigt zum ${fmtDate(s.cancel_at || s.expires_at)}`, tone: "amber" };
   if (s.status === "active") return { key: "paying", label: "Zahlend", tone: "green" };
@@ -49,7 +51,7 @@ export function kpis(tenants: OwnerTenant[], now = Date.now()) {
   const mrr = paying.reduce((sum, x) => sum + Number(x.t.subscription?.monthly_price || 0), 0);
   const trials = states.filter((x) => x.s.key === "trial").length;
   // Umwandlung: zahlend (auch gekündigt/Zahlung offen) im Verhältnis zu allen, deren Testphase vorbei ist
-  const decided = states.filter((x) => x.s.key !== "trial" && x.s.key !== "none").length;
+  const decided = states.filter((x) => !["trial", "none", "free"].includes(x.s.key)).length;
   const conversion = decided ? Math.round((paying.length / decided) * 100) : 0;
   const monthStart = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), 1).getTime();
   const cancellations = states.filter((x) => {
