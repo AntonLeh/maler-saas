@@ -5,7 +5,7 @@ import { showAlert, showConfirm, showPrompt } from "../../lib/dialogs";
 import DeletionDeadlines from "../loeschfristen/DeletionDeadlines";
 import * as api from "./api";
 import type { BillingEvent, OwnerTenant } from "./api";
-import { PLAN_LABEL, PLAN_ORDER, daysUntil, fmtDate, fmtMoney, kpis, relative, revenueByMonth, signupsByMonth, stateOf, toCsv, todos } from "./logic";
+import { PLAN_LABEL, PLAN_ORDER, planPrice, daysUntil, fmtDate, fmtMoney, kpis, relative, revenueByMonth, signupsByMonth, stateOf, toCsv, todos } from "./logic";
 import type { StateKey } from "./logic";
 import "./owner.css";
 
@@ -173,7 +173,7 @@ function Detail({
               <dt>Tarif</dt>
               <dd>{s ? PLAN_LABEL[s.plan] ?? s.plan : "–"}</dd>
               <dt>Preis</dt>
-              <dd>{s?.monthly_price ? `${fmtMoney(Number(s.monthly_price))} / Monat` : "–"}</dd>
+              <dd>{s ? `${fmtMoney(planPrice(s.plan, s.monthly_price))} / Monat (netto)` : "–"}</dd>
               <dt>Stripe</dt>
               <dd>{s?.has_stripe ? "verbunden" : "kein Stripe-Abo"}</dd>
               {s?.trial_ends_at && (
@@ -557,9 +557,15 @@ export default function OwnerDashboard({ onBack }: Props) {
                       <em className={`ow-badge ${st.tone}`}>{st.label}</em>
                       {left !== null && left >= 0 && left <= 3 && <small className="ow-warn"> noch {left} T.</small>}
                     </span>
-                    <span>
-                      {t.subscription ? PLAN_LABEL[t.subscription.plan] ?? t.subscription.plan : "–"}
-                      {st.key === "paying" && t.subscription?.monthly_price ? <small> · {fmtMoney(Number(t.subscription.monthly_price))}</small> : null}
+                    <span className="ow-plan">
+                      {t.subscription ? (
+                        <>
+                          {PLAN_LABEL[t.subscription.plan] ?? t.subscription.plan}
+                          <small>{fmtMoney(planPrice(t.subscription.plan, t.subscription.monthly_price))} / Monat</small>
+                        </>
+                      ) : (
+                        "–"
+                      )}
                     </span>
                     <span className="ow-usage">
                       <small>

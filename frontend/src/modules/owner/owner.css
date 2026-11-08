@@ -146,3 +146,7 @@
 @media (max-width: 760px) {
   .ow-root section.card > div:first-child { flex-wrap: wrap !important; }
 }
+
+.ow-plan { display: flex; flex-direction: column; }
+/* E-Mail und Ort dürfen umbrechen statt abgeschnitten zu werden */
+.ow-firm small { white-space: normal; overflow: visible; word-break: break-word; }
