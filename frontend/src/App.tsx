@@ -399,6 +399,7 @@ type OrdersFilterMode =
   | "finished"
   | "billed"
   | "completed"
+  | "review"
   | "customer";
 
 type CurrentPage =
@@ -517,6 +518,17 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   useState<SiteVisitFeedEntry[]>([]);
   const [progressImages, setProgressImages] = useState<ProgressImage[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  // Projektleiter: eigene Ausführungsaufträge/Zeiten/Fortschritte getrennt von den Aufträgen, die er leitet
+  // (sonst überschreiben sich beide Listen gegenseitig – je nachdem, welche zuletzt geladen wurde)
+  const [pmOrders, setPmOrders] = useState<Order[]>([]);
+  const [pmProgressEntries, setPmProgressEntries] = useState<ProgressEntry[]>([]);
+  const [pmProgressImages, setPmProgressImages] = useState<ProgressImage[]>([]);
+  const [pmTimeEntries, setPmTimeEntries] = useState<TimeEntry[]>([]);
+  const isPmSelf = () => userProfile?.role_id === PROJECT_MANAGER_ROLE_ID;
+  const setOwnOrders = (v: Order[]) => (isPmSelf() ? setPmOrders(v) : setOrders(v));
+  const setOwnProgressEntries = (v: ProgressEntry[]) => (isPmSelf() ? setPmProgressEntries(v) : setProgressEntries(v));
+  const setOwnProgressImages = (v: ProgressImage[]) => (isPmSelf() ? setPmProgressImages(v) : setProgressImages(v));
+  const setOwnTimeEntries = (v: TimeEntry[]) => (isPmSelf() ? setPmTimeEntries(v) : setTimeEntries(v));
 
   const [additionalQuotePositions, setAdditionalQuotePositions] = useState<AdditionalQuotePosition[]>([]);
   const [loadingAdditionalQuotePositions, setLoadingAdditionalQuotePositions] = useState(false);
@@ -2346,18 +2358,18 @@ const loadMessageRecipients = async () => {
     .select("order_id")
     .eq("tenant_id", tenantId)
     .eq("user_id", employeeId)
-    .in("assignment_role", ["employee", "project_manager"]);
+    .in("assignment_role", isPmSelf() ? ["employee"] : ["employee", "project_manager"]);
 
   if (assignmentError) {
     console.error("Fehler beim Laden der Mitarbeiter-Zuweisungen:", assignmentError);
-    setOrders([]);
+    setOwnOrders([]);
     return;
   }
 
   const orderIds = (assignments || []).map((item) => item.order_id);
 
   if (orderIds.length === 0) {
-    setOrders([]);
+    setOwnOrders([]);
     return;
   }
 
@@ -2371,11 +2383,11 @@ const loadMessageRecipients = async () => {
 
   if (error) {
     console.error("Fehler beim Laden der Mitarbeiter-Aufträge:", error);
-    setOrders([]);
+    setOwnOrders([]);
     return;
   }
 
-  setOrders(data || []);
+  setOwnOrders(data || []);
 };
 
   const loadEmployeeProgressEntries = async (
@@ -2394,19 +2406,19 @@ const loadMessageRecipients = async () => {
       "Fehler beim Laden der Fortschritte:",
       error
     );
-    setProgressEntries([]);
-    setProgressImages([]);
+    setOwnProgressEntries([]);
+    setOwnProgressImages([]);
     return;
   }
 
-  setProgressEntries(data || []);
+  setOwnProgressEntries(data || []);
 
   const progressIds = (data || []).map(
     (entry) => entry.id
   );
 
   if (progressIds.length === 0) {
-    setProgressImages([]);
+    setOwnProgressImages([]);
     return;
   }
 
@@ -2422,7 +2434,7 @@ const loadMessageRecipients = async () => {
       "Fehler beim Laden der Fortschrittsbilder:",
       imageError
     );
-    setProgressImages([]);
+    setOwnProgressImages([]);
     return;
   }
 
@@ -2453,7 +2465,7 @@ const loadMessageRecipients = async () => {
     signedImages.push(image as ProgressImage);
   }
 
-  setProgressImages(signedImages);
+  setOwnProgressImages(signedImages);
 };
 
 const loadPerformanceCriteria = async () => {
@@ -3233,11 +3245,11 @@ const loadTimeEntries = async (tenantId: number) => {
 
     if (error) {
       console.error("Fehler beim Laden der Zeiteinträge:", error);
-      setTimeEntries([]);
+      setOwnTimeEntries([]);
       return;
     }
 
-    setTimeEntries(data || []);
+    setOwnTimeEntries(data || []);
   };
 
   useEffect(() => {
@@ -3385,7 +3397,9 @@ const handleReturnOrderToWork = async (orderId: string | number) => {
     throw new Error("Bitte eine Notiz eingeben.");
   }
 
-  const currentOrder = orders.find((order) => order.id === orderId);
+  const currentOrder =
+    orders.find((order) => String(order.id) === String(orderId)) ??
+    pmOrders.find((order) => String(order.id) === String(orderId));
 
   if (!currentOrder) {
     throw new Error("Auftrag nicht gefunden.");
@@ -5666,6 +5680,11 @@ const totalEmployees = employees.length;
         (order) => order.status === "fertig"
       );
 
+    case "review":
+      return orders.filter(
+        (order) => order.status === "zur_pruefung"
+      );
+
     case "billed":
       return orders.filter(
         (order) => order.status === "abgerechnet"
@@ -5833,6 +5852,8 @@ const totalEmployees = employees.length;
           return "Alle offenen und aktiven Aufträge.";
         case "completed":
           return "Alle fertigen oder abgerechneten Aufträge.";
+        case "review":
+          return "Aufträge, die auf Prüfung und Freigabe warten.";
         case "customer":
           return selectedCustomerName
             ? "Es werden nur die Aufträge des ausgewählten Kunden angezeigt."
@@ -6286,10 +6307,10 @@ onReloadOrders={async () => {
           onLogout={handleLogout}
           onOpenMessages={openMessagesPage}
           unreadMessages={unreadMessages}
-          orders={orders}
-          progressEntries={progressEntries}
-          timeEntries={timeEntries}
-          progressImages={progressImages}
+          orders={pmOrders}
+          progressEntries={pmProgressEntries}
+          timeEntries={pmTimeEntries}
+          progressImages={pmProgressImages}
           onUpdateOrderStatus={handleEmployeeUpdateOrderStatus}
           onCreateProgress={handleCreateProgress}
           onReloadProgress={async () => {
@@ -6336,7 +6357,17 @@ onReloadOrders={async () => {
   userName={fullName}
   userEmail={session.user.email || ""}
   onLogout={handleLogout}
+  companyName={String((companySettings as { company_name?: string } | null)?.company_name ?? "")}
   onOpenOrders={() => openOrdersListPage("open")}
+  onOpenReview={() => openOrdersListPage("review")}
+  orders={orders}
+  assignments={orderAssignments}
+  workOrdersCount={pmOrders.length}
+  customerName={(id) => {
+    const c = customers.find((x) => String(x.id) === String(id));
+    return c ? (c.company_name || `${c.first_name || ""} ${c.last_name || ""}`.trim()) : "";
+  }}
+  hasMaterials={hasFeature("materials")}
   onOpenCreateCustomer={openCreateCustomerPage}
   onOpenCreateSiteVisit={() => setCurrentPage("create-site-visit")}
   onOpenWorkOrders={() => setCurrentPage("project-manager-work-orders")}
@@ -10840,7 +10871,13 @@ const businessAdvisor = generateBusinessInsights();
       feature="Materialverwaltung"
       requiredPlan="Professional"
       description="Verwalten Sie Materialzuweisungen, Übergaben, Verbrauch, Rückgaben und Materialhistorien direkt pro Auftrag und Mitarbeiter."
-      onUpgradeClick={() => setCurrentPage("pricing")}
+      onUpgradeClick={() => {
+        if (isAdmin) {
+          setCurrentPage("pricing");
+          return;
+        }
+        void showAlert("Den Tarif kann nur der Admin bzw. Inhaber Ihres Betriebs ändern. Sprechen Sie ihn gern darauf an.", { title: "Tarif ändern" });
+      }}
       onBackClick={openDashboard}
     />
 )}
