@@ -69,12 +69,20 @@ serve(async (req) => {
 
     const { data: appUser, error: appUserError } = await supabase
       .from("app_users")
-      .select("tenant_id, email")
+      .select("tenant_id, email, role_id")
       .eq("auth_user_id", user.id)
       .single();
 
     if (appUserError || !appUser) {
       throw new Error("App-Benutzer wurde nicht gefunden.");
+    }
+
+    // Nur Admins/Inhaber dürfen einen Tarif buchen oder wechseln
+    if (![1, 2].includes(Number(appUser.role_id))) {
+      return new Response(
+        JSON.stringify({ error: "Den Tarif kann nur der Admin bzw. Inhaber Ihres Betriebs buchen oder ändern." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const { data: priceId, error: priceError } = await supabase.rpc(

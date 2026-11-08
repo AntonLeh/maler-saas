@@ -69,13 +69,21 @@ serve(async (req) => {
     const { data: appUser, error: appUserError } =
       await supabase
         .from("app_users")
-        .select("tenant_id")
+        .select("tenant_id, role_id")
         .eq("auth_user_id", user.id)
         .single();
 
     if (appUserError || !appUser) {
       throw new Error(
         "App User nicht gefunden."
+      );
+    }
+
+    // Nur Admins/Inhaber dürfen das Abo verwalten (kündigen, Zahlungsmethode, Rechnungen)
+    if (![1, 2].includes(Number(appUser.role_id))) {
+      return new Response(
+        JSON.stringify({ error: "Das Abo kann nur der Admin bzw. Inhaber Ihres Betriebs verwalten." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
