@@ -58,6 +58,8 @@ import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website"
 import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import QuotesList from "./modules/angebote/QuotesList";
+import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
+import QuoteStatusBar from "./modules/angebote/QuoteStatusBar";
 import { depositAllowed, quoteStatusKey, quoteStatusLabel } from "./modules/angebote/status";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
@@ -7408,61 +7410,69 @@ onReloadOrders={async () => {
                           <p>Einzelheiten und Positionen des ausgewählten Angebots.</p>
                         </div>
 
-                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-  {quoteDetail && (
-    <button
-      type="button"
-      className="btn btn-primary"
-      onClick={() =>
-        generateQuotePdf({
-  quoteDetail,
-  quoteItems,
-  companySettings,
-  currencySymbol,
-  customers,
-})
-      }
-    >
-      PDF erstellen
-    </button>
-  )}
-
-<button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() => {
-    if (!hasFeature("customerPortal")) {
-      setCurrentPage("customer-portal-locked");
-      return;
-    }
-
-    handleCreateCustomerPortalLink();
-  }}
->
-  Kundenlink erstellen
-</button>
-
-  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-  {quoteDetail?.status !== "accepted" && (
-    <button
-  type="button"
-  className="btn btn-primary"
-  onClick={() => setShowAcceptQuoteForm(true)}
->
-  Angebot in Auftrag überführen
-</button>
-  )}
-
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={() => setCurrentPage("quotes-list")}
-  >
-    Zurück zur Angebotsliste
-  </button>
-</div>
-</div>
+                        <div className="ag-actions">
+                          {quoteDetail && quoteDetail.status !== "accepted" && (
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={() => setShowAcceptQuoteForm(true)}
+                            >
+                              In Auftrag überführen
+                            </button>
+                          )}
+                          {quoteDetail && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() =>
+                                generateQuotePdf({
+                                  quoteDetail,
+                                  quoteItems,
+                                  companySettings,
+                                  currencySymbol,
+                                  customers,
+                                })
+                              }
+                            >
+                              PDF erstellen
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => {
+                              if (!hasFeature("customerPortal")) {
+                                setCurrentPage("customer-portal-locked");
+                                return;
+                              }
+                              handleCreateCustomerPortalLink();
+                            }}
+                          >
+                            Kundenlink erstellen
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => {
+                              if (userProfile?.tenant_id) void loadQuotes(userProfile.tenant_id);
+                              setCurrentPage("quotes-list");
+                            }}
+                          >
+                            Zurück zur Liste
+                          </button>
+                        </div>
                       </div>
+
+                      {quoteDetail && userProfile?.tenant_id && (
+                        <QuoteStatusBar
+                          tenantId={userProfile.tenant_id}
+                          quote={quoteDetail}
+                          onChanged={async () => {
+                            await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
+                            await loadQuotes(userProfile.tenant_id);
+                          }}
+                        />
+                      )}
 
                       {loadingQuoteDetail && <p className="info-text">Angebot wird geladen...</p>}
                       {quoteDetailMessage && <p className="info-text">{quoteDetailMessage}</p>}
@@ -7562,20 +7572,6 @@ onReloadOrders={async () => {
         flexWrap: "wrap",
       }}
     >
-      <button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() => {
-    if (!hasFeature("customerPortal")) {
-      setCurrentPage("customer-portal-locked");
-      return;
-    }
-
-    handleCreateCustomerPortalLink();
-  }}
->
-  Kundenlink erstellen
-</button>
       <button
         type="button"
         className="btn btn-primary"
@@ -7697,71 +7693,21 @@ onReloadOrders={async () => {
                             </div>
                           )}
 
-                          <div className="settings-section">
-                            <h3>Positionen nach Bereichen</h3>
+                          {userProfile?.tenant_id && (
+                            <QuoteItemsEditor
+                              tenantId={userProfile.tenant_id}
+                              quoteId={quoteDetail.id}
+                              items={quoteItems}
+                              currencySymbol={currencySymbol}
+                              locked={quoteDetail.status === "accepted"}
+                              onChanged={async () => {
+                                await loadQuoteDetail(quoteDetail.id, userProfile.tenant_id);
+                                await loadQuotes(userProfile.tenant_id);
+                              }}
+                            />
+                          )}
 
-                            {quoteItems.length === 0 ? (
-                              <p className="info-text">Keine Positionen vorhanden.</p>
-                            ) : (
-                              <div className="quote-room-groups">
-                                {Object.entries(
-                                  quoteItems.reduce((groups: Record<string, typeof quoteItems>, item) => {
-                                    const [roomNameRaw] = item.title.split("–");
-                                    const roomName = roomNameRaw?.trim() || "Sonstige Leistungen";
-
-                                    if (!groups[roomName]) {
-                                      groups[roomName] = [];
-                                    }
-
-                                    groups[roomName].push(item);
-                                    return groups;
-                                  }, {})
-                                ).map(([roomName, items]) => (
-                                  <div key={roomName} className="quote-room-card">
-                                    <div className="quote-room-card-header">
-                                      <div>
-                                        <span>Bereich</span>
-                                        <h4>{roomName}</h4>
-                                      </div>
-
-                                      <strong>
-                                        {items
-                                          .reduce((sum, item) => sum + Number(item.line_total || 0), 0)
-                                          .toFixed(2)}{" "}
-                                        {currencySymbol}
-                                      </strong>
-                                    </div>
-
-                                    <div className="quote-room-items">
-                                      {items.map((item) => {
-                                        const parts = item.title.split("–");
-                                        const serviceTitle =
-                                          parts.length > 1 ? parts.slice(1).join("–").trim() : item.title;
-
-                                        return (
-                                          <div key={item.id} className="quote-room-item">
-                                            <div>
-                                              <strong>{serviceTitle}</strong>
-                                              {item.description && <p>{item.description}</p>}
-                                            </div>
-
-                                            <div className="quote-room-item-meta">
-                                              <span>
-                                                {Number(item.quantity || 0).toFixed(2)} {item.unit}
-                                              </span>
-                                              <span>× {Number(item.unit_price || 0).toFixed(2)} {currencySymbol}</span>
-                                              <strong>{Number(item.line_total || 0).toFixed(2)} {currencySymbol}</strong>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
+                          {quoteDetail.status !== "accepted" && (
                           <div className="settings-section">
   <h3>Zusatzposition hinzufügen</h3>
 
@@ -7795,6 +7741,8 @@ onReloadOrders={async () => {
     </div>
   </div>
 </div>
+
+                          )}
 
 <div className="settings-section">
   <h3>Zahlungsvereinbarung</h3>

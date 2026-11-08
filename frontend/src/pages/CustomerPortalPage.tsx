@@ -24,6 +24,8 @@ const getPortalStatusLabel = (status?: string) => {
       return "📨 Angebot gesendet";
     case "accepted":
       return "🟡 Angebot bestätigt";
+    case "rejected":
+      return "Angebot abgelehnt";
     case "neu":
       return "🔵 Auftrag geplant";
     case "in_arbeit":
