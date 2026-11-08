@@ -109,3 +109,8 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Ladeanzeige, während eine Seite nachgeladen wird */
+.page-loading { min-height: 60vh; display: grid; place-items: center; }
+.page-loading span { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #dbeafe; border-top-color: #2563eb; animation: page-spin 0.8s linear infinite; }
+@keyframes page-spin { to { transform: rotate(360deg); } }

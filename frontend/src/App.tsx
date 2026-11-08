@@ -1,5 +1,6 @@
 import {
   Fragment,
+  lazy,
   useEffect,
   useMemo,
   useRef,
@@ -8,63 +9,31 @@ import {
 import { Pencil, BarChart3 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import AssignOrder from "./pages/AssignOrder";
-import ProjectManagerDashboard from "./pages/ProjectManagerDashboard";
-import PlatformOwnerDashboard from "./pages/PlatformOwnerDashboard";
 import "./App.css";
-import AdminTimeEvaluation from "./components/AdminTimeEvaluation";
-import GlobalSettings from "./pages/GlobalSettings";
-import { generateQuotePdf } from "./lib/quotePdf";
-import InvoicesPage from "./pages/InvoicesPage";
-import CompanyOnboardingPage from "./pages/CompanyOnboardingPage";
-import AgbPage from "./pages/AgbPage";
-import AvvPage from "./modules/avv/AvvPage";
-import DatenschutzPage from "./pages/DatenschutzPage";
-import ImpressumPage from "./pages/ImpressumPage";
-import MaterialsPage from "./pages/MaterialsPage";
-import SiteVisitForm from "./modules/aufmass/SiteVisitForm";
 import { toNum } from "./modules/aufmass/calc";
 import { clearSiteVisitDraft } from "./modules/aufmass/draft";
-import OrderMaterialsSection from "./pages/OrderMaterialsSection";
-import CustomerPortalPage from "./pages/CustomerPortalPage";
 import LockedFeatureCard from "./components/LockedFeatureCard";
-import PricingPage from "./pages/PricingPage";
 import PaymentRequiredOverlay from "./components/PaymentRequiredOverlay";
 import TrialBanner from "./components/TrialBanner";
-import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
 import FeatureLandingPage from "./pages/feature/FeatureLandingPage";
 import { featurePageFor } from "./pages/feature/featurePages";
-import MalerSoftwarePage from "./pages/MalerSoftwarePage";
-import AufmassAngebotePage from "./pages/AufmassAngebotePage";
-import PerformanceSimulator from "./components/PerformanceSimulator";
-import BusinessCockpit from "./components/BusinessCockpit";
-import BusinessFeedPage from "./pages/BusinessFeedPage";
-import ApprovalCenterPage from "./pages/ApprovalCenterPage";
-import AuftragsverwaltungPage from "./pages/AuftragsverwaltungPage";
-import ZeiterfassungPage from "./pages/ZeiterfassungPage";
-import MaterialverwaltungPage from "./pages/MaterialverwaltungPage";
-import RechnungenPage from "./pages/RechnungenPage";
-import KundenportalPage from "./pages/KundenportalPage";
-import LeistungsbewertungPage from "./pages/LeistungsbewertungPage";
 import CustomerTaxFields from "./components/CustomerTaxFields";
-import { BelegeButton, BuchhaltungPage } from "./modules/belege";
+import { BelegeButton } from "./modules/belege/widgets";
 import { einvoiceCustomerFields, isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
-import { TerminkalenderPage, MeineTerminePage, TermineStatCard } from "./modules/terminkalender";
-import { KiTelefonPage, KiTelefonButton, hasAiPhoneAccess } from "./modules/ki-telefon";
-import { WebsitePage, WebsiteButton, hasWebsiteAccess } from "./modules/website";
-import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fachkraefte";
+import { TermineStatCard } from "./modules/terminkalender/widgets";
+import { KiTelefonButton } from "./modules/ki-telefon/widgets";
+import { hasAiPhoneAccess } from "./modules/ki-telefon/types";
+import { WebsiteButton } from "./modules/website/widgets";
+import { hasWebsiteAccess } from "./modules/website/types";
+import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import { lockKind, lockedSince, staffAccess } from "./lib/staffAccess";
 import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
 import LoginPage from "./modules/auth/LoginPage";
 import RegisterPage from "./modules/auth/RegisterPage";
 import ResetPasswordPage from "./modules/auth/ResetPasswordPage";
-import QuotesList from "./modules/angebote/QuotesList";
-import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
 import QuoteStatusBar from "./modules/angebote/QuoteStatusBar";
-import QuoteEmailDialog from "./modules/angebote/QuoteEmailDialog";
 import { depositAllowed, quoteStatusKey, quoteStatusLabel } from "./modules/angebote/status";
 
 const PLATFORM_OWNER_ROLE_ID = 1;
@@ -303,6 +272,93 @@ import type {
   SiteVisitRadiatorForm,
   SiteVisitFormState,
 } from "./modules/aufmass/types";
+
+// ---------- Seiten erst bei Bedarf laden (kleinerer Start, schnellere Startseite) ----------
+const pageLoaders = {
+  EmployeeDashboard: () => import("./pages/EmployeeDashboard"),
+  AssignOrder: () => import("./pages/AssignOrder"),
+  ProjectManagerDashboard: () => import("./pages/ProjectManagerDashboard"),
+  PlatformOwnerDashboard: () => import("./pages/PlatformOwnerDashboard"),
+  AdminTimeEvaluation: () => import("./components/AdminTimeEvaluation"),
+  GlobalSettings: () => import("./pages/GlobalSettings"),
+  InvoicesPage: () => import("./pages/InvoicesPage"),
+  CompanyOnboardingPage: () => import("./pages/CompanyOnboardingPage"),
+  AgbPage: () => import("./pages/AgbPage"),
+  AvvPage: () => import("./modules/avv/AvvPage"),
+  DatenschutzPage: () => import("./pages/DatenschutzPage"),
+  ImpressumPage: () => import("./pages/ImpressumPage"),
+  MaterialsPage: () => import("./pages/MaterialsPage"),
+  SiteVisitForm: () => import("./modules/aufmass/SiteVisitForm"),
+  OrderMaterialsSection: () => import("./pages/OrderMaterialsSection"),
+  CustomerPortalPage: () => import("./pages/CustomerPortalPage"),
+  PricingPage: () => import("./pages/PricingPage"),
+  BillingPage: () => import("./pages/BillingPage"),
+  MalerSoftwarePage: () => import("./pages/MalerSoftwarePage"),
+  AufmassAngebotePage: () => import("./pages/AufmassAngebotePage"),
+  PerformanceSimulator: () => import("./components/PerformanceSimulator"),
+  BusinessCockpit: () => import("./components/BusinessCockpit"),
+  BusinessFeedPage: () => import("./pages/BusinessFeedPage"),
+  ApprovalCenterPage: () => import("./pages/ApprovalCenterPage"),
+  AuftragsverwaltungPage: () => import("./pages/AuftragsverwaltungPage"),
+  ZeiterfassungPage: () => import("./pages/ZeiterfassungPage"),
+  MaterialverwaltungPage: () => import("./pages/MaterialverwaltungPage"),
+  RechnungenPage: () => import("./pages/RechnungenPage"),
+  KundenportalPage: () => import("./pages/KundenportalPage"),
+  LeistungsbewertungPage: () => import("./pages/LeistungsbewertungPage"),
+  QuotesList: () => import("./modules/angebote/QuotesList"),
+  QuoteItemsEditor: () => import("./modules/angebote/QuoteItemsEditor"),
+  QuoteEmailDialog: () => import("./modules/angebote/QuoteEmailDialog"),
+  BuchhaltungPage: () => import("./modules/belege/BuchhaltungPage"),
+  TerminkalenderPage: () => import("./modules/terminkalender/TerminkalenderPage"),
+  MeineTerminePage: () => import("./modules/terminkalender/MeineTerminePage"),
+  KiTelefonPage: () => import("./modules/ki-telefon/KiTelefonPage"),
+  WebsitePage: () => import("./modules/website/WebsitePage"),
+  FachkraeftePage: () => import("./modules/fachkraefte/FachkraeftePage"),
+  PublicPoolPage: () => import("./modules/fachkraefte/PublicPoolPage"),
+};
+const EmployeeDashboard = lazy(pageLoaders.EmployeeDashboard);
+const AssignOrder = lazy(pageLoaders.AssignOrder);
+const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
+const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
+const AdminTimeEvaluation = lazy(pageLoaders.AdminTimeEvaluation);
+const GlobalSettings = lazy(pageLoaders.GlobalSettings);
+const InvoicesPage = lazy(pageLoaders.InvoicesPage);
+const CompanyOnboardingPage = lazy(pageLoaders.CompanyOnboardingPage);
+const AgbPage = lazy(pageLoaders.AgbPage);
+const AvvPage = lazy(pageLoaders.AvvPage);
+const DatenschutzPage = lazy(pageLoaders.DatenschutzPage);
+const ImpressumPage = lazy(pageLoaders.ImpressumPage);
+const MaterialsPage = lazy(pageLoaders.MaterialsPage);
+const SiteVisitForm = lazy(pageLoaders.SiteVisitForm);
+const OrderMaterialsSection = lazy(pageLoaders.OrderMaterialsSection);
+const CustomerPortalPage = lazy(pageLoaders.CustomerPortalPage);
+const PricingPage = lazy(pageLoaders.PricingPage);
+const BillingPage = lazy(pageLoaders.BillingPage);
+const MalerSoftwarePage = lazy(pageLoaders.MalerSoftwarePage);
+const AufmassAngebotePage = lazy(pageLoaders.AufmassAngebotePage);
+const PerformanceSimulator = lazy(pageLoaders.PerformanceSimulator);
+const BusinessCockpit = lazy(pageLoaders.BusinessCockpit);
+const BusinessFeedPage = lazy(pageLoaders.BusinessFeedPage);
+const ApprovalCenterPage = lazy(pageLoaders.ApprovalCenterPage);
+const AuftragsverwaltungPage = lazy(pageLoaders.AuftragsverwaltungPage);
+const ZeiterfassungPage = lazy(pageLoaders.ZeiterfassungPage);
+const MaterialverwaltungPage = lazy(pageLoaders.MaterialverwaltungPage);
+const RechnungenPage = lazy(pageLoaders.RechnungenPage);
+const KundenportalPage = lazy(pageLoaders.KundenportalPage);
+const LeistungsbewertungPage = lazy(pageLoaders.LeistungsbewertungPage);
+const QuotesList = lazy(pageLoaders.QuotesList);
+const QuoteItemsEditor = lazy(pageLoaders.QuoteItemsEditor);
+const QuoteEmailDialog = lazy(pageLoaders.QuoteEmailDialog);
+const BuchhaltungPage = lazy(pageLoaders.BuchhaltungPage);
+const TerminkalenderPage = lazy(pageLoaders.TerminkalenderPage);
+const MeineTerminePage = lazy(pageLoaders.MeineTerminePage);
+const KiTelefonPage = lazy(pageLoaders.KiTelefonPage);
+const WebsitePage = lazy(pageLoaders.WebsitePage);
+const FachkraeftePage = lazy(pageLoaders.FachkraeftePage);
+const PublicPoolPage = lazy(pageLoaders.PublicPoolPage);
+/** Nach der Anmeldung im Hintergrund alle Seiten vorladen, damit beim Klicken nichts wartet */
+const preloadAppPages = () => Object.values(pageLoaders).forEach((load) => void load().catch(() => {}));
+
 
 type MaterialConsumptionLog = {
   id: number;
@@ -684,6 +740,13 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
     setCurrentPage("pricing");
   }
 };
+
+  // Angemeldet: übrige Seiten im Hintergrund vorladen (kurz verzögert, damit der Start nicht leidet)
+  useEffect(() => {
+    if (!session) return;
+    const t = window.setTimeout(preloadAppPages, 1500);
+    return () => window.clearTimeout(t);
+  }, [session]);
 
   // In der kostenlosen Testphase sind alle Funktionen frei (wie im Banner zugesagt)
   const hasFeature = (featureKey: string) => {
@@ -7331,15 +7394,16 @@ onReloadOrders={async () => {
                             <button
                               type="button"
                               className="btn btn-secondary"
-                              onClick={() =>
+                              onClick={async () => {
+                                const { generateQuotePdf } = await import("./lib/quotePdf");
                                 generateQuotePdf({
                                   quoteDetail,
                                   quoteItems,
                                   companySettings,
                                   currencySymbol,
                                   customers,
-                                })
-                              }
+                                });
+                              }}
                             >
                               PDF erstellen
                             </button>
