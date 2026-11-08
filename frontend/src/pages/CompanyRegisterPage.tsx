@@ -29,13 +29,18 @@ export default function CompanyRegisterPage({
 
     setMessage("");
 
+    if (password.length < 8) {
+  setMessage("Das Passwort muss mindestens 8 Zeichen lang sein.");
+  return;
+}
+
     if (password !== passwordRepeat) {
   setMessage("Passwörter stimmen nicht überein.");
   return;
 }
 
     if (!acceptTerms) {
-  setMessage("Bitte akzeptiere die AGB, den Auftragsverarbeitungsvertrag und die Datenschutzbestimmungen.");
+  setMessage("Bitte akzeptieren Sie die AGB, den Auftragsverarbeitungsvertrag und die Datenschutzbestimmungen.");
   return;
 }
 
@@ -141,9 +146,11 @@ if (emailAvailable === false) {
 
           <input
             type="password"
-            placeholder="Passwort"
+            placeholder="Passwort (mind. 8 Zeichen)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={8}
             required
           />
 
@@ -152,6 +159,7 @@ if (emailAvailable === false) {
             placeholder="Passwort wiederholen"
             value={passwordRepeat}
             onChange={(e) => setPasswordRepeat(e.target.value)}
+            autoComplete="new-password"
             required
           />
 

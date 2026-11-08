@@ -59,6 +59,8 @@ import { FachkraeftePage, PublicPoolPage, FachkraefteButton } from "./modules/fa
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import { lockKind, lockedSince, staffAccess } from "./lib/staffAccess";
 import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
+import LoginPage from "./modules/auth/LoginPage";
+import ResetPasswordPage from "./modules/auth/ResetPasswordPage";
 import QuotesList from "./modules/angebote/QuotesList";
 import QuoteItemsEditor from "./modules/angebote/QuoteItemsEditor";
 import QuoteStatusBar from "./modules/angebote/QuoteStatusBar";
@@ -602,14 +604,9 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   setBusinessEvents((data as BusinessEvent[]) || []);
 };
 
-  const [loginEmail, setLoginEmail] = useState("admin@test-malerfirma.de");
-  const [loginPassword, setLoginPassword] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
 
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [newPasswordRepeat, setNewPasswordRepeat] = useState("");
-  const [resetPasswordMessage, setResetPasswordMessage] = useState("");
 
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [loadingCompanySettings, setLoadingCompanySettings] = useState(false);
@@ -3705,95 +3702,7 @@ const handleDeleteProgressImage = async (
     ]);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail.trim(),
-      password: loginPassword,
-    });
-
-    if (error) {
-  let germanMessage = "Login fehlgeschlagen.";
-
-  if (error.message === "Invalid login credentials") {
-    germanMessage = "E-Mail-Adresse oder Passwort ist falsch.";
-  }
-
-  if (error.message.includes("Email not confirmed")) {
-    germanMessage = "Bitte bestätige zuerst deine E-Mail-Adresse.";
-  }
-
-  setLoginMessage(germanMessage);
-  return;
-}
-
-    setLoginMessage("Login erfolgreich.");
-    setLoginPassword("");
-  };
-
-  const handlePasswordReset = async () => {
-  if (!loginEmail) {
-    setLoginMessage("Bitte zuerst deine E-Mail-Adresse eingeben.");
-    return;
-  }
-
-  const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-    redirectTo: "https://maler-saas.com/?reset-password=true",
-  });
-
-  if (error) {
-    setLoginMessage("Passwort-Reset konnte nicht gestartet werden.");
-    console.error(error);
-    return;
-  }
-
-  setLoginMessage(
-    "Wir haben dir eine E-Mail zum Zurücksetzen des Passworts geschickt."
-  );
-};
-
-
-const handleSetNewPassword = async () => {
-  if (!newPassword || !newPasswordRepeat) {
-    setResetPasswordMessage("Bitte beide Passwortfelder ausfüllen.");
-    return;
-  }
-
-  if (newPassword !== newPasswordRepeat) {
-    setResetPasswordMessage("Die Passwörter stimmen nicht überein.");
-    return;
-  }
-
-  if (newPassword.length < 6) {
-    setResetPasswordMessage(
-      "Das Passwort sollte mindestens 6 Zeichen haben."
-    );
-    return;
-  }
-
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
-
-  if (error) {
-    setResetPasswordMessage("Passwort konnte nicht gespeichert werden.");
-    console.error(error);
-    return;
-  }
-
-  setResetPasswordMessage("Passwort erfolgreich geändert.");
-setShowResetPassword(false);
-setNewPassword("");
-setNewPasswordRepeat("");
-
-window.history.replaceState({}, document.title, window.location.pathname);
-
-await supabase.auth.signOut();
-setSession(null);
-setLoginMessage("Passwort erfolgreich geändert. Bitte mit dem neuen Passwort einloggen.");
-};
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -5957,41 +5866,24 @@ if (
 
 if (showResetPassword) {
   return (
-    <div className="auth-wrapper">
-      <div className="card form-page-card" style={{ maxWidth: 520, margin: "60px auto" }}>
-        <h2>Neues Passwort setzen</h2>
-        <p>Bitte ein neues Passwort vergeben.</p>
-
-        <input
-          type="password"
-          placeholder="Neues Passwort"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
-
-        <input
-          type="password"
-          placeholder="Passwort wiederholen"
-          value={newPasswordRepeat}
-          onChange={(e) => setNewPasswordRepeat(e.target.value)}
-        />
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ width: "100%", marginTop: 12 }}
-          onClick={handleSetNewPassword}
-        >
-          Passwort speichern
-        </button>
-
-        {resetPasswordMessage && (
-  <div className="message-box error">
-    {resetPasswordMessage}
-  </div>
-)}
-      </div>
-    </div>
+    <ResetPasswordPage
+      onDone={(msg) => {
+        setShowResetPassword(false);
+        setSession(null);
+        setLoginMessage(msg);
+        setShowLoginPage(true);
+      }}
+      onCancel={async () => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        await supabase.auth.signOut();
+        setShowResetPassword(false);
+        setSession(null);
+        setShowLoginPage(true);
+      }}
+      onImpressum={() => setCurrentPage("impressum")}
+      onDatenschutz={() => setCurrentPage("datenschutz")}
+      onAgb={() => setCurrentPage("agb")}
+    />
   );
 }
 
@@ -6157,70 +6049,19 @@ if (
 }
 
       return (
-        <div className="login-page">
-          <div className="login-card">
-            <div className="login-header">
-  <img
-    src="/images/logo.png"
-    alt="MalerSaaS Logo"
-    className="login-logo-image"
-  />
-
-  <h1>MalerSaaS</h1>
-  <p>Bitte einloggen, um das Dashboard zu öffnen.</p>
-</div>
-
-            <form onSubmit={handleLogin} className="form-stack">
-              <div className="form-group">
-                <label>E-Mail</label>
-                <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Passwort</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn btn-primary">
-                Einloggen
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ width: "100%", marginTop: 12 }}
-                onClick={handlePasswordReset}
-                >
-                Passwort vergessen?
-              </button>
-
-              <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: "100%", marginTop: 12 }}
-              onClick={() => setShowCompanyRegister(true)}
-              >
-              Neue Firma registrieren
-            </button>
-            </form>
-
-            {loginMessage && (
-  <div className="message-box error">
-    {loginMessage}
-  </div>
-)}
-          </div>
-        </div>
+        <LoginPage
+          key={loginMessage}
+          initialMessage={loginMessage ? { text: loginMessage, tone: "success" } : null}
+          onRegister={() => setShowCompanyRegister(true)}
+          onHome={() => {
+            setLoginMessage("");
+            setShowLoginPage(false);
+            if (window.location.pathname !== "/") window.history.pushState({}, "", "/");
+          }}
+          onImpressum={() => setCurrentPage("impressum")}
+          onDatenschutz={() => setCurrentPage("datenschutz")}
+          onAgb={() => setCurrentPage("agb")}
+        />
       );
     }
 
