@@ -10786,6 +10786,7 @@ const businessAdvisor = generateBusinessInsights();
                         orderId={Number(editingOrderId)}
                         employees={employees}
                         currentUserId={userProfile.id}
+                        currency={companySettings?.currency || "EUR"}
                         onAssignmentsChanged={(count) => {
                           setEditingMaterialCount(count);
                           if (count > 0 && editingOrderId) {
@@ -11102,6 +11103,7 @@ const businessAdvisor = generateBusinessInsights();
     <MaterialsPage
       tenantId={userProfile.tenant_id}
       onBack={openDashboard}
+      currency={companySettings?.currency || "EUR"}
     />
 )}
 

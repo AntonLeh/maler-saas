@@ -1,553 +1,548 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import DeliveryNoteImport from "../modules/lieferscheine/DeliveryNoteImport";
-
-type Material = {
-  id: number;
-  tenant_id: number;
-  name: string;
-  description: string | null;
-  category: string | null;
-  unit: string;
-  stock_quantity: number;
-  minimum_quantity: number;
-  purchase_price: number | null;
-  supplier: string | null;
-  storage_location: string | null;
-  is_active: boolean;
-};
+import * as mapi from "../modules/material/api";
+import type { Material, Movement } from "../modules/material/api";
+import "../modules/material/material.css";
 
 type Props = {
   tenantId: number;
   onBack: () => void;
+  /** Währung der Firma (z. B. EUR, CHF) */
+  currency?: string;
 };
 
-export default function MaterialsPage({ tenantId, onBack }: Props) {
+type Filter = "aktiv" | "nachbestellen" | "inaktiv" | "alle";
+
+type FormState = {
+  name: string;
+  unit: string;
+  category: string;
+  minimum: string;
+  price: string;
+  supplier: string;
+  location: string;
+  description: string;
+  initialStock: string;
+  active: boolean;
+};
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  unit: "Stk",
+  category: "",
+  minimum: "0",
+  price: "",
+  supplier: "",
+  location: "",
+  description: "",
+  initialStock: "",
+  active: true,
+};
+
+const UNIT_SUGGESTIONS = ["Stk", "Eimer", "Liter", "kg", "Rolle", "Karton", "m", "m²", "Sack", "Dose"];
+
+export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Props) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
 
-  const [name, setName] = useState("");
-  const [unit, setUnit] = useState("Stk");
-  const [category, setCategory] = useState("");
-  const [stockQuantity, setStockQuantity] = useState("0");
-  const [purchaseQuantity, setPurchaseQuantity] = useState("");
-  const [minimumQuantity, setMinimumQuantity] = useState("0");
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [supplier, setSupplier] = useState("");
-  const [storageLocation, setStorageLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState("Alle");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("Alle");
+  const [filter, setFilter] = useState<Filter>("aktiv");
+
+  // Dialoge
+  const [editing, setEditing] = useState<Material | "new" | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [stockFor, setStockFor] = useState<Material | null>(null);
+  const [stockQty, setStockQty] = useState("");
+  const [stockNote, setStockNote] = useState("");
+
+  const [historyFor, setHistoryFor] = useState<Material | null>(null);
+  const [history, setHistory] = useState<Movement[] | null>(null);
+  const [historyError, setHistoryError] = useState("");
+
   const loadMaterials = async () => {
     setLoading(true);
-
     const { data, error } = await supabase
       .from("materials")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("name", { ascending: true });
-
+    setLoading(false);
     if (error) {
       console.error("Fehler beim Laden der Materialien:", error);
-      setMessage("Materialien konnten nicht geladen werden.");
+      setNotice({ text: "Materialien konnten nicht geladen werden.", ok: false });
       setMaterials([]);
-      setLoading(false);
       return;
     }
-
     setMaterials((data as Material[]) || []);
-    setLoading(false);
   };
 
   useEffect(() => {
     loadMaterials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  const handleAddMaterialStock = async () => {
-  setMessage("");
+  useEffect(() => {
+    if (!notice?.ok) return;
+    const id = window.setTimeout(() => setNotice(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [notice]);
 
-  if (editingMaterialId === null) {
-    setMessage("Bitte zuerst ein Material auswählen oder speichern.");
-    return;
-  }
-
-  const quantity = Number(purchaseQuantity);
-
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    setMessage("Bitte eine gültige Menge größer als 0 eingeben.");
-    return;
-  }
-
-  const { error: stockError } = await supabase.rpc(
-    "book_material_stock",
-    {
-      p_material_id: editingMaterialId,
-      p_movement_type: "purchase",
-
-      p_quantity: quantity,
-
-      p_from_holder_type: "supplier",
-      p_from_holder_id: null,
-
-      p_to_holder_type: "warehouse",
-      p_to_holder_id: null,
-
-      p_order_id: null,
-
-      p_reference_type: "purchase",
-      p_reference_id: editingMaterialId,
-
-      p_note: "Wareneingang über die Materialverwaltung."
-    }
+  const active = materials.filter((m) => m.is_active);
+  const lowCount = active.filter(mapi.isLow).length;
+  const stockValue = active.reduce((s, m) => s + Number(m.stock_quantity || 0) * Number(m.purchase_price || 0), 0);
+  const categories = useMemo(
+    () => [...new Set(materials.map((m) => m.category).filter((c): c is string => !!c))].sort(),
+    [materials]
   );
 
-  if (stockError) {
-    console.error("Fehler beim Wareneingang:", stockError);
+  const visible = materials.filter((m) => {
+    if (filter === "aktiv" && !m.is_active) return false;
+    if (filter === "inaktiv" && m.is_active) return false;
+    if (filter === "nachbestellen" && !(m.is_active && mapi.isLow(m))) return false;
+    if (category !== "Alle" && m.category !== category) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [m.name, m.supplier, m.storage_location, m.category].some((v) => (v || "").toLowerCase().includes(q));
+  });
 
-    setMessage(
-      `Material konnte nicht hinzugefügt werden: ${stockError.message}`
-    );
+  // ---------- Anlegen / Bearbeiten ----------
 
-    return;
-  }
-
-  const { data: updatedMaterial, error: reloadError } = await supabase
-    .from("materials")
-    .select("stock_quantity")
-    .eq("id", editingMaterialId)
-    .single();
-
-  if (reloadError) {
-    console.error(
-      "Aktualisierter Lagerbestand konnte nicht geladen werden:",
-      reloadError
-    );
-  } else {
-    setStockQuantity(
-      String(Number(updatedMaterial?.stock_quantity ?? 0))
-    );
-  }
-
-  setPurchaseQuantity("");
-  setMessage(`✅ ${quantity} wurden dem Lagerbestand hinzugefügt.`);
-
-  await loadMaterials();
-};
-
-  const handleCreateMaterial = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setMessage("");
-
-  if (!name.trim()) {
-    setMessage("Bitte Materialname eingeben.");
-    return;
-  }
-
-  const materialData = {
-    name: name.trim(),
-    unit: unit.trim() || "Stk",
-    category: category.trim() || null,
-    stock_quantity: Number(stockQuantity || 0),
-    minimum_quantity: Number(minimumQuantity || 0),
-    purchase_price: purchasePrice ? Number(purchasePrice) : null,
-    supplier: supplier.trim() || null,
-    storage_location: storageLocation.trim() || null,
-    description: description.trim() || null,
-    updated_at: new Date().toISOString(),
+  const openNew = () => {
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setEditing("new");
   };
 
-  let error;
-
-  if (editingMaterialId !== null) {
-    const { stock_quantity, ...updateData } = materialData;
-
-const result = await supabase
-  .from("materials")
-  .update(updateData)
-  .eq("id", editingMaterialId)
-  .eq("tenant_id", tenantId);
-
-    error = result.error;
-  } else {
-    const result = await supabase.from("materials").insert({
-      ...materialData,
-      tenant_id: tenantId,
-      is_active: true,
+  const openEdit = (m: Material) => {
+    setForm({
+      name: m.name,
+      unit: m.unit || "Stk",
+      category: m.category || "",
+      minimum: String(m.minimum_quantity ?? 0),
+      price: m.purchase_price != null ? String(m.purchase_price).replace(".", ",") : "",
+      supplier: m.supplier || "",
+      location: m.storage_location || "",
+      description: m.description || "",
+      initialStock: "",
+      active: m.is_active,
     });
+    setFormError("");
+    setEditing(m);
+  };
 
-    error = result.error;
-  }
-
-  if (error) {
-    console.error("Fehler beim Speichern des Materials:", error);
-
-    setMessage(
-      editingMaterialId !== null
-        ? "Material konnte nicht aktualisiert werden."
-        : "Material konnte nicht gespeichert werden."
+  const saveMaterial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    const name = form.name.trim();
+    if (!name) return setFormError("Bitte einen Materialnamen eingeben.");
+    const minimum = form.minimum.trim() ? mapi.parseNum(form.minimum) : 0;
+    if (!Number.isFinite(minimum) || minimum < 0) return setFormError("Der Mindestbestand muss 0 oder größer sein.");
+    const price = form.price.trim() ? mapi.parseNum(form.price) : null;
+    if (price !== null && (!Number.isFinite(price) || price < 0)) return setFormError("Bitte einen gültigen Einkaufspreis eingeben.");
+    const initial = form.initialStock.trim() ? mapi.parseNum(form.initialStock) : 0;
+    if (!Number.isFinite(initial) || initial < 0) return setFormError("Bitte einen gültigen Anfangsbestand eingeben.");
+    const duplicate = materials.find(
+      (m) => m.name.trim().toLowerCase() === name.toLowerCase() && (editing === "new" || m.id !== editing?.id)
     );
+    if (duplicate) return setFormError(`Ein Material „${duplicate.name}“ gibt es schon.`);
 
-    return;
-  }
+    const data = {
+      name,
+      unit: form.unit.trim() || "Stk",
+      category: form.category.trim() || null,
+      minimum_quantity: minimum,
+      purchase_price: price,
+      supplier: form.supplier.trim() || null,
+      storage_location: form.location.trim() || null,
+      description: form.description.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
 
-  const wasEditing = editingMaterialId !== null;
+    setSaving(true);
+    try {
+      if (editing === "new") {
+        const { data: created, error } = await supabase
+          .from("materials")
+          .insert({ ...data, tenant_id: tenantId, stock_quantity: 0, is_active: true })
+          .select("id")
+          .single();
+        if (error) throw error;
+        if (initial > 0 && created?.id) {
+          try {
+            await mapi.stockIn(Number(created.id), initial, true, "");
+          } catch (err) {
+            setNotice({ text: `Material angelegt, aber der Anfangsbestand wurde nicht gebucht: ${(err as Error).message}`, ok: false });
+            setEditing(null);
+            await loadMaterials();
+            return;
+          }
+        }
+        setNotice({ text: `„${name}“ wurde angelegt.`, ok: true });
+      } else if (editing) {
+        const { error } = await supabase
+          .from("materials")
+          .update({ ...data, is_active: form.active })
+          .eq("id", editing.id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+        setNotice({ text: `„${name}“ wurde gespeichert.`, ok: true });
+      }
+      setEditing(null);
+      await loadMaterials();
+    } catch (err) {
+      console.error("Material speichern:", err);
+      setFormError(mapi.materialError(err, "Das Material konnte nicht gespeichert werden."));
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  setName("");
-  setUnit("Stk");
-  setCategory("");
-  setStockQuantity("0");
-  setMinimumQuantity("0");
-  setPurchasePrice("");
-  setSupplier("");
-  setStorageLocation("");
-  setDescription("");
-  setEditingMaterialId(null);
+  // ---------- Wareneingang ----------
 
-  setMessage(
-    wasEditing
-      ? "Material wurde aktualisiert."
-      : "Material wurde gespeichert."
-  );
+  const bookStockIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockFor) return;
+    const qty = mapi.parseNum(stockQty);
+    if (!Number.isFinite(qty) || qty <= 0) return setFormError("Bitte eine Menge größer als 0 eingeben.");
+    setSaving(true);
+    setFormError("");
+    try {
+      await mapi.stockIn(stockFor.id, qty, false, stockNote.trim());
+      setNotice({ text: `${mapi.fmtQty(qty)} ${stockFor.unit} „${stockFor.name}“ eingebucht.`, ok: true });
+      setStockFor(null);
+      await loadMaterials();
+    } catch (err) {
+      setFormError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  await loadMaterials();
-};
+  // ---------- Verlauf ----------
 
-const filteredMaterials = materials.filter((material) => {
-  const matchesCategory =
-    categoryFilter === "Alle" ||
-    material.category === categoryFilter;
+  const openHistory = async (m: Material) => {
+    setHistoryFor(m);
+    setHistory(null);
+    setHistoryError("");
+    try {
+      setHistory(await mapi.loadMovements(tenantId, m.id));
+    } catch (err) {
+      setHistoryError((err as Error).message);
+      setHistory([]);
+    }
+  };
 
-  const search = searchTerm.trim().toLowerCase();
-
-  const matchesSearch =
-    !search ||
-    material.name.toLowerCase().includes(search) ||
-    (material.supplier || "").toLowerCase().includes(search) ||
-    (material.storage_location || "").toLowerCase().includes(search);
-
-  return matchesCategory && matchesSearch;
-});
+  const field = (key: keyof FormState) => ({
+    value: String(form[key]),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [key]: e.target.value })),
+  });
 
   return (
-    <section className="single-page-section">
-      <div className="card form-page-card">
+    <section className="single-page-section mt-root">
+      <div className="card form-page-card mt-card">
         <div className="page-topbar">
           <div>
             <h2>Materialverwaltung</h2>
-            <p>Materialstamm, Lagerbestand und Mindestbestand verwalten.</p>
+            <p>Lagerbestand, Wareneingang und Nachbestellungen.</p>
           </div>
-
           <button type="button" className="btn btn-secondary" onClick={onBack}>
             Zurück zum Dashboard
           </button>
         </div>
 
-        {message && <div className="message-box info">{message}</div>}
-
-        <DeliveryNoteImport tenantId={tenantId} onBooked={loadMaterials} />
-
-        <form onSubmit={handleCreateMaterial} className="form-stack">
-          <h3>
-  {editingMaterialId !== null
-    ? "Material bearbeiten"
-    : "Neues Material anlegen"}
-          </h3>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Materialname</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="z. B. Innenfarbe Weiss 15L"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Einheit</label>
-              <input
-                type="text"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                placeholder="Stk, Rolle, Eimer, Liter"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Kategorie</label>
-              <input
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Farbe, Werkzeug, Abdeckung"
-              />
-            </div>
-
-            <div className="form-group">
-  <label>Aktueller Lagerbestand</label>
-  <input
-    type="number"
-    step="0.01"
-    value={stockQuantity}
-    disabled
-    style={{
-      backgroundColor: "#f3f4f6",
-      color: "#6b7280",
-      cursor: "not-allowed",
-    }}
-  />
-</div>
-
-
-            <div className="form-group">
-              <label>Mindestbestand</label>
-              <input
-                type="number"
-                step="0.01"
-                value={minimumQuantity}
-                onChange={(e) => setMinimumQuantity(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Einkaufspreis</label>
-              <input
-                type="number"
-                step="0.01"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                placeholder="z. B. 69.90"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Lieferant</label>
-              <input
-                type="text"
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                placeholder="z. B. Brillux"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Lagerort</label>
-              <input
-                type="text"
-                value={storageLocation}
-                onChange={(e) => setStorageLocation(e.target.value)}
-                placeholder="z. B. Lager A"
-              />
-            </div>
+        <div className="mt-kpis">
+          <button type="button" onClick={() => setFilter("aktiv")}>
+            <span>Materialien</span>
+            <b>{active.length}</b>
+            <small>aktiv im Lager</small>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter(filter === "nachbestellen" ? "aktiv" : "nachbestellen")}
+            className={`${lowCount > 0 ? "warn" : ""} ${filter === "nachbestellen" ? "on" : ""}`}
+          >
+            <span>Nachbestellen</span>
+            <b>{lowCount}</b>
+            <small>{lowCount > 0 ? "am oder unter Mindestbestand" : "alles ausreichend"}</small>
+          </button>
+          <div>
+            <span>Lagerwert</span>
+            <b>{mapi.fmtMoney(stockValue, currency)}</b>
+            <small>Bestand × Einkaufspreis</small>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label>Beschreibung</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Bemerkung zum Material"
-            />
+        {notice && <p className={`mt-msg ${notice.ok ? "ok" : "err"}`}>{notice.text}</p>}
+
+        <details className="mt-import">
+          <summary>📄 Lieferschein einlesen (KI) – Wareneingang per Foto</summary>
+          <DeliveryNoteImport tenantId={tenantId} onBooked={loadMaterials} />
+        </details>
+
+        <div className="mt-toolbar">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Suchen: Material, Lieferant, Lagerort …"
+            aria-label="Material suchen"
+          />
+          {categories.length > 0 && (
+            <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Kategorie">
+              <option value="Alle">Alle Kategorien</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="mt-seg" role="group" aria-label="Filter">
+            {(
+              [
+                ["aktiv", "Aktiv"],
+                ["nachbestellen", "Nachbestellen"],
+                ["inaktiv", "Inaktiv"],
+                ["alle", "Alle"],
+              ] as [Filter, string][]
+            ).map(([key, label]) => (
+              <button key={key} type="button" className={filter === key ? "on" : ""} onClick={() => setFilter(key)}>
+                {label}
+              </button>
+            ))}
           </div>
+          <button type="button" className="btn btn-primary" onClick={openNew}>
+            + Neues Material
+          </button>
+        </div>
 
-<hr style={{ margin: "24px 0" }} />
-
-<h3>📦 Wareneingang</h3>
-
-<div className="form-group">
-  <label>Menge hinzufügen</label>
-  <input
-    type="number"
-    step="0.01"
-    min="0"
-    value={purchaseQuantity}
-    onChange={(e) => setPurchaseQuantity(e.target.value)}
-    placeholder="z. B. 10"
-  />
-</div>
-
-<button
-  type="button"
-  className="btn btn-secondary"
-  onClick={handleAddMaterialStock}
->
-  📦 Material hinzufügen
-</button>
-
-<hr style={{ margin: "24px 0" }} />
-
-          <button type="submit" className="btn btn-primary">
-  {editingMaterialId !== null
-    ? "💾 Änderungen speichern"
-    : "➕ Material speichern"}
-</button>
-
-{editingMaterialId !== null && (
-  <button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() => {
-      setEditingMaterialId(null);
-
-      setName("");
-      setUnit("Stk");
-      setCategory("");
-      setStockQuantity("0");
-      setMinimumQuantity("0");
-      setPurchasePrice("");
-      setSupplier("");
-      setStorageLocation("");
-      setDescription("");
-
-      setMessage("");
-    }}
-  >
-    Abbrechen
-  </button>
-)}
-
-        </form>
-
-        <div className="table-wrapper" style={{ marginTop: 28 }}>
-
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: 16,
-    marginBottom: 16,
-  }}
->
-  <div className="form-group">
-    <label>Material suchen</label>
-    <input
-  type="text"
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  placeholder="Material, Lieferant oder Lagerort suchen …"
-  style={{ height: "100%" }}
-/>
-  </div>
-
-  <div className="form-group">
-    <label>Kategorie</label>
-    <select
-      value={categoryFilter}
-      onChange={(e) => setCategoryFilter(e.target.value)}
-    >
-      <option value="Alle">Alle</option>
-
-      {[...new Set(
-        materials
-          .map((m) => m.category)
-          .filter((c): c is string => !!c)
-      )]
-        .sort()
-        .map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-    </select>
-  </div>
-</div>
-
-          <table className="orders-table orders-table-wide">
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th>Kategorie</th>
-                <th>Bestand</th>
-                <th>Mindestbestand</th>
-                <th>Einheit</th>
-                <th>Lieferant</th>
-                <th>Lagerort</th>
-                <th>Preis</th>
-                <th>Status</th>
-                <th>Aktionen</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9}>Materialien werden geladen...</td>
-                </tr>
-              ) : materials.length === 0 ? (
-                <tr>
-                  <td colSpan={9}>Noch keine Materialien vorhanden.</td>
-                </tr>
-              ) : (
-                filteredMaterials.map((material) => {
-                  const lowStock =
-                    Number(material.stock_quantity) <=
-                    Number(material.minimum_quantity);
-
-
-
-                  return (
-                    <tr key={material.id}>
-                      <td>
-                        <strong>{material.name}</strong>
-                        <div className="table-subtitle">
-                          {material.description || ""}
-                        </div>
-                      </td>
-                      <td>{material.category || "-"}</td>
-                      <td>
-                        <strong style={{ color: lowStock ? "#b91c1c" : undefined }}>
-                          {material.stock_quantity}
-                        </strong>
-                      </td>
-                      <td>{material.minimum_quantity}</td>
-                      <td>{material.unit}</td>
-                      <td>{material.supplier || "-"}</td>
-                      <td>{material.storage_location || "-"}</td>
-                      <td>
-                        {material.purchase_price !== null
-                          ? `${material.purchase_price} CHF`
-                          : "-"}
-                      </td>
-                      <td>{material.is_active ? "Aktiv" : "Inaktiv"}</td>
-
-                      <td>
+        {loading ? (
+          <p className="mt-empty">Materialien werden geladen …</p>
+        ) : materials.length === 0 ? (
+          <p className="mt-empty">
+            Noch keine Materialien angelegt. Tippen Sie auf <b>„+ Neues Material“</b> oder lesen Sie einen Lieferschein ein.
+          </p>
+        ) : visible.length === 0 ? (
+          <p className="mt-empty">Keine Materialien für diese Auswahl.</p>
+        ) : (
+          <div className="mt-list">
+            {visible.map((m) => {
+              const low = m.is_active && mapi.isLow(m);
+              const min = Number(m.minimum_quantity || 0);
+              const pct = min > 0 ? Math.min(100, (Number(m.stock_quantity || 0) / (min * 2)) * 100) : 100;
+              return (
+                <div key={m.id} className={`mt-row${low ? " low" : ""}${m.is_active ? "" : " inactive"}`}>
+                  <div className="mt-name">
+                    <b>{m.name}</b>
+                    <small>
+                      {m.category && <span className="mt-tag">{m.category}</span>}
+                      {!m.is_active && <span className="mt-tag">Inaktiv</span>}
+                      {low && <span className="mt-tag low">Nachbestellen</span>}
+                      {[m.supplier, m.storage_location && `Lager: ${m.storage_location}`].filter(Boolean).join(" · ")}
+                    </small>
+                  </div>
+                  <div className="mt-stock">
+                    <b>
+                      {mapi.fmtQty(m.stock_quantity)} {m.unit}
+                    </b>
+                    <small>{min > 0 ? `Mindestbestand ${mapi.fmtQty(min)}` : "kein Mindestbestand"}</small>
+                    {min > 0 && (
+                      <div className="mt-bar" aria-hidden>
+                        <i style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-price">
+                    {mapi.fmtMoney(m.purchase_price, currency)}
+                    <small>je {m.unit}</small>
+                  </div>
+                  <div className="mt-actions">
+                    {m.is_active && (
                       <button
                         type="button"
                         className="btn btn-secondary"
                         onClick={() => {
-  setEditingMaterialId(material.id);
-
-  setName(material.name);
-  setCategory(material.category || "");
-  setUnit(material.unit);
-  setStockQuantity(String(material.stock_quantity));
-  setMinimumQuantity(String(material.minimum_quantity));
-  setPurchasePrice(
-    material.purchase_price !== null
-      ? String(material.purchase_price)
-      : ""
-  );
-  setSupplier(material.supplier || "");
-  setStorageLocation(material.storage_location || "");
-  setDescription(material.description || "");
-
-  setMessage("");
-}}
-              >
-                         ✏️ Bearbeiten
-                       </button>
-                    </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                          setStockFor(m);
+                          setStockQty("");
+                          setStockNote("");
+                          setFormError("");
+                        }}
+                      >
+                        + Eingang
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-secondary" onClick={() => openHistory(m)}>
+                      Verlauf
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => openEdit(m)}>
+                      Bearbeiten
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Anlegen / Bearbeiten */}
+      {editing && (
+        <div className="mt-modal" role="dialog" aria-modal="true" onClick={() => !saving && setEditing(null)}>
+          <form className="mt-dialog" onSubmit={saveMaterial} onClick={(e) => e.stopPropagation()}>
+            <h3>{editing === "new" ? "Neues Material" : "Material bearbeiten"}</h3>
+            <p>{editing === "new" ? "Stammdaten und Anfangsbestand erfassen." : "Der Bestand ändert sich nur über Wareneingang und Aufträge."}</p>
+            <div className="mt-form">
+              <div className="mt-field full">
+                <label htmlFor="mt-name">Materialname *</label>
+                <input id="mt-name" {...field("name")} placeholder="z. B. Innenfarbe Weiß 12,5 L" autoFocus />
+              </div>
+              <div className="mt-field">
+                <label htmlFor="mt-unit">Einheit</label>
+                <input id="mt-unit" list="mt-units" {...field("unit")} />
+                <datalist id="mt-units">
+                  {UNIT_SUGGESTIONS.map((u) => (
+                    <option key={u} value={u} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="mt-field">
+                <label htmlFor="mt-cat">Kategorie</label>
+                <input id="mt-cat" list="mt-cats" {...field("category")} placeholder="Farbe, Werkzeug, Abdeckung" />
+                <datalist id="mt-cats">
+                  {categories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              {editing === "new" && (
+                <div className="mt-field">
+                  <label htmlFor="mt-initial">Anfangsbestand</label>
+                  <input id="mt-initial" inputMode="decimal" {...field("initialStock")} placeholder="z. B. 10" />
+                </div>
+              )}
+              <div className="mt-field">
+                <label htmlFor="mt-min">Mindestbestand</label>
+                <input id="mt-min" inputMode="decimal" {...field("minimum")} />
+                <small>Darunter erscheint „Nachbestellen“.</small>
+              </div>
+              <div className="mt-field">
+                <label htmlFor="mt-price">Einkaufspreis je Einheit ({currency})</label>
+                <input id="mt-price" inputMode="decimal" {...field("price")} placeholder="z. B. 69,90" />
+              </div>
+              <div className="mt-field">
+                <label htmlFor="mt-sup">Lieferant</label>
+                <input id="mt-sup" {...field("supplier")} placeholder="z. B. Brillux" />
+              </div>
+              <div className="mt-field">
+                <label htmlFor="mt-loc">Lagerort</label>
+                <input id="mt-loc" {...field("location")} placeholder="z. B. Regal A3" />
+              </div>
+              <div className="mt-field full">
+                <label htmlFor="mt-desc">Beschreibung</label>
+                <textarea id="mt-desc" {...field("description")} placeholder="z. B. Farbton, Artikelnummer" />
+              </div>
+              {editing !== "new" && (
+                <label className="mt-check full">
+                  <input type="checkbox" checked={form.active} onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))} />
+                  Aktiv (kann Aufträgen zugewiesen werden)
+                </label>
+              )}
+            </div>
+            {formError && <p className="mt-msg err" style={{ marginTop: 12 }}>{formError}</p>}
+            <div className="mt-dialog-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)} disabled={saving}>
+                Abbrechen
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? "Speichert …" : "Speichern"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Wareneingang */}
+      {stockFor && (
+        <div className="mt-modal" role="dialog" aria-modal="true" onClick={() => !saving && setStockFor(null)}>
+          <form className="mt-dialog" onSubmit={bookStockIn} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <h3>Wareneingang</h3>
+            <p>
+              {stockFor.name} · aktuell {mapi.fmtQty(stockFor.stock_quantity)} {stockFor.unit}
+            </p>
+            <div className="mt-form">
+              <div className="mt-field full">
+                <label htmlFor="mt-in-qty">Menge ({stockFor.unit}) *</label>
+                <input id="mt-in-qty" inputMode="decimal" value={stockQty} onChange={(e) => setStockQty(e.target.value)} autoFocus />
+              </div>
+              <div className="mt-field full">
+                <label htmlFor="mt-in-note">Notiz</label>
+                <input id="mt-in-note" value={stockNote} onChange={(e) => setStockNote(e.target.value)} placeholder="z. B. Lieferung Brillux Nr. 4711" />
+              </div>
+            </div>
+            {formError && <p className="mt-msg err" style={{ marginTop: 12 }}>{formError}</p>}
+            <div className="mt-dialog-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setStockFor(null)} disabled={saving}>
+                Abbrechen
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? "Bucht …" : "Einbuchen"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Verlauf */}
+      {historyFor && (
+        <div className="mt-modal" role="dialog" aria-modal="true" onClick={() => setHistoryFor(null)}>
+          <div className="mt-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Verlauf: {historyFor.name}</h3>
+            <p>
+              Aktueller Bestand {mapi.fmtQty(historyFor.stock_quantity)} {historyFor.unit}
+            </p>
+            {historyError && <p className="mt-msg err">{historyError}</p>}
+            {history === null ? (
+              <p className="mt-empty">Wird geladen …</p>
+            ) : history.length === 0 ? (
+              <p className="mt-empty">Noch keine Buchungen.</p>
+            ) : (
+              <ul className="mt-moves">
+                {history.map((mv) => {
+                  const delta = Number(mv.stock_after ?? 0) - Number(mv.stock_before ?? 0);
+                  return (
+                    <li key={mv.id}>
+                      <span>
+                        <b>{mapi.MOVEMENT_LABELS[mv.movement_type] || mv.movement_type}</b>
+                        {mv.order_id ? ` · Auftrag #${mv.order_id}` : ""}
+                      </span>
+                      <b className={delta > 0 ? "plus" : delta < 0 ? "minus" : ""}>
+                        {delta > 0 ? "+" : delta < 0 ? "−" : ""}
+                        {mapi.fmtQty(Math.abs(delta) || mv.quantity)} {historyFor.unit}
+                      </b>
+                      <small>
+                        {new Date(mv.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
+                        {mv.stock_after != null ? ` · Bestand danach ${mapi.fmtQty(mv.stock_after)}` : ""}
+                        {mv.note ? ` · ${mv.note}` : ""}
+                      </small>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="mt-dialog-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setHistoryFor(null)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

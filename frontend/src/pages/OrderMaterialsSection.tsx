@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { showConfirm } from "../lib/dialogs";
+import * as mapi from "../modules/material/api";
+import "../modules/material/material.css";
 
-type Material = {
+type MaterialLite = {
   id: number;
   name: string;
   unit: string;
   stock_quantity: number;
+  purchase_price: number | null;
 };
 
 type Employee = {
@@ -23,7 +27,6 @@ type Assignment = {
   unit: string;
   status: string;
   assigned_at: string;
-  handover_count?: number;
 };
 
 type Props = {
@@ -33,291 +36,249 @@ type Props = {
   currentUserId: number;
   /** Wird nach jedem Laden mit der Anzahl zugewiesener Materialien aufgerufen */
   onAssignmentsChanged?: (count: number) => void;
+  /** Währung der Firma */
+  currency?: string;
 };
 
 export default function OrderMaterialsSection({
   tenantId,
   orderId,
   employees,
-  currentUserId,
   onAssignmentsChanged,
+  currency = "EUR",
 }: Props) {
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialLite[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [logs, setLogs] = useState<(mapi.UsageLog & { material_id?: number })[]>([]);
+  const [team, setTeam] = useState<number[]>([]);
   const [materialId, setMaterialId] = useState("");
-  const [assignedToUserId, setAssignedToUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
 
   const loadData = async () => {
-    const { data: materialsData } = await supabase
-      .from("materials")
-      .select("id,name,unit,stock_quantity")
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-
-    const { data: assignmentsData } = await supabase
-      .from("order_material_assignments")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("order_id", orderId)
-      .order("assigned_at", { ascending: false });
-
-    const assignmentIds = ((assignmentsData as Assignment[]) || []).map((a) => a.id);
-
-    let confirmations: any[] = [];
-
-    if (assignmentIds.length > 0) {
-      const { data: confirmationData } = await supabase
-        .from("material_handover_confirmations")
-        .select("assignment_id")
+    const [mRes, aRes, lRes, tRes] = await Promise.all([
+      supabase
+        .from("materials")
+        .select("id,name,unit,stock_quantity,purchase_price")
         .eq("tenant_id", tenantId)
-        .in("assignment_id", assignmentIds);
-
-      confirmations = confirmationData || [];
-    }
-
-    const assignmentsWithConfirmations = ((assignmentsData as Assignment[]) || []).map(
-      (assignment) => ({
-        ...assignment,
-        handover_count: confirmations.filter(
-          (c) => c.assignment_id === assignment.id
-        ).length,
-      })
-    );
-
-    setMaterials((materialsData as Material[]) || []);
-    setAssignments(assignmentsWithConfirmations);
-    onAssignmentsChanged?.(assignmentsWithConfirmations.length);
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      supabase
+        .from("order_material_assignments")
+        .select("id,material_id,assigned_to_user_id,quantity,unit,status,assigned_at")
+        .eq("tenant_id", tenantId)
+        .eq("order_id", orderId)
+        .order("assigned_at", { ascending: true }),
+      supabase
+        .from("material_consumption_logs")
+        .select("id,assignment_id,material_id,quantity,action,note,created_at,material_price_at_use")
+        .eq("tenant_id", tenantId)
+        .eq("order_id", orderId),
+      supabase.from("order_assignments").select("user_id").eq("tenant_id", tenantId).eq("order_id", orderId),
+    ]);
+    if (aRes.error) console.error("Materialzuweisungen konnten nicht geladen werden:", aRes.error);
+    const list = (aRes.data as Assignment[]) || [];
+    setMaterials((mRes.data as MaterialLite[]) || []);
+    setAssignments(list);
+    setLogs((lRes.data as mapi.UsageLog[]) || []);
+    setTeam([...new Set(((tRes.data as { user_id: number }[]) || []).map((r) => Number(r.user_id)))]);
+    onAssignmentsChanged?.(list.length);
   };
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, orderId]);
 
-  const getMaterialName = (id: number) => {
-    return materials.find((m) => m.id === id)?.name || `Material #${id}`;
+  const name = (id: number) => {
+    const e = employees.find((x) => Number(x.id) === Number(id));
+    return e ? `${e.first_name || ""} ${e.last_name || ""}`.trim() || "Mitarbeiter" : "Mitarbeiter";
   };
+  const material = (id: number) => materials.find((m) => m.id === id);
 
-  const getUserName = (id: number) => {
-    const user = employees.find((e) => e.id === id);
-    return user
-      ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-      : `User #${id}`;
-  };
+  const workers = employees.filter((e) => e.role_id === 3 || e.role_id === 4);
+  const teamWorkers = workers.filter((e) => team.includes(Number(e.id)));
+  const otherWorkers = workers.filter((e) => !team.includes(Number(e.id)));
 
-  const getStatusLabel = (status: string, handoverCount = 0) => {
-    if (status === "handed_over" || handoverCount > 0) return "Übergeben";
-    if (status === "reserved") return "Übergabe offen";
-    if (status === "returned") return "Zurückgegeben";
-    if (status === "completed") return "Abgeschlossen";
-    return status;
-  };
+  // Vorauswahl: einziges Teammitglied
+  useEffect(() => {
+    if (!userId && teamWorkers.length === 1) setUserId(String(teamWorkers[0].id));
+  }, [teamWorkers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getStatusColor = (status: string, handoverCount = 0) => {
-    if (status === "handed_over" || handoverCount > 0) return "#166534";
-    if (status === "reserved") return "#92400e";
-    if (status === "returned") return "#1e40af";
-    return "#374151";
-  };
-
-  const handleAssignMaterial = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage("");
-
-    if (!materialId || !assignedToUserId || Number(quantity) <= 0) {
-      setMessage("Bitte Material, Empfänger und Menge eingeben.");
-      return;
-    }
-
-    const material = materials.find((m) => m.id === Number(materialId));
-
-    if (!material) {
-      setMessage("Material wurde nicht gefunden.");
-      return;
-    }
-
-    if (Number(quantity) > Number(material.stock_quantity)) {
-      setMessage("Die Menge ist größer als der aktuelle Lagerbestand.");
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from("order_material_assignments")
-      .insert({
-        tenant_id: tenantId,
-        order_id: orderId,
-        material_id: Number(materialId),
-        assigned_to_user_id: Number(assignedToUserId),
-        assigned_by_user_id: currentUserId,
-        quantity: Number(quantity),
-        unit: material.unit,
-        status: "reserved",
-        updated_at: new Date().toISOString(),
-      });
-
-    if (insertError) {
-      console.error("Fehler beim Zuweisen von Material:", insertError);
-      setMessage("Material konnte nicht zugewiesen werden.");
-      return;
-    }
-
-    const { data: projectManagerAssignment, error: projectManagerError } =
-  await supabase
-    .from("order_assignments")
-    .select("user_id")
-    .eq("order_id", orderId)
-    .eq("assignment_role", "project_manager")
-    .maybeSingle();
-
-if (projectManagerError) {
-  console.error(projectManagerError);
-  setMessage("Projektleiter konnte nicht ermittelt werden.");
-  return;
-}
-
-if (!projectManagerAssignment) {
-  setMessage("Diesem Auftrag ist kein Projektleiter zugeordnet.");
-  return;
-}
-
-    const { error: stockError } = await supabase.rpc(
-  "book_material_stock",
-  {
-    p_material_id: material.id,
-    p_movement_type: "assignment",
-
-    p_quantity: Number(quantity),
-
-    p_from_holder_type: "warehouse",
-    p_from_holder_id: null,
-
-    p_to_holder_type: "project_manager",
-    p_to_holder_id: projectManagerAssignment.user_id,
-
-    p_order_id: orderId,
-
-    p_reference_type: "order",
-    p_reference_id: orderId,
-
-    p_note: "Material aus Lager entnommen und Projektleiter übergeben."
-  }
-);
-
-if (stockError) {
-  console.error(stockError);
-
-  setMessage(
-    "Material wurde reserviert, konnte aber nicht aus dem Lager gebucht werden."
+  const rows = useMemo(
+    () =>
+      assignments.map((a) => {
+        const own = logs.filter((l) => l.assignment_id === a.id);
+        const sum = (act: string[]) => own.filter((l) => act.includes(l.action)).reduce((s, l) => s + Number(l.quantity || 0), 0);
+        const used = sum(["used", "damaged", "left_on_site"]);
+        const returned = sum(["returned"]);
+        const priceNow = material(a.material_id)?.purchase_price ?? null;
+        const cost = own
+          .filter((l) => l.action !== "returned")
+          .reduce((s, l) => s + Number(l.quantity || 0) * Number(l.material_price_at_use ?? priceNow ?? 0), 0);
+        return { a, used, returned, open: Number(a.quantity) - used - returned, cost, hasPrice: priceNow != null };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assignments, logs, materials]
   );
+  const totalCost = rows.reduce((s, r) => s + r.cost, 0);
 
-  return;
-}
+  const selected = materialId ? material(Number(materialId)) : undefined;
 
-    setMaterialId("");
-    setAssignedToUserId("");
-    setQuantity("1");
-    setMessage("Material wurde dem Auftrag zugewiesen.");
-    await loadData();
+  const assign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(null);
+    const qty = mapi.parseNum(quantity);
+    if (!materialId) return setNotice({ text: "Bitte ein Material auswählen.", ok: false });
+    if (!userId) return setNotice({ text: "Bitte einen Empfänger auswählen.", ok: false });
+    if (!Number.isFinite(qty) || qty <= 0) return setNotice({ text: "Bitte eine Menge größer als 0 eingeben.", ok: false });
+    if (selected && qty > Number(selected.stock_quantity)) {
+      return setNotice({ text: `Im Lager sind nur ${mapi.fmtQty(selected.stock_quantity)} ${selected.unit}.`, ok: false });
+    }
+    setBusy(true);
+    try {
+      await mapi.assignToOrder(orderId, Number(materialId), Number(userId), qty);
+      setNotice({ text: `${mapi.fmtQty(qty)} ${selected?.unit || ""} ${selected?.name || "Material"} an ${name(Number(userId))} zugewiesen.`, ok: true });
+      setMaterialId("");
+      setQuantity("1");
+      await loadData();
+    } catch (err) {
+      setNotice({ text: (err as Error).message, ok: false });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancel = async (a: Assignment) => {
+    const m = material(a.material_id);
+    const ok = await showConfirm(
+      `${mapi.fmtQty(a.quantity)} ${a.unit} ${m?.name || "Material"} wieder zurück ins Lager buchen?`,
+      { title: "Zuweisung stornieren", confirmLabel: "Stornieren", danger: true }
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await mapi.cancelAssignment(a.id);
+      setNotice({ text: "Zuweisung storniert – Material ist zurück im Lager.", ok: true });
+      await loadData();
+    } catch (err) {
+      setNotice({ text: (err as Error).message, ok: false });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="card" style={{ marginTop: 24 }}>
-      <h3>Material</h3>
-      <p className="info-text">
-        Material einem Auftrag zuweisen und Übergabestatus kontrollieren.
+    <div className="card mt-root" style={{ marginTop: 24 }}>
+      <h3 style={{ margin: 0 }}>Material</h3>
+      <p className="info-text" style={{ margin: "4px 0 0" }}>
+        Material aus dem Lager diesem Auftrag zuweisen. Der Mitarbeiter bestätigt die Übernahme und bucht Verbrauch und Rückgabe.
       </p>
 
-      {message && <div className="message-box info">{message}</div>}
-
-      <form onSubmit={handleAssignMaterial} className="form-stack">
-        <div className="form-row three-cols">
-          <div className="form-group">
-            <label>Material</label>
-            <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
-              <option value="">Bitte wählen</option>
-              {materials.map((material) => (
-                <option key={material.id} value={material.id}>
-                  {material.name} — Bestand: {material.stock_quantity} {material.unit}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Menge</label>
-            <input
-              type="number"
-              step="0.01"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Empfänger</label>
-            <select
-              value={assignedToUserId}
-              onChange={(e) => setAssignedToUserId(e.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {employees
-                .filter((e) => e.role_id === 3 || e.role_id === 4)
-                .map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.first_name || ""} {employee.last_name || ""}
+      <form onSubmit={assign} className="om-assign">
+        <div className="mt-field">
+          <label htmlFor={`om-mat-${orderId}`}>Material</label>
+          <select id={`om-mat-${orderId}`} value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
+            <option value="">Bitte wählen</option>
+            {materials.map((m) => (
+              <option key={m.id} value={m.id} disabled={Number(m.stock_quantity) <= 0}>
+                {m.name} – {Number(m.stock_quantity) <= 0 ? "nicht im Lager" : `${mapi.fmtQty(m.stock_quantity)} ${m.unit} im Lager`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-field">
+          <label htmlFor={`om-qty-${orderId}`}>Menge{selected ? ` (${selected.unit})` : ""}</label>
+          <input id={`om-qty-${orderId}`} inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        </div>
+        <div className="mt-field">
+          <label htmlFor={`om-user-${orderId}`}>Empfänger</label>
+          <select id={`om-user-${orderId}`} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <option value="">Bitte wählen</option>
+            {teamWorkers.length > 0 && (
+              <optgroup label="Team dieses Auftrags">
+                {teamWorkers.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {name(w.id)}
+                    {w.role_id === 3 ? " (PL)" : ""}
                   </option>
                 ))}
-            </select>
-          </div>
+              </optgroup>
+            )}
+            {otherWorkers.length > 0 && (
+              <optgroup label={teamWorkers.length > 0 ? "Weitere Mitarbeiter" : "Mitarbeiter"}>
+                {otherWorkers.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {name(w.id)}
+                    {w.role_id === 3 ? " (PL)" : ""}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         </div>
-
-        <button type="submit" className="btn btn-primary">
-          Material zuweisen
+        <button type="submit" className="btn btn-primary" disabled={busy}>
+          {busy ? "…" : "Zuweisen"}
         </button>
       </form>
 
-      <div className="table-wrapper" style={{ marginTop: 22 }}>
-        <h4>Materialstatus Auftrag</h4>
+      {notice && <p className={`mt-msg ${notice.ok ? "ok" : "err"}`}>{notice.text}</p>}
 
-        <table className="orders-table orders-table-wide">
+      {rows.length === 0 ? (
+        <p className="mt-empty">Noch kein Material zugewiesen.</p>
+      ) : (
+        <table className="om-table">
           <thead>
             <tr>
               <th>Material</th>
-              <th>Menge</th>
               <th>Empfänger</th>
-              <th>Übergabestatus</th>
+              <th>Zugewiesen</th>
+              <th>Verbraucht</th>
+              <th>Zurück</th>
+              <th>Status</th>
+              <th>Kosten</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {assignments.length === 0 ? (
-              <tr>
-                <td colSpan={4}>Noch kein Material zugewiesen.</td>
+            {rows.map(({ a, used, returned, open, cost, hasPrice }) => (
+              <tr key={a.id}>
+                <td>
+                  <b>{material(a.material_id)?.name || `Material #${a.material_id}`}</b>
+                </td>
+                <td data-label="An">{name(a.assigned_to_user_id)}</td>
+                <td data-label="Zugewiesen">
+                  {mapi.fmtQty(a.quantity)} {a.unit}
+                </td>
+                <td data-label="Verbraucht">{used > 0 ? `${mapi.fmtQty(used)} ${a.unit}` : "–"}</td>
+                <td data-label="Zurück">{returned > 0 ? `${mapi.fmtQty(returned)} ${a.unit}` : "–"}</td>
+                <td>
+                  <span className={`om-status ${a.status}`}>
+                    {a.status === "reserved" ? "Wartet auf Übernahme" : open > 0 ? `Übernommen · ${mapi.fmtQty(open)} offen` : "Abgeschlossen"}
+                  </span>
+                </td>
+                <td data-label="Kosten">{cost > 0 ? mapi.fmtMoney(cost, currency) : hasPrice ? "–" : "kein Preis"}</td>
+                <td>
+                  {a.status === "reserved" && (
+                    <button type="button" className="btn btn-secondary" onClick={() => cancel(a)} disabled={busy}>
+                      Stornieren
+                    </button>
+                  )}
+                </td>
               </tr>
-            ) : (
-              assignments.map((item) => (
-                <tr key={item.id}>
-                  <td>{getMaterialName(item.material_id)}</td>
-                  <td>
-                    {item.quantity} {item.unit}
-                  </td>
-                  <td>{getUserName(item.assigned_to_user_id)}</td>
-                  <td>
-                    <strong
-                      style={{
-                        color: getStatusColor(item.status, item.handover_count),
-                      }}
-                    >
-                      {getStatusLabel(item.status, item.handover_count)}
-                    </strong>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={6}>Materialkosten (verbraucht)</td>
+              <td>{mapi.fmtMoney(totalCost, currency)}</td>
+              <td />
+            </tr>
+          </tfoot>
         </table>
-      </div>
+      )}
     </div>
   );
 }

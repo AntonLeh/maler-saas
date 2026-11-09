@@ -1,31 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import * as mapi from "../modules/material/api";
+import "../modules/material/material.css";
 
 type MaterialAssignment = {
   id: number;
-  tenant_id: number;
-  order_id: number;
   material_id: number;
-
-  assigned_to_user_id: number;
-  assigned_by_user_id: number;
-
   quantity: number;
   unit: string;
   status: string;
-
-  materials?: {
-    name: string;
-  } | null;
-};
-
-type ConsumptionLog = {
-  id: number;
-  assignment_id: number;
-  quantity: number;
-  action: string;
-  note: string | null;
-  created_at: string;
+  materials?: { name: string } | null;
 };
 
 type Props = {
@@ -34,373 +18,155 @@ type Props = {
   currentUserId: number;
 };
 
-export default function EmployeeMaterialsSection({
-  tenantId,
-  orderId,
-  currentUserId,
-}: Props) {
+export default function EmployeeMaterialsSection({ tenantId, orderId, currentUserId }: Props) {
   const [assignments, setAssignments] = useState<MaterialAssignment[]>([]);
-  const [logs, setLogs] = useState<ConsumptionLog[]>([]);
-  const [message, setMessage] = useState("");
-  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [logs, setLogs] = useState<mapi.UsageLog[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [notice, setNotice] = useState<{ id: number | null; text: string; ok: boolean } | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [qty, setQty] = useState<Record<number, string>>({});
+  const [action, setAction] = useState<Record<number, string>>({});
+  const [note, setNote] = useState<Record<number, string>>({});
 
-  const [consumptionQuantity, setConsumptionQuantity] = useState<Record<number, string>>({});
-  const [consumptionAction, setConsumptionAction] = useState<Record<number, string>>({});
-  const [consumptionNote, setConsumptionNote] = useState<Record<number, string>>({});
-
-  const loadAssignments = async () => {
+  const load = async () => {
     const { data, error } = await supabase
       .from("order_material_assignments")
-      .select(`
-        *,
-        materials (
-          name
-        )
-      `)
+      .select("id, material_id, quantity, unit, status, materials ( name )")
       .eq("tenant_id", tenantId)
       .eq("order_id", Number(orderId))
       .eq("assigned_to_user_id", currentUserId)
       .order("assigned_at", { ascending: false });
-
-    if (error) {
-      console.error("Material konnte nicht geladen werden:", error);
-      setAssignments([]);
+    if (error) console.error("Material konnte nicht geladen werden:", error);
+    const list = (data as unknown as MaterialAssignment[]) || [];
+    setAssignments(list);
+    if (list.length > 0) {
+      const { data: logData } = await supabase
+        .from("material_consumption_logs")
+        .select("id, assignment_id, quantity, action, note, created_at")
+        .eq("tenant_id", tenantId)
+        .in("assignment_id", list.map((a) => a.id))
+        .order("created_at", { ascending: false });
+      setLogs((logData as mapi.UsageLog[]) || []);
+    } else {
       setLogs([]);
-      return;
     }
-
-    const loadedAssignments = (data as MaterialAssignment[]) || [];
-    setAssignments(loadedAssignments);
-
-    const assignmentIds = loadedAssignments.map((item) => item.id);
-
-    if (assignmentIds.length === 0) {
-      setLogs([]);
-      return;
-    }
-
-    const { data: logData, error: logError } = await supabase
-      .from("material_consumption_logs")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .in("assignment_id", assignmentIds)
-      .order("created_at", { ascending: false });
-
-    if (logError) {
-      console.error("Verbrauchsdaten konnten nicht geladen werden:", logError);
-      setLogs([]);
-      return;
-    }
-
-    setLogs((logData as ConsumptionLog[]) || []);
+    setLoaded(true);
   };
 
   useEffect(() => {
-    loadAssignments();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, orderId, currentUserId]);
 
-  const getActionLabel = (action: string) => {
-    if (action === "used") return "Verbraucht";
-    if (action === "returned") return "Zurückgegeben";
-    if (action === "damaged") return "Beschädigt";
-    if (action === "left_on_site") return "Auf Baustelle gelassen";
-    return action;
+  const confirm = async (a: MaterialAssignment) => {
+    setBusyId(a.id);
+    setNotice(null);
+    try {
+      await mapi.confirmHandover(a.id);
+      setNotice({ id: a.id, text: "Übernahme bestätigt.", ok: true });
+      await load();
+    } catch (err) {
+      setNotice({ id: a.id, text: (err as Error).message, ok: false });
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const getLogsForAssignment = (assignmentId: number) => {
-    return logs.filter((log) => log.assignment_id === assignmentId);
+  const book = async (a: MaterialAssignment, open: number) => {
+    const q = mapi.parseNum(qty[a.id] || "");
+    const act = action[a.id] || "used";
+    if (!Number.isFinite(q) || q <= 0) return setNotice({ id: a.id, text: "Bitte eine Menge größer als 0 eingeben.", ok: false });
+    if (q > open) return setNotice({ id: a.id, text: `Es sind nur noch ${mapi.fmtQty(open)} ${a.unit} offen.`, ok: false });
+    setBusyId(a.id);
+    setNotice(null);
+    try {
+      await mapi.bookUsage(a.id, q, act, (note[a.id] || "").trim());
+      setQty((p) => ({ ...p, [a.id]: "" }));
+      setNote((p) => ({ ...p, [a.id]: "" }));
+      setAction((p) => ({ ...p, [a.id]: "used" }));
+      setNotice({ id: a.id, text: `${mapi.USAGE_LABELS[act]}: ${mapi.fmtQty(q)} ${a.unit} gespeichert.`, ok: true });
+      await load();
+    } catch (err) {
+      setNotice({ id: a.id, text: (err as Error).message, ok: false });
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const confirmHandover = async (assignmentId: number) => {
-    setLoadingId(assignmentId);
-    setMessage("");
-
-    const { error: confirmError } = await supabase
-      .from("material_handover_confirmations")
-      .insert({
-        tenant_id: tenantId,
-        assignment_id: assignmentId,
-        confirmed_by_user_id: currentUserId,
-        confirmation_text: "Materialübernahme digital bestätigt.",
-      });
-
-    if (confirmError) {
-      console.error("Übergabe konnte nicht bestätigt werden:", confirmError);
-      setMessage("Übergabe konnte nicht bestätigt werden.");
-      setLoadingId(null);
-      return;
-    }
-
-    const { error: updateError } = await supabase
-      .from("order_material_assignments")
-      .update({
-        status: "handed_over",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", assignmentId)
-      .eq("tenant_id", tenantId);
-
-    if (updateError) {
-      console.error("Materialstatus konnte nicht aktualisiert werden:", updateError);
-      setMessage("Bestätigung gespeichert, aber Status konnte nicht aktualisiert werden.");
-      setLoadingId(null);
-      return;
-    }
-
-    setMessage("Materialübernahme wurde bestätigt.");
-    setLoadingId(null);
-    await loadAssignments();
-  };
-
-  const saveConsumption = async (assignment: MaterialAssignment) => {
-    const quantity = Number(consumptionQuantity[assignment.id] || 0);
-    const action = consumptionAction[assignment.id] || "used";
-    const note = consumptionNote[assignment.id] || "";
-
-    if (quantity <= 0) {
-      setMessage("Bitte eine gültige Menge für den Materialverbrauch eingeben.");
-      return;
-    }
-
-    const alreadyBooked = logs
-  .filter((log) => log.assignment_id === assignment.id)
-  .reduce((sum, log) => sum + Number(log.quantity), 0);
-
-const remaining = Number(assignment.quantity) - alreadyBooked;
-
-if (remaining <= 0) {
-  setMessage("Für dieses Material ist keine Restmenge mehr verfügbar.");
-  return;
-}
-
-if (quantity > remaining) {
-  setMessage(
-    `Es sind nur noch ${remaining} ${assignment.unit} verfügbar.`
-  );
-  return;
-}
-
-    setLoadingId(assignment.id);
-    setMessage("");
-
-    const { data: materialData, error: materialError } = await supabase
-  .from("materials")
-  .select("name, unit, supplier, purchase_price")
-  .eq("id", assignment.material_id)
-  .eq("tenant_id", tenantId)
-  .single();
-
-if (materialError) {
-  console.error("Materialdaten konnten nicht geladen werden:", materialError);
-  setMessage("Materialdaten konnten nicht geladen werden.");
-  setLoadingId(null);
-  return;
-}
-
-    const { error } = await supabase.from("material_consumption_logs").insert({
-  tenant_id: tenantId,
-  assignment_id: assignment.id,
-  order_id: Number(orderId),
-  material_id: assignment.material_id,
-  user_id: currentUserId,
-  quantity,
-  action,
-  note: note.trim() || null,
-
-  material_name_at_use: materialData.name,
-  unit_at_use: materialData.unit,
-  material_supplier_at_use: materialData.supplier,
-  material_price_at_use: materialData.purchase_price,
-});
-
-    if (error) {
-      console.error("Materialverbrauch konnte nicht gespeichert werden:", error);
-      setMessage("Materialverbrauch konnte nicht gespeichert werden.");
-      setLoadingId(null);
-      return;
-    }
-
-
-
-    if (action === "returned") {
-  const { error: stockError } = await supabase.rpc(
-    "book_material_stock",
-    {
-      p_material_id: assignment.material_id,
-      p_movement_type: "return",
-
-      p_quantity: quantity,
-
-      p_from_holder_type: "employee",
-      p_from_holder_id: currentUserId,
-
-      p_to_holder_type: "project_manager",
-      p_to_holder_id: assignment.assigned_by_user_id,
-
-      p_order_id: Number(orderId),
-
-      p_reference_type: "order",
-      p_reference_id: Number(orderId),
-
-      p_note: "Restmaterial vom Mitarbeiter an den Projektleiter zurückgegeben."
-    }
-  );
-
-  if (stockError) {
-    console.error("book_material_stock Fehler:");
-    console.error(JSON.stringify(stockError, null, 2));
-    setMessage(
-      "Rückgabe wurde gespeichert, aber die Verantwortungsübergabe konnte nicht gebucht werden."
-    );
-    setLoadingId(null);
-    return;
-  }
-}
-
-    setConsumptionQuantity((prev) => ({ ...prev, [assignment.id]: "" }));
-    setConsumptionAction((prev) => ({ ...prev, [assignment.id]: "used" }));
-    setConsumptionNote((prev) => ({ ...prev, [assignment.id]: "" }));
-
-    setMessage("Materialverbrauch wurde gespeichert.");
-    setLoadingId(null);
-    await loadAssignments();
-  };
-
+  if (!loaded) return null;
   if (assignments.length === 0) {
-    return null;
+    return <p className="mt-empty">Für diesen Auftrag ist dir kein Material zugewiesen.</p>;
   }
 
   return (
-    <div className="card" style={{ marginTop: 18 }}>
-      <h4>Materialübernahme & Verbrauch</h4>
+    <div className="em-list mt-root">
+      {assignments.map((a) => {
+        const own = logs.filter((l) => l.assignment_id === a.id);
+        const booked = own.reduce((s, l) => s + Number(l.quantity || 0), 0);
+        const open = Math.max(0, Number(a.quantity) - booked);
+        const msg = notice && notice.id === a.id ? notice : null;
+        return (
+          <div key={a.id} className="em-item">
+            <div className="em-head">
+              <div>
+                <b>{a.materials?.name || `Material #${a.material_id}`}</b>
+                <small>
+                  {mapi.fmtQty(a.quantity)} {a.unit} zugewiesen
+                  {a.status === "handed_over" ? ` · ${mapi.fmtQty(open)} ${a.unit} offen` : ""}
+                </small>
+              </div>
+              <span className={`om-status ${a.status}`}>{a.status === "reserved" ? "Bitte Übernahme bestätigen" : open > 0 ? "Übernommen" : "Abgeschlossen"}</span>
+            </div>
 
-      {message && <div className="message-box info">{message}</div>}
+            {a.status === "reserved" ? (
+              <button type="button" className="btn btn-primary" onClick={() => confirm(a)} disabled={busyId === a.id}>
+                {busyId === a.id ? "Bestätigt …" : "✓ Material erhalten"}
+              </button>
+            ) : (
+              open > 0 && (
+                <div className="em-book">
+                  <input
+                    inputMode="decimal"
+                    placeholder="Menge"
+                    value={qty[a.id] || ""}
+                    onChange={(e) => setQty((p) => ({ ...p, [a.id]: e.target.value }))}
+                    aria-label="Menge"
+                  />
+                  <select value={action[a.id] || "used"} onChange={(e) => setAction((p) => ({ ...p, [a.id]: e.target.value }))} aria-label="Art">
+                    <option value="used">Verbraucht</option>
+                    <option value="returned">Zurück ins Lager</option>
+                    <option value="damaged">Beschädigt</option>
+                    <option value="left_on_site">Auf Baustelle gelassen</option>
+                  </select>
+                  <input
+                    className="full"
+                    placeholder="Notiz (optional)"
+                    value={note[a.id] || ""}
+                    onChange={(e) => setNote((p) => ({ ...p, [a.id]: e.target.value }))}
+                    aria-label="Notiz"
+                  />
+                  <button type="button" className="btn btn-secondary full" onClick={() => book(a, open)} disabled={busyId === a.id}>
+                    {busyId === a.id ? "Speichert …" : "Buchen"}
+                  </button>
+                </div>
+              )
+            )}
 
-      <div className="table-wrapper">
-  <table className="orders-table orders-table-wide">
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Zugewiesen</th>
-              <th>Status</th>
-              <th>Übernahme</th>
-              <th>Verbrauch / Rückgabe</th>
-              <th>Historie</th>
-            </tr>
-          </thead>
+            {msg && <p className={`mt-msg ${msg.ok ? "ok" : "err"}`} style={{ margin: 0 }}>{msg.text}</p>}
 
-          <tbody>
-            {assignments.map((item) => {
-              const itemLogs = getLogsForAssignment(item.id);
-
-              return (
-                <tr key={item.id}>
-                  <td>{item.materials?.name || `Material #${item.material_id}`}</td>
-
-                  <td>
-                    {item.quantity} {item.unit}
-                  </td>
-
-                  <td>{item.status}</td>
-
-                  <td>
-                    {item.status === "reserved" ? (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        disabled={loadingId === item.id}
-                        onClick={() => confirmHandover(item.id)}
-                      >
-                        {loadingId === item.id
-                          ? "Bestätige..."
-                          : "Übernahme bestätigen"}
-                      </button>
-                    ) : (
-                      "Bestätigt"
-                    )}
-                  </td>
-
-                  <td>
-                    {item.status === "handed_over" ? (
-                      <div style={{ display: "grid", gap: 8, minWidth: 260 }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Menge"
-                          value={consumptionQuantity[item.id] || ""}
-                          onChange={(e) =>
-                            setConsumptionQuantity((prev) => ({
-                              ...prev,
-                              [item.id]: e.target.value,
-                            }))
-                          }
-                        />
-
-                        <select
-                          value={consumptionAction[item.id] || "used"}
-                          onChange={(e) =>
-                            setConsumptionAction((prev) => ({
-                              ...prev,
-                              [item.id]: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="used">Verbraucht</option>
-                          <option value="returned">Zurückgegeben</option>
-                          <option value="damaged">Beschädigt</option>
-                          <option value="left_on_site">Auf Baustelle gelassen</option>
-                        </select>
-
-                        <input
-                          type="text"
-                          placeholder="Notiz optional"
-                          value={consumptionNote[item.id] || ""}
-                          onChange={(e) =>
-                            setConsumptionNote((prev) => ({
-                              ...prev,
-                              [item.id]: e.target.value,
-                            }))
-                          }
-                        />
-
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          disabled={loadingId === item.id}
-                          onClick={() => saveConsumption(item)}
-                        >
-                          {loadingId === item.id ? "Speichert..." : "Verbrauch speichern"}
-                        </button>
-                      </div>
-                    ) : (
-                      "Erst Übernahme bestätigen"
-                    )}
-                  </td>
-
-                  <td>
-                    {itemLogs.length === 0 ? (
-                      <span className="info-text">Noch nichts dokumentiert.</span>
-                    ) : (
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {itemLogs.map((log) => (
-                          <div key={log.id}>
-                            <strong>
-                              {getActionLabel(log.action)}: {log.quantity} {item.unit}
-                            </strong>
-                            {log.note && (
-                              <div className="table-subtitle">{log.note}</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            {own.length > 0 && (
+              <ul className="em-logs">
+                {own.map((l) => (
+                  <li key={l.id}>
+                    {new Date(l.created_at).toLocaleDateString("de-DE")} · <b>{mapi.USAGE_LABELS[l.action] || l.action}</b>: {mapi.fmtQty(l.quantity)} {a.unit}
+                    {l.note ? ` – ${l.note}` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
