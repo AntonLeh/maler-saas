@@ -1,0 +1,34 @@
+/* Auftrag bearbeiten: Prüfbereich + Verlauf */
+.ao-review { text-align: left; margin: 0 0 20px; padding: 16px 18px; border-radius: 18px; background: linear-gradient(135deg, #f0fdfa, #ecfeff); border: 1px solid #5eead4; display: flex; flex-direction: column; gap: 10px; }
+.ao-review-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ao-review-head small { color: #475569; font-size: 13px; }
+.ao-badge { font-weight: 800; font-size: 14px; color: #0f766e; }
+.ao-quote { margin: 0; padding: 10px 12px; border-left: 4px solid #14b8a6; background: #fff; border-radius: 8px; font-size: 15px; white-space: pre-line; color: #0f172a; }
+.ao-label { margin: 0; font-size: 13px; font-weight: 700; color: #334155; text-align: left; }
+.ao-muted { margin: 0; font-size: 14px; color: #64748b; text-align: left; }
+.ao-hours ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; color: #334155; }
+.ao-review-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.ao-review-actions .btn { width: auto; flex: 1 1 200px; }
+
+.ao-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
+.ao-photos button { padding: 0; border: none; background: none; cursor: zoom-in; }
+.ao-photos img { width: 100%; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; display: block; }
+
+.ao-history { margin-top: 30px; text-align: left; }
+.ao-history h3 { margin: 0 0 10px; }
+.ao-history ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ao-history li { padding: 12px 14px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.ao-history li p { margin: 6px 0 0; font-size: 14px; white-space: pre-line; text-align: left; }
+.ao-history-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: #64748b; }
+.ao-history-meta b { color: #0f172a; }
+.ao-status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #334155; }
+.ao-status.s-in_arbeit { background: #dbeafe; color: #1d4ed8; }
+.ao-status.s-pausiert { background: #fef3c7; color: #92400e; }
+.ao-status.s-zur_pruefung, .ao-status.s-fertig { background: #dcfce7; color: #166534; }
+
+.ao-hint { margin: 4px 0 0; font-size: 12px; color: #64748b; text-align: left; }
+.ao-error { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; font-size: 14px; font-weight: 600; text-align: left; }
+
+.ao-lightbox { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ao-lightbox img { max-width: 100%; max-height: 85vh; border-radius: 14px; object-fit: contain; background: #fff; }
+.ao-lightbox button { position: absolute; top: 18px; right: 18px; width: 42px; height: 42px; border-radius: 50%; border: none; background: #fff; color: #111; font-size: 20px; font-weight: 700; cursor: pointer; }

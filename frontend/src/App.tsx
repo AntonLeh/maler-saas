@@ -28,6 +28,8 @@ import { WebsiteButton } from "./modules/website/widgets";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
+import { OrderHistory, OrderReviewBox } from "./modules/auftraege/OrderReviewPanels";
+import { diffAssignments, formSnapshot, orderErrorText, validateOrderForm } from "./modules/auftraege/logic";
 import { lockKind, lockedSince, staffAccess } from "./lib/staffAccess";
 import { StaffGraceBanner, StaffLockedPage } from "./components/StaffAccessNotice";
 import LoginPage from "./modules/auth/LoginPage";
@@ -606,6 +608,9 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [orderProgress, setOrderProgress] = useState<OrderProgress[]>([]);
+  // Auftrag bearbeiten: Stand beim Öffnen (für „ungespeicherte Änderungen“) + Prüf-Aktionen
+  const [orderEditSnapshot, setOrderEditSnapshot] = useState("");
+  const [orderReviewBusy, setOrderReviewBusy] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -3396,49 +3401,92 @@ useEffect(() => {
     await loadEmployeeOrders(userProfile.tenant_id, userProfile.id);
   };
 
-  const handleApproveOrder = async (orderId: string | number) => {
-  if (!userProfile) return;
+  const handleApproveOrder = async (orderId: string | number): Promise<boolean> => {
+  if (!userProfile) return false;
 
-  const { error } = await supabase
+  const ok = await showConfirm(
+    "Auftrag abnehmen und als „Fertig“ abschließen?",
+    { title: "Auftrag abnehmen", confirmLabel: "Ja, abnehmen" }
+  );
+  if (!ok) return false;
+
+  const { data, error } = await supabase
     .from("orders")
     .update({ status: "fertig" })
     .eq("id", orderId)
-    .eq("tenant_id", userProfile.tenant_id);
+    .eq("tenant_id", userProfile.tenant_id)
+    .select("id");
 
-  if (error) {
+  if (error || !data || data.length === 0) {
     console.error("Fehler beim Freigeben:", error);
-    setOrderMessage(`Freigabe fehlgeschlagen: ${error.message}`);
-    return;
+    setOrderMessage(orderErrorText(error ?? { message: "row-level security" }, "Die Freigabe hat nicht geklappt. Bitte noch einmal versuchen."));
+    return false;
   }
 
-  setOrderMessage("Auftrag wurde freigegeben und abgeschlossen.");
+  setOrderMessage("Auftrag wurde abgenommen und abgeschlossen.");
   await loadOrders(userProfile.tenant_id);
+  return true;
 };
 
-const handleReturnOrderToWork = async (orderId: string | number) => {
-  if (!userProfile) return;
+const handleReturnOrderToWork = async (orderId: string | number): Promise<boolean> => {
+  if (!userProfile) return false;
 
-  const confirmed = await showConfirm(
-    "Möchten Sie diesen Auftrag wirklich zur Nacharbeit zurückgeben?",
-    { confirmLabel: "Ja, zurückgeben" }
+  const reason = await showPrompt(
+    "Was muss noch erledigt werden? Die zugeteilten Mitarbeiter bekommen diese Nachricht.",
+    {
+      title: "Zurück an Mitarbeiter",
+      multiline: true,
+      placeholder: "z. B. Flur: Kante an der Decke nachstreichen",
+      confirmLabel: "Zurückgeben",
+      validate: (v) => (v.trim().length < 3 ? "Bitte kurz beschreiben, was fehlt." : null),
+    }
   );
 
-  if (!confirmed) return;
+  if (reason === null) return false;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("orders")
     .update({ status: "in_arbeit" })
     .eq("id", orderId)
-    .eq("tenant_id", userProfile.tenant_id);
+    .eq("tenant_id", userProfile.tenant_id)
+    .select("id, title");
 
-  if (error) {
+  if (error || !data || data.length === 0) {
     console.error("Fehler beim Zurückgeben zur Nacharbeit:", error);
-    setOrderMessage(`Zurückgeben fehlgeschlagen: ${error.message}`);
-    return;
+    setOrderMessage(orderErrorText(error ?? { message: "row-level security" }, "Das Zurückgeben hat nicht geklappt. Bitte noch einmal versuchen."));
+    return false;
   }
 
-  setOrderMessage("Auftrag wurde zur Nacharbeit zurückgegeben.");
+  // Zugeteilte Mitarbeiter per Nachricht informieren
+  const employeeIds = orderAssignments
+    .filter((a) => String(a.order_id) === String(orderId) && a.assignment_role === "employee")
+    .map((a) => Number(a.user_id))
+    .filter((id) => id && id !== userProfile.id);
+  const title = String(data[0]?.title || "Auftrag");
+  let notified = 0;
+  if (employeeIds.length > 0) {
+    const { error: msgError } = await supabase.from("messages").insert(
+      employeeIds.map((id) => ({
+        tenant_id: userProfile.tenant_id,
+        sender_id: userProfile.id,
+        recipient_id: id,
+        order_id: Number(orderId),
+        message_type: "direct",
+        message: `↩ Nacharbeit für „${title}“: ${reason.trim()}`,
+        image_url: null,
+      }))
+    );
+    if (msgError) console.error("Nachricht zur Nacharbeit nicht gesendet:", msgError);
+    else notified = employeeIds.length;
+  }
+
+  setOrderMessage(
+    notified > 0
+      ? `Auftrag zur Nacharbeit zurückgegeben – ${notified} Mitarbeiter wurde(n) benachrichtigt.`
+      : "Auftrag zur Nacharbeit zurückgegeben. (Es wurde niemand benachrichtigt – bitte Mitarbeiter direkt informieren.)"
+  );
   await loadOrders(userProfile.tenant_id);
+  return true;
 };
 
   const formatDateOnly = (value: string | null) => {
@@ -4871,8 +4919,9 @@ const openEmployeeOrders = () => {
 
   setOrderMessage("");
   setEditingOrderId(order.id);
+  setOrderProgress([]);
 
-  setOrderForm({
+  const editForm = {
     customer_id: order.customer_id || "",
     title: order.title || "",
     description: order.description || "",
@@ -4883,17 +4932,28 @@ const openEmployeeOrders = () => {
     start_date: order.start_date || "",
     end_date: order.end_date || "",
     assigned_to: "",
-  });
+  };
+  setOrderForm(editForm);
 
-  setSelectedProjectManagerId(
-    order.assigned_project_manager_id
-      ? String(order.assigned_project_manager_id)
-      : ""
+  // Bisherige Zuteilungen übernehmen (sonst würde Speichern alle Mitarbeiter austragen)
+  const currentAssignments = orderAssignments.filter(
+    (a) => String(a.order_id) === String(order.id)
   );
+  const pmFromAssignments = currentAssignments.find(
+    (a) => a.assignment_role === "project_manager"
+  )?.user_id;
+  const pmId = order.assigned_project_manager_id ?? pmFromAssignments ?? null;
+  const pmIdText = pmId ? String(pmId) : "";
+  const employeeIdTexts = currentAssignments
+    .filter((a) => a.assignment_role === "employee")
+    .map((a) => String(a.user_id));
 
-  setSelectedEmployeeIds([]);
+  setSelectedProjectManagerId(pmIdText);
+  setSelectedEmployeeIds(employeeIdTexts);
+  setOrderEditSnapshot(formSnapshot(editForm, pmIdText, employeeIdTexts));
 
   loadOrderProgress(order.id, order.tenant_id);
+  loadTimeEntries(order.tenant_id);
   setCurrentPage("edit-order");
 };
 
@@ -5104,13 +5164,61 @@ assigned_project_manager_id: selectedProjectManagerId
         return;
       }
 
-      if (!orderForm.customer_id || !orderForm.title.trim()) {
-        setOrderMessage("Bitte Kunde und Auftragstitel ausfüllen.");
+      const invalid = validateOrderForm(orderForm);
+      if (invalid) {
+        setOrderMessage(invalid);
         return;
       }
 
       setSavingOrder(true);
 
+      const pmId = selectedProjectManagerId ? Number(selectedProjectManagerId) : null;
+      const employeeIds = selectedEmployeeIds
+        .map(Number)
+        .filter((id) => id && id !== pmId);
+
+      // 1) Zuteilungen: nur Änderungen übernehmen (zuerst, solange der Auftrag noch „meiner“ ist)
+      const currentAssignments = orderAssignments.filter(
+        (a) => String(a.order_id) === String(editingOrderId)
+      );
+      const { toDelete, toInsert } = diffAssignments(currentAssignments, pmId, employeeIds);
+
+      if (toInsert.length > 0) {
+        const { error: insertError } = await supabase.from("order_assignments").insert(
+          toInsert.map((a) => ({
+            tenant_id: userProfile.tenant_id,
+            order_id: editingOrderId,
+            user_id: a.user_id,
+            assignment_role: a.assignment_role,
+          }))
+        );
+        if (insertError) {
+          console.error("Fehler beim Speichern der Zuweisungen:", insertError);
+          setOrderMessage(orderErrorText(insertError, "Die Zuteilung konnte nicht gespeichert werden. Bitte noch einmal versuchen."));
+          setSavingOrder(false);
+          return;
+        }
+      }
+
+      for (const a of toDelete) {
+        const query = supabase
+          .from("order_assignments")
+          .delete()
+          .eq("tenant_id", userProfile.tenant_id)
+          .eq("order_id", editingOrderId)
+          .eq("user_id", Number(a.user_id))
+          .eq("assignment_role", a.assignment_role);
+        const { error: deleteError } = await query;
+        if (deleteError) {
+          console.error("Fehler beim Entfernen einer Zuweisung:", deleteError);
+          setOrderMessage(orderErrorText(deleteError, "Eine Zuteilung konnte nicht entfernt werden. Bitte noch einmal versuchen."));
+          setSavingOrder(false);
+          await loadOrders(userProfile.tenant_id);
+          return;
+        }
+      }
+
+      // 2) Auftragsdaten
       const updatedOrder = {
         customer_id: orderForm.customer_id,
         title: orderForm.title.trim(),
@@ -5121,78 +5229,71 @@ assigned_project_manager_id: selectedProjectManagerId
         address_city: orderForm.address_city.trim() || null,
         start_date: orderForm.start_date || null,
         end_date: orderForm.end_date || null,
-        assigned_to: orderForm.assigned_to ? Number(orderForm.assigned_to) : null,
+        assigned_project_manager_id: pmId,
+        assigned_to: employeeIds.length > 0 ? employeeIds[0] : null, // Übergang (ältere Regeln)
       };
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from("orders")
         .update(updatedOrder)
         .eq("id", editingOrderId)
-        .eq("tenant_id", userProfile.tenant_id);
+        .eq("tenant_id", userProfile.tenant_id)
+        .select("id");
 
-      if (error) {
+      if (error || !updatedRows || updatedRows.length === 0) {
         console.error("Fehler beim Aktualisieren des Auftrags:", error);
-        setOrderMessage(`Auftrag konnte nicht aktualisiert werden: ${error.message}`);
+        setOrderMessage(
+          error
+            ? orderErrorText(error, "Der Auftrag konnte nicht gespeichert werden. Bitte noch einmal versuchen.")
+            : "Dafür fehlt die Berechtigung. Projektleiter können nur ihre eigenen Aufträge bearbeiten."
+        );
         setSavingOrder(false);
+        await loadOrders(userProfile.tenant_id);
         return;
       }
 
-      const { error: deleteAssignmentsError } = await supabase
-  .from("order_assignments")
-  .delete()
-  .eq("order_id", editingOrderId)
-  .eq("tenant_id", userProfile.tenant_id);
-
-if (deleteAssignmentsError) {
-  console.error("Fehler beim Löschen alter Zuweisungen:", deleteAssignmentsError);
-  setOrderMessage(
-    `Alte Zuweisungen konnten nicht gelöscht werden: ${deleteAssignmentsError.message}`
-  );
-  setSavingOrder(false);
-  return;
-}
-
-const assignments = [
-  ...(selectedProjectManagerId
-    ? [
-        {
-          tenant_id: userProfile.tenant_id,
-          order_id: editingOrderId,
-          user_id: Number(selectedProjectManagerId),
-          assignment_role: "project_manager",
-        },
-      ]
-    : []),
-
-  ...selectedEmployeeIds.map((id) => ({
-    tenant_id: userProfile.tenant_id,
-    order_id: editingOrderId,
-    user_id: Number(id),
-    assignment_role: "employee",
-  })),
-];
-
-if (assignments.length > 0) {
-  const { error: assignmentsError } = await supabase
-    .from("order_assignments")
-    .insert(assignments);
-
-  if (assignmentsError) {
-    console.error("Fehler beim Speichern der Zuweisungen:", assignmentsError);
-    setOrderMessage(
-      `Zuweisungen konnten nicht gespeichert werden: ${assignmentsError.message}`
-    );
-    setSavingOrder(false);
-    return;
-  }
-}
-
-      setOrderMessage("Auftrag erfolgreich aktualisiert.");
+      setOrderMessage("Auftrag gespeichert.");
       await loadOrders(userProfile.tenant_id);
       setEditingOrderId(null);
+      setOrderEditSnapshot("");
       resetOrderForm();
       setCurrentPage("orders-list");
       setSavingOrder(false);
+    };
+
+    /** Zurück zur Liste – mit Rückfrage bei ungespeicherten Änderungen */
+    const leaveEditOrderPage = async () => {
+      const dirty =
+        orderEditSnapshot &&
+        formSnapshot(orderForm, selectedProjectManagerId, selectedEmployeeIds) !== orderEditSnapshot;
+      if (dirty) {
+        const ok = await showConfirm("Sie haben Änderungen, die noch nicht gespeichert sind. Trotzdem verlassen?", {
+          title: "Ungespeicherte Änderungen",
+          tone: "warning",
+          confirmLabel: "Verwerfen",
+          cancelLabel: "Weiter bearbeiten",
+        });
+        if (!ok) return;
+      }
+      setOrderEditSnapshot("");
+      openOrdersListPage(ordersFilterMode);
+    };
+
+    /** Prüfbereich: abnehmen oder zurückgeben */
+    const reviewEditingOrder = async (decision: "approve" | "return") => {
+      if (!editingOrderId) return;
+      setOrderReviewBusy(true);
+      const ok =
+        decision === "approve"
+          ? await handleApproveOrder(editingOrderId)
+          : await handleReturnOrderToWork(editingOrderId);
+      setOrderReviewBusy(false);
+      if (ok) {
+        setOrderEditSnapshot("");
+        setEditingOrderId(null);
+        resetOrderForm();
+        openOrdersListPage(ordersFilterMode);
+      }
     };
 
     const handleCreateQuote = async (e: React.FormEvent) => {
@@ -10265,27 +10366,62 @@ const businessAdvisor = generateBusinessInsights();
                 </section>
               )}
 
-              {currentPage === "edit-order" && canEditOrders && (
+              {currentPage === "edit-order" && canEditOrders && (() => {
+                const editingOrder = orders.find((o) => String(o.id) === String(editingOrderId)) || null;
+                const savedStatus = editingOrder?.status || orderForm.status;
+                const pmLocked =
+                  userProfile?.role_id === PROJECT_MANAGER_ROLE_ID &&
+                  !!selectedProjectManagerId &&
+                  Number(selectedProjectManagerId) === userProfile?.id;
+                const assignable = employees.filter(
+                  (emp) =>
+                    emp.is_active !== false &&
+                    (emp.role_id === 3 || emp.role_id === 4) &&
+                    String(emp.id) !== String(selectedProjectManagerId)
+                );
+                const orderTimes = timeEntries.filter(
+                  (t) => String(t.order_id) === String(editingOrderId)
+                );
+                const historyPeople = employees.map((emp) => ({
+                  id: emp.id,
+                  first_name: emp.first_name,
+                  last_name: emp.last_name,
+                }));
+                const isError =
+                  !!orderMessage &&
+                  !/gespeichert|abgenommen|zurückgegeben/i.test(orderMessage);
+                return (
                 <section className="single-page-section">
                   <div className="card form-page-card">
                     <div className="page-topbar">
                       <div>
                         <h2>Auftrag bearbeiten</h2>
-                        <p>Bestehende Auftragsdaten aktualisieren.</p>
+                        <p>{editingOrder?.title || "Bestehende Auftragsdaten aktualisieren."}</p>
                       </div>
 
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => openOrdersListPage(ordersFilterMode)}
+                        onClick={leaveEditOrderPage}
                       >
                         Zurück zur Auftragsliste
                       </button>
                     </div>
 
+                    {savedStatus === "zur_pruefung" && (
+                      <OrderReviewBox
+                        history={orderProgress}
+                        timeEntries={orderTimes}
+                        people={historyPeople}
+                        busy={orderReviewBusy}
+                        onApprove={() => reviewEditingOrder("approve")}
+                        onReturn={() => reviewEditingOrder("return")}
+                      />
+                    )}
+
                     <form onSubmit={handleUpdateOrder} className="form-stack">
                       <div className="form-group">
-                        <label>Kunde</label>
+                        <label>Kunde *</label>
                         <select
                           name="customer_id"
                           value={orderForm.customer_id}
@@ -10295,83 +10431,89 @@ const businessAdvisor = generateBusinessInsights();
                           <option value="">Bitte Kunde auswählen</option>
                           {customers.map((customer) => (
                             <option key={customer.id} value={customer.id}>
-                              {customer.first_name} {customer.last_name}
+                              {customer.company_name
+                                ? `${customer.company_name} – ${customer.first_name} ${customer.last_name}`
+                                : `${customer.first_name} ${customer.last_name}`}
                             </option>
                           ))}
                         </select>
                       </div>
 
                       <div className="form-group">
-  <label>Projektleiter</label>
-  <select
-    value={selectedProjectManagerId}
-    onChange={(e) => setSelectedProjectManagerId(e.target.value)}
-  >
-    <option value="">Bitte wählen</option>
-    {employees
-  .filter((pm) => pm.role_id === 3)
-  .map((pm) => (
-      <option key={pm.id} value={pm.id}>
-        {pm.first_name || ""} {pm.last_name || ""}
-      </option>
-    ))}
-  </select>
-</div>
-
-<div className="form-group">
-  <label>Mitarbeiter zuweisen</label>
-
-  <div className="employee-selection-list">
-    {employees.map((employee) => (
-      <label
-        key={employee.id}
-        className={`employee-selection-item ${
-          selectedEmployeeIds.includes(String(employee.id))
-            ? "selected"
-            : ""
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={selectedEmployeeIds.includes(String(employee.id))}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedEmployeeIds([
-                ...selectedEmployeeIds,
-                String(employee.id),
-              ]);
-            } else {
-              setSelectedEmployeeIds(
-                selectedEmployeeIds.filter(
-                  (id) => id !== String(employee.id)
-                )
-              );
-            }
-          }}
-        />
-
-        <span className="employee-name">
-          {employee.first_name || ""} {employee.last_name || ""}
-        </span>
-
-        <span
-          className={`employee-role ${
-            String(employee.id) === String(selectedProjectManagerId)
-              ? "project-manager"
-              : "employee"
-          }`}
-        >
-          {String(employee.id) === String(selectedProjectManagerId)
-            ? "Projektleiter"
-            : "Mitarbeiter"}
-        </span>
-      </label>
-    ))}
-  </div>
-</div>
+                        <label>Projektleiter</label>
+                        <select
+                          value={selectedProjectManagerId}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSelectedProjectManagerId(value);
+                            setSelectedEmployeeIds((ids) => ids.filter((id) => id !== value));
+                          }}
+                          disabled={pmLocked}
+                        >
+                          <option value="">Bitte wählen</option>
+                          {employees
+                            .filter((pm) => pm.role_id === 3)
+                            .map((pm) => (
+                              <option key={pm.id} value={pm.id}>
+                                {pm.first_name || ""} {pm.last_name || ""}
+                              </option>
+                            ))}
+                        </select>
+                        {pmLocked && (
+                          <p className="ao-hint">Sie sind Projektleiter dieses Auftrags. Einen anderen Projektleiter kann nur der Inhaber oder Admin eintragen.</p>
+                        )}
+                      </div>
 
                       <div className="form-group">
-                        <label>Auftragstitel</label>
+                        <label>Mitarbeiter zuweisen</label>
+
+                        {assignable.length === 0 ? (
+                          <p className="ao-hint">Noch keine Mitarbeiter angelegt.</p>
+                        ) : (
+                          <div className="employee-selection-list">
+                            {assignable.map((employee) => (
+                              <label
+                                key={employee.id}
+                                className={`employee-selection-item ${
+                                  selectedEmployeeIds.includes(String(employee.id))
+                                    ? "selected"
+                                    : ""
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedEmployeeIds.includes(String(employee.id))}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedEmployeeIds([
+                                        ...selectedEmployeeIds,
+                                        String(employee.id),
+                                      ]);
+                                    } else {
+                                      setSelectedEmployeeIds(
+                                        selectedEmployeeIds.filter(
+                                          (id) => id !== String(employee.id)
+                                        )
+                                      );
+                                    }
+                                  }}
+                                />
+
+                                <span className="employee-name">
+                                  {employee.first_name || ""} {employee.last_name || ""}
+                                </span>
+
+                                <span className={`employee-role ${employee.role_id === 3 ? "project-manager" : "employee"}`}>
+                                  {employee.role_id === 3 ? "Projektleiter" : "Mitarbeiter"}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Auftragstitel *</label>
                         <input
                           type="text"
                           name="title"
@@ -10403,8 +10545,11 @@ const businessAdvisor = generateBusinessInsights();
                             <option value="geplant">Geplant</option>
                             <option value="in_arbeit">In Arbeit</option>
                             <option value="pausiert">Pausiert</option>
+                            <option value="zur_pruefung">Fertig gemeldet (zur Prüfung)</option>
                             <option value="fertig">Fertig</option>
-                            <option value="abgerechnet">Abgerechnet</option>
+                            {(isAdmin || orderForm.status === "abgerechnet") && (
+                              <option value="abgerechnet">Abgerechnet</option>
+                            )}
                           </select>
                         </div>
 
@@ -10415,6 +10560,7 @@ const businessAdvisor = generateBusinessInsights();
                             name="address_street"
                             value={orderForm.address_street}
                             onChange={handleOrderChange}
+                            autoComplete="street-address"
                           />
                         </div>
                       </div>
@@ -10427,6 +10573,8 @@ const businessAdvisor = generateBusinessInsights();
                             name="address_zip"
                             value={orderForm.address_zip}
                             onChange={handleOrderChange}
+                            inputMode="numeric"
+                            autoComplete="postal-code"
                           />
                         </div>
 
@@ -10437,6 +10585,7 @@ const businessAdvisor = generateBusinessInsights();
                             name="address_city"
                             value={orderForm.address_city}
                             onChange={handleOrderChange}
+                            autoComplete="address-level2"
                           />
                         </div>
                       </div>
@@ -10458,10 +10607,17 @@ const businessAdvisor = generateBusinessInsights();
                             type="date"
                             name="end_date"
                             value={orderForm.end_date}
+                            min={orderForm.start_date || undefined}
                             onChange={handleOrderChange}
                           />
                         </div>
                       </div>
+
+                      {orderMessage && (
+                        <p className={isError ? "ao-error" : "info-text"} role={isError ? "alert" : "status"}>
+                          {orderMessage}
+                        </p>
+                      )}
 
                       <div className="form-actions">
                         <button
@@ -10473,52 +10629,22 @@ const businessAdvisor = generateBusinessInsights();
                         </button>
                       </div>
 
-                      {orderMessage && <p className="info-text">{orderMessage}</p>}
-
-                          <div className="settings-section" style={{ marginTop: "30px" }}>
-  <h3>Auftragsverlauf</h3>
-
-  {orderProgress.length === 0 ? (
-    <p className="info-text">Noch keine Fortschrittseinträge vorhanden.</p>
-  ) : (
-    <div className="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th>Status</th>
-            <th>Notiz</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orderProgress.map((entry) => (
-            <tr key={entry.id}>
-              <td>
-                {new Date(entry.created_at).toLocaleString("de-DE")}
-              </td>
-              <td>{entry.status || "-"}</td>
-              <td>{entry.note || "-"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>            
+                      <OrderHistory history={orderProgress} people={historyPeople} />
                     </form>
 
                   {editingOrderId && userProfile && (
-  <OrderMaterialsSection
-    tenantId={userProfile.tenant_id}
-    orderId={Number(editingOrderId)}
-    employees={employees}
-    currentUserId={userProfile.id}
-  />
-)}
+                    <OrderMaterialsSection
+                      tenantId={userProfile.tenant_id}
+                      orderId={Number(editingOrderId)}
+                      employees={employees}
+                      currentUserId={userProfile.id}
+                    />
+                  )}
 
                   </div>
                 </section>
-              )}
+                );
+              })()}
 
               {currentPage === "create-employee" && isAdmin && (
                 <section className="single-page-section">
