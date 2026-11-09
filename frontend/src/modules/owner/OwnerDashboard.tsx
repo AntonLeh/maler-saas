@@ -308,9 +308,10 @@ function Detail({
 
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
 const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
+const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
 
 export default function OwnerDashboard({ onBack }: Props) {
-  const [view, setView] = useState<"overview" | "books" | "marketing">("overview");
+  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -397,6 +398,14 @@ export default function OwnerDashboard({ onBack }: Props) {
     );
   }
 
+  if (view === "contacts") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <OwnerContacts onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   if (view === "books") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
@@ -419,6 +428,9 @@ export default function OwnerDashboard({ onBack }: Props) {
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setView("marketing")}>
               📣 Werbung
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setView("contacts")}>
+              ✉️ Kontakte
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren
