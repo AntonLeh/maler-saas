@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import DeliveryNoteImport from "../modules/lieferscheine/DeliveryNoteImport";
 import * as mapi from "../modules/material/api";
@@ -56,6 +56,8 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [categoryNewMode, setCategoryNewMode] = useState(false);
+  const categoryRef = useRef<HTMLInputElement | null>(null);
 
   const [stockFor, setStockFor] = useState<Material | null>(null);
   const [stockQty, setStockQty] = useState("");
@@ -116,6 +118,7 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
   const openNew = () => {
     setForm(EMPTY_FORM);
     setFormError("");
+    setCategoryNewMode(false);
     setEditing("new");
   };
 
@@ -133,6 +136,7 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
       active: m.is_active,
     });
     setFormError("");
+    setCategoryNewMode(false);
     setEditing(m);
   };
 
@@ -155,7 +159,12 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
     const data = {
       name,
       unit: form.unit.trim() || "Stk",
-      category: form.category.trim() || null,
+      // Schreibweise an vorhandene Kategorie angleichen („farbe“ → „Farbe“)
+      category: (() => {
+        const typed = form.category.trim().replace(/\s+/g, " ");
+        if (!typed) return null;
+        return categories.find((c) => c.toLowerCase() === typed.toLowerCase()) ?? typed.charAt(0).toUpperCase() + typed.slice(1);
+      })(),
       minimum_quantity: minimum,
       purchase_price: price,
       supplier: form.supplier.trim() || null,
@@ -411,14 +420,48 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
                   ))}
                 </datalist>
               </div>
-              <div className="mt-field">
+              <div className="mt-field full">
                 <label htmlFor="mt-cat">Kategorie</label>
-                <input id="mt-cat" list="mt-cats" {...field("category")} placeholder="Farbe, Werkzeug, Abdeckung" />
-                <datalist id="mt-cats">
-                  {categories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
+                <input
+                  id="mt-cat"
+                  ref={categoryRef}
+                  {...field("category")}
+                  placeholder={categoryNewMode ? "Neue Kategorie eintippen, z. B. Lösemittel" : "z. B. Farbe, Werkzeug, Abdeckung"}
+                  autoComplete="off"
+                />
+                <div className="mt-chips" role="group" aria-label="Kategorie wählen">
+                  {categories.map((c) => {
+                    const on = form.category.trim().toLowerCase() === c.toLowerCase();
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`mt-chip${on ? " on" : ""}`}
+                        aria-pressed={on}
+                        onClick={() => {
+                          setCategoryNewMode(false);
+                          setForm((f) => ({ ...f, category: on ? "" : c }));
+                        }}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className="mt-chip add"
+                    onClick={() => {
+                      setCategoryNewMode(true);
+                      setForm((f) => ({ ...f, category: "" }));
+                      window.setTimeout(() => categoryRef.current?.focus(), 0);
+                    }}
+                  >
+                    + Neue Kategorie
+                  </button>
+                </div>
+                <small>
+                  {categories.length > 0 ? "Vorhandene antippen oder eine neue eintippen." : "Einfach eine Kategorie eintippen, z. B. Farbe oder Lösemittel."}
+                </small>
               </div>
               {editing === "new" && (
                 <div className="mt-field">

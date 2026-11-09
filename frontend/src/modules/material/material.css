@@ -110,3 +110,10 @@
   .om-table td { border: none; padding: 2px 4px; }
   .om-table td[data-label]::before { content: attr(data-label) ": "; color: #64748b; font-size: 12px; }
 }
+
+/* Kategorie-Chips */
+.mt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.mt-chip { padding: 5px 11px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; width: auto; }
+.mt-chip:hover { border-color: #6366f1; }
+.mt-chip.on { background: #eef2ff; border-color: #6366f1; color: #3730a3; }
+.mt-chip.add { border-style: dashed; color: #4f46e5; }
