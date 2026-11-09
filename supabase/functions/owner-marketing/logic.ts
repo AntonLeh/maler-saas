@@ -103,3 +103,86 @@ export function cleanResult(input: any, youtube: boolean) {
   if (!out.texts.facebook && !out.texts.instagram && !out.texts.linkedin) return null;
   return out;
 }
+
+// ---------- Stimme (ElevenLabs) ----------
+
+/** Standard-Stimmen (ElevenLabs-Standardstimmen, sprechen mit eleven_multilingual_v2 Deutsch); per Secret änderbar */
+export const VOICES: Record<"female" | "male", string> = {
+  female: "EXAVITQu4vr4xnSDxMaL", // „Sarah“
+  male: "JBFqnCBsd6RMkjVDRZzb", // „George“
+};
+
+/** Text für die Sprachausgabe säubern: Emojis, Hashtags, Platzhalter raus */
+export function speakable(text: string): string {
+  return String(text ?? "")
+    .replace(/\{LINK\}/g, "")
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "")
+    .replace(/maler-saas\.com/gi, "Maler Bindestrich SaaS Punkt com")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 400);
+}
+
+// ---------- Drehanleitung (YouTube-Erklärvideo) ----------
+
+export const SHOTLIST_PROMPT = `Du erstellst eine Drehanleitung für ein YouTube-Erklärvideo über MalerSaaS, aufgenommen als Bildschirmaufnahme mit Stimme vom Gründer.
+Nutze nur Funktionen und Bezeichnungen aus den Fakten. Schreibe Deutsch, kurz und konkret, Sie-Form.
+WICHTIG Datenschutz: In der Aufnahme dürfen keine echten Kunden- oder Mitarbeiterdaten zu sehen sein – plane immer ein Demo-Konto mit erfundenen Testdaten
+(z. B. „Familie Muster, Musterstraße 1, 12345 Musterstadt“) und erwähne das in der Vorbereitung.
+
+Fakten:
+<fakten>
+{FACTS}
+</fakten>
+
+Gib über das Werkzeug "drehanleitung" zurück:
+- preparation: 3–8 Punkte, was vorher anzulegen/einzustellen ist (Demo-Konto, Testkunde, Testauftrag, Browser-Zoom, Lesezeichenleiste ausblenden, Benachrichtigungen aus).
+- scenes: 5–12 Szenen in Reihenfolge, je { title, screen (welche Seite/welcher Bereich zu sehen ist), actions (was genau geklickt/eingegeben wird), say (was gesprochen wird, 1–4 Sätze), seconds (ungefähre Dauer) }.
+- thumbnail: Vorschlag für das Vorschaubild (Text höchstens 5 Wörter + was zu sehen ist).`;
+
+export const SHOTLIST_TOOL = {
+  name: "drehanleitung",
+  description: "Drehanleitung für ein Erklärvideo",
+  input_schema: {
+    type: "object",
+    properties: {
+      preparation: { type: "array", maxItems: 10, items: { type: "string", maxLength: 200 } },
+      scenes: {
+        type: "array",
+        maxItems: 14,
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string", maxLength: 80 },
+            screen: { type: "string", maxLength: 200 },
+            actions: { type: "string", maxLength: 400 },
+            say: { type: "string", maxLength: 600 },
+            seconds: { type: "integer" },
+          },
+          required: ["title", "screen", "actions", "say"],
+        },
+      },
+      thumbnail: { type: "string", maxLength: 200 },
+    },
+    required: ["preparation", "scenes"],
+  },
+};
+
+// deno-lint-ignore no-explicit-any
+export function cleanShotlist(input: any) {
+  if (!input || !Array.isArray(input.scenes) || !input.scenes.length) return null;
+  const c = (v: unknown, m: number) => String(v ?? "").trim().slice(0, m);
+  return {
+    preparation: (Array.isArray(input.preparation) ? input.preparation : []).map((p: unknown) => c(p, 200)).filter(Boolean).slice(0, 10),
+    // deno-lint-ignore no-explicit-any
+    scenes: input.scenes.slice(0, 14).map((s: any) => ({
+      title: c(s.title, 80),
+      screen: c(s.screen, 200),
+      actions: c(s.actions, 400),
+      say: c(s.say, 600),
+      seconds: Math.max(3, Math.min(120, Number(s.seconds) || 15)),
+    })),
+    thumbnail: c(input.thumbnail, 200),
+  };
+}

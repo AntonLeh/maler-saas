@@ -13,6 +13,17 @@ export type Texts = {
   youtube_title: string;
   youtube_description: string;
   youtube_script: string;
+  /** vom Video-Generator bearbeitete Szenen */
+  video_scenes?: { text: string; image: string | null; seconds: number; hint?: string }[];
+  video_voice?: "none" | "female" | "male";
+  /** Drehanleitung fürs YouTube-Erklärvideo */
+  youtube_shotlist?: Shotlist;
+};
+
+export type Shotlist = {
+  preparation: string[];
+  scenes: { title: string; screen: string; actions: string; say: string; seconds: number }[];
+  thumbnail: string;
 };
 
 export type GraphicData = {

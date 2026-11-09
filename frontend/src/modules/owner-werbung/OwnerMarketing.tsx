@@ -5,6 +5,8 @@ import * as api from "./api";
 import * as L from "./logic";
 import type { ChannelKey, GraphicData, Goal, Post, Status, Texts } from "./logic";
 import GraphicEditor from "./GraphicEditor";
+import VideoMaker from "./VideoMaker";
+import ShotlistPanel from "./ShotlistPanel";
 import { resolveImage } from "./api";
 import { renderToBlob } from "./graphic";
 import "./ow2.css";
@@ -170,7 +172,7 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const campaign = post.utm_campaign || L.campaignSlug(post.title);
 
-  const channels = L.CHANNELS.filter((c) => c.key !== "youtube" || texts.youtube_title || texts.youtube_script);
+  const channels = L.CHANNELS;
   const dirty =
     JSON.stringify([texts, title, graphic, status, planned, published]) !==
     JSON.stringify([post.texts || {}, post.title, post.graphic ?? api.defaultGraphic(post.goal), post.status, post.planned_for ?? "", post.published_channels ?? []]);
@@ -380,6 +382,16 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
             {published.includes(channel) ? "✓ Veröffentlicht (zurücknehmen)" : "Als veröffentlicht markieren"}
           </button>
         </div>
+        {channel === "video" && (
+          <VideoMaker
+            texts={texts}
+            uploads={post.images ?? []}
+            graphic={graphic}
+            fileBase={campaign}
+            onChange={(patch) => setTexts((t) => ({ ...t, ...patch }))}
+          />
+        )}
+        {channel === "youtube" && <ShotlistPanel topic={post.topic} texts={texts} onChange={(patch) => setTexts((t) => ({ ...t, ...patch }))} />}
       </div>
     </div>
   );

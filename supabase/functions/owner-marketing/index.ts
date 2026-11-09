@@ -5,13 +5,17 @@
 // POST …/functions/v1/owner-marketing   Authorization: Bearer <Login-Token>
 //   { topic, goal, keywords, youtube: boolean, image_paths?: string[] }   (Bilder im Bucket owner-marketing)
 //   -> { ok, result: { title, graphic: {headline, subline, points}, texts: {...} } }   (gespeichert wird im Browser)
-// Secrets (vorhanden): ANTHROPIC_API_KEY.  Optional: OWNER_MARKETING_MODEL (Standard claude-sonnet-5-5)
+//   { action: "voice", text, voice: "female"|"male" }      -> { ok, audio: base64 (MP3) }   ElevenLabs Text-to-Speech
+//   { action: "shotlist", topic, script }                 -> { ok, shotlist }   Drehanleitung fürs YouTube-Erklärvideo
+// Secrets (vorhanden): ANTHROPIC_API_KEY, ELEVENLABS_API_KEY (Berechtigung „Text to Speech“ nötig).
+// Optional: OWNER_MARKETING_MODEL (Standard claude-sonnet-5-5), OWNER_VOICE_FEMALE / OWNER_VOICE_MALE (ElevenLabs-Stimmen-ID)
 // Deploy:  npx supabase functions deploy owner-marketing --no-verify-jwt
 // =====================================================================
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { SYSTEM_PROMPT, TOOL, cleanResult, userPrompt } from "./logic.ts";
+import { SHOTLIST_PROMPT, SHOTLIST_TOOL, SYSTEM_PROMPT, TOOL, VOICES, cleanResult, cleanShotlist, speakable, userPrompt } from "./logic.ts";
+import { KNOWLEDGE_WITH_PRICES } from "../help-chat/prompt.ts";
 import { encodeBase64, mediaTypeFor } from "../receipt-ai/logic.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -53,6 +57,54 @@ serve(async (req) => {
     if (!user || Number(user.role_id) !== 1) return json({ ok: false, error: "Nur für den Plattform-Inhaber." }, 403);
 
     const body = await req.json().catch(() => ({}));
+
+    // ---------- Stimme ----------
+    if (body.action === "voice") {
+      const key = Deno.env.get("ELEVENLABS_API_KEY");
+      if (!key) return json({ ok: false, error: "Der ElevenLabs-Schlüssel fehlt." }, 500);
+      const text = speakable(String(body.text ?? ""));
+      if (!text) return json({ ok: false, error: "Kein Text zum Sprechen." }, 400);
+      const which = body.voice === "male" ? "male" : "female";
+      const voiceId = Deno.env.get(which === "male" ? "OWNER_VOICE_MALE" : "OWNER_VOICE_FEMALE") || VOICES[which];
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+        method: "POST",
+        headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
+        body: JSON.stringify({ text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+      });
+      if (!res.ok) {
+        const detail = (await res.text().catch(() => "")).slice(0, 300);
+        console.error("elevenlabs tts", res.status, detail);
+        const msg =
+          res.status === 401 || /permission|missing_permissions/i.test(detail)
+            ? "ElevenLabs lehnt ab: Bitte beim API-Schlüssel die Berechtigung „Text to Speech“ einschalten."
+            : res.status === 404 || /voice/i.test(detail)
+              ? "Diese Stimme gibt es in Ihrem ElevenLabs-Konto nicht. Bitte die andere Stimme wählen oder eine Stimmen-ID hinterlegen."
+              : /quota|credits/i.test(detail)
+                ? "Das ElevenLabs-Guthaben ist aufgebraucht."
+                : "Die Stimme konnte gerade nicht erzeugt werden.";
+        return json({ ok: false, error: msg }, 502);
+      }
+      return json({ ok: true, audio: encodeBase64(new Uint8Array(await res.arrayBuffer())) });
+    }
+
+    // ---------- Drehanleitung ----------
+    if (body.action === "shotlist") {
+      const data = await callClaude({
+        max_tokens: 4000,
+        system: SHOTLIST_PROMPT.replace("{FACTS}", KNOWLEDGE_WITH_PRICES),
+        tools: [SHOTLIST_TOOL],
+        tool_choice: { type: "tool", name: "drehanleitung" },
+        messages: [{
+          role: "user",
+          content: `Thema: ${String(body.topic ?? "").slice(0, 200)}\n\nVorhandenes Skript (falls vorhanden):\n<skript>\n${String(body.script ?? "").slice(0, 6000)}\n</skript>\n\nErstelle die Drehanleitung.`,
+        }],
+      });
+      const block = (data.content ?? []).find((c: any) => c.type === "tool_use");
+      const shotlist = cleanShotlist(block?.input);
+      if (!shotlist) return json({ ok: false, error: "Die Drehanleitung konnte nicht erstellt werden. Bitte noch einmal versuchen." }, 422);
+      return json({ ok: true, shotlist });
+    }
+
     const youtube = !!body.youtube;
     const paths: string[] = (Array.isArray(body.image_paths) ? body.image_paths : []).filter((p: unknown) => typeof p === "string" && !p.includes("..")).slice(0, 4);
 

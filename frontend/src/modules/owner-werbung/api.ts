@@ -1,6 +1,6 @@
 // Owner-Werbung: Datenbank, Bilder, KI-Funktion
 import { supabase } from "../../lib/supabase";
-import type { GraphicData, Goal, Post, Texts } from "./logic";
+import type { GraphicData, Goal, Post, Shotlist, Texts } from "./logic";
 
 const BUCKET = "owner-marketing";
 
@@ -63,6 +63,35 @@ export async function imageUrl(path: string): Promise<string> {
 }
 
 export type AiResult = { title: string; graphic: { headline: string; subline: string; points: string[] }; texts: Texts };
+
+async function callFn<T>(body: Record<string, unknown>, fallback: string): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("owner-marketing", { body });
+  if (error) {
+    let msg = "";
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") msg = (await ctx.json())?.error ?? "";
+    } catch {
+      /* leer */
+    }
+    if (!msg && /Failed to send|not found/i.test(String(error.message))) msg = "Die Funktion „owner-marketing“ ist noch nicht hochgeladen.";
+    throw new Error(msg || fallback);
+  }
+  if (!data?.ok) throw new Error(data?.error || fallback);
+  return data as T;
+}
+
+/** KI-Stimme (ElevenLabs) für einen Text → MP3 */
+export async function voice(text: string, which: "female" | "male"): Promise<ArrayBuffer> {
+  const r = await callFn<{ audio: string }>({ action: "voice", text, voice: which }, "Die Stimme konnte nicht erzeugt werden.");
+  const bin = atob(r.audio);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+export const shotlist = (topic: string, script: string) =>
+  callFn<{ shotlist: Shotlist }>({ action: "shotlist", topic, script }, "Die Drehanleitung konnte nicht erstellt werden.").then((r) => r.shotlist);
 
 export async function generate(input: { topic: string; goal: Goal; keywords: string; youtube: boolean; image_paths: string[] }): Promise<AiResult> {
   const { data, error } = await supabase.functions.invoke("owner-marketing", { body: input });
