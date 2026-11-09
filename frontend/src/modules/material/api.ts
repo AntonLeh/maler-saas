@@ -119,3 +119,118 @@ export const USAGE_LABELS: Record<string, string> = {
 
 export const isLow = (m: Pick<Material, "stock_quantity" | "minimum_quantity">) =>
   Number(m.minimum_quantity || 0) > 0 && Number(m.stock_quantity || 0) <= Number(m.minimum_quantity || 0);
+
+// ---------- Verlauf mit Personen und Baustellen ----------
+
+export type HistoryEntry = {
+  key: string;
+  at: string;
+  kind: "move" | "usage";
+  label: string;
+  /** +/− Lagerbestand; null = Bestand unverändert (z. B. Verbrauch) */
+  delta: number | null;
+  quantity: number;
+  stockAfter: number | null;
+  by: string | null; // wer hat gebucht
+  to: string | null; // an wen ging das Material
+  site: string | null; // Baustelle
+  note: string | null;
+};
+
+type RawMove = Movement & { from_holder_type: string | null; from_holder_id: number | null; to_holder_type: string | null; to_holder_id: number | null };
+type RawUsage = { id: number; user_id: number | null; order_id: number | null; quantity: number; action: string; note: string | null; created_at: string };
+
+export async function loadHistory(tenantId: number, materialId: number): Promise<HistoryEntry[]> {
+  const [mRes, uRes] = await Promise.all([
+    supabase
+      .from("material_stock_movements")
+      .select("id, movement_type, quantity, stock_before, stock_after, order_id, performed_by, note, created_at, from_holder_type, from_holder_id, to_holder_type, to_holder_id")
+      .eq("tenant_id", tenantId)
+      .eq("material_id", materialId)
+      .order("created_at", { ascending: false })
+      .limit(150),
+    supabase
+      .from("material_consumption_logs")
+      .select("id, user_id, order_id, quantity, action, note, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("material_id", materialId)
+      .order("created_at", { ascending: false })
+      .limit(150),
+  ]);
+  if (mRes.error) throw new Error(materialError(mRes.error, "Verlauf konnte nicht geladen werden."));
+  const moves = (mRes.data as RawMove[]) || [];
+  const usages = (uRes.data as RawUsage[]) || [];
+
+  // Namen und Baustellen nachladen
+  const userIds = [...new Set([
+    ...moves.flatMap((m) => [m.performed_by, m.to_holder_type === "employee" || m.to_holder_type === "project_manager" ? m.to_holder_id : null, m.from_holder_type === "employee" ? m.from_holder_id : null]),
+    ...usages.map((u) => u.user_id),
+  ].filter((x): x is number => x != null))];
+  const orderIds = [...new Set([...moves.map((m) => m.order_id), ...usages.map((u) => u.order_id)].filter((x): x is number => x != null))];
+  const [pRes, oRes] = await Promise.all([
+    userIds.length ? supabase.from("app_users").select("id, first_name, last_name").in("id", userIds) : Promise.resolve({ data: [] }),
+    orderIds.length ? supabase.from("orders").select("id, title, address_street, address_city").in("id", orderIds) : Promise.resolve({ data: [] }),
+  ]);
+  const people = new Map<number, string>(
+    ((pRes.data as { id: number; first_name: string | null; last_name: string | null }[]) || []).map((p) => [
+      Number(p.id),
+      `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unbekannt",
+    ])
+  );
+  const sites = new Map<number, string>(
+    ((oRes.data as { id: number; title: string | null; address_street: string | null; address_city: string | null }[]) || []).map((o) => [
+      Number(o.id),
+      [o.title || `Auftrag #${o.id}`, [o.address_street, o.address_city].filter(Boolean).join(", ")].filter(Boolean).join(" – "),
+    ])
+  );
+  const who = (id: number | null) => (id == null ? null : people.get(Number(id)) ?? null);
+  const site = (id: number | null) => (id == null ? null : sites.get(Number(id)) ?? `Auftrag #${id}`);
+
+  const entries: HistoryEntry[] = moves.map((m) => {
+    const label = MOVEMENT_LABELS[m.movement_type] || m.movement_type;
+    const delta = m.stock_after != null && m.stock_before != null ? Number(m.stock_after) - Number(m.stock_before) : null;
+    const toPerson = m.to_holder_type === "employee" || m.to_holder_type === "project_manager" ? who(m.to_holder_id) : null;
+    const note = (m.note || "").trim();
+    const boring = !note || note === label || /^Wareneingang( über die Materialverwaltung)?\.?$/.test(note) || /^Material aus Lager entnommen/.test(note) || /^Aus dem Lager entnommen/.test(note) || /^Restmaterial zurück ins Lager\.?$/.test(note);
+    return {
+      key: `m${m.id}`,
+      at: m.created_at,
+      kind: "move",
+      label,
+      delta,
+      quantity: Number(m.quantity),
+      stockAfter: m.stock_after,
+      by: who(m.performed_by),
+      to: toPerson,
+      site: site(m.order_id),
+      note: boring ? null : note,
+    };
+  });
+
+  // Verbrauch, Beschädigt, Auf Baustelle (Rückgaben stehen schon als Lagerbewegung drin,
+  // außer bei alten Rückgaben ohne Lagerbuchung)
+  for (const u of usages) {
+    if (u.action === "returned") {
+      const t = new Date(u.created_at).getTime();
+      const covered = moves.some(
+        (m) => m.movement_type === "return" && Number(m.quantity) === Number(u.quantity) && Math.abs(new Date(m.created_at).getTime() - t) < 60000
+      );
+      if (covered) continue;
+    }
+    entries.push({
+      key: `u${u.id}`,
+      at: u.created_at,
+      kind: "usage",
+      label: USAGE_LABELS[u.action] || u.action,
+      delta: null,
+      quantity: Number(u.quantity),
+      stockAfter: null,
+      by: who(u.user_id),
+      to: null,
+      site: site(u.order_id),
+      note: u.note,
+    });
+  }
+
+  return entries.sort((a, b) => b.at.localeCompare(a.at));
+}

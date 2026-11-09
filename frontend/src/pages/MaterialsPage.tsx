@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import DeliveryNoteImport from "../modules/lieferscheine/DeliveryNoteImport";
 import * as mapi from "../modules/material/api";
-import type { Material, Movement } from "../modules/material/api";
+import type { HistoryEntry, Material } from "../modules/material/api";
 import "../modules/material/material.css";
 
 type Props = {
@@ -64,7 +64,7 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
   const [stockNote, setStockNote] = useState("");
 
   const [historyFor, setHistoryFor] = useState<Material | null>(null);
-  const [history, setHistory] = useState<Movement[] | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null);
   const [historyError, setHistoryError] = useState("");
 
   const loadMaterials = async () => {
@@ -240,7 +240,7 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
     setHistory(null);
     setHistoryError("");
     try {
-      setHistory(await mapi.loadMovements(tenantId, m.id));
+      setHistory(await mapi.loadHistory(tenantId, m.id));
     } catch (err) {
       setHistoryError((err as Error).message);
       setHistory([]);
@@ -556,26 +556,25 @@ export default function MaterialsPage({ tenantId, onBack, currency = "EUR" }: Pr
               <p className="mt-empty">Noch keine Buchungen.</p>
             ) : (
               <ul className="mt-moves">
-                {history.map((mv) => {
-                  const delta = Number(mv.stock_after ?? 0) - Number(mv.stock_before ?? 0);
-                  return (
-                    <li key={mv.id}>
-                      <span>
-                        <b>{mapi.MOVEMENT_LABELS[mv.movement_type] || mv.movement_type}</b>
-                        {mv.order_id ? ` · Auftrag #${mv.order_id}` : ""}
-                      </span>
-                      <b className={delta > 0 ? "plus" : delta < 0 ? "minus" : ""}>
-                        {delta > 0 ? "+" : delta < 0 ? "−" : ""}
-                        {mapi.fmtQty(Math.abs(delta) || mv.quantity)} {historyFor.unit}
-                      </b>
-                      <small>
-                        {new Date(mv.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
-                        {mv.stock_after != null ? ` · Bestand danach ${mapi.fmtQty(mv.stock_after)}` : ""}
-                        {mv.note ? ` · ${mv.note}` : ""}
-                      </small>
-                    </li>
-                  );
-                })}
+                {history.map((h) => (
+                  <li key={h.key} className={h.kind === "usage" ? "usage" : ""}>
+                    <span>
+                      <b>{h.label}</b>
+                      {h.site ? <span className="mt-site"> · {h.site}</span> : ""}
+                    </span>
+                    <b className={h.delta == null ? "" : h.delta > 0 ? "plus" : h.delta < 0 ? "minus" : ""}>
+                      {h.delta == null ? "" : h.delta > 0 ? "+" : h.delta < 0 ? "−" : ""}
+                      {mapi.fmtQty(h.delta == null || h.delta === 0 ? h.quantity : Math.abs(h.delta))} {historyFor.unit}
+                    </b>
+                    <small>
+                      {new Date(h.at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
+                      {h.by ? ` · ${h.kind === "usage" ? "von" : "gebucht von"} ${h.by}` : ""}
+                      {h.to && h.to !== h.by ? ` · an ${h.to}` : ""}
+                      {h.stockAfter != null ? ` · Bestand danach ${mapi.fmtQty(h.stockAfter)}` : ""}
+                      {h.note ? ` · „${h.note}“` : ""}
+                    </small>
+                  </li>
+                ))}
               </ul>
             )}
             <div className="mt-dialog-actions">

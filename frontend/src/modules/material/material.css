@@ -117,3 +117,6 @@
 .mt-chip:hover { border-color: #6366f1; }
 .mt-chip.on { background: #eef2ff; border-color: #6366f1; color: #3730a3; }
 .mt-chip.add { border-style: dashed; color: #4f46e5; }
+
+.mt-moves li.usage { background: #f5f3ff; }
+.mt-site { font-weight: 600; color: #334155; }
