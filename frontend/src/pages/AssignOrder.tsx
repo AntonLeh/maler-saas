@@ -1,3 +1,4 @@
+import "../modules/auftraege/auftraege.css";
 import { useState } from "react";
 
 type Order = {
@@ -21,6 +22,10 @@ type Props = {
   employeeIds: number[]
 ) => Promise<void>;
   onBack: () => void;
+  /** Prüft, ob dem Auftrag schon Material zugewiesen ist (optional) */
+  checkHasMaterial?: (orderId: string) => Promise<boolean>;
+  /** Öffnet den Auftrag direkt beim Material-Bereich (optional) */
+  onOpenMaterial?: (orderId: string) => void;
 };
 
 export default function AssignOrder({
@@ -28,6 +33,8 @@ export default function AssignOrder({
   employees,
   onAssign,
   onBack,
+  checkHasMaterial,
+  onOpenMaterial,
 }: Props) {
   const [selectedOrder, setSelectedOrder] = useState("");
   const [selectedProjectManager, setSelectedProjectManager] = useState("");
@@ -35,6 +42,7 @@ export default function AssignOrder({
   const [projectManagerWorksToo, setProjectManagerWorksToo] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [materialMissingFor, setMaterialMissingFor] = useState<string | null>(null);
 
   const projectManagers = employees.filter((e) => e.role_id === 3);
   const workers = employees.filter((e) => e.role_id === 4);
@@ -79,6 +87,10 @@ await onAssign(
 </label>
 
     setMessage("Zuweisung gespeichert.");
+    if (checkHasMaterial) {
+      const has = await checkHasMaterial(selectedOrder).catch(() => true);
+      setMaterialMissingFor(has ? null : selectedOrder);
+    }
   } catch (err: any) {
     setMessage(err.message || "Fehler bei der Zuweisung.");
   } finally {
@@ -181,6 +193,17 @@ await onAssign(
           </button>
 
           {message && <p className="info-text">{message}</p>}
+
+          {materialMissingFor && (
+            <div className="ao-material-hint" role="status">
+              <span>⚠️ Für diesen Auftrag ist noch kein Material zugewiesen.</span>
+              {onOpenMaterial && (
+                <button type="button" className="btn btn-primary" onClick={() => onOpenMaterial(materialMissingFor)}>
+                  Material zuweisen
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

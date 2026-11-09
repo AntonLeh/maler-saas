@@ -45,6 +45,8 @@
 .pm-dot.r-review { background: #f59e0b; }
 .pm-dot.r-no_team { background: #ef4444; }
 .pm-dot.r-overdue { background: #dc2626; }
+.pm-dot.r-no_material { background: #f59e0b; }
+.pm-list-main .pm-reason.r-no_material { color: #b45309; }
 .pm-dot.r-start_today { background: #2563eb; }
 .pm-list-main .pm-reason { font-weight: 600; }
 .pm-list-main .pm-reason.r-review { color: #b45309; }

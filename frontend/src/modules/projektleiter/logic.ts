@@ -10,7 +10,7 @@ export type PmOrder = {
 };
 export type PmAssignment = { order_id: string | number; user_id: number; assignment_role: string };
 
-export type AttentionReason = "review" | "no_team" | "overdue" | "start_today";
+export type AttentionReason = "review" | "no_team" | "no_material" | "overdue" | "start_today";
 export type AttentionItem = { order: PmOrder; reason: AttentionReason; text: string };
 
 const DONE = new Set(["fertig", "abgerechnet"]);
@@ -48,7 +48,14 @@ export function pmKpis(orders: PmOrder[], assignments: PmAssignment[], now = new
 }
 
 /** Wichtigstes zuerst: Freigabe → ohne Mitarbeiter → Enddatum überschritten → startet heute */
-export function attentionList(orders: PmOrder[], assignments: PmAssignment[], now = new Date(), max = 6): AttentionItem[] {
+/** materialOrderIds: Aufträge, denen schon Material zugewiesen ist (fehlt = Prüfung aus) */
+export function attentionList(
+  orders: PmOrder[],
+  assignments: PmAssignment[],
+  now = new Date(),
+  max = 6,
+  materialOrderIds?: Set<string> | null
+): AttentionItem[] {
   const today = todayIso(now);
   const out: AttentionItem[] = [];
   const seen = new Set<string>();
@@ -61,6 +68,10 @@ export function attentionList(orders: PmOrder[], assignments: PmAssignment[], no
   const active = orders.filter((o) => !DONE.has(o.status));
   for (const o of active) if (o.status === "zur_pruefung") push(o, "review", "Wartet auf deine Prüfung und Freigabe");
   for (const o of active) if (teamSize(o.id, assignments) === 0) push(o, "no_team", "Noch keine Mitarbeiter eingeteilt");
+  if (materialOrderIds)
+    for (const o of active)
+      if (teamSize(o.id, assignments) > 0 && !materialOrderIds.has(String(o.id)))
+        push(o, "no_material", "Material fehlt – Team ist eingeteilt, aber kein Material zugewiesen");
   for (const o of active) if (o.end_date && o.end_date.slice(0, 10) < today) push(o, "overdue", `Enddatum ${fmtDate(o.end_date)} überschritten`);
   for (const o of active) if ((o.start_date || "").slice(0, 10) === today) push(o, "start_today", "Startet heute");
   return out.slice(0, max);

@@ -24,6 +24,10 @@ type ProjectManagerDashboardProps = {
   // Terminkalender-Modul (optional)
   currentUserId?: number;
   onOpenAppointments?: () => void;
+  /** Aufträge mit zugewiesenem Material (null = unbekannt, kein Hinweis) */
+  materialOrderIds?: string[] | null;
+  /** Auftrag direkt beim Material-Bereich öffnen */
+  onOpenOrderMaterial?: (orderId: string) => void;
 };
 
 export default function ProjectManagerDashboard({
@@ -46,6 +50,8 @@ export default function ProjectManagerDashboard({
   hasMaterials,
   currentUserId,
   onOpenAppointments,
+  materialOrderIds,
+  onOpenOrderMaterial,
 }: ProjectManagerDashboardProps) {
   const [openAppointments, setOpenAppointments] = useState(0);
 
@@ -66,7 +72,10 @@ export default function ProjectManagerDashboard({
   }, [currentUserId]);
 
   const kpis = useMemo(() => pmKpis(orders, assignments), [orders, assignments]);
-  const attention = useMemo(() => attentionList(orders, assignments), [orders, assignments]);
+  const attention = useMemo(
+    () => attentionList(orders, assignments, new Date(), 6, hasMaterials && materialOrderIds ? new Set(materialOrderIds) : null),
+    [orders, assignments, hasMaterials, materialOrderIds]
+  );
   const firstName = userName.split(" ")[0] || userName;
 
   return (
@@ -162,7 +171,16 @@ export default function ProjectManagerDashboard({
               <ul className="pm-list">
                 {attention.map((a) => (
                   <li key={`${a.reason}-${a.order.id}`}>
-                    <button type="button" onClick={a.reason === "review" ? onOpenReview : onOpenOrders}>
+                    <button
+                      type="button"
+                      onClick={
+                        a.reason === "review"
+                          ? onOpenReview
+                          : a.reason === "no_material" && onOpenOrderMaterial
+                            ? () => onOpenOrderMaterial(String(a.order.id))
+                            : onOpenOrders
+                      }
+                    >
                       <span className={`pm-dot r-${a.reason}`} aria-hidden />
                       <span className="pm-list-main">
                         <b>{a.order.title || "Auftrag"}</b>

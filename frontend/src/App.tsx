@@ -614,6 +614,10 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [editingOrderRecord, setEditingOrderRecord] = useState<Order | null>(null);
   const [editingAssignments, setEditingAssignments] = useState<{ user_id: number; assignment_role: string }[]>([]);
   const [editingAssignmentsLoaded, setEditingAssignmentsLoaded] = useState(false);
+  // Material-Hinweis: Anzahl Material beim bearbeiteten Auftrag + Aufträge mit Material (für PL-Dashboard)
+  const [editingMaterialCount, setEditingMaterialCount] = useState<number | null>(null);
+  const [materialOrderIds, setMaterialOrderIds] = useState<string[] | null>(null);
+  const scrollToMaterialsRef = useRef(false);
   const [orderReviewBusy, setOrderReviewBusy] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
 
@@ -954,6 +958,17 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const canDeleteCustomers = isAdmin;
 
   const canViewOrders = isAdmin || isProjectManager;
+  // „Material zuweisen“: nach dem Öffnen eines Auftrags direkt zum Material-Bereich springen
+  useEffect(() => {
+    if (currentPage !== "edit-order" || !editingOrderId || !scrollToMaterialsRef.current) return;
+    scrollToMaterialsRef.current = false;
+    const id = window.setTimeout(
+      () => document.getElementById("ao-materials")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      350
+    );
+    return () => window.clearTimeout(id);
+  }, [currentPage, editingOrderId]);
+
   const canCreateOrders = isAdmin || isProjectManager;
   const canEditOrders = isAdmin || isProjectManager;
   const canAssignOrders = isAdmin || isProjectManager;
@@ -2061,6 +2076,16 @@ if (existingOrder) {
   }
 
   setOrderAssignments(assignments || []);
+
+  // Welche Aufträge haben schon Material? (für den Hinweis „Material fehlt“)
+  const { data: materialRows, error: materialError } = await supabase
+    .from("order_material_assignments")
+    .select("order_id")
+    .eq("tenant_id", tenantId)
+    .in("order_id", orderIds);
+  setMaterialOrderIds(
+    materialError ? null : [...new Set((materialRows || []).map((r) => String(r.order_id)))]
+  );
 };
 
   const loadInvoices = async (tenantId: number) => {
@@ -4946,6 +4971,15 @@ const openEmployeeOrders = () => {
   setEditingOrderRecord(order);
   setEditingAssignments([]);
   setEditingAssignmentsLoaded(false);
+  setEditingMaterialCount(null);
+  supabase
+    .from("order_material_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", order.tenant_id)
+    .eq("order_id", order.id)
+    .then(({ count, error }) => {
+      if (!error) setEditingMaterialCount(count ?? 0);
+    });
 
   // Bisherige Zuteilungen direkt aus der Datenbank laden (gilt auch für fertige Aufträge,
   // die nicht in der Auftragsliste stehen). Sonst würde Speichern Mitarbeiter austragen.
@@ -5216,6 +5250,15 @@ assigned_project_manager_id: selectedProjectManagerId
         setSavingOrder(false);
         return;
       }
+      // Hinweis: Mitarbeiter eingeteilt, aber noch kein Material
+      let goToMaterial = false;
+      if (hasFeature("materials") && employeeIds.length > 0 && editingMaterialCount === 0) {
+        goToMaterial = await showConfirm(
+          "Mitarbeiter sind eingeteilt, aber für diesen Auftrag ist noch kein Material zugewiesen.\n\nSoll nach dem Speichern gleich das Material zugewiesen werden?",
+          { title: "Material zuweisen", tone: "warning", confirmLabel: "Jetzt Material zuweisen", cancelLabel: "Später" }
+        );
+      }
+
       const { toDelete, toInsert } = diffAssignments(editingAssignments, pmId, employeeIds);
 
       if (toInsert.length > 0) {
@@ -5287,6 +5330,24 @@ assigned_project_manager_id: selectedProjectManagerId
         return;
       }
 
+      if (goToMaterial) {
+        // Auf der Seite bleiben und zum Material springen
+        const nextAssignments = [
+          ...(pmId ? [{ user_id: pmId, assignment_role: "project_manager" }] : []),
+          ...employeeIds.map((id) => ({ user_id: id, assignment_role: "employee" })),
+        ];
+        setEditingAssignments(nextAssignments);
+        setOrderEditSnapshot(formSnapshot(orderForm, selectedProjectManagerId, selectedEmployeeIds));
+        setOrderMessage("Auftrag gespeichert. Bitte jetzt unten das Material zuweisen.");
+        setSavingOrder(false);
+        await loadOrders(userProfile.tenant_id);
+        window.setTimeout(
+          () => document.getElementById("ao-materials")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          80
+        );
+        return;
+      }
+
       setOrderMessage("Auftrag gespeichert.");
       await loadOrders(userProfile.tenant_id);
       setEditingOrderId(null);
@@ -5312,6 +5373,33 @@ assigned_project_manager_id: selectedProjectManagerId
       }
       setOrderEditSnapshot("");
       openOrdersListPage(ordersFilterMode);
+    };
+
+    /** Auftrag öffnen und direkt zum Material-Bereich springen */
+    const openOrderMaterial = async (orderId: string) => {
+      let order = orders.find((o) => String(o.id) === String(orderId)) || null;
+      if (!order && userProfile) {
+        const { data } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("tenant_id", userProfile.tenant_id)
+          .eq("id", orderId)
+          .maybeSingle();
+        order = (data as Order) || null;
+      }
+      if (!order) return;
+      scrollToMaterialsRef.current = true;
+      openEditOrderPage(order);
+    };
+
+    const orderHasMaterial = async (orderId: string) => {
+      if (!userProfile) return true;
+      const { count, error } = await supabase
+        .from("order_material_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", userProfile.tenant_id)
+        .eq("order_id", orderId);
+      return error ? true : (count ?? 0) > 0;
     };
 
     /** Prüfbereich: abnehmen oder zurückgeben */
@@ -6454,6 +6542,8 @@ onReloadOrders={async () => {
   unreadMessages={unreadMessages}
   currentUserId={userProfile.id}
   onOpenAppointments={() => setCurrentPage("meine-termine")}
+  materialOrderIds={materialOrderIds}
+  onOpenOrderMaterial={(orderId) => void openOrderMaterial(orderId)}
 />
         </>
       );
@@ -8164,6 +8254,8 @@ onReloadOrders={async () => {
                   employees={employees}
                   onAssign={handleAssignOrder}
                   onBack={openDashboard}
+                  checkHasMaterial={hasFeature("materials") ? orderHasMaterial : undefined}
+                  onOpenMaterial={(orderId) => void openOrderMaterial(orderId)}
                 />
               )}
 
@@ -10651,6 +10743,23 @@ const businessAdvisor = generateBusinessInsights();
                         </p>
                       )}
 
+                      {hasFeature("materials") &&
+                        selectedEmployeeIds.length > 0 &&
+                        editingMaterialCount === 0 && (
+                          <div className="ao-material-hint" role="status">
+                            <span>⚠️ Für diesen Auftrag ist noch kein Material zugewiesen.</span>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() =>
+                                document.getElementById("ao-materials")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                              }
+                            >
+                              Material zuweisen ↓
+                            </button>
+                          </div>
+                        )}
+
                       <div className="ao-savebar">
                         <button type="button" className="btn btn-secondary" onClick={leaveEditOrderPage}>
                           Abbrechen
@@ -10671,12 +10780,20 @@ const businessAdvisor = generateBusinessInsights();
                     </div>
 
                   {editingOrderId && userProfile && (
-                    <div className="ao-materials">
+                    <div className="ao-materials" id="ao-materials">
                       <OrderMaterialsSection
                         tenantId={userProfile.tenant_id}
                         orderId={Number(editingOrderId)}
                         employees={employees}
                         currentUserId={userProfile.id}
+                        onAssignmentsChanged={(count) => {
+                          setEditingMaterialCount(count);
+                          if (count > 0 && editingOrderId) {
+                            setMaterialOrderIds((ids) =>
+                              ids && !ids.includes(String(editingOrderId)) ? [...ids, String(editingOrderId)] : ids
+                            );
+                          }
+                        }}
                       />
                     </div>
                   )}

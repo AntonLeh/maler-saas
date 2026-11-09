@@ -26,13 +26,21 @@ type Assignment = {
   handover_count?: number;
 };
 
-type Props = { tenantId: number; orderId: number; employees: Employee[]; currentUserId: number; };
+type Props = {
+  tenantId: number;
+  orderId: number;
+  employees: Employee[];
+  currentUserId: number;
+  /** Wird nach jedem Laden mit der Anzahl zugewiesener Materialien aufgerufen */
+  onAssignmentsChanged?: (count: number) => void;
+};
 
 export default function OrderMaterialsSection({
   tenantId,
   orderId,
   employees,
   currentUserId,
+  onAssignmentsChanged,
 }: Props) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -81,6 +89,7 @@ export default function OrderMaterialsSection({
 
     setMaterials((materialsData as Material[]) || []);
     setAssignments(assignmentsWithConfirmations);
+    onAssignmentsChanged?.(assignmentsWithConfirmations.length);
   };
 
   useEffect(() => {
