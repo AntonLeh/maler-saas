@@ -279,8 +279,8 @@ export default function ContactPanel({ contact, templates, pingen, onSaved, onDe
           <input type="date" value={f.next_followup ?? ""} onChange={(e) => set("next_followup", e.target.value || null)} />
         </div>
         <div className="ok-field full">
-          <label>Notizen</label>
-          <textarea rows={2} value={String(f.notes ?? "")} onChange={(e) => set("notes", e.target.value)} />
+          <label>Notizen (nur für Sie sichtbar)</label>
+          <textarea className="ok-note-field" rows={2} value={String(f.notes ?? "")} onChange={(e) => set("notes", e.target.value)} />
         </div>
       </div>
 
@@ -392,7 +392,7 @@ export default function ContactPanel({ contact, templates, pingen, onSaved, onDe
             ) : (
               <ul className="ok-events">
                 {events.map((e) => (
-                  <li key={e.id}>
+                  <li key={e.id} className={`ev-${e.kind}`}>
                     <b>{L.EVENT_LABELS[e.kind] ?? e.kind}</b>
                     <small>{new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}</small>
                     {e.subject && <span>{e.subject}</span>}

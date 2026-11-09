@@ -94,3 +94,8 @@
   .ok-grid { grid-template-columns: 1fr; }
   .ok-sep { display: none; }
 }
+
+/* interne Notizen rot hervorheben */
+.ok-events li.ev-notiz { border-left-color: #dc2626; background: #fef2f2; border-radius: 0 8px 8px 0; padding-right: 10px; }
+.ok-events li.ev-notiz b, .ok-events li.ev-notiz p { color: #b91c1c; }
+.ok-field textarea.ok-note-field { color: #b91c1c; border-color: #fca5a5; background: #fffafa; }
