@@ -51,7 +51,7 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
   const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState<Expense | "new" | null>(null);
   const [hideZero, setHideZero] = useState(true);
-  const [zipBusy, setZipBusy] = useState(false);
+  const [zipBusy, setZipBusy] = useState("");
   const [settingsForm, setSettingsForm] = useState<Settings | null>(null);
 
   const load = useCallback(async () => {
@@ -141,17 +141,17 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const zip = async () => {
+  const zip = async (period: L.Period) => {
     if (!s) return;
-    setZipBusy(true);
+    setZipBusy(period.tag);
     try {
-      const r = await api.gestoriaZip(income, expenses, qq, s);
+      const r = await api.gestoriaZip(income, expenses, period, s);
       api.download(r.name, r.blob, "application/zip");
-      setNotice({ text: r.missing.length ? `Paket erstellt. Ohne Beleg-Datei: ${r.missing.join(", ")}` : "Paket für die Gestoría erstellt.", ok: !r.missing.length });
+      setNotice({ text: r.missing.length ? `Paket ${period.label} erstellt. Ohne Beleg-Datei: ${r.missing.join(", ")}` : `Paket ${period.label} für die Gestoría erstellt.`, ok: !r.missing.length });
     } catch (err) {
       setNotice({ text: (err as Error).message, ok: false });
     } finally {
-      setZipBusy(false);
+      setZipBusy("");
     }
   };
 
@@ -483,11 +483,24 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
 
             {tab === "gestoria" && (
               <div className="ob-pack">
-                <p className="ob-hint">
-                  Alles für Ihre Gestoría zum {qq.q}. Quartal {qq.year} – Dateien auf Spanisch, Excel öffnet sie direkt.
-                </p>
-                <button type="button" className="btn btn-primary" onClick={zip} disabled={zipBusy}>
-                  {zipBusy ? "Erstellt …" : "📦 Komplettes Paket (ZIP inkl. Belege)"}
+                <h3 className="ob-h3">Monatlich an die Gestoría</h3>
+                <p className="ob-hint">Libros registro und alle Belege des Monats als ZIP – Dateien auf Spanisch, Excel öffnet sie direkt.</p>
+                <div className="ob-months">
+                  {L.monthsOfQuarter(qq, s!.books_start, new Date().toISOString().slice(0, 10)).map((m) => {
+                    const nInc = income.filter((i) => i.issue_date >= m.from && i.issue_date <= m.to).length;
+                    const nExp = expenses.filter((e) => e.issue_date >= m.from && e.issue_date <= m.to).length;
+                    return (
+                      <button key={m.tag} type="button" className="ob-month" onClick={() => zip(m)} disabled={!!zipBusy}>
+                        <b>📦 {m.label}</b>
+                        <small>{zipBusy === m.tag ? "Erstellt …" : `${nInc} Rechnung(en) · ${nExp} Beleg(e)`}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+                <h3 className="ob-h3">Zur Quartalsabgabe</h3>
+                <p className="ob-hint">Ganzes {qq.q}. Quartal {qq.year} mit Zusammenfassung Modelo 303 / 130 / 349.</p>
+                <button type="button" className="btn btn-primary" onClick={() => zip(L.quarterPeriod(qq))} disabled={!!zipBusy}>
+                  {zipBusy === L.quarterPeriod(qq).tag ? "Erstellt …" : "📦 Quartalspaket (ZIP inkl. Belege)"}
                 </button>
                 <div className="ob-pack-row">
                   <button type="button" className="btn btn-secondary" onClick={() => api.download(`libro_facturas_emitidas_${qq.year}-${qq.q}T.csv`, L.libroEmitidas(income, L.quarterRange(qq).from, L.quarterRange(qq).to))}>

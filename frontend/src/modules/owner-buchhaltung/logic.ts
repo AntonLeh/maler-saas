@@ -111,6 +111,26 @@ export const quarterOf = (date: string): Quarter => {
   return { year: y, q: (Math.floor((mo - 1) / 3) + 1) as Quarter["q"] };
 };
 
+const MONTHS_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const MONTHS_DE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+export type Period = { from: string; to: string; tag: string; label: string; quarter: Quarter | null };
+
+/** Monate eines Quartals (nur ab Buchhaltungsbeginn und bis heute) */
+export const monthsOfQuarter = ({ year, q }: Quarter, booksStart: string, today: string): Period[] => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const out: Period[] = [];
+  for (let m = (q - 1) * 3 + 1; m <= q * 3; m++) {
+    const from = `${year}-${pad(m)}-01`;
+    const to = `${year}-${pad(m)}-${pad(new Date(Date.UTC(year, m, 0)).getUTCDate())}`;
+    if (to < booksStart || from > today) continue;
+    out.push({ from, to, tag: `${year}-${pad(m)}_${MONTHS_ES[m - 1]}`, label: `${MONTHS_DE[m - 1]} ${year}`, quarter: null });
+  }
+  return out;
+};
+
+export const quarterPeriod = (qq: Quarter): Period => ({ ...quarterRange(qq), tag: `${qq.year}-${qq.q}T`, label: `${qq.q}. Quartal ${qq.year}`, quarter: qq });
+
 export const quarterLabel = ({ year, q }: Quarter) => `${q}T ${year}`;
 
 export const inQuarter = (date: string, qq: Quarter) => {

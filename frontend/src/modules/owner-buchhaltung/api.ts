@@ -2,7 +2,7 @@
 import { zipSync, strToU8 } from "fflate";
 import { supabase } from "../../lib/supabase";
 import * as L from "./logic";
-import type { Expense, Income, Quarter, Settings } from "./logic";
+import type { Expense, Income, Period, Settings } from "./logic";
 
 const BUCKET = "owner-receipts";
 
@@ -131,17 +131,19 @@ export function download(name: string, content: BlobPart, type = "text/csv;chars
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-/** ZIP für die Gestoría: Libros registro, Resumen und alle Belege des Zeitraums */
-export async function gestoriaZip(income: Income[], expenses: Expense[], qq: Quarter, s: Settings) {
-  const { from, to } = L.quarterRange(qq);
-  const tag = `${qq.year}-${qq.q}T`;
+/** ZIP für die Gestoría: Libros registro und alle Belege des Zeitraums (Monat oder Quartal; beim Quartal mit Resumen 303/130/349) */
+export async function gestoriaZip(income: Income[], expenses: Expense[], period: Period, s: Settings) {
+  const { from, to, tag } = period;
   const files: Record<string, Uint8Array> = {
     [`libro_facturas_emitidas_${tag}.csv`]: strToU8(L.libroEmitidas(income, from, to)),
     [`libro_facturas_recibidas_${tag}.csv`]: strToU8(L.libroRecibidas(expenses, from, to)),
-    [`resumen_303_130_349_${tag}.csv`]: strToU8(
-      L.resumenCsv(qq, L.modelo303(income, expenses, qq, s.books_start), L.modelo130(income, expenses, qq, s), L.modelo349(income, expenses, qq))
-    ),
   };
+  const qq = period.quarter;
+  if (qq) {
+    files[`resumen_303_130_349_${tag}.csv`] = strToU8(
+      L.resumenCsv(qq, L.modelo303(income, expenses, qq, s.books_start), L.modelo130(income, expenses, qq, s), L.modelo349(income, expenses, qq))
+    );
+  }
   const missing: string[] = [];
   for (const e of expenses.filter((x) => x.issue_date >= from && x.issue_date <= to)) {
     if (!e.file_path) {
