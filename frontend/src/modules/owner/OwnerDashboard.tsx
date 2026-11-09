@@ -1,6 +1,6 @@
 // Owner-Dashboard (nur Plattform-Inhaber): Kennzahlen, Handlungsbedarf, Diagramme, Firmenliste mit Detailansicht.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { showAlert, showConfirm, showPrompt } from "../../lib/dialogs";
 import DeletionDeadlines from "../loeschfristen/DeletionDeadlines";
 import * as api from "./api";
@@ -306,7 +306,10 @@ function Detail({
   );
 }
 
+const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
+
 export default function OwnerDashboard({ onBack }: Props) {
+  const [view, setView] = useState<"overview" | "books">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -385,6 +388,14 @@ export default function OwnerDashboard({ onBack }: Props) {
 
   const planTotal = PLAN_ORDER.reduce((s, p) => s + (k.plans[p] ?? 0), 0);
 
+  if (view === "books") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <OwnerBooks onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   return (
     <section className="single-page-section ow-root">
       <div className="card form-page-card">
@@ -394,6 +405,9 @@ export default function OwnerDashboard({ onBack }: Props) {
             <p>Stand {new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>
           </div>
           <div className="ow-top-actions">
+            <button type="button" className="btn btn-primary" onClick={() => setView("books")}>
+              📒 Buchhaltung
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren
             </button>

@@ -1,0 +1,108 @@
+/* Owner-Buchhaltung Spanien */
+.ob-root { text-align: left; color: #0f172a; }
+.ob-root h2, .ob-root h3, .ob-root p, .ob-root label { text-align: left; }
+.ob-card { max-width: 1240px; }
+.ob-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.ob-top h2 { margin: 0; }
+.ob-top p { margin: 4px 0 0; color: #64748b; font-size: 14px; }
+.ob-top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ob-top-actions .btn { width: auto; }
+.ob-top-actions select { padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+
+.ob-tabs { display: flex; gap: 6px; overflow-x: auto; margin: 16px 0 14px; padding-bottom: 2px; scrollbar-width: none; }
+.ob-tabs::-webkit-scrollbar { display: none; }
+.ob-tabs button { flex: none; padding: 8px 13px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
+.ob-tabs button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+
+.ob-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.ob-msg.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.ob-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.ob-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 14px; color: #64748b; font-size: 14px; background: #fff; }
+.ob-hint { margin: 0 0 12px; color: #475569; font-size: 14px; }
+.ob-note { margin: 12px 0 0; color: #64748b; font-size: 13px; }
+.ob-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ob-row .ob-hint { margin: 0; }
+.ob-row .btn { width: auto; }
+
+.ob-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.ob-kpis > * { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; border: 1px solid #d8e4f5; background: linear-gradient(135deg, #f8fbff, #eef4ff); font: inherit; color: inherit; text-align: left; min-width: 0; }
+.ob-kpis button { cursor: pointer; }
+.ob-kpis .pay { background: #fff7ed; border-color: #fdba74; }
+.ob-kpis .ok { background: #f0fdf4; border-color: #bbf7d0; }
+.ob-kpis span { font-size: 12px; font-weight: 700; color: #64748b; }
+.ob-kpis b { font-size: 20px; }
+.ob-kpis small { font-size: 12px; color: #475569; }
+
+.ob-deadline { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 14px; }
+.ob-deadline.soon { background: #fffbeb; border-color: #fcd34d; }
+.ob-deadline span { display: block; margin-top: 3px; color: #64748b; font-size: 13px; }
+.ob-warn { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ob-warn li { padding: 9px 12px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; font-weight: 600; }
+
+.ob-table-wrap { overflow-x: auto; }
+.ob-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ob-table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; padding: 8px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.ob-table td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.ob-table td small { display: block; color: #64748b; font-size: 12px; }
+.ob-table .r { text-align: right; white-space: nowrap; }
+.ob-table tr.warn td { background: #fffbeb; }
+.ob-table tfoot td { font-weight: 800; border-bottom: none; }
+.ob-table select { padding: 5px 8px; border: 1px solid #dbe3ee; border-radius: 8px; font: inherit; font-size: 13px; max-width: 240px; background: #fff; }
+.ob-mini { width: 70px; padding: 5px 7px; border: 1px solid #dbe3ee; border-radius: 8px; font: inherit; font-size: 13px; text-align: right; }
+.ob-acts { white-space: nowrap; text-align: right; }
+.ob-acts button { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 4px; }
+
+.ob-result { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; margin-bottom: 12px; }
+.ob-result.pay { background: #fff7ed; border: 1px solid #fdba74; }
+.ob-result.ok { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.ob-result span { font-size: 13px; font-weight: 700; color: #64748b; }
+.ob-result b { font-size: 24px; }
+.ob-result small { font-size: 13px; color: #475569; }
+.ob-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; margin-bottom: 8px; }
+.ob-cas { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ob-cas td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+.ob-cas td.c { width: 64px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #4338ca; font-weight: 700; }
+.ob-cas td.v { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ob-cas tr.strong td { font-weight: 800; background: #f8fafc; }
+
+.ob-pack { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.ob-pack .btn { width: auto; }
+.ob-pack-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Formulare */
+.ob-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ob-form .full { grid-column: 1 / -1; }
+.ob-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ob-field > label { font-size: 13px; font-weight: 700; color: #334155; }
+.ob-field input, .ob-field select { padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; width: 100%; box-sizing: border-box; }
+.ob-field input[readonly] { background: #f8fafc; color: #475569; }
+.ob-field small { font-size: 12px; color: #64748b; }
+.ob-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.ob-seg button { padding: 7px 11px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
+.ob-seg button.on { background: #eef2ff; border-color: #6366f1; color: #3730a3; }
+.ob-fx > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.ob-fx input { flex: 1 1 120px; }
+.ob-fx .btn { width: auto; }
+.ob-checks { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+.ob-checks label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.ob-checks input { width: 18px; height: 18px; }
+.ob-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.ob-actions .btn { width: auto; }
+.ob-settings { max-width: 760px; }
+
+.ob-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 9000; display: flex; align-items: flex-start; justify-content: center; padding: 32px 14px; overflow-y: auto; }
+.ob-dialog { width: 100%; max-width: 680px; background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3); text-align: left; }
+.ob-dialog h3 { margin: 0 0 12px; font-size: 19px; }
+.ob-file { position: relative; display: block; margin-bottom: 12px; padding: 14px; border: 2px dashed #a5b4fc; border-radius: 14px; background: #f5f7ff; color: #3730a3; font-weight: 700; font-size: 14px; cursor: pointer; text-align: center; }
+.ob-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .ob-kpis { grid-template-columns: repeat(2, 1fr); }
+  .ob-kpis > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .ob-form { grid-template-columns: 1fr; }
+  .ob-top-actions { width: 100%; }
+  .ob-top-actions select { flex: 1 1 100%; }
+}
+.ob-linkbtn { margin-left: 8px; background: none; border: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: #4f46e5; cursor: pointer; text-decoration: underline; }
