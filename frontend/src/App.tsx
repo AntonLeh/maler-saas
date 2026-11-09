@@ -600,6 +600,8 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [validUntilValue, setValidUntilValue] = useState("");
 
   const [currentPage, setCurrentPage] = useState<CurrentPage>("dashboard");
+  // Impressum/Datenschutz: wohin „Zurück“ führt (z. B. Mitarbeiter-Dashboard)
+  const legalBackPageRef = useRef<CurrentPage | null>(null);
   const [showCompanyRegister, setShowCompanyRegister] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -3682,18 +3684,24 @@ const handleDeleteProgressImage = async (
     }
   }
 
-  const { error } = await supabase
+  const { data: deletedRows, error } = await supabase
     .from("order_progress_images")
     .delete()
     .eq("id", imageId)
-    .eq("tenant_id", userProfile.tenant_id);
+    .eq("tenant_id", userProfile.tenant_id)
+    .select("id");
+
+  await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
+
+  if (!error && (!deletedRows || deletedRows.length === 0)) {
+    // RLS: fremdes Foto oder schon gelöscht
+    throw new Error("Dieses Foto kannst du nicht löschen.");
+  }
 
   if (error) {
     console.error("Fehler beim Löschen des Bild-Datensatzes:", error);
     throw new Error("Bild konnte nicht gelöscht werden.");
   }
-
-  await loadEmployeeProgressEntries(userProfile.tenant_id, userProfile.id);
 };
 
   const handleEmployeeStartWork = async (orderId: string) => {
@@ -5863,7 +5871,8 @@ const totalEmployees = employees.length;
   return (
     <ImpressumPage
       onBack={() => {
-        setCurrentPage("dashboard");
+        setCurrentPage(legalBackPageRef.current ?? "dashboard");
+        legalBackPageRef.current = null;
       }}
     />
   );
@@ -5883,7 +5892,8 @@ if (currentPage === "datenschutz") {
   return (
     <DatenschutzPage
       onBack={() => {
-        setCurrentPage("dashboard");
+        setCurrentPage(legalBackPageRef.current ?? "dashboard");
+        legalBackPageRef.current = null;
       }}
     />
   );
@@ -6177,6 +6187,15 @@ onReloadOrders={async () => {
           onStartBreak={handleEmployeeStartBreak}
           onEndBreak={handleEmployeeEndBreak}
           onEndWork={handleEmployeeEndWork}
+          companyName={String((companySettings as { company_name?: string } | null)?.company_name ?? "")}
+          onImpressum={() => {
+            legalBackPageRef.current = "employee-dashboard";
+            setCurrentPage("impressum");
+          }}
+          onDatenschutz={() => {
+            legalBackPageRef.current = "employee-dashboard";
+            setCurrentPage("datenschutz");
+          }}
         />
         </>
       );
@@ -6247,6 +6266,7 @@ onReloadOrders={async () => {
           onStartBreak={handleEmployeeStartBreak}
           onEndBreak={handleEmployeeEndBreak}
           onEndWork={handleEmployeeEndWork}
+          embedded
         />
       </div>
     </div>
