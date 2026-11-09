@@ -63,7 +63,7 @@ export type Settings = {
 };
 
 export const INCOME_LABELS: Record<IncomeTreatment, string> = {
-  es: "Spanien – mit IVA",
+  es: "Mit spanischer IVA (21 %)",
   eu_b2b: "EU-Firma – Steuerumkehr",
   eu_no_vat_id: "EU ohne USt-IdNr. – prüfen",
   oss: "EU-Ausland mit dortiger MwSt (OSS)",
@@ -224,7 +224,7 @@ export function modelo303(income: Income[], expenses: Expense[], qq: Quarter, bo
     { c: "03", label: "Cuota 4 %", value: x.c4 },
     { c: "04", label: "Base imponible 10 %", value: x.b10 },
     { c: "06", label: "Cuota 10 %", value: x.c10 },
-    { c: "07", label: "Base imponible 21 % (Verkäufe in Spanien)", value: x.b21 },
+    { c: "07", label: "Base imponible 21 % (Rechnungen mit spanischer IVA, z. B. Kunden ohne USt-IdNr.)", value: x.b21 },
     { c: "09", label: "Cuota 21 %", value: x.c21 },
     { c: "10", label: "Adquisiciones intracomunitarias de servicios – Base (EU-Dienstleister)", value: x.b10x },
     { c: "11", label: "Adquisiciones intracomunitarias – Cuota", value: x.c11 },

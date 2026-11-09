@@ -123,17 +123,6 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const changeRetencion = async (i: Income, v: string) => {
-    const n = Number(v.replace(",", "."));
-    if (!Number.isFinite(n) || n < 0 || n === i.retencion) return;
-    try {
-      await api.updateIncome(i.id, { retencion: n });
-      await load();
-    } catch (err) {
-      setNotice({ text: (err as Error).message, ok: false });
-    }
-  };
-
   const removeExpense = async (e: Expense) => {
     if (!(await showConfirm(`Ausgabe „${e.supplier}“ vom ${dateDe(e.issue_date)} löschen?`, { danger: true, confirmLabel: "Löschen" }))) return;
     try {
@@ -292,7 +281,7 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
             {tab === "einnahmen" && (
               <>
                 <p className="ob-hint">
-                  Einnahmen kommen automatisch aus Stripe (bezahlte Rechnungen und Gutschriften ab {dateDe(s!.books_start)}). Die Steuerart wird automatisch bestimmt – ändern Sie sie nur, wenn sie nicht stimmt.
+                  Einnahmen kommen automatisch aus Stripe (bezahlte Rechnungen und Gutschriften ab {dateDe(s!.books_start)}). Die Steuerart wird automatisch bestimmt – ändern Sie sie nur, wenn sie nicht stimmt. Kunden aus Deutschland oder Österreich ohne USt-IdNr. bekommen von Stripe spanische IVA berechnet (Privatkunden-Regel).
                 </p>
                 {qIncome.length === 0 ? (
                   <p className="ob-empty">Keine Einnahmen in diesem Quartal.</p>
@@ -307,7 +296,6 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
                           <th>Steuerart</th>
                           <th className="r">Netto</th>
                           <th className="r">IVA</th>
-                          <th className="r">Retención</th>
                           <th />
                         </tr>
                       </thead>
@@ -337,20 +325,6 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
                             </td>
                             <td className="r">{eur(i.net_eur)}</td>
                             <td className="r">{i.tax_eur ? eur(i.tax_eur) : "–"}</td>
-                            <td className="r">
-                              {i.customer_country === "ES" ? (
-                                <input
-                                  className="ob-mini"
-                                  defaultValue={i.retencion ? String(i.retencion).replace(".", ",") : ""}
-                                  placeholder="0"
-                                  inputMode="decimal"
-                                  onBlur={(e) => changeRetencion(i, e.target.value || "0")}
-                                  aria-label="Retención"
-                                />
-                              ) : (
-                                "–"
-                              )}
-                            </td>
                             <td>
                               {i.invoice_pdf && (
                                 <a href={i.invoice_pdf} target="_blank" rel="noreferrer">
@@ -366,7 +340,7 @@ export default function OwnerBooks({ onBack }: { onBack: () => void }) {
                           <td colSpan={4}>Summe {qq.q}. Quartal</td>
                           <td className="r">{eur(sumIncome)}</td>
                           <td className="r">{eur(qIncome.reduce((a, i) => a + i.tax_eur, 0))}</td>
-                          <td colSpan={2} />
+                          <td />
                         </tr>
                       </tfoot>
                     </table>
