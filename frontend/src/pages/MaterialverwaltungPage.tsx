@@ -20,7 +20,7 @@ export default function MaterialverwaltungPage({
     <>
       <SeoMeta
         title="Materialverwaltung für Malerbetriebe | MalerSaaS"
-        description="Digitale Materialverwaltung für Malerbetriebe: Lagerbestand, Mindestbestand, Lieferanten, Lagerorte und Materialverbrauch zentral mit MalerSaaS verwalten."
+        description="Materialverwaltung für Malerbetriebe: Lagerbestand, Nachbestell-Hinweis, Lagerwert, Materialkosten je Auftrag und lückenloser Verlauf – wer was wann auf welcher Baustelle verbraucht hat."
         canonical="https://maler-saas.com/materialverwaltung"
       />
 
@@ -79,14 +79,14 @@ export default function MaterialverwaltungPage({
               <h1>Material und Lagerbestand zentral verwalten</h1>
 
               <p className="materialverwaltung-hero-text">
-                Mit MalerSaaS verwalten Malerbetriebe ihre Materialien,
-                Lagerbestände und Mindestbestände an einem zentralen Ort.
+                Mit MalerSaaS verwalten Malerbetriebe ihre Materialien und
+                Lagerbestände an einem zentralen Ort – mit Hinweis, wann
+                nachbestellt werden muss, und dem aktuellen Lagerwert.
               </p>
 
               <p className="materialverwaltung-hero-text">
-                Lieferanten, Lagerorte, Einkaufspreise und Kategorien bleiben
-                direkt mit dem jeweiligen Material verbunden und sind schnell
-                auffindbar.
+                Jede Buchung ist nachvollziehbar: wer Material eingebucht hat,
+                an wen es ging, wer es verbraucht hat und auf welcher Baustelle.
               </p>
 
               <button
@@ -140,18 +140,18 @@ export default function MaterialverwaltungPage({
     </article>
 
     <article>
-      <h3>Einheiten sauber erfassen</h3>
+      <h3>Nachbestellen auf einen Blick</h3>
       <p>
-        Materialien lassen sich mit passenden Einheiten wie Eimer,
-        Stück oder anderen betrieblichen Mengeneinheiten verwalten.
+        Materialien am oder unter dem Mindestbestand werden markiert und
+        lassen sich mit einem Klick als Nachbestell-Liste filtern.
       </p>
     </article>
 
     <article>
-      <h3>Materialstatus erkennen</h3>
+      <h3>Lagerwert immer aktuell</h3>
       <p>
-        Aktive Materialien bleiben in der Übersicht verfügbar und können
-        für die weitere Planung und Verwendung herangezogen werden.
+        Bestand mal Einkaufspreis – so sehen Sie jederzeit, wie viel Geld
+        im Lager steckt.
       </p>
     </article>
   </div>
@@ -253,6 +253,14 @@ export default function MaterialverwaltungPage({
         wieder in den verfügbaren Lagerbestand ein.
       </p>
     </article>
+
+    <article>
+      <h3>Materialkosten je Auftrag</h3>
+      <p>
+        Pro Auftrag sehen Sie Zugewiesen, Verbraucht, Zurück und die
+        Materialkosten – die Grundlage für eine ehrliche Nachkalkulation.
+      </p>
+    </article>
   </div>
 </section>
 
@@ -289,10 +297,10 @@ export default function MaterialverwaltungPage({
     </article>
 
     <article>
-      <h3>Materialbewegungen nachvollziehen</h3>
+      <h3>Lückenloser Materialverlauf</h3>
       <p>
-        Übergaben, Verbrauch und Rückgaben bleiben mit dem jeweiligen
-        Auftrag verknüpft.
+        Für jedes Material sehen Sie, wer es wann eingebucht, an wen
+        ausgegeben und auf welcher Baustelle verbraucht hat.
       </p>
     </article>
 
