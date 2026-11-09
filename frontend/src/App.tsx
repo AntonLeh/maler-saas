@@ -610,6 +610,10 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [orderProgress, setOrderProgress] = useState<OrderProgress[]>([]);
   // Auftrag bearbeiten: Stand beim Öffnen (für „ungespeicherte Änderungen“) + Prüf-Aktionen
   const [orderEditSnapshot, setOrderEditSnapshot] = useState("");
+  // Auftrag, der gerade bearbeitet wird, + seine Zuteilungen (direkt aus der DB, auch für fertige Aufträge)
+  const [editingOrderRecord, setEditingOrderRecord] = useState<Order | null>(null);
+  const [editingAssignments, setEditingAssignments] = useState<{ user_id: number; assignment_role: string }[]>([]);
+  const [editingAssignmentsLoaded, setEditingAssignmentsLoaded] = useState(false);
   const [orderReviewBusy, setOrderReviewBusy] = useState(false);
   const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
 
@@ -3458,9 +3462,13 @@ const handleReturnOrderToWork = async (orderId: string | number): Promise<boolea
   }
 
   // Zugeteilte Mitarbeiter per Nachricht informieren
-  const employeeIds = orderAssignments
-    .filter((a) => String(a.order_id) === String(orderId) && a.assignment_role === "employee")
-    .map((a) => Number(a.user_id))
+  const { data: assignedRows } = await supabase
+    .from("order_assignments")
+    .select("user_id")
+    .eq("tenant_id", userProfile.tenant_id)
+    .eq("order_id", orderId)
+    .eq("assignment_role", "employee");
+  const employeeIds = [...new Set((assignedRows || []).map((a) => Number(a.user_id)))]
     .filter((id) => id && id !== userProfile.id);
   const title = String(data[0]?.title || "Auftrag");
   let notified = 0;
@@ -4935,22 +4943,47 @@ const openEmployeeOrders = () => {
   };
   setOrderForm(editForm);
 
-  // Bisherige Zuteilungen übernehmen (sonst würde Speichern alle Mitarbeiter austragen)
-  const currentAssignments = orderAssignments.filter(
-    (a) => String(a.order_id) === String(order.id)
-  );
-  const pmFromAssignments = currentAssignments.find(
-    (a) => a.assignment_role === "project_manager"
-  )?.user_id;
-  const pmId = order.assigned_project_manager_id ?? pmFromAssignments ?? null;
-  const pmIdText = pmId ? String(pmId) : "";
-  const employeeIdTexts = currentAssignments
-    .filter((a) => a.assignment_role === "employee")
-    .map((a) => String(a.user_id));
+  setEditingOrderRecord(order);
+  setEditingAssignments([]);
+  setEditingAssignmentsLoaded(false);
 
-  setSelectedProjectManagerId(pmIdText);
-  setSelectedEmployeeIds(employeeIdTexts);
-  setOrderEditSnapshot(formSnapshot(editForm, pmIdText, employeeIdTexts));
+  // Bisherige Zuteilungen direkt aus der Datenbank laden (gilt auch für fertige Aufträge,
+  // die nicht in der Auftragsliste stehen). Sonst würde Speichern Mitarbeiter austragen.
+  const applyAssignments = (list: { user_id: number; assignment_role: string }[]) => {
+    const pmFromAssignments = list.find((a) => a.assignment_role === "project_manager")?.user_id;
+    const pmId = order.assigned_project_manager_id ?? pmFromAssignments ?? null;
+    const pmIdText = pmId ? String(pmId) : "";
+    const employeeIdTexts = list
+      .filter((a) => a.assignment_role === "employee" && String(a.user_id) !== pmIdText)
+      .map((a) => String(a.user_id));
+    setEditingAssignments(list);
+    setSelectedProjectManagerId(pmIdText);
+    setSelectedEmployeeIds(employeeIdTexts);
+    setOrderEditSnapshot(formSnapshot(editForm, pmIdText, employeeIdTexts));
+  };
+
+  applyAssignments(
+    orderAssignments
+      .filter((a) => String(a.order_id) === String(order.id))
+      .map((a) => ({ user_id: Number(a.user_id), assignment_role: String(a.assignment_role) }))
+  );
+
+  supabase
+    .from("order_assignments")
+    .select("user_id, assignment_role")
+    .eq("tenant_id", order.tenant_id)
+    .eq("order_id", order.id)
+    .then(({ data, error }) => {
+      if (error) {
+        console.error("Zuteilungen konnten nicht geladen werden:", error);
+        setOrderMessage("Die Zuteilungen konnten nicht geladen werden. Bitte die Seite neu laden, bevor Sie speichern.");
+        return;
+      }
+      applyAssignments(
+        (data || []).map((a) => ({ user_id: Number(a.user_id), assignment_role: String(a.assignment_role) }))
+      );
+      setEditingAssignmentsLoaded(true);
+    });
 
   loadOrderProgress(order.id, order.tenant_id);
   loadTimeEntries(order.tenant_id);
@@ -5178,10 +5211,12 @@ assigned_project_manager_id: selectedProjectManagerId
         .filter((id) => id && id !== pmId);
 
       // 1) Zuteilungen: nur Änderungen übernehmen (zuerst, solange der Auftrag noch „meiner“ ist)
-      const currentAssignments = orderAssignments.filter(
-        (a) => String(a.order_id) === String(editingOrderId)
-      );
-      const { toDelete, toInsert } = diffAssignments(currentAssignments, pmId, employeeIds);
+      if (!editingAssignmentsLoaded) {
+        setOrderMessage("Die Zuteilungen werden noch geladen. Bitte einen Moment warten und erneut speichern.");
+        setSavingOrder(false);
+        return;
+      }
+      const { toDelete, toInsert } = diffAssignments(editingAssignments, pmId, employeeIds);
 
       if (toInsert.length > 0) {
         const { error: insertError } = await supabase.from("order_assignments").insert(
@@ -10367,7 +10402,9 @@ const businessAdvisor = generateBusinessInsights();
               )}
 
               {currentPage === "edit-order" && canEditOrders && (() => {
-                const editingOrder = orders.find((o) => String(o.id) === String(editingOrderId)) || null;
+                const editingOrder =
+                  orders.find((o) => String(o.id) === String(editingOrderId)) ||
+                  (editingOrderRecord && String(editingOrderRecord.id) === String(editingOrderId) ? editingOrderRecord : null);
                 const savedStatus = editingOrder?.status || orderForm.status;
                 const pmLocked =
                   userProfile?.role_id === PROJECT_MANAGER_ROLE_ID &&
@@ -10392,7 +10429,7 @@ const businessAdvisor = generateBusinessInsights();
                   !/gespeichert|abgenommen|zurückgegeben/i.test(orderMessage);
                 return (
                 <section className="single-page-section">
-                  <div className="card form-page-card">
+                  <div className="card form-page-card ao-edit">
                     <div className="page-topbar">
                       <div>
                         <h2>Auftrag bearbeiten</h2>
@@ -10419,102 +10456,92 @@ const businessAdvisor = generateBusinessInsights();
                       />
                     )}
 
-                    <form onSubmit={handleUpdateOrder} className="form-stack">
-                      <div className="form-group">
-                        <label>Kunde *</label>
-                        <select
-                          name="customer_id"
-                          value={orderForm.customer_id}
-                          onChange={handleOrderChange}
-                          required
-                        >
-                          <option value="">Bitte Kunde auswählen</option>
-                          {customers.map((customer) => (
-                            <option key={customer.id} value={customer.id}>
-                              {customer.company_name
-                                ? `${customer.company_name} – ${customer.first_name} ${customer.last_name}`
-                                : `${customer.first_name} ${customer.last_name}`}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Projektleiter</label>
-                        <select
-                          value={selectedProjectManagerId}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setSelectedProjectManagerId(value);
-                            setSelectedEmployeeIds((ids) => ids.filter((id) => id !== value));
-                          }}
-                          disabled={pmLocked}
-                        >
-                          <option value="">Bitte wählen</option>
-                          {employees
-                            .filter((pm) => pm.role_id === 3)
-                            .map((pm) => (
-                              <option key={pm.id} value={pm.id}>
-                                {pm.first_name || ""} {pm.last_name || ""}
+                    <div className="ao-edit-grid">
+                    <form onSubmit={handleUpdateOrder} className="ao-form">
+                      <div className="ao-row ao-2">
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-customer">Kunde *</label>
+                          <select
+                            id="ao-customer"
+                            name="customer_id"
+                            value={orderForm.customer_id}
+                            onChange={handleOrderChange}
+                            required
+                          >
+                            <option value="">Bitte Kunde auswählen</option>
+                            {customers.map((customer) => (
+                              <option key={customer.id} value={customer.id}>
+                                {customer.company_name
+                                  ? `${customer.company_name} – ${customer.first_name} ${customer.last_name}`
+                                  : `${customer.first_name} ${customer.last_name}`}
                               </option>
                             ))}
-                        </select>
-                        {pmLocked && (
-                          <p className="ao-hint">Sie sind Projektleiter dieses Auftrags. Einen anderen Projektleiter kann nur der Inhaber oder Admin eintragen.</p>
-                        )}
+                          </select>
+                        </div>
+
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-pm">Projektleiter</label>
+                          <select
+                            id="ao-pm"
+                            value={selectedProjectManagerId}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setSelectedProjectManagerId(value);
+                              setSelectedEmployeeIds((ids) => ids.filter((id) => id !== value));
+                            }}
+                            disabled={pmLocked}
+                            title={pmLocked ? "Einen anderen Projektleiter kann nur der Inhaber oder Admin eintragen." : undefined}
+                          >
+                            <option value="">Bitte wählen</option>
+                            {employees
+                              .filter((pm) => pm.role_id === 3)
+                              .map((pm) => (
+                                <option key={pm.id} value={pm.id}>
+                                  {pm.first_name || ""} {pm.last_name || ""}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </div>
 
-                      <div className="form-group">
-                        <label>Mitarbeiter zuweisen</label>
-
+                      <div className="form-group ao-field">
+                        <label>
+                          Mitarbeiter
+                          {selectedEmployeeIds.length > 0 && <span className="ao-count">{selectedEmployeeIds.length} ausgewählt</span>}
+                        </label>
                         {assignable.length === 0 ? (
                           <p className="ao-hint">Noch keine Mitarbeiter angelegt.</p>
                         ) : (
-                          <div className="employee-selection-list">
-                            {assignable.map((employee) => (
-                              <label
-                                key={employee.id}
-                                className={`employee-selection-item ${
-                                  selectedEmployeeIds.includes(String(employee.id))
-                                    ? "selected"
-                                    : ""
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedEmployeeIds.includes(String(employee.id))}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedEmployeeIds([
-                                        ...selectedEmployeeIds,
-                                        String(employee.id),
-                                      ]);
-                                    } else {
-                                      setSelectedEmployeeIds(
-                                        selectedEmployeeIds.filter(
-                                          (id) => id !== String(employee.id)
-                                        )
-                                      );
-                                    }
-                                  }}
-                                />
-
-                                <span className="employee-name">
+                          <div className="ao-chips">
+                            {assignable.map((employee) => {
+                              const id = String(employee.id);
+                              const on = selectedEmployeeIds.includes(id);
+                              return (
+                                <button
+                                  key={employee.id}
+                                  type="button"
+                                  className={`ao-chip${on ? " on" : ""}`}
+                                  aria-pressed={on}
+                                  onClick={() =>
+                                    setSelectedEmployeeIds(
+                                      on ? selectedEmployeeIds.filter((x) => x !== id) : [...selectedEmployeeIds, id]
+                                    )
+                                  }
+                                >
+                                  <span aria-hidden>{on ? "✓" : "+"}</span>
                                   {employee.first_name || ""} {employee.last_name || ""}
-                                </span>
-
-                                <span className={`employee-role ${employee.role_id === 3 ? "project-manager" : "employee"}`}>
-                                  {employee.role_id === 3 ? "Projektleiter" : "Mitarbeiter"}
-                                </span>
-                              </label>
-                            ))}
+                                  {employee.role_id === 3 && <small>PL</small>}
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
 
-                      <div className="form-group">
-                        <label>Auftragstitel *</label>
+                      <div className="form-group ao-field">
+                        <label htmlFor="ao-title">Auftragstitel *</label>
                         <input
+                          id="ao-title"
                           type="text"
                           name="title"
                           value={orderForm.title}
@@ -10523,20 +10550,22 @@ const businessAdvisor = generateBusinessInsights();
                         />
                       </div>
 
-                      <div className="form-group">
-                        <label>Beschreibung</label>
+                      <div className="form-group ao-field">
+                        <label htmlFor="ao-desc">Beschreibung</label>
                         <textarea
+                          id="ao-desc"
                           name="description"
                           value={orderForm.description}
                           onChange={handleOrderChange}
-                          rows={4}
+                          rows={3}
                         />
                       </div>
 
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>Status</label>
+                      <div className="ao-row ao-3">
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-status">Status</label>
                           <select
+                            id="ao-status"
                             name="status"
                             value={orderForm.status}
                             onChange={handleOrderChange}
@@ -10545,7 +10574,7 @@ const businessAdvisor = generateBusinessInsights();
                             <option value="geplant">Geplant</option>
                             <option value="in_arbeit">In Arbeit</option>
                             <option value="pausiert">Pausiert</option>
-                            <option value="zur_pruefung">Fertig gemeldet (zur Prüfung)</option>
+                            <option value="zur_pruefung">Fertig gemeldet</option>
                             <option value="fertig">Fertig</option>
                             {(isAdmin || orderForm.status === "abgerechnet") && (
                               <option value="abgerechnet">Abgerechnet</option>
@@ -10553,9 +10582,35 @@ const businessAdvisor = generateBusinessInsights();
                           </select>
                         </div>
 
-                        <div className="form-group">
-                          <label>Straße</label>
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-start">Start</label>
                           <input
+                            id="ao-start"
+                            type="date"
+                            name="start_date"
+                            value={orderForm.start_date}
+                            onChange={handleOrderChange}
+                          />
+                        </div>
+
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-end">Ende</label>
+                          <input
+                            id="ao-end"
+                            type="date"
+                            name="end_date"
+                            value={orderForm.end_date}
+                            min={orderForm.start_date || undefined}
+                            onChange={handleOrderChange}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="ao-row ao-addr">
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-street">Straße</label>
+                          <input
+                            id="ao-street"
                             type="text"
                             name="address_street"
                             value={orderForm.address_street}
@@ -10563,12 +10618,11 @@ const businessAdvisor = generateBusinessInsights();
                             autoComplete="street-address"
                           />
                         </div>
-                      </div>
 
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>PLZ</label>
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-zip">PLZ</label>
                           <input
+                            id="ao-zip"
                             type="text"
                             name="address_zip"
                             value={orderForm.address_zip}
@@ -10578,37 +10632,15 @@ const businessAdvisor = generateBusinessInsights();
                           />
                         </div>
 
-                        <div className="form-group">
-                          <label>Ort</label>
+                        <div className="form-group ao-field">
+                          <label htmlFor="ao-city">Ort</label>
                           <input
+                            id="ao-city"
                             type="text"
                             name="address_city"
                             value={orderForm.address_city}
                             onChange={handleOrderChange}
                             autoComplete="address-level2"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>Startdatum</label>
-                          <input
-                            type="date"
-                            name="start_date"
-                            value={orderForm.start_date}
-                            onChange={handleOrderChange}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Enddatum</label>
-                          <input
-                            type="date"
-                            name="end_date"
-                            value={orderForm.end_date}
-                            min={orderForm.start_date || undefined}
-                            onChange={handleOrderChange}
                           />
                         </div>
                       </div>
@@ -10619,26 +10651,34 @@ const businessAdvisor = generateBusinessInsights();
                         </p>
                       )}
 
-                      <div className="form-actions">
+                      <div className="ao-savebar">
+                        <button type="button" className="btn btn-secondary" onClick={leaveEditOrderPage}>
+                          Abbrechen
+                        </button>
                         <button
                           type="submit"
                           className="btn btn-primary"
-                          disabled={savingOrder}
+                          disabled={savingOrder || !editingAssignmentsLoaded}
                         >
-                          {savingOrder ? "Speichert..." : "Änderungen speichern"}
+                          {savingOrder ? "Speichert…" : "Änderungen speichern"}
                         </button>
                       </div>
-
-                      <OrderHistory history={orderProgress} people={historyPeople} />
                     </form>
 
+                    <aside className="ao-side">
+                      <OrderHistory history={orderProgress} people={historyPeople} />
+                    </aside>
+                    </div>
+
                   {editingOrderId && userProfile && (
-                    <OrderMaterialsSection
-                      tenantId={userProfile.tenant_id}
-                      orderId={Number(editingOrderId)}
-                      employees={employees}
-                      currentUserId={userProfile.id}
-                    />
+                    <div className="ao-materials">
+                      <OrderMaterialsSection
+                        tenantId={userProfile.tenant_id}
+                        orderId={Number(editingOrderId)}
+                        employees={employees}
+                        currentUserId={userProfile.id}
+                      />
+                    </div>
                   )}
 
                   </div>
