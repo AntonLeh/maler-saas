@@ -307,9 +307,10 @@ function Detail({
 }
 
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
+const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 
 export default function OwnerDashboard({ onBack }: Props) {
-  const [view, setView] = useState<"overview" | "books">("overview");
+  const [view, setView] = useState<"overview" | "books" | "marketing">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -388,6 +389,14 @@ export default function OwnerDashboard({ onBack }: Props) {
 
   const planTotal = PLAN_ORDER.reduce((s, p) => s + (k.plans[p] ?? 0), 0);
 
+  if (view === "marketing") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <OwnerMarketing onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   if (view === "books") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
@@ -407,6 +416,9 @@ export default function OwnerDashboard({ onBack }: Props) {
           <div className="ow-top-actions">
             <button type="button" className="btn btn-primary" onClick={() => setView("books")}>
               📒 Buchhaltung
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setView("marketing")}>
+              📣 Werbung
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren

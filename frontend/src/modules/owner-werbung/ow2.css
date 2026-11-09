@@ -1,0 +1,94 @@
+/* Owner-Werbung */
+.ow2-root { text-align: left; color: #0f172a; }
+.ow2-root h2, .ow2-root h3, .ow2-root p, .ow2-root label { text-align: left; }
+.ow2-main { max-width: 1240px; }
+.ow2-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ow2-top h2 { margin: 0; }
+.ow2-top p { margin: 4px 0 0; color: #64748b; font-size: 14px; }
+.ow2-top-actions, .ow2-ed-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ow2-top-actions .btn, .ow2-ed-actions .btn, .ow2-actions .btn { width: auto; }
+
+.ow2-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.ow2-msg.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.ow2-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.ow2-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 14px; color: #64748b; font-size: 14px; background: #fff; }
+.ow2-note { margin: 14px 0 0; color: #64748b; font-size: 13px; }
+.ow2-small { margin: 0; color: #64748b; font-size: 12px; word-break: break-all; }
+.ow2-h3 { margin: 22px 0 10px; font-size: 17px; }
+
+.ow2-card { border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; background: #fff; margin-bottom: 16px; }
+.ow2-card h3 { margin: 0 0 12px; }
+.ow2-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ow2-form .full { grid-column: 1 / -1; }
+.ow2-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ow2-field > label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #334155; }
+.ow2-field > label span { font-weight: 600; color: #94a3b8; }
+.ow2-field > label span.over { color: #dc2626; }
+.ow2-field input, .ow2-field select, .ow2-field textarea { padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; width: 100%; box-sizing: border-box; }
+.ow2-field textarea { resize: vertical; line-height: 1.45; }
+.ow2-field small { font-size: 12px; color: #64748b; }
+.ow2-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.ow2-seg button { padding: 7px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
+.ow2-seg button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+.ow2-filter { margin: 4px 0 12px; }
+.ow2-upload { position: relative; display: block; padding: 12px; border: 2px dashed #a5b4fc; border-radius: 12px; background: #f5f7ff; color: #3730a3; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; }
+.ow2-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ow2-check { display: flex !important; justify-content: flex-start !important; align-items: center; gap: 8px; font-size: 14px !important; }
+.ow2-check input { width: 18px; height: 18px; }
+.ow2-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.ow2-actions.left { justify-content: flex-start; }
+.ow2-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+
+.ow2-due { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #fffbeb; border: 1px solid #fcd34d; margin-bottom: 12px; font-size: 14px; }
+.ow2-due button { border: 1px solid #fbbf24; background: #fff; border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ow2-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ow2-list button { width: 100%; display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ow2-list button:hover { border-color: #93c5fd; background: #f8fbff; }
+.ow2-li-main b { display: block; font-size: 15px; }
+.ow2-li-main small { display: block; font-size: 12px; color: #64748b; margin-top: 2px; }
+.ow2-status { justify-self: start; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #f1f5f9; color: #334155; }
+.ow2-status.s-geplant { background: #dbeafe; color: #1d4ed8; }
+.ow2-status.s-veroeffentlicht { background: #dcfce7; color: #166534; }
+.ow2-li-ch { display: flex; gap: 4px; }
+.ow2-li-ch i { font-style: normal; font-size: 11px; font-weight: 800; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #f1f5f9; color: #94a3b8; }
+.ow2-li-ch i.on { background: #16a34a; color: #fff; }
+
+.ow2-editor { display: flex; flex-direction: column; }
+.ow2-ed-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
+.ow2-title { flex: 1 1 320px; font: inherit; font-size: 20px; font-weight: 800; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; color: #0f172a; }
+.ow2-title:hover, .ow2-title:focus { border-color: #dbe3ee; outline: none; }
+.ow2-plan { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr; gap: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; }
+.ow2-code { display: block; padding: 9px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+
+.ow2-graphic { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.ow2-gcontrols { display: flex; flex-direction: column; gap: 12px; }
+.ow2-gcontrols .btn { width: auto; align-self: flex-start; }
+.ow2-gcontrols .ow2-field input + input { margin-top: 6px; }
+.ow2-thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ow2-thumbs button { position: relative; width: 74px; height: 56px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; padding: 0; overflow: hidden; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; color: #475569; }
+.ow2-thumbs button.on { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
+.ow2-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ow2-thumbs span { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); color: #fff; font-size: 9px; padding: 1px 2px; }
+.ow2-preview { position: sticky; top: 16px; display: flex; justify-content: center; background: #f1f5f9; border-radius: 16px; padding: 14px; }
+.ow2-preview canvas { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2); }
+.ow2-preview.f9x16 canvas { max-width: 300px; }
+.ow2-preview.f4x5 canvas { max-width: 420px; }
+.ow2-preview.f1x1 canvas { max-width: 480px; }
+
+.ow2-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; }
+.ow2-tabs::-webkit-scrollbar { display: none; }
+.ow2-tabs button { flex: none; padding: 8px 13px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
+.ow2-tabs button.on { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.ow2-channel { display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-width: 900px) {
+  .ow2-graphic { grid-template-columns: 1fr; }
+  .ow2-preview { position: static; order: -1; }
+  .ow2-plan { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .ow2-form { grid-template-columns: 1fr; }
+  .ow2-list button { grid-template-columns: 1fr auto; }
+  .ow2-list .ow2-status { grid-column: 1 / -1; }
+  .ow2-actions .btn { flex: 1 1 100%; }
+}
