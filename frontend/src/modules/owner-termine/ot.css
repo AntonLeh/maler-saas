@@ -1,0 +1,125 @@
+/* Owner-Termine */
+.ot-root { text-align: left; color: #0f172a; }
+.ot-root h2, .ot-root h3, .ot-root h4, .ot-root p, .ot-root label { text-align: left; }
+.ot-main { max-width: 1240px; }
+.ot-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ot-top h2 { margin: 0; }
+.ot-top p { margin: 4px 0 0; color: #64748b; font-size: 14px; }
+.ot-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ot-root .btn, .ot-dialog .btn { width: auto; }
+.ot-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: default; }
+.ot-msg.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.ot-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.ot-small { margin: 6px 0 10px; color: #64748b; font-size: 12px; line-height: 1.5; }
+.ot-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 14px; color: #475569; font-size: 14px; background: #fff; }
+.ot-link { background: none; border: 0; padding: 0; color: #1d4ed8; font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+/* Dialog */
+.ot-dialog { border: 1px solid #c7d2fe; border-radius: 18px; padding: 16px 18px; background: #f8faff; margin-bottom: 16px; text-align: left; }
+.ot-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.ot-dialog-head h3 { margin: 0; font-size: 18px; }
+.ot-dialog h4 { margin: 0 0 6px; font-size: 14px; }
+.ot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.ot-grid .full { grid-column: 1 / -1; }
+.ot-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; font-weight: 700; color: #334155; }
+.ot-field > label { font-size: 12px; font-weight: 700; color: #334155; }
+.ot-field input, .ot-field select, .ot-field textarea { padding: 8px 11px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 400; background: #fff; width: 100%; box-sizing: border-box; color: #0f172a; }
+.ot-field textarea { resize: vertical; }
+.ot-field.inline { flex-direction: row; align-items: center; gap: 8px; }
+.ot-field.inline select { width: auto; }
+.ot-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #334155; padding: 8px 0; }
+.ot-check input { width: 18px; height: 18px; }
+.ot-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.ot-kinds button { border: 1.5px solid; background: #fff; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.ot-kinds button.on { color: #fff !important; }
+.ot-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+
+/* Leiste */
+.ot-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ot-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ot-nav .btn { padding: 8px 12px; min-height: 0; }
+.ot-nav h3 { margin: 0 0 0 8px; font-size: 18px; }
+.ot-seg { display: inline-flex; border: 1px solid #dbe3ee; border-radius: 12px; overflow: hidden; background: #fff; }
+.ot-seg button { border: 0; background: none; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; }
+.ot-seg button.on { background: #1d4ed8; color: #fff; }
+
+/* Monat */
+.ot-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #e2e8f0; gap: 1px; }
+.ot-wd { background: #f8fafc; padding: 8px; font-size: 12px; font-weight: 700; color: #64748b; text-align: center; }
+.ot-day { background: #fff; min-height: 104px; padding: 6px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; min-width: 0; }
+.ot-day:hover { background: #f8faff; }
+.ot-day.we { background: #fbfcfe; }
+.ot-day.other { background: #f8fafc; }
+.ot-day.other .ot-num { color: #cbd5e1; }
+.ot-num { font-size: 13px; font-weight: 700; color: #334155; align-self: flex-end; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.ot-day.today .ot-num { background: #1d4ed8; color: #fff; }
+.ot-chip { display: block; width: 100%; text-align: left; border: 0; border-left: 3px solid transparent; border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ot-chip.allday { border-left: 0; }
+.ot-chip b { font-weight: 800; }
+.ot-more { border: 0; background: none; color: #1d4ed8; font: inherit; font-size: 12px; font-weight: 700; text-align: left; cursor: pointer; padding: 0 6px; }
+
+/* Woche */
+.ot-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.ot-wcol { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 220px; min-width: 0; }
+.ot-wcol.today { border-color: #1d4ed8; box-shadow: 0 0 0 1px #1d4ed8 inset; }
+.ot-whead { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; }
+.ot-whead b { color: #0f172a; font-size: 16px; }
+.ot-add { margin-left: auto; border: 1px solid #dbe3ee; background: #fff; border-radius: 8px; width: 26px; height: 26px; font-weight: 800; color: #1d4ed8; cursor: pointer; }
+.ot-wcard { text-align: left; border: 1px solid #e2e8f0; border-left: 4px solid; border-radius: 10px; background: #fff; padding: 6px 8px; font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ot-wcard small { font-size: 11px; font-weight: 800; }
+.ot-wcard b { font-size: 13px; overflow-wrap: anywhere; }
+.ot-wcard span { font-size: 11px; color: #64748b; overflow-wrap: anywhere; }
+.ot-none { margin: 0; color: #cbd5e1; font-size: 13px; }
+
+/* Liste */
+.ot-list { display: flex; flex-direction: column; gap: 14px; }
+.ot-lday h4 { margin: 0 0 6px; font-size: 14px; color: #334155; }
+.ot-lday h4.today { color: #1d4ed8; }
+.ot-lrow { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 9px 12px; margin-bottom: 6px; font: inherit; cursor: pointer; }
+.ot-lrow:hover { border-color: #93c5fd; }
+.ot-time { width: 110px; flex: none; font-size: 13px; font-weight: 700; color: #334155; }
+.ot-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.ot-ltext { display: flex; flex-direction: column; min-width: 0; }
+.ot-ltext b { font-size: 14px; }
+.ot-ltext small { font-size: 12px; color: #64748b; }
+
+.ot-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 12px; color: #64748b; font-weight: 600; }
+.ot-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* Abo + Steuer */
+.ot-feed { display: flex; gap: 8px; margin: 10px 0; }
+.ot-feed input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 13px; background: #fff; }
+.ot-howto { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ot-howto > div { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 12px 14px; }
+.ot-howto ol { margin: 0; padding-left: 18px; font-size: 13px; color: #334155; line-height: 1.55; }
+.ot-tax { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ot-tax li { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; background: #fff; border: 1px solid #fee2e2; border-left: 4px solid #b91c1c; border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+.ot-tax b { width: 120px; }
+.ot-tax em { color: #166534; font-style: normal; font-size: 12px; font-weight: 700; }
+
+/* Übersicht im Owner-Dashboard */
+.ot-upcoming { border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px 16px; background: #fff; margin: 0 0 16px; text-align: left; }
+.ot-up-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ot-up-head h3 { margin: 0; font-size: 16px; }
+.ot-up-days { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ot-up-days h4 { margin: 0 0 6px; font-size: 13px; color: #64748b; }
+
+/* Termine im Kontakt */
+.ot-contact-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 900px) {
+  .ot-week { grid-template-columns: 1fr; }
+  .ot-wcol { min-height: 0; }
+  .ot-grid { grid-template-columns: 1fr 1fr; }
+  .ot-howto, .ot-up-days { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .ot-day { min-height: 64px; padding: 3px; }
+  .ot-chip { font-size: 0; padding: 0; height: 6px; border-left: 0; pointer-events: none; }
+  .ot-chip:not(.allday) { background: currentColor !important; }
+  .ot-chip b { display: none; }
+  .ot-more { font-size: 10px; padding: 0; }
+  .ot-num { width: 22px; height: 22px; font-size: 12px; }
+  .ot-grid { grid-template-columns: 1fr; }
+  .ot-time { width: 76px; }
+}

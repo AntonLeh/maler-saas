@@ -309,9 +309,11 @@ function Detail({
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
 const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
+const OwnerCalendar = lazy(() => import("../owner-termine/OwnerCalendar"));
+const UpcomingAppointments = lazy(() => import("../owner-termine/UpcomingAppointments"));
 
 export default function OwnerDashboard({ onBack }: Props) {
-  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts">("overview");
+  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -398,6 +400,14 @@ export default function OwnerDashboard({ onBack }: Props) {
     );
   }
 
+  if (view === "calendar") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <OwnerCalendar onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   if (view === "contacts") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
@@ -432,6 +442,9 @@ export default function OwnerDashboard({ onBack }: Props) {
             <button type="button" className="btn btn-primary" onClick={() => setView("contacts")}>
               ✉️ Kontakte
             </button>
+            <button type="button" className="btn btn-primary" onClick={() => setView("calendar")}>
+              📅 Termine
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren
             </button>
@@ -443,6 +456,10 @@ export default function OwnerDashboard({ onBack }: Props) {
             </button>
           </div>
         </div>
+
+        <Suspense fallback={null}>
+          <UpcomingAppointments onOpen={() => setView("calendar")} />
+        </Suspense>
 
         {error && <p className="ow-error">{error}</p>}
 

@@ -5,6 +5,9 @@ import * as api from "./api";
 import * as L from "./logic";
 import type { Contact, ContactEvent, Template } from "./logic";
 import { blobToBase64, buildLetters } from "./letter";
+import AppointmentDialog from "../owner-termine/AppointmentDialog";
+import { loadForContact } from "../owner-termine/api";
+import * as T from "../owner-termine/logic";
 
 type Props = {
   contact: Contact | null; // null = neu
@@ -37,9 +40,13 @@ export default function ContactPanel({ contact, templates, pingen, onSaved, onDe
   const id = contact?.id ?? null;
   const saved = contact ? { ...contact, ...f } as Contact : null;
 
+  const [appts, setAppts] = useState<T.Appointment[]>([]);
+  const [apptEdit, setApptEdit] = useState<T.Appointment | "new" | null>(null);
+
   useEffect(() => {
     if (!id) return;
     api.loadEvents(id).then(setEvents).catch(() => setEvents([]));
+    loadForContact(id).then(setAppts).catch(() => setAppts([]));
   }, [id]);
 
   const set = (k: keyof Contact, v: unknown) => setF((p) => ({ ...p, [k]: v }));
@@ -379,6 +386,61 @@ export default function ContactPanel({ contact, templates, pingen, onSaved, onDe
               </div>
             </div>
           )}
+
+          <div className="ok-box">
+            <div className="ok-row">
+              <h4>Termine</h4>
+              {!apptEdit && (
+                <button type="button" className="btn btn-secondary" onClick={() => setApptEdit("new")}>
+                  📅 Termin eintragen
+                </button>
+              )}
+            </div>
+            {apptEdit && (
+              <AppointmentDialog
+                appt={apptEdit === "new" ? null : apptEdit}
+                defaults={{ contactId: id, kind: "innung", title: saved.organisation }}
+                contacts={[{ id: saved.id, organisation: saved.organisation, city: saved.city }]}
+                onSaved={(a) => {
+                  setAppts((p) => [a, ...p.filter((x) => x.id !== a.id)].sort((x, y) => y.starts_at.localeCompare(x.starts_at)));
+                  setApptEdit(null);
+                }}
+                onDeleted={(aid) => {
+                  setAppts((p) => p.filter((x) => x.id !== aid));
+                  setApptEdit(null);
+                }}
+                onClose={() => setApptEdit(null)}
+              />
+            )}
+            {appts.length === 0 ? (
+              !apptEdit && <p className="ok-small">Noch keine Termine mit diesem Kontakt.</p>
+            ) : (
+              <ul className="ot-contact-list">
+                {appts.map((a) => {
+                  const k = T.KINDS[a.kind] ?? T.KINDS.sonstiges;
+                  const s = new Date(a.starts_at);
+                  return (
+                    <li key={a.id}>
+                      <button type="button" className="ot-lrow" onClick={() => setApptEdit(a)}>
+                        <span className="ot-time">
+                          {s.toLocaleDateString("de-DE")}
+                          {!a.all_day && ` ${T.hm(s)}`}
+                        </span>
+                        <span className="ot-dot" style={{ background: k.color }} />
+                        <span className="ot-ltext">
+                          <b>{a.title}</b>
+                          <small>
+                            {s < new Date() ? "vergangen" : "geplant"}
+                            {a.location ? ` · ${a.location}` : ""}
+                          </small>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           <div className="ok-box">
             <div className="ok-row">
