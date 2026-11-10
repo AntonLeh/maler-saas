@@ -8,7 +8,7 @@ import {
 } from "react";
 import { Pencil, BarChart3 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase, supabaseUrl, supabaseAnonKey } from "./lib/supabase";
+import { supabase } from "./lib/supabase";
 import "./App.css";
 import { toNum } from "./modules/aufmass/calc";
 import { clearSiteVisitDraft } from "./modules/aufmass/draft";
@@ -25,6 +25,7 @@ import { TermineStatCard } from "./modules/terminkalender/widgets";
 import { KiTelefonButton } from "./modules/ki-telefon/widgets";
 import { hasAiPhoneAccess } from "./modules/ki-telefon/types";
 import { WebsiteButton } from "./modules/website/widgets";
+import { EmploymentBadges, EmploymentFilter } from "./modules/mitarbeiter-arten/widgets";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -57,6 +58,8 @@ type AppUser = {
   is_active?: boolean;
   created_at?: string;
   hourly_rate: number | null;
+  employment_type?: string | null;
+  app_access?: boolean | null;
 };
 
 type SubscriptionFeature = {
@@ -282,6 +285,7 @@ const pageLoaders = {
   ProjectManagerDashboard: () => import("./pages/ProjectManagerDashboard"),
   PlatformOwnerDashboard: () => import("./pages/PlatformOwnerDashboard"),
   AdminTimeEvaluation: () => import("./components/AdminTimeEvaluation"),
+  EmployeeEditor: () => import("./modules/mitarbeiter-arten/EmployeeEditor"),
   GlobalSettings: () => import("./pages/GlobalSettings"),
   InvoicesPage: () => import("./pages/InvoicesPage"),
   CompanyOnboardingPage: () => import("./pages/CompanyOnboardingPage"),
@@ -323,6 +327,7 @@ const AssignOrder = lazy(pageLoaders.AssignOrder);
 const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
 const AdminTimeEvaluation = lazy(pageLoaders.AdminTimeEvaluation);
+const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const GlobalSettings = lazy(pageLoaders.GlobalSettings);
 const InvoicesPage = lazy(pageLoaders.InvoicesPage);
 const CompanyOnboardingPage = lazy(pageLoaders.CompanyOnboardingPage);
@@ -916,6 +921,7 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [employeeTypeFilter, setEmployeeTypeFilter] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
 
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
@@ -5483,161 +5489,6 @@ assigned_project_manager_id: selectedProjectManagerId
       }
     };
 
-    const handleCreateEmployee = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setEmployeeMessage("");
-
-      if (!employeeForm.first_name.trim() || !employeeForm.last_name.trim() || !employeeForm.email.trim()) {
-        setEmployeeMessage("Bitte Vorname, Nachname und E-Mail ausfüllen.");
-        return;
-      }
-
-      if (!employeeForm.password || employeeForm.password.length < 8) {
-        setEmployeeMessage("Das Passwort muss mindestens 8 Zeichen lang sein.");
-        return;
-      }
-
-      if (!userProfile) {
-        setEmployeeMessage("Benutzerprofil nicht geladen.");
-        return;
-      }
-
-      if (!session?.access_token) {
-        setEmployeeMessage("Ihre Sitzung ist nicht mehr gültig. Bitte melden Sie sich neu an.");
-        return;
-      }
-
-      setSavingEmployee(true);
-
-      try {
-
-        const { count: activeEmployeeCount, error: countEmployeesError } = await supabase
-  .from("app_users")
-  .select("id", { count: "exact", head: true })
-  .eq("tenant_id", userProfile.tenant_id)
-  .eq("is_active", true)
-  .in("role_id", [3, 4]);
-
-if (countEmployeesError) {
-  console.error("Mitarbeiteranzahl konnte nicht geprüft werden:", countEmployeesError);
-  setEmployeeMessage("Mitarbeiterlimit konnte nicht geprüft werden.");
-  setSavingEmployee(false);
-  return;
-}
-
-if (!subscription) {
-  setEmployeeMessage("Abo konnte nicht geprüft werden.");
-  setSavingEmployee(false);
-  return;
-}
-
-const maxUsers = Number(subscription.max_users || 0);
-const currentUsers = Number(activeEmployeeCount || 0);
-
-if (maxUsers > 0 && currentUsers >= maxUsers) {
-  setEmployeeMessage(
-    `Mitarbeiter-Limit erreicht: Ihr Tarif erlaubt höchstens ${maxUsers} aktive Mitarbeiter. Für mehr Mitarbeiter wechseln Sie bitte den Tarif.`
-  );
-  setSavingEmployee(false);
-  return;
-}
-        
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/create-employee-auth`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": supabaseAnonKey,
-              "Authorization": `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              first_name: employeeForm.first_name.trim(),
-              last_name: employeeForm.last_name.trim(),
-              email: employeeForm.email.trim().toLowerCase(),
-              phone: employeeForm.phone.trim(),
-              password: employeeForm.password,
-              role_id: Number(employeeForm.role_id),
-              hourly_rate: employeeForm.hourly_rate ? Number(employeeForm.hourly_rate) : null,
-            }),
-          }
-        );
-
-        const result = await response.json().catch(() => ({}));
-
-
-        if (!response.ok) {
-          const message = result?.error || result?.message || `HTTP-Fehler ${response.status}`;
-          setEmployeeMessage(`Mitarbeiter konnte nicht gespeichert werden: ${message}`);
-          setSavingEmployee(false);
-          return;
-        }
-
-        setEmployeeMessage("Mitarbeiter mit Login erfolgreich angelegt.");
-        resetEmployeeForm();
-        await loadEmployees(userProfile.tenant_id);
-        setCurrentPage("employees-list");
-      } catch (error) {
-        console.error("Fehler beim Anlegen des Mitarbeiters:", error);
-        setEmployeeMessage(
-          `Mitarbeiter konnte nicht gespeichert werden: ${error instanceof Error ? error.message : "Unbekannter Fehler"
-          }`
-        );
-      } finally {
-        setSavingEmployee(false);
-      }
-    };
-
-    const handleUpdateEmployee = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setEmployeeMessage("");
-
-      if (!userProfile || !editingEmployeeId) {
-        setEmployeeMessage("Kein Mitarbeiter zum Bearbeiten ausgewählt.");
-        return;
-      }
-
-      if (
-        !employeeForm.first_name.trim() ||
-        !employeeForm.last_name.trim() ||
-        !employeeForm.email.trim()
-      ) {
-        setEmployeeMessage("Bitte Vorname, Nachname und E-Mail ausfüllen.");
-        return;
-      }
-
-      setSavingEmployee(true);
-
-      const updatedEmployee = {
-        first_name: employeeForm.first_name.trim(),
-        last_name: employeeForm.last_name.trim(),
-        email: employeeForm.email.trim(),
-        phone: employeeForm.phone.trim() || null,
-        role_id: Number(employeeForm.role_id),
-        hourly_rate: employeeForm.hourly_rate ? Number(employeeForm.hourly_rate) : null,
-      };
-
-      const { error } = await supabase
-        .from("app_users")
-        .update(updatedEmployee)
-        .eq("id", editingEmployeeId)
-        .eq("tenant_id", userProfile.tenant_id);
-
-      if (error) {
-        console.error("Fehler beim Aktualisieren des Mitarbeiters:", error);
-        setEmployeeMessage(`Mitarbeiter konnte nicht aktualisiert werden: ${error.message}`);
-        setSavingEmployee(false);
-        return;
-      }
-
-      setEmployeeMessage("Mitarbeiter erfolgreich aktualisiert.");
-      await loadEmployees(userProfile.tenant_id);
-      setEditingEmployeeId(null);
-      resetEmployeeForm();
-      setCurrentPage("employees-list");
-      setSavingEmployee(false);
-    };
-
     const handleDeleteCustomer = async (customerId: string) => {
       if (!userProfile) return;
 
@@ -8187,7 +8038,9 @@ onReloadOrders={async () => {
 
                     {employeeMessage && <p className="info-text">{employeeMessage}</p>}
 
-                    {filteredEmployees.length === 0 ? (
+                    <EmploymentFilter employees={employees} value={employeeTypeFilter} onChange={setEmployeeTypeFilter} />
+
+                    {filteredEmployees.filter((e) => !employeeTypeFilter || (e.role_id !== ADMIN_ROLE_ID && (e.employment_type || "gewerblich") === employeeTypeFilter)).length === 0 ? (
                       <div className="empty-state">
                         <p>
                           {employees.length === 0
@@ -8197,12 +8050,13 @@ onReloadOrders={async () => {
                       </div>
                     ) : (
                       <div className="list-grid two-col-list-grid">
-                        {filteredEmployees.map((employee) => (
+                        {filteredEmployees.filter((e) => !employeeTypeFilter || (e.role_id !== ADMIN_ROLE_ID && (e.employment_type || "gewerblich") === employeeTypeFilter)).map((employee) => (
                           <div key={employee.id} className="customer-item customer-item-row">
                             <div className="customer-content">
                               <div className="customer-name">
                                 {employee.first_name || ""} {employee.last_name || ""}
                               </div>
+                              {employee.role_id !== ADMIN_ROLE_ID && <EmploymentBadges type={employee.employment_type} appAccess={employee.app_access} />}
 
                               <div className="customer-meta">
                                 <span>{employee.email || "Keine E-Mail"}</span>
@@ -8216,7 +8070,7 @@ onReloadOrders={async () => {
                                       : `Rolle-ID ${employee.role_id}`}
                                 </span>
                                 <span>
-                                  Stundensatz intern:{" "}
+                                  Kosten-Stundensatz:{" "}
                                   {employee.hourly_rate != null ? `${Number(employee.hourly_rate).toFixed(2)} ${currencySymbol}` : "nicht hinterlegt"}
                                 </span>
                               </div>
@@ -10804,230 +10658,20 @@ const businessAdvisor = generateBusinessInsights();
                 );
               })()}
 
-              {currentPage === "create-employee" && isAdmin && (
-                <section className="single-page-section">
-                  <div className="card form-page-card">
-                    <div className="page-topbar">
-                      <div>
-                        <h2>Mitarbeiter anlegen</h2>
-                        <p>Neuen Mitarbeiter im aktuellen Tenant erfassen.</p>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={openDashboard}
-                      >
-                        Zurück zum Dashboard
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleCreateEmployee} className="form-stack">
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>Vorname</label>
-                          <input
-                            type="text"
-                            name="first_name"
-                            value={employeeForm.first_name}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Nachname</label>
-                          <input
-                            type="text"
-                            name="last_name"
-                            value={employeeForm.last_name}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>E-Mail</label>
-                          <input
-                            type="email"
-                            name="email"
-                            value={employeeForm.email}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Telefon</label>
-                          <input
-                            type="text"
-                            name="phone"
-                            value={employeeForm.phone}
-                            onChange={handleEmployeeChange}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Stundensatz intern ({currencySymbol} / Stunde)</label>
-                          <input
-                            type="number"
-                            name="hourly_rate"
-                            value={employeeForm.hourly_rate}
-                            onChange={handleEmployeeChange}
-                            step="0.01"
-                            min="0"
-                            placeholder="z. B. 28.50"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Passwort</label>
-                        <input
-                          type="password"
-                          name="password"
-                          value={employeeForm.password}
-                          onChange={handleEmployeeChange}
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Rolle</label>
-                        <select
-                          name="role_id"
-                          value={employeeForm.role_id}
-                          onChange={handleEmployeeChange}
-                          required
-                        >
-                          <option value={String(PROJECT_MANAGER_ROLE_ID)}>Projektleiter</option>
-                          <option value={String(EMPLOYEE_ROLE_ID)}>Mitarbeiter</option>
-                        </select>
-                      </div>
-
-                      <div className="form-actions">
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={savingEmployee}
-                        >
-                          {savingEmployee ? "Speichert..." : "Mitarbeiter speichern"}
-                        </button>
-                      </div>
-
-                      {employeeMessage && <p className="info-text">{employeeMessage}</p>}
-                    </form>
-                  </div>
-                </section>
-              )}
-
-              {currentPage === "edit-employee" && isAdmin && (
-                <section className="single-page-section">
-                  <div className="card form-page-card">
-                    <div className="page-topbar">
-                      <div>
-                        <h2>Mitarbeiter bearbeiten</h2>
-                        <p>Bestehende Mitarbeiterdaten aktualisieren.</p>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={openEmployeesListPage}
-                      >
-                        Zurück zur Mitarbeiterliste
-                      </button>
-                    </div>
-
-                    <form onSubmit={handleUpdateEmployee} className="form-stack">
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>Vorname</label>
-                          <input
-                            type="text"
-                            name="first_name"
-                            value={employeeForm.first_name}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Nachname</label>
-                          <input
-                            type="text"
-                            name="last_name"
-                            value={employeeForm.last_name}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-row two-cols">
-                        <div className="form-group">
-                          <label>E-Mail</label>
-                          <input
-                            type="email"
-                            name="email"
-                            value={employeeForm.email}
-                            onChange={handleEmployeeChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Telefon</label>
-                          <input
-                            type="text"
-                            name="phone"
-                            value={employeeForm.phone}
-                            onChange={handleEmployeeChange}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Stundensatz intern ({currencySymbol} / Stunde)</label>
-                          <input
-                            type="number"
-                            name="hourly_rate"
-                            value={employeeForm.hourly_rate}
-                            onChange={handleEmployeeChange}
-                            step="0.01"
-                            min="0"
-                            placeholder="z. B. 28.50"
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label>Rolle</label>
-                          <select
-                            name="role_id"
-                            value={employeeForm.role_id}
-                            onChange={handleEmployeeChange}
-                            required
-                          >
-                            <option value={String(PROJECT_MANAGER_ROLE_ID)}>Projektleiter</option>
-                            <option value={String(EMPLOYEE_ROLE_ID)}>Mitarbeiter</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="form-actions">
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={savingEmployee}
-                        >
-                          {savingEmployee ? "Speichert..." : "Änderungen speichern"}
-                        </button>
-                      </div>
-
-                      {employeeMessage && <p className="info-text">{employeeMessage}</p>}
-                    </form>
-                  </div>
-                </section>
+              {(currentPage === "create-employee" || (currentPage === "edit-employee" && employees.some((e) => e.id === editingEmployeeId))) && isAdmin && userProfile && (
+                <EmployeeEditor
+                  key={currentPage === "edit-employee" ? `e-${editingEmployeeId}` : "neu"}
+                  tenantId={userProfile.tenant_id}
+                  person={currentPage === "edit-employee" ? employees.find((e) => e.id === editingEmployeeId) ?? null : null}
+                  currencySymbol={currencySymbol}
+                  onSaved={async (msg) => {
+                    setEmployeeMessage(msg);
+                    setEditingEmployeeId(null);
+                    await loadEmployees(userProfile.tenant_id);
+                    setCurrentPage("employees-list");
+                  }}
+                  onBack={currentPage === "edit-employee" ? openEmployeesListPage : openDashboard}
+                />
               )}
 
               {currentPage === "pricing-rules" && (
