@@ -207,6 +207,59 @@ export default function ZeiterfassungPage({
   </div>
 </section>
 
+<section className="zeiterfassung-evaluation">
+  <div className="zeiterfassung-evaluation-content">
+    <p className="zeiterfassung-section-label">
+      Das ganze Team
+    </p>
+
+    <h2>Festangestellte, Azubis, Leiharbeiter und Subunternehmer – alle an einem Ort</h2>
+
+    <p>
+      Für jede Person legen Sie fest, wie sie beschäftigt ist und was
+      eine Stunde Ihren Betrieb wirklich kostet. So stimmt die
+      Nachkalkulation jedes Auftrags.
+    </p>
+
+    <div className="zeiterfassung-evaluation-grid">
+      <article>
+        <h3>Stundenlohn oder Festgehalt</h3>
+        <p>
+          Ob Geselle mit Stundenlohn oder Projektleiter mit Monatsgehalt:
+          MalerSaaS rechnet daraus den Kosten-Stundensatz – mit
+          nachvollziehbarem Rechenweg.
+        </p>
+      </article>
+
+      <article>
+        <h3>Leiharbeiter und Subunternehmer</h3>
+        <p>
+          Zeitarbeitsfirma mit Verrechnungssatz oder Subunternehmer mit
+          Stundensatz, Pauschale oder Aufmaß – inklusive Hinweis vor Ende
+          der 18-monatigen Höchstdauer bei Leiharbeit.
+        </p>
+      </article>
+
+      <article>
+        <h3>Mit oder ohne App</h3>
+        <p>
+          Wer keine App braucht, wird ohne Anmeldung angelegt – und zählt
+          nicht zur Mitarbeiterzahl Ihres Tarifs.
+        </p>
+      </article>
+
+      <article>
+        <h3>Austritt statt Löschen</h3>
+        <p>
+          Verlässt jemand den Betrieb, tragen Sie den Austritt ein: Die
+          Anmeldung wird gesperrt, Stunden und Kosten bleiben für
+          Abrechnung und Nachkalkulation erhalten.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
 <section className="zeiterfassung-benefits">
   <div className="zeiterfassung-benefits-intro">
     <p className="zeiterfassung-section-label">

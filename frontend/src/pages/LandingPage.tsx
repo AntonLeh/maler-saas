@@ -137,6 +137,10 @@ const faqs = [
     a: "Die Tarife beginnen bei 79 € im Monat zzgl. MwSt. (bis 3 Mitarbeiter). Je nach Betriebsgröße gibt es vier Tarife: bis 3, bis 8 und bis 20 Mitarbeiter sowie Enterprise ab 21 Mitarbeitern ohne Obergrenze. Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
   },
   {
+    q: "Zählen Leiharbeiter und Subunternehmer zur Mitarbeiterzahl?",
+    a: "Nur, wenn sie die App nutzen. Zur Mitarbeiterzahl des Tarifs zählen alle aktiven Personen mit App-Zugang. Leiharbeiter, Subunternehmer oder Lagerkräfte ohne App-Zugang legen Sie kostenlos zusätzlich an – mit eigenem Kosten-Stundensatz für die Nachkalkulation. Wer den Betrieb verlässt, wird mit „Austritt“ ausgetragen und zählt danach nicht mehr mit.",
+  },
+  {
     q: "Brauche ich für den Test eine Kreditkarte?",
     a: "Nein. Die 14 Tage sind kostenlos und unverbindlich. Die Testphase endet automatisch – sie wird nicht von selbst zu einem kostenpflichtigen Abo.",
   },

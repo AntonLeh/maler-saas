@@ -237,7 +237,7 @@ export const FEATURE_PAGES: FeaturePageData[] = [
       },
       {
         q: "Wer kümmert sich um Impressum und Datenschutz?",
-        a: "Im Reiter „Rechtliches“ hinterlegen Sie Ihre Angaben; Impressum und Datenschutzhinweise werden auf der Website angezeigt. Für den Inhalt sind Sie als Betrieb verantwortlich.",
+        a: "Im Reiter „Impressum, Datenschutz & AGB“ hinterlegen Sie Ihre Angaben; Impressum und Datenschutzhinweise werden auf der Website angezeigt. Eigene AGB können Sie optional einfügen – dann erscheint eine AGB-Seite mit Link im Fußbereich. Für den Inhalt sind Sie als Betrieb verantwortlich.",
       },
     ],
     related: [
