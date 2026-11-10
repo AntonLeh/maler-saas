@@ -8049,7 +8049,7 @@ onReloadOrders={async () => {
                       />
                     </div>
 
-                    {employeeMessage && <p className="info-text">{employeeMessage}</p>}
+                    {employeeMessage && <p className="info-text ea-list-msg">{employeeMessage}</p>}
 
                     <EmploymentFilter employees={employees} value={employeeTypeFilter} onChange={setEmployeeTypeFilter} />
 
@@ -8064,7 +8064,7 @@ onReloadOrders={async () => {
                     ) : (
                       <div className="list-grid two-col-list-grid">
                         {filterPeople(filteredEmployees, employeeTypeFilter).map((employee) => (
-                          <div key={employee.id} className="customer-item customer-item-row">
+                          <div key={employee.id} className="customer-item customer-item-row ea-person">
                             <div className="customer-content">
                               <div className="customer-name">
                                 {employee.first_name || ""} {employee.last_name || ""}

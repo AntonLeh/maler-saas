@@ -64,3 +64,15 @@
 .ea-exitbox .ea-field input, .ea-exitbox .ea-field select { padding: 8px 10px; font-size: 14px; }
 .ea-exit-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .ea-exit-actions .btn { width: auto; }
+
+/* Mitarbeiterliste: Knöpfe unter die Angaben, damit der Text Platz hat */
+.customer-item-row.ea-person { flex-direction: column; align-items: stretch; gap: 10px; }
+.ea-person .customer-content { text-align: left; }
+.ea-person .customer-actions { justify-content: flex-start; flex-shrink: 1; width: 100%; border-top: 1px solid #eef2f7; padding-top: 10px; }
+.ea-person .customer-meta span { word-break: normal; overflow-wrap: anywhere; }
+.ea-list-msg { text-align: left; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 10px 12px; font-weight: 600; }
+.ea-person .customer-actions .btn { width: auto; flex: 0 1 auto; }
+.ea-list-msg { margin: 10px 0 !important; }
+@media (max-width: 760px) {
+  .ea-person .customer-actions .btn { flex: 1 1 auto; }
+}
