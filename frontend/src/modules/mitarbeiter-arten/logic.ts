@@ -184,3 +184,15 @@ export function cleanPay(type: EmploymentType, p: Pay): Pay {
     notes: p.notes?.trim() || null,
   };
 }
+
+// ---------- Liste: Filter nach Art bzw. „Ausgeschieden“ ----------
+export const EXIT_FILTER = "__ausgeschieden";
+export const EXIT_REASONS = ["Einsatz beendet", "Kündigung durch Mitarbeiter", "Kündigung durch Betrieb", "Vertrag ausgelaufen", "Ausbildung beendet", "Sonstiges"];
+
+type ListPerson = { role_id: number; employment_type?: string | null; is_active?: boolean | null };
+
+/** Standard: nur aktive; Filter „Ausgeschieden“: nur inaktive; Chef/Admin immer bei „Alle“ */
+export function filterPeople<T extends ListPerson>(list: T[], filter: string): T[] {
+  if (filter === EXIT_FILTER) return list.filter((e) => e.is_active === false);
+  return list.filter((e) => e.is_active !== false && (!filter || (e.role_id !== 2 && (e.employment_type || "gewerblich") === filter)));
+}

@@ -4,6 +4,8 @@
 //                                oder ohne App-Zugang (z. B. Subunternehmer, Lager – zählt nicht zum Limit)
 //   action "grant_access":  App-Zugang nachträglich einschalten (Login anlegen bzw. wieder freigeben)
 //   action "revoke_access": App-Zugang abschalten (Login gesperrt, Daten bleiben)
+//   action "exit":          Austritt eintragen (inaktiv, Login gesperrt, Stunden bleiben)
+//   action "rejoin":        ausgeschiedene Person wieder aufnehmen
 // Deploy:  npx supabase functions deploy create-employee-auth --no-verify-jwt
 // =====================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -79,6 +81,46 @@ Deno.serve(async (req) => {
       return !!data?.length;
     };
 
+    // ---------- Austritt / Wiederaufnahme ----------
+    if (action === "exit" || action === "rejoin") {
+      const userId = Number(body.user_id);
+      const { data: target } = await adminClient.from("app_users").select("*").eq("id", userId).eq("tenant_id", tenantId).maybeSingle();
+      if (!target || !ALLOWED_CREATABLE_ROLE_IDS.includes(target.role_id)) return json({ error: "Person nicht gefunden." }, 404);
+
+      if (action === "exit") {
+        const date = String(body.exit_date || "");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Bitte ein Austrittsdatum wählen." }, 400);
+        const tomorrow = new Date(Date.now() + 36 * 3600 * 1000).toISOString().slice(0, 10);
+        if (date > tomorrow) return json({ error: "Den Austritt bitte am letzten Arbeitstag oder danach eintragen – nicht im Voraus." }, 400);
+        if (target.auth_user_id) {
+          const { error } = await adminClient.auth.admin.updateUserById(target.auth_user_id, { ban_duration: BAN_FOREVER });
+          if (error) return json({ error: `Login konnte nicht gesperrt werden: ${error.message}` }, 400);
+        }
+        const { error } = await adminClient
+          .from("app_users")
+          .update({ is_active: false, exit_date: date, exit_reason: String(body.exit_reason || "").trim().slice(0, 200) || null })
+          .eq("id", userId);
+        if (error) {
+          const missing = /exit_date|exit_reason/i.test(error.message);
+          return json({ error: missing ? "Für den Austritt fehlt noch das Datenbank-Update (SQL „Austritt“)." : error.message }, 400);
+        }
+        return json({ success: true });
+      }
+
+      // Wieder aufnehmen: mit App-Zugang zählt die Person wieder zum Tarif-Limit
+      if (target.app_access !== false) {
+        const limit = await checkLimit();
+        if (limit) return limit;
+        if (target.auth_user_id) {
+          const { error } = await adminClient.auth.admin.updateUserById(target.auth_user_id, { ban_duration: "none" });
+          if (error) return json({ error: `Login konnte nicht freigegeben werden: ${error.message}` }, 400);
+        }
+      }
+      const { error } = await adminClient.from("app_users").update({ is_active: true, exit_date: null, exit_reason: null }).eq("id", userId);
+      if (error) return json({ error: error.message }, 400);
+      return json({ success: true });
+    }
+
     // ---------- App-Zugang ein/aus für bestehende Person ----------
     if (action === "grant_access" || action === "revoke_access") {
       const userId = Number(body.user_id);
@@ -95,6 +137,7 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      if (target.is_active === false) return json({ error: "Die Person ist ausgeschieden. Bitte zuerst „Wieder aufnehmen“." }, 400);
       if (target.app_access && target.auth_user_id) return json({ success: true });
       const email = String(body.email || target.email || "").trim().toLowerCase();
       const password = String(body.password || "");

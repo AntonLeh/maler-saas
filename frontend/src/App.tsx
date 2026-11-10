@@ -25,7 +25,9 @@ import { TermineStatCard } from "./modules/terminkalender/widgets";
 import { KiTelefonButton } from "./modules/ki-telefon/widgets";
 import { hasAiPhoneAccess } from "./modules/ki-telefon/types";
 import { WebsiteButton } from "./modules/website/widgets";
-import { EmploymentBadges, EmploymentFilter } from "./modules/mitarbeiter-arten/widgets";
+import { EmploymentBadges, EmploymentFilter, ExitControl } from "./modules/mitarbeiter-arten/widgets";
+import { filterPeople } from "./modules/mitarbeiter-arten/logic";
+import { hasTimeEntries } from "./modules/mitarbeiter-arten/api";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -60,6 +62,7 @@ type AppUser = {
   hourly_rate: number | null;
   employment_type?: string | null;
   app_access?: boolean | null;
+  exit_date?: string | null;
 };
 
 type SubscriptionFeature = {
@@ -5558,6 +5561,13 @@ assigned_project_manager_id: selectedProjectManagerId
       setEmployeeMessage("");
       setDeletingEmployeeId(employeeId);
 
+      // Mit erfassten Stunden nicht löschen – sonst fehlen sie in Abrechnung und Nachkalkulation
+      if (await hasTimeEntries(employeeId, userProfile.tenant_id)) {
+        setDeletingEmployeeId(null);
+        await showAlert("Für diese Person sind schon Stunden erfasst. Bitte statt „Löschen“ den „Austritt“ eintragen – dann bleiben die Stunden für Abrechnung und Nachkalkulation erhalten.", { title: "Bitte Austritt eintragen" });
+        return;
+      }
+
       const { error } = await supabase
         .from("app_users")
         .delete()
@@ -5576,6 +5586,9 @@ assigned_project_manager_id: selectedProjectManagerId
       await loadEmployees(userProfile.tenant_id);
       setDeletingEmployeeId(null);
     };
+
+    // Für Auswahllisten (Auftrag zuweisen, Material …): ausgeschiedene Personen ausblenden
+    const activeEmployees = useMemo(() => employees.filter((e) => e.is_active !== false), [employees]);
 
     const customerNameMap = useMemo(() => {
       const map = new Map<string, string>();
@@ -8040,7 +8053,7 @@ onReloadOrders={async () => {
 
                     <EmploymentFilter employees={employees} value={employeeTypeFilter} onChange={setEmployeeTypeFilter} />
 
-                    {filteredEmployees.filter((e) => !employeeTypeFilter || (e.role_id !== ADMIN_ROLE_ID && (e.employment_type || "gewerblich") === employeeTypeFilter)).length === 0 ? (
+                    {filterPeople(filteredEmployees, employeeTypeFilter).length === 0 ? (
                       <div className="empty-state">
                         <p>
                           {employees.length === 0
@@ -8050,13 +8063,13 @@ onReloadOrders={async () => {
                       </div>
                     ) : (
                       <div className="list-grid two-col-list-grid">
-                        {filteredEmployees.filter((e) => !employeeTypeFilter || (e.role_id !== ADMIN_ROLE_ID && (e.employment_type || "gewerblich") === employeeTypeFilter)).map((employee) => (
+                        {filterPeople(filteredEmployees, employeeTypeFilter).map((employee) => (
                           <div key={employee.id} className="customer-item customer-item-row">
                             <div className="customer-content">
                               <div className="customer-name">
                                 {employee.first_name || ""} {employee.last_name || ""}
                               </div>
-                              {employee.role_id !== ADMIN_ROLE_ID && <EmploymentBadges type={employee.employment_type} appAccess={employee.app_access} />}
+                              {employee.role_id !== ADMIN_ROLE_ID && <EmploymentBadges type={employee.employment_type} appAccess={employee.app_access} isActive={employee.is_active} exitDate={employee.exit_date} />}
 
                               <div className="customer-meta">
                                 <span>{employee.email || "Keine E-Mail"}</span>
@@ -8085,6 +8098,14 @@ onReloadOrders={async () => {
                                 Bearbeiten
                               </button>
 
+                              <ExitControl
+                                person={employee}
+                                onDone={async (msg) => {
+                                  setEmployeeMessage(msg);
+                                  if (userProfile) await loadEmployees(userProfile.tenant_id);
+                                }}
+                              />
+
                               <button
                                 type="button"
                                 className="btn btn-danger btn-small"
@@ -8105,7 +8126,7 @@ onReloadOrders={async () => {
               {currentPage === "assign-order" && canAssignOrders && (
                 <AssignOrder
                   orders={orders}
-                  employees={employees}
+                  employees={activeEmployees}
                   onAssign={handleAssignOrder}
                   onBack={openDashboard}
                   checkHasMaterial={hasFeature("materials") ? orderHasMaterial : undefined}
@@ -10230,7 +10251,7 @@ const businessAdvisor = generateBusinessInsights();
                           onChange={handleOrderChange}
                         >
                           <option value="">Kein Mitarbeiter zugewiesen</option>
-                          {employees.map((employee) => (
+                          {activeEmployees.map((employee) => (
                             <option key={employee.id} value={employee.id}>
                               {employee.first_name || ""} {employee.last_name || ""}
                             </option>
@@ -10638,7 +10659,7 @@ const businessAdvisor = generateBusinessInsights();
                       <OrderMaterialsSection
                         tenantId={userProfile.tenant_id}
                         orderId={Number(editingOrderId)}
-                        employees={employees}
+                        employees={activeEmployees}
                         currentUserId={userProfile.id}
                         currency={companySettings?.currency || "EUR"}
                         onAssignmentsChanged={(count) => {
