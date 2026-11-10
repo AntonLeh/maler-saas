@@ -21,6 +21,9 @@ export default function LegalTab({
   const [jobTitle, setJobTitle] = useState(website.job_title ?? "");
   const [jobCountry, setJobCountry] = useState(website.job_title_country ?? "Deutschland");
   const [privacyExtra, setPrivacyExtra] = useState(website.privacy_extra ?? "");
+  const [terms, setTerms] = useState(website.terms_text ?? "");
+  const termsSaved = (website.terms_text ?? "").trim();
+  const termsMax = 60000;
 
   const gaps = imprintGaps(company, { owner_name: owner, legal_form: legalForm });
   const base = previewUrl(website);
@@ -106,6 +109,41 @@ export default function LegalTab({
           <a className="btn btn-secondary" href={`${url}/datenschutz?${query}`} target="_blank" rel="noreferrer">
             Datenschutz ansehen
           </a>
+        </div>
+      </section>
+
+      <section className="ws-panel">
+        <h3>AGB (optional)</h3>
+        <p className="tk-muted">
+          Wenn Sie eigene Allgemeine Geschäftsbedingungen haben, fügen Sie sie hier ein. Dann erscheint auf Ihrer Website die Seite „AGB“ mit einem Link unten neben Impressum
+          und Datenschutz. Ohne Text gibt es keine AGB-Seite – das ist rechtlich in Ordnung, AGB sind keine Pflicht.
+        </p>
+        <p className="tk-muted">
+          Wichtig: Damit Ihre AGB für einen Auftrag gelten, müssen Sie im Angebot bzw. vor Auftragserteilung darauf hinweisen und sie dem Kunden zugänglich machen – die Website
+          allein reicht dafür nicht. Geprüfte Muster-AGB für Malerbetriebe bekommen Sie meist bei Ihrer Innung oder Ihrem Fachverband. Bitte keine fremden AGB kopieren.
+        </p>
+        <label className="tk-field">
+          <span>
+            AGB-Text ({terms.length.toLocaleString("de-DE")} / {termsMax.toLocaleString("de-DE")} Zeichen)
+          </span>
+          <textarea
+            rows={12}
+            value={terms}
+            maxLength={termsMax}
+            onChange={(e) => setTerms(e.target.value)}
+            placeholder={"§ 1 Geltungsbereich\nDiese Allgemeinen Geschäftsbedingungen gelten für …\n\n§ 2 Angebote und Vertragsschluss\n…"}
+          />
+        </label>
+        <p className="tk-muted">Tipp: Absätze mit einer Leerzeile trennen. Zeilen wie „§ 1 Geltungsbereich“ oder „1. Geltungsbereich“ werden als Überschrift angezeigt.</p>
+        <div className="ws-row">
+          <button type="button" className="btn btn-primary" disabled={saving || terms.trim() === termsSaved} onClick={() => onSave({ terms_text: terms.trim() || null })}>
+            {saving ? "Wird gespeichert …" : terms.trim() ? "AGB speichern" : termsSaved ? "AGB entfernen" : "AGB speichern"}
+          </button>
+          {termsSaved && (
+            <a className="btn btn-secondary" href={`${url}/agb?${query}`} target="_blank" rel="noreferrer">
+              AGB ansehen
+            </a>
+          )}
         </div>
       </section>
 

@@ -69,6 +69,7 @@ export type SiteData = {
   job_title?: string | null;
   job_title_country?: string | null;
   privacy_extra?: string | null;
+  terms_text?: string | null;
   custom_domain?: string | null;
   company: {
     name?: string | null;
@@ -625,7 +626,7 @@ function footer(d: SiteData, ctx: Ctx): string {
   return `<footer class="bottom"><div class="wrap">
 <div><strong>${esc(c.name)}</strong><br>${esc(c.street)}<br>${esc([c.zip, c.city].filter(Boolean).join(" "))}</div>
 <div>${phone ? `Telefon: <a href="tel:${esc(telHref(phone))}">${esc(phone)}</a><br>` : ""}${c.email ? `E-Mail: ${emailLink(c.email)}` : ""}</div>
-<div>${jobsOf(d).length ? `<a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a> · ` : ""}<a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a><br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
+<div>${jobsOf(d).length ? `<a href="${ctx.base}/karriere${ctx.q ?? ""}">Karriere</a> · ` : ""}<a href="${ctx.base}/impressum${ctx.q ?? ""}">Impressum</a> · <a href="${ctx.base}/datenschutz${ctx.q ?? ""}">Datenschutz</a>${d.terms_text ? ` · <a href="${ctx.base}/agb${ctx.q ?? ""}">AGB</a>` : ""}<br><span class="made">Website erstellt mit <a href="${esc(ctx.origin)}/">Maler-SaaS</a></span></div>
 </div></footer>
 ${(() => {
   const wa = waHref(d.whatsapp_number, c.name ?? "");
@@ -1260,7 +1261,7 @@ ${lists.length ? `<div class="job-lists">${lists.join("")}</div>` : ""}
 // ---------------------------------------------------------------------
 // Eigene Seite pro Leistung, z. B. /w/prinzenkinder/fassadenanstrich
 // ---------------------------------------------------------------------
-const RESERVED_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen", "karriere"]);
+const RESERVED_PAGES = new Set(["impressum", "datenschutz", "agb", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen", "karriere"]);
 
 export function slugifyService(title: string): string {
   return title
@@ -1619,6 +1620,34 @@ ${d.privacy_extra ? `<h2>Ergänzende Hinweise</h2>${paragraphs(d.privacy_extra)}
   });
 }
 
+/** Eigene AGB des Betriebs (Text aus „Website → Impressum & Datenschutz“). Zeilen wie „§ 3 Zahlung“ werden Zwischenüberschriften. */
+export function termsHtml(text: unknown): string {
+  return String(text ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const [first, ...rest] = p.split("\n");
+      const isHead = /^(§\s*\d+|\d{1,2}\.\s|Ziffer\s+\d+|Art(ikel)?\.?\s*\d+)/i.test(first) && first.length <= 90;
+      if (!isHead) return `<p>${esc(p).replace(/\n/g, "<br>")}</p>`;
+      return `<h2>${esc(first)}</h2>${rest.length ? `<p>${esc(rest.join("\n")).replace(/\n/g, "<br>")}</p>` : ""}`;
+    })
+    .join("");
+}
+
+export function renderTerms(d: SiteData, ctx: Ctx): string {
+  const c = d.company;
+  return page(
+    d,
+    { ...ctx, canonical: `${ctx.canonical.replace(/\/$/, "")}/agb` },
+    `AGB – ${c.name ?? ""}`,
+    `Allgemeine Geschäftsbedingungen von ${c.name ?? ""}`,
+    `<div class="wrap legal"><h1>Allgemeine Geschäftsbedingungen</h1><p><strong>${esc(c.name)}</strong>${c.city ? `, ${esc(c.city)}` : ""}</p>${termsHtml(d.terms_text)}</div>`,
+    { home: false, index: false }
+  );
+}
+
 function notFound(origin: string): Response {
   const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Seite nicht gefunden</title>
 <style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:90vh;margin:0;color:#1c2430;text-align:center;padding:20px}</style></head>
@@ -1907,7 +1936,13 @@ export async function handle(request: Request): Promise<Response> {
   const preview = url.searchParams.get("vorschau") || "";
   let data: SiteData | null = null;
   try {
-    data = await rpc("website_public", { p_slug: site.key, p_preview: preview || null });
+    // AGB getrennt laden – fehlt das Datenbank-Update, gibt es einfach keine AGB-Seite
+    const [main, terms] = await Promise.all([
+      rpc("website_public", { p_slug: site.key, p_preview: preview || null }),
+      rpc("website_terms", { p_slug: site.key, p_preview: preview || null }).catch(() => null),
+    ]);
+    data = main;
+    if (data) data.terms_text = typeof terms === "string" && terms.trim() ? terms : null;
   } catch {
     return new Response("Die Seite ist vorübergehend nicht erreichbar.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });
   }
@@ -1975,6 +2010,7 @@ export async function handle(request: Request): Promise<Response> {
   if (pagePath === "" || pagePath === "index.html") html = renderHome(data, ctx);
   else if (pagePath === "impressum") html = renderImprint(data, ctx);
   else if (pagePath === "datenschutz") html = renderPrivacy(data, ctx);
+  else if (pagePath === "agb" && data.terms_text) html = renderTerms(data, ctx);
   else if (pagePath === "karriere" && jobsOf(data).length) html = renderCareer(data, ctx);
   else if (pagePath.startsWith("stelle-") && findJob(data, pagePath)) {
     const fj = findJob(data, pagePath)!;

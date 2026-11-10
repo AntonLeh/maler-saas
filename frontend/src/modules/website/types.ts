@@ -66,6 +66,7 @@ export type Website = {
   job_title: string | null;
   job_title_country: string | null;
   privacy_extra: string | null;
+  terms_text?: string | null;
   updated_at: string;
   /** eigene Domain (nur über die Funktion website-domain änderbar) */
   custom_domain?: string | null;
@@ -339,7 +340,7 @@ export function referenceSlug(id: number, title: string): string {
 }
 
 /** Adressen der Leistungsseiten – gleiche Regeln wie serviceSlugs in frontend/api/site.ts */
-const RESERVED_SERVICE_PAGES = new Set(["impressum", "datenschutz", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
+const RESERVED_SERVICE_PAGES = new Set(["impressum", "datenschutz", "agb", "robots-txt", "sitemap-xml", "index-html", "kontakt", "leistungen"]);
 export function serviceSlugs(titles: string[]): string[] {
   const used = new Set<string>();
   return titles.map((title) => {

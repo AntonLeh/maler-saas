@@ -240,7 +240,7 @@ export default function WebsitePage({
                   ["marketing", `Werbung${newSuggestions ? ` (${newSuggestions} neu)` : ""}`],
                   ["reviews", "Bewertungen"],
                   ["leads", `Anfragen${newLeads ? ` (${newLeads} neu)` : ""}`],
-                  ["legal", "Impressum & Datenschutz"],
+                  ["legal", "Impressum, Datenschutz & AGB"],
                 ] as [Tab, string][]
               ).map(([t, label]) => (
                 <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
