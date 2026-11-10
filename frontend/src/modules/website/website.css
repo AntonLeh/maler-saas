@@ -1451,3 +1451,8 @@
     grid-template-columns: 1fr;
   }
 }
+.ws-root .ws-ok {
+  color: #166534;
+  font-weight: 600;
+  margin: 6px 0;
+}

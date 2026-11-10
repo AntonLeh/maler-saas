@@ -134,6 +134,8 @@ export default function LegalTab({
             placeholder={"§ 1 Geltungsbereich\nDiese Allgemeinen Geschäftsbedingungen gelten für …\n\n§ 2 Angebote und Vertragsschluss\n…"}
           />
         </label>
+        {termsSaved && terms.trim() === termsSaved && <p className="ws-ok">✓ Gespeichert – Ihre AGB stehen auf der Website (Seite „AGB“, Link unten im Fußbereich).</p>}
+        {terms.trim() !== termsSaved && <p className="ws-warn">Noch nicht gespeichert.</p>}
         <p className="tk-muted">Tipp: Absätze mit einer Leerzeile trennen. Zeilen wie „§ 1 Geltungsbereich“ oder „1. Geltungsbereich“ werden als Überschrift angezeigt.</p>
         <div className="ws-row">
           <button type="button" className="btn btn-primary" disabled={saving || terms.trim() === termsSaved} onClick={() => onSave({ terms_text: terms.trim() || null })}>
