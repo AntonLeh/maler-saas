@@ -10,7 +10,7 @@ import ManualTimeDialog from "./ManualTimeDialog";
 import "./st.css";
 
 type Tab = "stb" | "leih" | "sub";
-type Props = { tenantId: number; currencySymbol: string; onBack: () => void };
+type Props = { tenantId: number; currencySymbol: string; onBack?: () => void; embedded?: boolean };
 
 const thisMonth = () => ymd(new Date()).slice(0, 7);
 const lastMonth = () => {
@@ -21,7 +21,7 @@ const lastMonth = () => {
 };
 const safe = (s: string) => s.replace(/[^\wäöüÄÖÜß-]+/g, "_").slice(0, 40);
 
-export default function ReportsPage({ tenantId, currencySymbol: cur, onBack }: Props) {
+export default function ReportsPage({ tenantId, currencySymbol: cur, onBack, embedded }: Props) {
   const [tab, setTab] = useState<Tab>("stb");
   const [people, setPeople] = useState<Person[]>([]);
   const [pays, setPays] = useState<Map<number, Pay>>(new Map());
@@ -144,20 +144,22 @@ export default function ReportsPage({ tenantId, currencySymbol: cur, onBack }: P
   const groups: Group[] = ["own", "leih", "sub"];
 
   return (
-    <section className="single-page-section st-root">
-      <div className="card form-page-card st-page">
+    <section className={embedded ? "st-root st-embedded" : "single-page-section st-root"}>
+      <div className={embedded ? "" : "card form-page-card st-page"}>
         <div className="page-topbar">
           <div>
-            <h2>Stundenlisten & Nachweise</h2>
+            <h2>Löhne & Nachweise</h2>
             <p>Monatsliste für den Steuerberater, Stundennachweis für die Zeitarbeitsfirma, Leistungsnachweis für Subunternehmer.</p>
           </div>
           <div className="st-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setDialog(true)}>
-              + Stunden nachtragen
+              🕒 Stunden nachtragen
             </button>
-            <button type="button" className="btn btn-secondary" onClick={onBack}>
-              Zurück
-            </button>
+            {onBack && (
+              <button type="button" className="btn btn-secondary" onClick={onBack}>
+                Zurück
+              </button>
+            )}
           </div>
         </div>
 

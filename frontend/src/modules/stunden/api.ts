@@ -115,3 +115,22 @@ export async function loadCompany(tenantId: number): Promise<{ name: string; str
     city: [d.zip || d.postal_code, d.city].filter(Boolean).join(" "),
   };
 }
+
+// ---------- Stechuhr durch den Projektleiter (Personen ohne App) ----------
+export type ClockOpen = { user_id: number; entry_id: number; order_id: number; started_at: string };
+
+export async function clockStatus(): Promise<ClockOpen[]> {
+  const { data, error } = await supabase.rpc("pm_clock_status");
+  if (error) throw new Error(missing(error.message) || /pm_clock/i.test(error.message) ? "Für die Stechuhr fehlt noch das Datenbank-Update (SQL „PL-Stechuhr“)." : clean(error.message));
+  return ((data ?? []) as ClockOpen[]).map((r) => ({ ...r, user_id: Number(r.user_id), order_id: Number(r.order_id) }));
+}
+
+export async function clockStart(userId: number, orderId: number) {
+  const { error } = await supabase.rpc("pm_clock_start", { p_user_id: userId, p_order_id: orderId });
+  if (error) throw new Error(/pm_clock|Could not find/i.test(error.message) ? "Für die Stechuhr fehlt noch das Datenbank-Update (SQL „PL-Stechuhr“)." : clean(error.message));
+}
+
+export async function clockStop(userId: number, breakMinutes: number) {
+  const { error } = await supabase.rpc("pm_clock_stop", { p_user_id: userId, p_break_minutes: breakMinutes });
+  if (error) throw new Error(clean(error.message));
+}

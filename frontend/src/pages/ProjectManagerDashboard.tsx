@@ -28,7 +28,14 @@ type ProjectManagerDashboardProps = {
   materialOrderIds?: string[] | null;
   /** Auftrag direkt beim Material-Bereich öffnen */
   onOpenOrderMaterial?: (orderId: string) => void;
+  /** Alle Personen des Betriebs (für die Stechuhr von Mitarbeitern ohne App) */
+  teamPeople?: Person[];
+  /** „Stunden nachtragen“ öffnen */
+  onOpenManualTime?: () => void;
 };
+
+import TeamClock from "../modules/stunden/TeamClock";
+import type { Person } from "../modules/stunden/logic";
 
 export default function ProjectManagerDashboard({
   userName,
@@ -52,6 +59,8 @@ export default function ProjectManagerDashboard({
   onOpenAppointments,
   materialOrderIds,
   onOpenOrderMaterial,
+  teamPeople,
+  onOpenManualTime,
 }: ProjectManagerDashboardProps) {
   const [openAppointments, setOpenAppointments] = useState(0);
 
@@ -122,6 +131,7 @@ export default function ProjectManagerDashboard({
         </section>
 
         <div className="pm-grid">
+          {teamPeople && <TeamClock people={teamPeople} orders={orders} assignments={assignments} />}
           <section className="pm-card">
             <h2>Schnellzugriff</h2>
             <div className="pm-actions">
@@ -153,6 +163,12 @@ export default function ProjectManagerDashboard({
                   <i aria-hidden>📅</i>
                   <span><b>Meine Termine</b><small>{openAppointments > 0 ? `${openAppointments} neu weitergeleitet` : "Besichtigungen & Termine"}</small></span>
                   {openAppointments > 0 && <em>{openAppointments}</em>}
+                </button>
+              )}
+              {onOpenManualTime && (
+                <button type="button" className="pm-action" onClick={onOpenManualTime}>
+                  <i aria-hidden>🕒</i>
+                  <span><b>Stunden nachtragen</b><small>Falls eine Zeit vergessen wurde</small></span>
                 </button>
               )}
               <button type="button" className="pm-action" onClick={onOpenMessages}>

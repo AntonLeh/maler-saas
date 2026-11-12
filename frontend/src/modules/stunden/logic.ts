@@ -207,3 +207,6 @@ export function download(blob: Blob, name: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
+
+/** Pausen-Vorschlag nach Arbeitszeitgesetz: über 6 Std. 30 min, über 9 Std. 45 min */
+export const suggestedBreak = (grossMinutes: number) => (grossMinutes > 9 * 60 + 45 ? 45 : grossMinutes > 6 * 60 + 30 ? 30 : 0);

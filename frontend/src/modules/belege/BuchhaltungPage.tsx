@@ -3,10 +3,11 @@ import BelegePage from "./BelegePage";
 import UstPage from "./UstPage";
 import OffenePostenPage from "./OffenePostenPage";
 import SteuerberaterPage from "./SteuerberaterPage";
+import ReportsPage from "../stunden/ReportsPage";
 import "../terminkalender/terminkalender.css";
 import "./belege.css";
 
-type Tab = "belege" | "ust" | "op" | "stb";
+type Tab = "belege" | "ust" | "op" | "stb" | "lohn";
 
 /** Buchhaltung (nur Admins): Reiter „Belege & Ausgaben“ und „Umsatzsteuer“ */
 export default function BuchhaltungPage(props: {
@@ -20,7 +21,7 @@ export default function BuchhaltungPage(props: {
   const [tab, setTab] = useState<Tab>(() => {
     try {
       const t = sessionStorage.getItem("buchhaltung:tab");
-      return t === "ust" || t === "op" || t === "stb" ? t : "belege";
+      return t === "ust" || t === "op" || t === "stb" || t === "lohn" ? t : "belege";
     } catch {
       return "belege";
     }
@@ -60,11 +61,15 @@ export default function BuchhaltungPage(props: {
           <button type="button" role="tab" aria-selected={tab === "stb"} className={tab === "stb" ? "active" : ""} onClick={() => open("stb")}>
             Steuerberater
           </button>
+          <button type="button" role="tab" aria-selected={tab === "lohn"} className={tab === "lohn" ? "active" : ""} onClick={() => open("lohn")}>
+            Löhne &amp; Nachweise
+          </button>
         </div>
 
         {tab === "belege" && <BelegePage {...props} embedded />}
         {tab === "ust" && <UstPage tenantId={props.tenantId} country={props.country} currencySymbol={props.currencySymbol} />}
         {tab === "stb" && <SteuerberaterPage tenantId={props.tenantId} country={props.country} currencySymbol={props.currencySymbol} />}
+        {tab === "lohn" && <ReportsPage tenantId={props.tenantId} currencySymbol={props.currencySymbol || "€"} embedded />}
         {tab === "op" && <OffenePostenPage tenantId={props.tenantId} currencySymbol={props.currencySymbol} onOpenInvoices={props.onOpenInvoices} />}
       </div>
     </section>

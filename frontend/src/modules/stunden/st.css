@@ -58,3 +58,19 @@
   .st-table { font-size: 13px; }
   .st-table th, .st-table td { padding: 7px 6px; }
 }
+
+/* PL-Dashboard: Stechuhr für Personen ohne App */
+.st-clock { grid-column: 1 / -1; text-align: left; }
+.st-clock-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.st-clock-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; background: #fff; }
+.st-clock-list li.running { border-color: #86efac; background: #f0fdf4; }
+.st-clock-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.st-clock-who b { font-size: 15px; color: #0f172a; }
+.st-clock-who small { font-size: 12.5px; color: #64748b; }
+.st-clock-run { color: #15803d !important; font-weight: 700; }
+.st-clock-start, .st-clock-stop { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.st-clock-start small { font-size: 12.5px; color: #475569; }
+.st-clock-start select { padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; max-width: 240px; }
+.st-clock-stop label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #334155; }
+.st-clock-stop input { width: 56px; padding: 8px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; text-align: right; }
+.st-clock .btn { width: auto; }
