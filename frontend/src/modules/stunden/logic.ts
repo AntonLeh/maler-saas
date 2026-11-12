@@ -263,3 +263,55 @@ export function presetRange(kind: "week" | "lastweek" | "month" | "lastmonth", n
   const last = kind === "month" ? d : new Date(d.getFullYear(), m + 1, 0);
   return { from: ymd(first), to: ymd(last) };
 }
+
+// ---------- Arbeitszeitgesetz & Auffälligkeiten ----------
+export type Alert = { key: string; kind: "open" | "day10" | "break" | "rest" | "noorder" | "norate"; personId: number; entryId?: number; day: string; text: string };
+
+export function grossMinutes(e: Entry, now = Date.now()): number {
+  if (!e.started_at) return 0;
+  const end = e.ended_at ? new Date(e.ended_at).getTime() : now;
+  return Math.max(0, (end - new Date(e.started_at).getTime()) / 60000);
+}
+
+/** Hinweise: vergessen auszustempeln, > 10 Std./Tag, Pause zu kurz, Ruhezeit < 11 Std., ohne Auftrag, Stundensatz 0 */
+export function findAlerts(entries: Entry[], people: Person[], now = Date.now()): Alert[] {
+  const out: Alert[] = [];
+  const byId = new Map(people.map((p) => [Number(p.id), p]));
+  const nm = (id: number) => nameOf(byId.get(Number(id)), id);
+  for (const e of entries) {
+    if (!e.ended_at && e.started_at && grossMinutes(e, now) > 12 * 60) {
+      out.push({ key: `open-${e.id}`, kind: "open", personId: e.user_id, entryId: e.id, day: dayOf(e), text: `${nm(e.user_id)}: Zeit läuft seit ${new Date(e.started_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })} – vermutlich vergessen auszustempeln.` });
+    }
+    if (!e.ended_at) continue;
+    const g = grossMinutes(e);
+    const b = Number(e.total_break_minutes || 0);
+    if ((g > 9 * 60 && b < 45) || (g > 6 * 60 && b < 30)) {
+      out.push({ key: `break-${e.id}`, kind: "break", personId: e.user_id, entryId: e.id, day: dayOf(e), text: `${nm(e.user_id)} am ${deDate(dayOf(e))}: ${fmtH(g)} Std. mit nur ${b} min Pause (Pflicht: ${g > 9 * 60 ? 45 : 30} min).` });
+    }
+    if (e.order_id == null) out.push({ key: `noorder-${e.id}`, kind: "noorder", personId: e.user_id, entryId: e.id, day: dayOf(e), text: `${nm(e.user_id)} am ${deDate(dayOf(e))}: Eintrag ohne Auftrag.` });
+  }
+  // je Person und Tag: > 10 Std.; Ruhezeit zwischen Arbeitstagen
+  const byPerson = new Map<number, Entry[]>();
+  for (const e of entries) if (e.ended_at && e.started_at) byPerson.set(Number(e.user_id), [...(byPerson.get(Number(e.user_id)) ?? []), e]);
+  for (const [pid, list] of byPerson) {
+    const days = new Map<string, number>();
+    for (const e of list) days.set(dayOf(e), (days.get(dayOf(e)) ?? 0) + netMinutes(e));
+    for (const [d, m] of days) if (m > 600) out.push({ key: `day10-${pid}-${d}`, kind: "day10", personId: pid, day: d, text: `${nm(pid)} am ${deDate(d)}: ${fmtH(m)} Std. gearbeitet (höchstens 10 Std. erlaubt).` });
+    const sorted = [...list].sort((a, b) => String(a.started_at).localeCompare(String(b.started_at)));
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const cur = sorted[i];
+      if (dayOf(prev) === dayOf(cur)) continue;
+      const rest = (new Date(cur.started_at!).getTime() - new Date(prev.ended_at!).getTime()) / 60000;
+      if (rest >= 0 && rest < 11 * 60) out.push({ key: `rest-${cur.id}`, kind: "rest", personId: pid, entryId: cur.id, day: dayOf(cur), text: `${nm(pid)}: nur ${fmtH(rest)} Std. Ruhezeit vor dem ${deDate(dayOf(cur))} (mindestens 11 Std.).` });
+    }
+    const p = byPerson.has(pid) ? byId.get(pid) : undefined;
+    if (p && (p.role_id === 3 || p.role_id === 4) && !Number(p.hourly_rate) && !(typeOf(p) === "sub")) {
+      out.push({ key: `norate-${pid}`, kind: "norate", personId: pid, day: "", text: `${nm(pid)}: kein Kosten-Stundensatz hinterlegt – Kosten fehlen in der Nachkalkulation.` });
+    }
+  }
+  const order: Alert["kind"][] = ["open", "day10", "break", "rest", "noorder", "norate"];
+  return out.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || b.day.localeCompare(a.day));
+}
+
+export const yearRange = (now = new Date()) => ({ from: `${now.getFullYear()}-01-01`, to: ymd(now) });

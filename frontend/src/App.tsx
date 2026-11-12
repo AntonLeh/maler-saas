@@ -290,11 +290,11 @@ const pageLoaders = {
   AssignOrder: () => import("./pages/AssignOrder"),
   ProjectManagerDashboard: () => import("./pages/ProjectManagerDashboard"),
   PlatformOwnerDashboard: () => import("./pages/PlatformOwnerDashboard"),
-  AdminTimeEvaluation: () => import("./components/AdminTimeEvaluation"),
   EmployeeEditor: () => import("./modules/mitarbeiter-arten/EmployeeEditor"),
   OrderCostsSection: () => import("./modules/stunden/OrderCostsSection"),
   ManualTimeDialog: () => import("./modules/stunden/ManualTimeDialog"),
   OrdersList: () => import("./modules/auftraege/OrdersList"),
+  TimeEvaluation: () => import("./modules/stunden/TimeEvaluation"),
   GlobalSettings: () => import("./pages/GlobalSettings"),
   InvoicesPage: () => import("./pages/InvoicesPage"),
   CompanyOnboardingPage: () => import("./pages/CompanyOnboardingPage"),
@@ -335,11 +335,11 @@ const EmployeeDashboard = lazy(pageLoaders.EmployeeDashboard);
 const AssignOrder = lazy(pageLoaders.AssignOrder);
 const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
-const AdminTimeEvaluation = lazy(pageLoaders.AdminTimeEvaluation);
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
 const OrdersList = lazy(pageLoaders.OrdersList);
+const TimeEvaluation = lazy(pageLoaders.TimeEvaluation);
 const GlobalSettings = lazy(pageLoaders.GlobalSettings);
 const InvoicesPage = lazy(pageLoaders.InvoicesPage);
 const CompanyOnboardingPage = lazy(pageLoaders.CompanyOnboardingPage);
@@ -7852,38 +7852,8 @@ onReloadOrders={async () => {
                 />
               )}
 
-              {currentPage === "time-evaluation" && isAdmin && (
-                <section className="single-page-section">
-                  <div className="card">
-                    <div className="page-topbar">
-                      <div>
-                        <h2>Arbeitsstunden</h2>
-                        <p>Übersicht über Arbeitszeiten, Pausen und Nettozeiten.</p>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ width: "auto" }}
-                        onClick={openDashboard}
-                      >
-                        Zurück zum Dashboard
-                      </button>
-                    </div>
-
-                    <div style={{ marginBottom: "20px" }}>
-                      <p><strong>Währung:</strong> {currencyCode}</p>
-                      <p><strong>Symbol:</strong> {currencySymbol}</p>
-                      <p><strong>Interner Standard-Stundensatz:</strong> {defaultInternalHourlyRate}</p>
-                      <p><strong>Kunden-Stundensatz:</strong> {defaultCustomerHourlyRate}</p>
-                      {loadingCompanySettings && (
-                        <p><strong>Hinweis:</strong> Einstellungen werden geladen...</p>
-                      )}
-                    </div>
-
-                    <AdminTimeEvaluation />
-                  </div>
-                </section>
+              {currentPage === "time-evaluation" && isAdmin && userProfile && (
+                <TimeEvaluation tenantId={userProfile.tenant_id} currencySymbol={currencySymbol} onBack={() => setCurrentPage("business-intelligence")} />
               )}
 
               {currentPage === "business-intelligence" && isAdmin && (() => {

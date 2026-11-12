@@ -80,3 +80,27 @@
 .st-table tr.st-week td { background: #f1f5f9; font-weight: 700; font-size: 13px; color: #334155; }
 .st-overview td { vertical-align: middle; }
 .st-actions .btn { white-space: nowrap; }
+
+/* Arbeitsstunden */
+.st-presets button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+.st-alerts { border: 1px solid #fecaca; background: #fffafa; border-radius: 14px; padding: 12px 14px; margin: 6px 0 14px; }
+.st-alerts h4 { margin: 0 0 8px; font-size: 15px; color: #b91c1c; }
+.st-alerts ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-alerts li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 13.5px; color: #334155; border-left: 3px solid #fca5a5; padding-left: 8px; }
+.st-alerts li.k-open, .st-alerts li.k-day10 { border-left-color: #dc2626; }
+.st-alerts li.k-noorder, .st-alerts li.k-norate { border-left-color: #f59e0b; }
+.st-name { all: unset; cursor: pointer; font-weight: 700; color: #0f172a; }
+.st-name:hover { color: #1d4ed8; text-decoration: underline; }
+.st-table td.pos { color: #15803d; font-weight: 700; }
+.st-table td.neg { color: #b91c1c; font-weight: 700; }
+.st-corr { color: #b45309 !important; }
+
+@media (max-width: 760px) {
+  .st-cards thead { display: none; }
+  .st-cards, .st-cards tbody { display: block; }
+  .st-cards tr { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; margin-bottom: 8px; background: #fff; }
+  .st-cards td { border: 0; padding: 0; text-align: left !important; }
+  .st-cards td[data-label=""] { grid-column: 1 / -1; }
+  .st-cards td[data-label]:not([data-label=""])::before { content: attr(data-label) ": "; color: #64748b; font-size: 12px; }
+}
+.st-alerts .st-link { font-size: 13.5px; }

@@ -26,8 +26,9 @@ export async function deleteManualEntry(id: number) {
   if (error) throw new Error(missing(error.message) ? NEEDS_SQL : clean(error.message));
 }
 
-export async function loadEntries(tenantId: number, filter: { from?: string; to?: string; orderId?: number; userId?: number } = {}): Promise<Entry[]> {
-  let q = supabase.from("time_entries").select("*").eq("tenant_id", tenantId).not("ended_at", "is", null);
+export async function loadEntries(tenantId: number, filter: { from?: string; to?: string; orderId?: number; userId?: number; includeOpen?: boolean } = {}): Promise<Entry[]> {
+  let q = supabase.from("time_entries").select("*").eq("tenant_id", tenantId);
+  if (!filter.includeOpen) q = q.not("ended_at", "is", null);
   if (filter.from) q = q.gte("started_at", `${filter.from}T00:00:00`);
   if (filter.to) q = q.lte("started_at", `${filter.to}T23:59:59`);
   if (filter.orderId) q = q.eq("order_id", filter.orderId);
@@ -133,4 +134,25 @@ export async function clockStart(userId: number, orderId: number) {
 export async function clockStop(userId: number, breakMinutes: number) {
   const { error } = await supabase.rpc("pm_clock_stop", { p_user_id: userId, p_break_minutes: breakMinutes });
   if (error) throw new Error(clean(error.message));
+}
+
+// ---------- Korrektur (nur Admin) ----------
+export async function correctEntry(id: number, start: Date, end: Date, breakMinutes: number, reason: string) {
+  const { error } = await supabase.rpc("time_entry_correct", { p_id: id, p_start: start.toISOString(), p_end: end.toISOString(), p_break_minutes: breakMinutes, p_reason: reason });
+  if (error) throw new Error(/time_entry_correct|Could not find/i.test(error.message) ? "Für Korrekturen fehlt noch das Datenbank-Update (SQL „Zeit-Korrektur“)." : clean(error.message));
+}
+
+export type Correction = { id: number; time_entry_id: number; old_started_at: string | null; old_ended_at: string | null; old_break_minutes: number | null; new_started_at: string; new_ended_at: string; new_break_minutes: number; reason: string; corrected_by: number | null; created_at: string };
+
+export async function loadCorrections(tenantId: number): Promise<Correction[]> {
+  const { data, error } = await supabase.from("time_entry_corrections").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(2000);
+  if (error) return [];
+  return (data ?? []) as Correction[];
+}
+
+/** Laufende Einträge (ohne Ende) – für „vergessen auszustempeln“ */
+export async function loadOpenEntries(tenantId: number): Promise<Entry[]> {
+  const { data, error } = await supabase.from("time_entries").select("*").eq("tenant_id", tenantId).is("ended_at", null).limit(500);
+  if (error) return [];
+  return (data ?? []) as Entry[];
 }
