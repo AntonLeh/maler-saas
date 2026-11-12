@@ -1,6 +1,6 @@
-// Nachweise von Subunternehmern und Leiharbeitsfirmen: Dokumentarten je Land, Ampel, Erinnerungen
+// Dokumente & Nachweise aller Mitarbeiter (Subunternehmer, Leiharbeit, eigenes Personal): Arten je Land, Ampel, Erinnerungen
 export type Land = "de" | "at" | "ch";
-export type Kind = "sub" | "leiharbeit";
+export type Kind = "sub" | "leiharbeit" | "eigen" | "azubi";
 
 export type DocType = {
   key: string;
@@ -11,6 +11,8 @@ export type DocType = {
   key_doc?: boolean;
   /** hat normalerweise ein Ablaufdatum */
   expires?: boolean;
+  /** abgelaufen → Warnung bei der Zuteilung (z. B. Arbeitserlaubnis) */
+  assign_warn_expired?: boolean;
 };
 
 export type PartnerDoc = {
@@ -27,6 +29,28 @@ export type PartnerDoc = {
 };
 
 const BOTH: Kind[] = ["sub", "leiharbeit"];
+const OWN: Kind[] = ["eigen", "azubi"];
+const ALL: Kind[] = ["sub", "leiharbeit", "eigen", "azubi"];
+
+/** Verträge der Partner (ohne Ablauf) */
+const PARTNER_CONTRACTS: DocType[] = [
+  { key: "werkvertrag", label: "Werkvertrag / Rahmenvertrag", for: ["sub"] },
+  { key: "ueberlassungsvertrag", label: "Arbeitnehmerüberlassungsvertrag", for: ["leiharbeit"] },
+];
+
+/** Eigenes Personal – nichts davon ist Pflicht */
+const OWN_TYPES: DocType[] = [
+  { key: "arbeitsvertrag", label: "Arbeitsvertrag / Änderungsvertrag", for: ["eigen"] },
+  { key: "ausbildungsvertrag", label: "Ausbildungsvertrag", for: ["azubi"] },
+  { key: "qualifikation", label: "Gesellenbrief / Meisterbrief / Zeugnis", for: OWN },
+  { key: "fuehrerschein", label: "Führerschein", hint: "Als Halter von Firmenfahrzeugen müssen Sie den Führerschein regelmäßig kontrollieren (Empfehlung: halbjährlich).", for: OWN, expires: true },
+  { key: "aufenthaltstitel", label: "Aufenthaltstitel / Arbeitserlaubnis", hint: "Ohne gültige Arbeitserlaubnis darf die Person nicht beschäftigt werden – es drohen hohe Bußgelder.", for: OWN, expires: true, assign_warn_expired: true },
+  { key: "vorsorge", label: "Arbeitsmedizinische Vorsorge / Untersuchung", for: OWN, expires: true },
+  { key: "unterweisung", label: "Unterweisung Arbeitsschutz", hint: "Die Unterweisung ist mindestens einmal jährlich vorgeschrieben – als „gültig bis“ das Datum in einem Jahr eintragen.", for: OWN, expires: true },
+  { key: "erste_hilfe", label: "Erste-Hilfe-Ausbildung", hint: "Betriebliche Ersthelfer müssen alle 2 Jahre fortgebildet werden.", for: OWN, expires: true },
+  { key: "staplerschein", label: "Staplerschein", for: OWN, expires: true },
+  { key: "geruest_buehne", label: "Gerüst- / Hubarbeitsbühnen-Schein", for: OWN, expires: true },
+];
 
 export const DOC_TYPES: Record<Land, DocType[]> = {
   de: [
@@ -37,7 +61,9 @@ export const DOC_TYPES: Record<Land, DocType[]> = {
     { key: "gewerbe", label: "Gewerbeanmeldung / Eintrag Handwerksrolle", for: ["sub"] },
     { key: "haftpflicht", label: "Betriebshaftpflicht-Versicherung", for: ["sub"], expires: true },
     { key: "aueg", label: "Erlaubnis Arbeitnehmerüberlassung (AÜG)", hint: "Ohne Erlaubnis gilt der Leiharbeiter als bei Ihnen angestellt.", for: ["leiharbeit"], key_doc: true, expires: true },
-    { key: "sonstiges", label: "Sonstiges", for: BOTH },
+    ...PARTNER_CONTRACTS,
+    ...OWN_TYPES,
+    { key: "sonstiges", label: "Sonstiges", for: ALL },
   ],
   at: [
     { key: "hfu_liste", label: "HFU-Liste (Auftraggeberhaftung)", hint: "Steht der Subunternehmer nicht auf der HFU-Liste, haften Sie für Abgaben (20 % bzw. 5 % Einbehalt).", for: ["sub"], key_doc: true, expires: true },
@@ -46,7 +72,9 @@ export const DOC_TYPES: Record<Land, DocType[]> = {
     { key: "unbedenklich_ogk", label: "Unbedenklichkeitsbescheinigung ÖGK", for: BOTH, expires: true },
     { key: "haftpflicht", label: "Betriebshaftpflicht-Versicherung", for: ["sub"], expires: true },
     { key: "akue", label: "Gewerbeberechtigung Arbeitskräfteüberlassung", for: ["leiharbeit"], key_doc: true, expires: true },
-    { key: "sonstiges", label: "Sonstiges", for: BOTH },
+    ...PARTNER_CONTRACTS,
+    ...OWN_TYPES,
+    { key: "sonstiges", label: "Sonstiges", for: ALL },
   ],
   ch: [
     { key: "handelsregister", label: "Handelsregisterauszug", for: ["sub"] },
@@ -55,7 +83,9 @@ export const DOC_TYPES: Record<Land, DocType[]> = {
     { key: "suva", label: "Bestätigung Unfallversicherung (SUVA)", for: BOTH, expires: true },
     { key: "haftpflicht", label: "Betriebshaftpflicht-Versicherung", for: ["sub"], expires: true },
     { key: "personalverleih", label: "Bewilligung Personalverleih (AVG)", for: ["leiharbeit"], key_doc: true, expires: true },
-    { key: "sonstiges", label: "Sonstiges", for: BOTH },
+    ...PARTNER_CONTRACTS,
+    ...OWN_TYPES,
+    { key: "sonstiges", label: "Sonstiges", for: ALL },
   ],
 };
 
@@ -66,8 +96,9 @@ export function landOf(country: string | null | undefined): Land {
   return "de";
 }
 
-export const kindOf = (employmentType: string | null | undefined): Kind | null =>
-  employmentType === "sub" ? "sub" : employmentType === "leiharbeit" ? "leiharbeit" : null;
+export const kindOf = (employmentType: string | null | undefined): Kind =>
+  employmentType === "sub" ? "sub" : employmentType === "leiharbeit" ? "leiharbeit" : employmentType === "azubi" ? "azubi" : "eigen";
+export const isPartner = (k: Kind) => k === "sub" || k === "leiharbeit";
 
 export const typesFor = (land: Land, kind: Kind) => DOC_TYPES[land].filter((t) => t.for.includes(kind));
 
@@ -126,8 +157,9 @@ export function issuesFor(kind: Kind, land: Land, docs: PartnerDoc[], today = to
     }
     if (!d.valid_until) continue;
     const n = daysLeft(d.valid_until, today);
-    if (n < 0) out.push({ type: t.key, label: t.label, state: "expired", days: n, key_doc: !!t.key_doc });
-    else if (n <= WARN_DAYS) out.push({ type: t.key, label: t.label, state: "soon", days: n, key_doc: !!t.key_doc });
+    const kd = !!t.key_doc || !!t.assign_warn_expired;
+    if (n < 0) out.push({ type: t.key, label: t.label, state: "expired", days: n, key_doc: kd });
+    else if (n <= WARN_DAYS) out.push({ type: t.key, label: t.label, state: "soon", days: n, key_doc: kd });
   }
   return out;
 }
@@ -160,12 +192,12 @@ export const groupByUser = (docs: PartnerDoc[]) => {
 
 export type PersonLike = { id: number; first_name?: string | null; last_name?: string | null; employment_type?: string | null; is_active?: boolean | null; role_id?: number };
 
-/** Probleme je Person (nur aktive Subunternehmer/Leiharbeiter) */
+/** Probleme je Person (nur aktive Personen) */
 export function peopleIssues(people: PersonLike[], docs: PartnerDoc[], land: Land): { person: PersonLike; issues: Issue[] }[] {
   const out: { person: PersonLike; issues: Issue[] }[] = [];
   for (const p of people) {
     const kind = kindOf(p.employment_type);
-    if (!kind || p.is_active === false) continue;
+    if (p.is_active === false || p.role_id === 1) continue;
     const issues = issuesFor(kind, land, docs.filter((d) => Number(d.user_id) === Number(p.id)));
     if (issues.length) out.push({ person: p, issues });
   }

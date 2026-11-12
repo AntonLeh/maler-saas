@@ -1,4 +1,4 @@
-// Nachweise: Bereich beim Subunternehmer/Leiharbeiter, Ampel, Erinnerung, Warnung bei Zuteilung
+// Dokumente & Nachweise: Bereich bei jeder Person, Ampel, Erinnerung, Warnung bei Zuteilung
 import { useMemo, useState } from "react";
 import { showAlert, showConfirm } from "../../lib/dialogs";
 import * as api from "./api";
@@ -9,6 +9,7 @@ import {
   docLight,
   issueText,
   issuesFor,
+  isPartner,
   kindOf,
   labelOf,
   peopleIssues,
@@ -26,10 +27,13 @@ const de = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("de-DE");
 // ---------- Ampel in der Mitarbeiterliste ----------
 export function DocsLight({ person, docs, land }: { person: P; docs: PartnerDoc[] | null; land: Land }) {
   const kind = kindOf(person.employment_type);
-  if (!kind || !docs || person.is_active === false) return null;
+  if (!docs || person.is_active === false) return null;
   const issues = issuesFor(kind, land, docs.filter((d) => Number(d.user_id) === Number(person.id)));
+  // eigenes Personal: nur anzeigen, wenn etwas abläuft
+  if (!isPartner(kind) && !issues.length) return null;
   const light = personLight(issues);
-  const text = light === "green" ? "Nachweise ok" : light === "yellow" ? "Nachweis läuft ab" : issues.some((i) => i.state === "missing") ? "Nachweis fehlt" : "Nachweis abgelaufen";
+  const word = isPartner(kind) ? "Nachweis" : "Dokument";
+  const text = light === "green" ? "Nachweise ok" : light === "yellow" ? `${word} läuft ab` : issues.some((i) => i.state === "missing") ? `${word} fehlt` : `${word} abgelaufen`;
   return (
     <span className={`nw-light nw-${light}`} title={issues.map(issueText).join("\n") || "Alle Nachweise gültig"}>
       <i aria-hidden /> {text}
@@ -44,7 +48,7 @@ export function DocsReminder({ people, docs, land, onOpen }: { people: P[]; docs
   const red = list.some((x) => personLight(x.issues) === "red");
   return (
     <div className={`nw-reminder ${red ? "nw-red" : "nw-yellow"}`}>
-      <strong>📄 Nachweise prüfen</strong>
+      <strong>📄 Dokumente & Nachweise prüfen</strong>
       <ul>
         {list.map(({ person, issues }) => (
           <li key={person.id}>
@@ -78,6 +82,9 @@ export function AssignWarning({ selected, docs, land }: { selected: P[]; docs: P
       {land === "at" && rows.some((r) => r.issues.some((i) => i.type === "hfu_liste")) && (
         <p className="nw-small">Steht der Subunternehmer nicht auf der HFU-Liste, haften Sie für seine Abgaben (Einbehalt 20 % bzw. 5 %).</p>
       )}
+      {rows.some((r) => r.issues.some((i) => i.type === "aufenthaltstitel")) && (
+        <p className="nw-small">Ohne gültige Arbeitserlaubnis darf die Person nicht beschäftigt werden – es drohen hohe Bußgelder.</p>
+      )}
       <p className="nw-small">Die Zuteilung ist trotzdem möglich.</p>
     </div>
   );
@@ -100,10 +107,11 @@ export function DocsSection({
   onChanged: () => Promise<void> | void;
 }) {
   const kind = kindOf(person.employment_type);
-  const types = kind ? typesFor(land, kind) : [];
+  const types = typesFor(land, kind);
+  const partner = isPartner(kind);
   const mine = useMemo(() => (docs ?? []).filter((d) => Number(d.user_id) === Number(person.id)), [docs, person.id]);
   const current = useMemo(() => currentByType(mine), [mine]);
-  const issues = kind ? issuesFor(kind, land, mine) : [];
+  const issues = issuesFor(kind, land, mine);
   const [type, setType] = useState(types[0]?.key ?? "sonstiges");
   const [title, setTitle] = useState("");
   const [until, setUntil] = useState("");
@@ -114,7 +122,6 @@ export function DocsSection({
   const [fileKey, setFileKey] = useState(0);
   const [showAll, setShowAll] = useState(false);
 
-  if (!kind) return null;
   const def = types.find((t) => t.key === type);
 
   const save = async () => {
@@ -160,21 +167,23 @@ export function DocsSection({
   };
 
   const sorted = [...mine].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  const isCurrent = (d: PartnerDoc) => d.doc_type === "sonstiges" || current.get(d.doc_type)?.id === d.id;
+  // Dokumente mit Ablaufdatum ersetzen sich (neuestes zählt); Verträge, Zeugnisse usw. bleiben alle aktuell
+  const replaces = (key: string) => key !== "sonstiges" && !!types.find((t) => t.key === key && (t.expires || t.key_doc));
+  const isCurrent = (d: PartnerDoc) => !replaces(d.doc_type) || current.get(d.doc_type)?.id === d.id;
   const visible = showAll ? sorted : sorted.filter(isCurrent);
 
   return (
     <section className="single-page-section nw-root">
       <div className="card form-page-card">
-        <h3>📄 Nachweise {kind === "sub" ? "des Subunternehmers" : "der Zeitarbeitsfirma"}</h3>
-        <p className="nw-small">Nur Sie als Inhaber sehen diese Nachweise. {WARN_DAYS} Tage vor Ablauf erscheint eine Erinnerung im Dashboard und im Terminkalender.</p>
+        <h3>📄 {kind === "sub" ? "Nachweise & Dokumente des Subunternehmers" : kind === "leiharbeit" ? "Nachweise & Dokumente der Zeitarbeitsfirma" : "Dokumente"}</h3>
+        <p className="nw-small">Nur Sie als Inhaber sehen diese Dokumente (z. B. Verträge, Bescheinigungen, Scheine). {WARN_DAYS} Tage vor Ablauf erscheint eine Erinnerung im Dashboard und im Terminkalender.</p>
 
         {docs === null ? (
           <p className="nw-msg err">{api.NEEDS_SQL}</p>
         ) : (
           <>
-            <div className="nw-checklist">
-              {types.filter((t) => t.key !== "sonstiges").map((t) => {
+            {partner && <div className="nw-checklist">
+              {types.filter((t) => t.key !== "sonstiges" && (t.expires || t.key_doc)).map((t) => {
                 const d = current.get(t.key);
                 const l = d ? docLight(d) : t.key_doc ? "red" : "grey";
                 return (
@@ -187,14 +196,14 @@ export function DocsSection({
                   </div>
                 );
               })}
-            </div>
+            </div>}
 
             {issues.length > 0 && (
               <div className="nw-msg warn">{issues.map(issueText).join(" · ")}</div>
             )}
 
             <div className="nw-form">
-              <h4>Nachweis hinzufügen</h4>
+              <h4>Dokument hinzufügen</h4>
               <div className="nw-grid">
                 <label className="nw-field">
                   <span>Art</span>
@@ -205,7 +214,7 @@ export function DocsSection({
                 {type === "sonstiges" ? (
                   <label className="nw-field">
                     <span>Bezeichnung</span>
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Mindestlohn-Erklärung" />
+                    <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={partner ? "z. B. Mindestlohn-Erklärung" : "z. B. Abmahnung, Urlaubsantrag"} />
                   </label>
                 ) : (
                   <label className="nw-field">
@@ -225,18 +234,18 @@ export function DocsSection({
                 </label>
                 <label className="nw-field nw-wide">
                   <span>Notiz (optional)</span>
-                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. Sicherheitsnummer, Aussteller" />
+                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={partner ? "z. B. Sicherheitsnummer, Aussteller" : "z. B. Führerscheinklassen, Aussteller"} />
                 </label>
               </div>
               {def?.hint && <p className="nw-small">ℹ️ {def.hint}</p>}
               {err && <p className="nw-msg err">{err}</p>}
-              <button type="button" className="btn btn-primary nw-save" disabled={busy} onClick={save}>{busy ? "Speichert …" : "Nachweis speichern"}</button>
+              <button type="button" className="btn btn-primary nw-save" disabled={busy} onClick={save}>{busy ? "Speichert …" : "Dokument speichern"}</button>
             </div>
 
             {sorted.length > 0 && (
               <div className="nw-list">
                 <div className="nw-list-head">
-                  <h4>{showAll ? "Alle Nachweise (Verlauf)" : "Aktuelle Nachweise"}</h4>
+                  <h4>{showAll ? "Alle Dokumente (Verlauf)" : "Aktuelle Dokumente"}</h4>
                   {sorted.length > visible.length || showAll ? (
                     <button type="button" className="nw-link" onClick={() => setShowAll(!showAll)}>{showAll ? "Nur aktuelle" : `Verlauf anzeigen (${sorted.length})`}</button>
                   ) : null}
