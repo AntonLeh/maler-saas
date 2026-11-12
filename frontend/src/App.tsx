@@ -2,6 +2,7 @@ import {
   Fragment,
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -32,6 +33,10 @@ import { tabFromMode } from "./modules/auftraege/listLogic";
 import PlannedHoursField from "./modules/auftraege/PlannedHoursField";
 import type { Person as StundenPerson } from "./modules/stunden/logic";
 import { hasTimeEntries } from "./modules/mitarbeiter-arten/api";
+import { AssignWarning, DocsLight, DocsReminder, DocsSection } from "./modules/nachweise/widgets";
+import { landOf } from "./modules/nachweise/logic";
+import type { PartnerDoc } from "./modules/nachweise/logic";
+import { loadDocs as loadPartnerDocs } from "./modules/nachweise/api";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -5639,6 +5644,17 @@ assigned_project_manager_id: selectedProjectManagerId
       return m;
     }, [timeEntries]);
 
+    // Nachweise von Subunternehmern / Leiharbeitsfirmen (nur Inhaber; null = Datenbank-Update fehlt)
+    const [partnerDocs, setPartnerDocs] = useState<PartnerDoc[] | null>(null);
+    const partnerLand = landOf(companySettings?.country);
+    const docsTenantId = userProfile?.role_id === ADMIN_ROLE_ID ? userProfile.tenant_id : null;
+    const reloadPartnerDocs = useCallback(async () => {
+      if (docsTenantId) setPartnerDocs(await loadPartnerDocs(docsTenantId));
+    }, [docsTenantId]);
+    useEffect(() => {
+      void reloadPartnerDocs();
+    }, [reloadPartnerDocs]);
+
     const customerNameMap = useMemo(() => {
       const map = new Map<string, string>();
       customers.forEach((customer) => {
@@ -6680,6 +6696,16 @@ onReloadOrders={async () => {
 
                   </section>
 
+                  <DocsReminder
+                    people={employees}
+                    docs={partnerDocs}
+                    land={partnerLand}
+                    onOpen={(id) => {
+                      const p = employees.find((e) => e.id === id);
+                      if (p) openEditEmployeePage(p);
+                    }}
+                  />
+
                   <BusinessCockpit
                   businessEvents={[
   ...businessEvents,
@@ -7390,6 +7416,9 @@ onReloadOrders={async () => {
             </label>
           ))}
       </div>
+      {userProfile?.role_id === ADMIN_ROLE_ID && (
+        <AssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} docs={partnerDocs} land={partnerLand} />
+      )}
     </div>
 
     <div
@@ -7812,6 +7841,7 @@ onReloadOrders={async () => {
                                 {employee.first_name || ""} {employee.last_name || ""}
                               </div>
                               {employee.role_id !== ADMIN_ROLE_ID && <EmploymentBadges type={employee.employment_type} appAccess={employee.app_access} isActive={employee.is_active} exitDate={employee.exit_date} />}
+                              <DocsLight person={employee} docs={partnerDocs} land={partnerLand} />
 
                               <div className="customer-meta">
                                 <span>{employee.email || "Keine E-Mail"}</span>
@@ -10229,6 +10259,9 @@ const businessAdvisor = generateBusinessInsights();
                             })}
                           </div>
                         )}
+                        {userProfile?.role_id === ADMIN_ROLE_ID && (
+                          <AssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} docs={partnerDocs} land={partnerLand} />
+                        )}
                       </div>
 
                       <div className="form-group ao-field">
@@ -10446,6 +10479,13 @@ const businessAdvisor = generateBusinessInsights();
                 />
               )}
 
+              {currentPage === "edit-employee" && userProfile?.role_id === ADMIN_ROLE_ID && (() => {
+                const person = employees.find((e) => e.id === editingEmployeeId);
+                return person ? (
+                  <DocsSection tenantId={userProfile.tenant_id} currentUserId={userProfile.id} person={person} land={partnerLand} docs={partnerDocs} onChanged={reloadPartnerDocs} />
+                ) : null;
+              })()}
+
               {currentPage === "pricing-rules" && (
                 userProfile?.role_id === 1 ||
                 userProfile?.role_id === 2
@@ -10644,11 +10684,24 @@ const businessAdvisor = generateBusinessInsights();
 )}
 
 {currentPage === "terminkalender" && isAdmin && userProfile?.tenant_id && (
+  <>
+  <div style={{ maxWidth: 1180, margin: "0 auto", width: "100%" }}>
+    <DocsReminder
+      people={employees}
+      docs={partnerDocs}
+      land={partnerLand}
+      onOpen={(id) => {
+        const p = employees.find((e) => e.id === id);
+        if (p) openEditEmployeePage(p);
+      }}
+    />
+  </div>
   <TerminkalenderPage
     tenantId={userProfile.tenant_id}
     currentUserId={userProfile.id}
     onBack={openDashboard}
   />
+  </>
 )}
 
 {currentPage === "ki-telefon" && isAdmin && userProfile?.tenant_id && (

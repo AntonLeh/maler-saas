@@ -1,0 +1,72 @@
+/* Nachweise von Subunternehmern / Leiharbeitsfirmen */
+.nw-root { text-align: left; color: #0f172a; }
+.nw-root h3, .nw-root h4, .nw-root p, .nw-root label { text-align: left; }
+.nw-root .form-page-card { max-width: 980px; }
+.nw-root h3 { margin: 0 0 4px; font-size: 18px; }
+.nw-root h4 { margin: 0 0 8px; font-size: 15px; }
+.nw-small { margin: 6px 0; font-size: 12.5px; color: #64748b; line-height: 1.5; }
+.nw-msg { margin: 10px 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.nw-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.nw-msg.warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+
+.nw-checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin: 12px 0; }
+.nw-check { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 12px; padding: 9px 11px; background: #fff; }
+.nw-check i { width: 11px; height: 11px; border-radius: 50%; margin-top: 4px; flex: none; background: #cbd5e1; }
+.nw-check b { display: block; font-size: 13.5px; }
+.nw-check b em { font-style: normal; font-size: 11px; font-weight: 700; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+.nw-check small { font-size: 12px; color: #64748b; }
+.nw-check.nw-green i { background: #22c55e; }
+.nw-check.nw-yellow i { background: #f59e0b; }
+.nw-check.nw-red i { background: #dc2626; }
+.nw-check.nw-red { border-color: #fecaca; background: #fff7f7; }
+
+.nw-form { border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 14px; background: #f8fafc; margin: 12px 0; }
+.nw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.nw-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.nw-field > span { font-size: 13px; font-weight: 700; color: #334155; }
+.nw-field input, .nw-field select { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14.5px; background: #fff; }
+.nw-field input[type="file"] { padding: 7px; font-size: 13px; }
+.nw-wide { grid-column: 1 / -1; }
+.nw-root .nw-save { width: auto; margin-top: 8px; }
+
+.nw-list { margin-top: 6px; }
+.nw-list-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nw-link { all: unset; cursor: pointer; color: #1d4ed8; font-size: 13px; font-weight: 700; }
+.nw-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; border-top: 1px solid #f1f5f9; padding: 9px 0; }
+.nw-row b { display: block; font-size: 14px; }
+.nw-row small { font-size: 12px; color: #64748b; }
+.nw-row.old { opacity: 0.6; }
+.nw-actions { display: flex; gap: 6px; }
+.nw-actions .btn { width: auto; }
+.nw-tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.nw-tag.nw-green { background: #dcfce7; color: #166534; }
+.nw-tag.nw-yellow { background: #fef3c7; color: #92400e; }
+.nw-tag.nw-red { background: #fee2e2; color: #b91c1c; }
+
+/* Ampel in der Liste */
+.nw-light { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; cursor: default; }
+.nw-light i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.nw-light.nw-green { background: #dcfce7; color: #166534; }
+.nw-light.nw-green i { background: #22c55e; }
+.nw-light.nw-yellow { background: #fef3c7; color: #92400e; }
+.nw-light.nw-yellow i { background: #f59e0b; }
+.nw-light.nw-red { background: #fee2e2; color: #b91c1c; }
+.nw-light.nw-red i { background: #dc2626; }
+
+/* Erinnerung */
+.nw-reminder { text-align: left; border-radius: 14px; padding: 12px 14px; margin: 0 0 14px; border: 1px solid #fcd34d; background: #fffbeb; color: #78350f; }
+.nw-reminder.nw-red { border-color: #fca5a5; background: #fef2f2; color: #7f1d1d; }
+.nw-reminder ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.nw-reminder li { font-size: 13.5px; display: flex; gap: 8px; flex-wrap: wrap; }
+.nw-reminder li button { all: unset; cursor: pointer; font-weight: 800; text-decoration: underline; }
+
+/* Warnung bei der Zuteilung */
+.nw-assign { text-align: left; border: 1px solid #fca5a5; background: #fef2f2; color: #7f1d1d; border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.nw-assign p { margin: 4px 0 0; font-size: 13.5px; }
+.nw-assign .nw-small { color: #991b1b; }
+
+@media (max-width: 640px) {
+  .nw-grid { grid-template-columns: 1fr; }
+  .nw-row { grid-template-columns: 1fr; }
+  .nw-row .nw-tag { justify-self: start; }
+}
