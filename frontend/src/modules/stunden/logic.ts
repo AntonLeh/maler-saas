@@ -12,7 +12,16 @@ export type Entry = {
   total_break_minutes: number | null;
   entered_by?: number | null;
   entry_note?: string | null;
+  created_at?: string | null;
 };
+
+/** Herkunft: selbst gestempelt, vom Projektleiter gestempelt (Stechuhr) oder nachgetragen */
+export function sourceOf(e: Entry): "self" | "pl" | "manual" {
+  if (!e.entered_by) return "self";
+  if (e.created_at && e.started_at && new Date(e.created_at).getTime() - new Date(e.started_at).getTime() < 3 * 60000) return "pl";
+  return "manual";
+}
+export const SOURCE_LABELS = { self: "", pl: "vom Projektleiter gestempelt", manual: "nachgetragen" } as const;
 
 export type Person = {
   id: number;
@@ -170,7 +179,7 @@ export function stbList(month: string, people: Person[], entries: Entry[], pays:
 }
 
 // ---------- Nachweis (Leiharbeit / Subunternehmer) ----------
-export type ProofRow = { day: string; order: string; from: string; to: string; breakMin: number; minutes: number; manual: boolean };
+export type ProofRow = { day: string; order: string; from: string; to: string; breakMin: number; minutes: number; manual: boolean; source: "self" | "pl" | "manual" };
 
 export function proofRows(personId: number, entries: Entry[], from: string, to: string, orderTitle: (id: Entry["order_id"]) => string): ProofRow[] {
   return inRange(entries, from, to)
@@ -183,7 +192,8 @@ export function proofRows(personId: number, entries: Entry[], from: string, to: 
       to: hm(e.ended_at!),
       breakMin: Number(e.total_break_minutes || 0),
       minutes: netMinutes(e),
-      manual: !!e.entered_by,
+      manual: sourceOf(e) === "manual",
+      source: sourceOf(e),
     }));
 }
 
@@ -210,3 +220,46 @@ export function download(blob: Blob, name: string) {
 
 /** Pausen-Vorschlag nach Arbeitszeitgesetz: über 6 Std. 30 min, über 9 Std. 45 min */
 export const suggestedBreak = (grossMinutes: number) => (grossMinutes > 9 * 60 + 45 ? 45 : grossMinutes > 6 * 60 + 30 ? 30 : 0);
+
+/** ISO-Kalenderwoche eines Tages (YYYY-MM-DD) */
+export function isoWeek(day: string): { year: number; week: number; key: string } {
+  const d = new Date(`${day}T12:00:00`);
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dow);
+  const y = t.getUTCFullYear();
+  const week = Math.ceil(((t.getTime() - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
+  return { year: y, week, key: `${y}-${String(week).padStart(2, "0")}` };
+}
+
+/** Zeilen nach Kalenderwoche gruppieren (Reihenfolge bleibt) */
+export function byWeek<T extends { day: string; minutes: number }>(rows: T[]): { key: string; label: string; minutes: number; rows: T[] }[] {
+  const out: { key: string; label: string; minutes: number; rows: T[] }[] = [];
+  for (const r of rows) {
+    const w = isoWeek(r.day);
+    let g = out.find((x) => x.key === w.key);
+    if (!g) {
+      g = { key: w.key, label: `KW ${w.week}/${w.year}`, minutes: 0, rows: [] };
+      out.push(g);
+    }
+    g.rows.push(r);
+    g.minutes += r.minutes;
+  }
+  return out;
+}
+
+/** Schnellauswahl Zeitraum */
+export function presetRange(kind: "week" | "lastweek" | "month" | "lastmonth", now = new Date()): { from: string; to: string } {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (kind === "week" || kind === "lastweek") {
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - ((d.getDay() + 6) % 7) - (kind === "lastweek" ? 7 : 0));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { from: ymd(mon), to: ymd(kind === "week" ? d : sun) };
+  }
+  const m = kind === "month" ? d.getMonth() : d.getMonth() - 1;
+  const first = new Date(d.getFullYear(), m, 1);
+  const last = kind === "month" ? d : new Date(d.getFullYear(), m + 1, 0);
+  return { from: ymd(first), to: ymd(last) };
+}

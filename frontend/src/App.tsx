@@ -28,6 +28,7 @@ import { hasAiPhoneAccess } from "./modules/ki-telefon/types";
 import { WebsiteButton } from "./modules/website/widgets";
 import { EmploymentBadges, EmploymentFilter, ExitControl } from "./modules/mitarbeiter-arten/widgets";
 import { filterPeople } from "./modules/mitarbeiter-arten/logic";
+import { tabFromMode } from "./modules/auftraege/listLogic";
 import type { Person as StundenPerson } from "./modules/stunden/logic";
 import { hasTimeEntries } from "./modules/mitarbeiter-arten/api";
 import { hasWebsiteAccess } from "./modules/website/types";
@@ -293,6 +294,7 @@ const pageLoaders = {
   EmployeeEditor: () => import("./modules/mitarbeiter-arten/EmployeeEditor"),
   OrderCostsSection: () => import("./modules/stunden/OrderCostsSection"),
   ManualTimeDialog: () => import("./modules/stunden/ManualTimeDialog"),
+  OrdersList: () => import("./modules/auftraege/OrdersList"),
   GlobalSettings: () => import("./pages/GlobalSettings"),
   InvoicesPage: () => import("./pages/InvoicesPage"),
   CompanyOnboardingPage: () => import("./pages/CompanyOnboardingPage"),
@@ -337,6 +339,7 @@ const AdminTimeEvaluation = lazy(pageLoaders.AdminTimeEvaluation);
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
+const OrdersList = lazy(pageLoaders.OrdersList);
 const GlobalSettings = lazy(pageLoaders.GlobalSettings);
 const InvoicesPage = lazy(pageLoaders.InvoicesPage);
 const CompanyOnboardingPage = lazy(pageLoaders.CompanyOnboardingPage);
@@ -7136,384 +7139,34 @@ onReloadOrders={async () => {
               )}
 
               {currentPage === "orders-list" && canViewOrders && (
-                <section className="single-page-section">
-                  <div className="card">
-                    <div className="page-topbar">
-                      <div>
-                        <h2>{getOrdersListTitle()}</h2>
-                        <p>{getOrdersListDescription()}</p>
-                      </div>
-
-                      <div className="topbar-actions-inline">
-                        {ordersFilterMode === "customer" && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => {
-                              clearCustomerFilter();
-                              openOrdersListPage("all");
-                            }}
-                          >
-                            Kundenfilter zurücksetzen
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          onClick={openDashboard}
-                        >
-                          Zurück zum Dashboard
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="list-toolbar">
-                      <input
-                        type="text"
-                        placeholder="Aufträge suchen..."
-                        value={orderSearch}
-                        onChange={(e) => setOrderSearch(e.target.value)}
-                        className="search-input"
-                      />
-
-                            <select
-    value={ordersFilterMode}
-    onChange={(e) =>
-      openOrdersListPage(
-        e.target.value as "all" | "open" | "completed"
-      )
-    }
-    className="search-input"
-  >
-    <option value="all">Alle Aufträge</option>
-<option value="open">Offene Aufträge</option>
-<option value="finished">Fertige Aufträge</option>
-<option value="billed">Abgerechnete Aufträge</option>
-<option value="completed">Fertig + abgerechnet</option>
-  </select>
-
-                      <select
-                        value={selectedEmployeeFilterId}
-                        onChange={(e) => setSelectedEmployeeFilterId(e.target.value)}
-                        className="search-input"
-                      >
-                        <option value="">Alle Mitarbeiter</option>
-                        <option value="unassigned">Nur nicht zugewiesen</option>
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={String(employee.id)}>
-                            {(employee.first_name || "").trim()} {(employee.last_name || "").trim()}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {orderMessage && <p className="info-text">{orderMessage}</p>}
-
-                    {filteredOrders.length === 0 ? (
-                      <div className="empty-state">
-                        <p>Keine Aufträge gefunden.</p>
-                      </div>
-                    ) : (
-                      <div className="table-wrapper">
-                        <table className="orders-table orders-table-wide">
-                          <thead>
-                            <tr>
-                              <th>Titel</th>
-                              <th>Kunde</th>
-                              <th>Mitarbeiter</th>
-                              <th>Status</th>
-                              <th>Ort</th>
-                              <th>Zeitraum</th>
-                              <th>Aktion</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredOrders.map((order, index) => {
-                              const orderProgressEntries = getProgressEntriesForOrder(order.id);
-
-                              return (
-  <Fragment key={order.id}>
-  <tr className={index % 2 === 1 ? "order-row-alternate" : ""}>
-    <td data-label="Titel">
-      <div className="table-title">{order.title}</div>
-      <div className="table-subtitle">
-        {order.description || "Keine Beschreibung"}
-      </div>
-    </td>
-
-    <td data-label="Kunde">
-      {customerNameMap.get(order.customer_id) || order.customer_id}
-    </td>
-
-    <td data-label="Mitarbeiter">
-  {orderAssignments.filter(
-    (assignment) => String(assignment.order_id) === String(order.id)
-  ).length === 0 ? (
-    "Nicht zugewiesen"
-  ) : (
-    <div className="order-employee-list">
-      {orderAssignments
-        .filter(
-          (assignment) =>
-            String(assignment.order_id) === String(order.id)
-        )
-        .map((assignment, assignmentIndex) => {
-          const personName =
-            employeeNameMap.get(Number(assignment.user_id)) ||
-            `Mitarbeiter #${assignment.user_id}`;
-
-          return (
-            <div
-              key={`${order.id}-${assignment.user_id}-${assignment.assignment_role}-${assignmentIndex}`}
-              className="order-employee-item"
-            >
-              <span className="order-employee-icon">
-                {assignment.assignment_role === "project_manager"
-                  ? "🟦"
-                  : "🟩"}
-              </span>
-
-              <span>
-                {assignment.assignment_role === "project_manager"
-                  ? `Projektleiter: ${personName}`
-                  : personName}
-              </span>
-            </div>
-          );
-        })}
-    </div>
-  )}
-</td>
-
-    <td data-label="Status">
-      <span className={getStatusClass(order.status)}>
-        {order.status === "zur_pruefung"
-          ? "🔎 Zur Prüfung"
-          : order.status.replaceAll("_", " ")}
-      </span>
-    </td>
-
-    <td data-label="Ort">
-      {[order.address_street, order.address_zip, order.address_city]
-        .filter(Boolean)
-        .join(", ") || "-"}
-    </td>
-
-    <td data-label="Zeitraum">
-      {formatDateOnly(order.start_date)} bis{" "}
-      {formatDateOnly(order.end_date)}
-    </td>
-
-    <td data-label="Aktion">
-      <div
-      className="order-actions"
-        style={{
-          display: "flex",
-          gap: "8px",
-          flexWrap: "wrap",
-        }}
-      >
-        {canEditOrders && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-small"
-            onClick={() => openEditOrderPage(order)}
-            title="Auftrag bearbeiten"
-            aria-label="Auftrag bearbeiten"
-          >
-            ✏️
-          </button>
-        )}
-
-        {order.status === "zur_pruefung" && (
-          <button
-            type="button"
-            className="btn btn-primary btn-small"
-            onClick={() => handleApproveOrder(order.id)}
-            title="Auftrag freigeben"
-            aria-label="Auftrag freigeben"
-          >
-            ✓
-          </button>
-        )}
-
-        {isAdmin && order.status !== "abgerechnet" && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-small"
-            onClick={() => handleCreatePartialInvoice(order.id)}
-            title="Abschlagsrechnung erstellen"
-            aria-label="Abschlagsrechnung erstellen"
-          >
-            💶
-          </button>
-        )}
-
-        {order.status === "fertig" && isAdmin && (
-          <>
-            <button
-              type="button"
-              className="btn btn-primary btn-small"
-              onClick={() => handleCreateInvoice(order.id)}
-              title="Rechnung erstellen"
-              aria-label="Rechnung erstellen"
-            >
-              🧾
-            </button>
-
-            <PerformanceSimulator
-              orderId={order.id}
-              employees={employees}
-            />
-          </>
-        )}
-      </div>
-    </td>
-  </tr>
-
-<tr className={index % 2 === 1 ? "order-row-alternate" : ""}>
-  <td colSpan={7}>
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        flexWrap: "wrap",
-        padding: "0.5rem 0",
-      }}
-    >
-      <strong>Fortschrittsverlauf:</strong>
-
-      {orderProgressEntries.length > 0 ? (
-        <button
-          type="button"
-          className={
-            expandedProgressOrderIds.has(String(order.id))
-              ? "btn btn-primary btn-small"
-              : "btn btn-secondary btn-small"
-          }
-          onClick={() => {
-            const orderId = String(order.id);
-
-            setExpandedProgressOrderIds((current) => {
-              const next = new Set(current);
-
-              if (next.has(orderId)) {
-                next.delete(orderId);
-              } else {
-                next.add(orderId);
-              }
-
-              return next;
-            });
-          }}
-        >
-          {expandedProgressOrderIds.has(String(order.id))
-            ? "Fortschritt ausblenden"
-            : `Fortschritt anzeigen (${orderProgressEntries.length})`}
-        </button>
-      ) : (
-        <span className="table-subtitle">
-          Noch keine Fortschrittsnotizen vorhanden.
-        </span>
-      )}
-    </div>
-
-{expandedProgressOrderIds.has(String(order.id)) &&
-  orderProgressEntries.length > 0 && (
-    <div
-      style={{
-        display: "grid",
-        gap: "10px",
-        marginTop: "8px",
-        marginBottom: "8px",
-      }}
-    >
-      {orderProgressEntries.map((entry) => (
-        <div
-          key={entry.id}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "20px",
-            padding: "7px 10px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            background: "#fafafa",
-          }}
-        >
-          <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-            <div
-              className="table-subtitle"
-              style={{ marginBottom: "4px" }}
-            >
-              {employeeNameMap.get(entry.user_id) ||
-                `Mitarbeiter #${entry.user_id}`}{" "}
-              {formatDateTime(entry.created_at)}
-            </div>
-
-            <div>{entry.note}</div>
-          </div>
-
-          {(entry.images?.length ?? 0) > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "8px",
-                justifyContent: "flex-end",
-                flex: "0 0 auto",
-              }}
-            >
-              {(entry.images ?? []).map((img: any) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedProgressImagePreview(img.image_url)
-                  }
-                  style={{
-                    padding: 0,
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
+                <OrdersList
+                  key={`${ordersFilterMode}-${selectedCustomerId ?? ""}`}
+                  title="Auftragsliste"
+                  description={isAdmin ? "Alle Aufträge mit Status, Team und offenen Punkten." : "Ihre Aufträge mit Status, Team und offenen Punkten."}
+                  orders={orders}
+                  assignments={orderAssignments}
+                  people={employees}
+                  customerName={(id) => customerNameMap.get(String(id)) || String(id)}
+                  progressFor={getProgressEntriesForOrder}
+                  materialOrderIds={hasFeature("materials") ? materialOrderIds : null}
+                  initialTab={tabFromMode(ordersFilterMode)}
+                  customerFilter={ordersFilterMode === "customer" && selectedCustomerId ? { id: String(selectedCustomerId), name: selectedCustomerName || "" } : null}
+                  onClearCustomer={() => {
+                    clearCustomerFilter();
+                    openOrdersListPage("all");
                   }}
-                >
-                  <img
-                    src={img.image_url}
-                    alt="Fortschrittsbild"
-                    style={{
-                      display: "block",
-                      width: "100px",
-                      height: "75px",
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                      border: "1px solid #ddd",
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )}
-
-  </td>
-</tr>
-
-                                </Fragment>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </section>
+                  message={orderMessage}
+                  canEdit={canEditOrders}
+                  isAdmin={isAdmin}
+                  onEdit={(o) => openEditOrderPage(o as Order)}
+                  onApprove={(id) => void handleApproveOrder(id)}
+                  onPartialInvoice={(id) => void handleCreatePartialInvoice(id)}
+                  onInvoice={(id) => void handleCreateInvoice(id)}
+                  renderFinishedExtra={(o) => <PerformanceSimulator orderId={String(o.id)} employees={employees} />}
+                  onPreviewImage={setSelectedProgressImagePreview}
+                  onBack={openDashboard}
+                  formatDateTime={formatDateTime}
+                />
               )}
 
               {currentPage === "quote-detail" && (

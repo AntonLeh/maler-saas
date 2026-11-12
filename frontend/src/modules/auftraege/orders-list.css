@@ -1,0 +1,90 @@
+/* Auftragsliste */
+.ol-root { text-align: left; color: #0f172a; }
+.ol-root h2, .ol-root p { text-align: left; }
+.ol-root .page-topbar .btn { width: auto; }
+
+.ol-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
+.ol-tabs button { border: 1px solid #dbe3ee; background: #fff; border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 14px; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.ol-tabs button span { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 12px; text-align: center; }
+.ol-tabs button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+.ol-tabs button.on span { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.ol-tabs button.t-pruefung:not(.on) span { background: #fef3c7; color: #92400e; }
+
+.ol-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.ol-toolbar input, .ol-toolbar select { padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.ol-toolbar input { flex: 1 1 240px; min-width: 0; }
+.ol-sort { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; }
+.ol-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 14px; color: #475569; background: #fff; }
+
+.ol-table-wrap { border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #fff; }
+.ol-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ol-table th { text-align: left; font-size: 12px; color: #64748b; font-weight: 700; padding: 9px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.ol-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.ol-table tr.open td { background: #f8faff; }
+.ol-main { min-width: 220px; }
+.ol-title { all: unset; cursor: pointer; font-weight: 800; color: #0f172a; font-size: 15px; }
+.ol-title:hover { color: #1d4ed8; text-decoration: underline; }
+.ol-main small { display: block; color: #64748b; font-size: 12.5px; margin-top: 2px; }
+.ol-flags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.ol-flag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; }
+.ol-flag.f-overdue { background: #fee2e2; color: #b91c1c; }
+.ol-flag.f-unassigned { background: #ffedd5; color: #c2410c; }
+.ol-flag.f-no_material { background: #fef3c7; color: #92400e; }
+.ol-flag.f-review { background: #ede9fe; color: #6d28d9; }
+.ol-flag.f-today { background: #dbeafe; color: #1d4ed8; }
+
+.ol-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; background: #f1f5f9; color: #334155; }
+.ol-status.s-neu { background: #e0f2fe; color: #0369a1; }
+.ol-status.s-geplant { background: #e0e7ff; color: #4338ca; }
+.ol-status.s-arbeit { background: #dbeafe; color: #1d4ed8; }
+.ol-status.s-pausiert { background: #f1f5f9; color: #64748b; }
+.ol-status.s-pruefung { background: #ede9fe; color: #6d28d9; }
+.ol-status.s-fertig { background: #dcfce7; color: #166534; }
+.ol-status.s-abgerechnet { background: #e2e8f0; color: #334155; }
+.ol-status.s-storniert { background: #fee2e2; color: #b91c1c; }
+
+.ol-team { display: flex; align-items: center; flex-wrap: wrap; }
+.ol-av { width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11.5px; font-weight: 800; background: #dcfce7; color: #166534; border: 2px solid #fff; margin-left: -6px; cursor: default; }
+.ol-team .ol-av:first-child { margin-left: 0; }
+.ol-av.pm { background: #dbeafe; color: #1d4ed8; }
+.ol-av.more { background: #e2e8f0; color: #334155; }
+.ol-none { color: #94a3b8; }
+td.ol-overdue { color: #b91c1c; font-weight: 700; }
+td[data-label="Zeitraum"] { white-space: nowrap; }
+
+.ol-actions { text-align: right; white-space: nowrap; }
+.ol-btn { border: 1px solid #dbe3ee; background: #fff; border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer; margin-left: 4px; }
+.ol-btn:hover:not(:disabled) { border-color: #93c5fd; }
+.ol-btn:disabled { opacity: 0.45; cursor: default; }
+.ol-btn.on { background: #eff6ff; border-color: #93c5fd; }
+.ol-btn.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.ol-actions .btn { width: auto; }
+
+.ol-progress-row td { background: #f8faff; padding-top: 0; }
+.ol-progress { display: grid; gap: 8px; padding: 4px 0 6px; }
+.ol-progress-item { display: flex; justify-content: space-between; gap: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 8px 10px; }
+.ol-progress-item small { color: #64748b; font-size: 12px; }
+.ol-progress-item p { margin: 2px 0 0; }
+.ol-thumbs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ol-thumbs button { padding: 0; border: 0; background: none; cursor: pointer; }
+.ol-thumbs img { width: 84px; height: 63px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; display: block; }
+.ol-legend { margin: 10px 0 0; font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ol-legend .ol-av { width: 24px; height: 24px; font-size: 10px; margin: 0; }
+
+/* Handy: Karten statt Tabelle */
+@media (max-width: 760px) {
+  .ol-table-wrap { border: 0; background: none; overflow: visible; }
+  .ol-table thead { display: none; }
+  .ol-table, .ol-table tbody { display: block; }
+  .ol-table tr { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 12px; margin-bottom: 10px; }
+  .ol-table td { display: block; border: 0; padding: 0; }
+  .ol-main { grid-column: 1 / -1; min-width: 0; }
+  .ol-table td[data-label="Status"] { grid-column: 1; }
+  .ol-table td[data-label="Team"] { grid-column: 2; justify-self: end; }
+  .ol-table td[data-label="Zeitraum"] { grid-column: 1 / -1; font-size: 13px; color: #475569; }
+  .ol-actions { grid-column: 1 / -1; text-align: left; white-space: normal; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ol-btn { margin-left: 0; }
+  .ol-table tr.ol-progress-row { display: block; margin-top: -14px; border-top: 0; border-radius: 0 0 14px 14px; }
+  .ol-progress-item { flex-direction: column; }
+  .ol-thumbs { justify-content: flex-start; }
+}

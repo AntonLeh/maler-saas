@@ -3,7 +3,15 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { EMPLOYMENT } from "../mitarbeiter-arten/logic";
 import type { Pay } from "../mitarbeiter-arten/logic";
-import { deDate, fmtH, fmtMoney, hours, monthLabel, nameOf } from "./logic";
+import {
+  byWeek,
+  deDate,
+  fmtH,
+  fmtMoney,
+  hours,
+  monthLabel,
+  nameOf,
+} from "./logic";
 import type { ExternalCost, Person, ProofRow, StbRow } from "./logic";
 
 type Company = { name: string; street: string; city: string };
@@ -30,30 +38,59 @@ function foot(doc: jsPDF) {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text(`Erstellt am ${new Date().toLocaleDateString("de-DE")} mit MalerSaaS · Seite ${i} von ${n}`, 14, 289);
+    doc.text(
+      `Erstellt am ${new Date().toLocaleDateString("de-DE")} mit MalerSaaS · Seite ${i} von ${n}`,
+      14,
+      289,
+    );
   }
 }
 
 const tableStyle = {
   styles: { fontSize: 8.5, cellPadding: 1.8, textColor: NAVY },
-  headStyles: { fillColor: NAVY, textColor: [255, 255, 255] as [number, number, number], fontStyle: "bold" as const },
-  alternateRowStyles: { fillColor: [248, 250, 252] as [number, number, number] },
+  headStyles: {
+    fillColor: NAVY,
+    textColor: [255, 255, 255] as [number, number, number],
+    fontStyle: "bold" as const,
+  },
+  alternateRowStyles: {
+    fillColor: [248, 250, 252] as [number, number, number],
+  },
   margin: { left: 14, right: 14 },
 };
 
-const lastY = (doc: jsPDF) => (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 40;
+const lastY = (doc: jsPDF) =>
+  (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+    ?.finalY ?? 40;
 
 // ---------- Monatsliste Steuerberater ----------
 export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  head(doc, `Arbeitsstunden ${monthLabel(month)}`, "Monatsliste für die Lohnabrechnung (eigenes Personal)", company);
+  head(
+    doc,
+    `Arbeitsstunden ${monthLabel(month)}`,
+    "Monatsliste für die Lohnabrechnung (eigenes Personal)",
+    company,
+  );
 
   autoTable(doc, {
     ...tableStyle,
     startY: 36,
-    head: [["Mitarbeiter", "Beschäftigung", "Arbeitstage", "Stunden", "Hinweis"]],
-    body: rows.map((r) => [nameOf(r.person), EMPLOYMENT[r.type].short, String(r.days.length), fmtH(r.minutes), r.note || "–"]),
-    columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { cellWidth: 72 } },
+    head: [
+      ["Mitarbeiter", "Beschäftigung", "Arbeitstage", "Stunden", "Hinweis"],
+    ],
+    body: rows.map((r) => [
+      nameOf(r.person),
+      EMPLOYMENT[r.type].short,
+      String(r.days.length),
+      fmtH(r.minutes),
+      r.note || "–",
+    ]),
+    columnStyles: {
+      2: { halign: "right" },
+      3: { halign: "right" },
+      4: { cellWidth: 72 },
+    },
   });
 
   for (const r of rows) {
@@ -71,8 +108,15 @@ export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
       ...tableStyle,
       startY: y + 3,
       head: [["Datum", "Stunden", "Aufträge"]],
-      body: r.days.map((d) => [deDate(d.day), fmtH(d.minutes), d.orders.join(", ")]),
-      columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 20, halign: "right" } },
+      body: r.days.map((d) => [
+        deDate(d.day),
+        fmtH(d.minutes),
+        d.orders.join(", "),
+      ]),
+      columnStyles: {
+        0: { cellWidth: 34 },
+        1: { cellWidth: 20, halign: "right" },
+      },
     });
   }
 
@@ -83,7 +127,11 @@ export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
   }
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text("Stunden = erfasste Nettoarbeitszeit (ohne Pausen). Soll-Stunden aus den Wochenstunden, Mo–Fr, ohne Feiertage und Urlaub.", 14, y);
+  doc.text(
+    "Stunden = erfasste Nettoarbeitszeit (ohne Pausen). Soll-Stunden aus den Wochenstunden, Mo–Fr, ohne Feiertage und Urlaub.",
+    14,
+    y,
+  );
   foot(doc);
   return doc.output("blob");
 }
@@ -101,22 +149,78 @@ export function proofPdf(o: {
 }): Blob {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const leih = o.kind === "leih";
-  const partner = leih ? o.pay?.agency_name || "Zeitarbeitsfirma" : o.pay?.sub_company || nameOf(o.person);
+  const partner = leih
+    ? o.pay?.agency_name || "Zeitarbeitsfirma"
+    : o.pay?.sub_company || nameOf(o.person);
   const period = `${new Date(`${o.from}T12:00:00`).toLocaleDateString("de-DE")} – ${new Date(`${o.to}T12:00:00`).toLocaleDateString("de-DE")}`;
-  head(doc, leih ? "Stundennachweis Arbeitnehmerüberlassung" : "Leistungsnachweis Subunternehmer", `${nameOf(o.person)} · ${partner} · Zeitraum ${period}`, o.company);
+  head(
+    doc,
+    leih
+      ? "Stundennachweis Arbeitnehmerüberlassung"
+      : "Leistungsnachweis Subunternehmer",
+    `${nameOf(o.person)} · ${partner} · Zeitraum ${period}`,
+    o.company,
+  );
 
-  const rate = leih ? o.pay?.agency_rate ?? o.person.hourly_rate : o.pay?.sub_billing === "stunde" ? o.pay?.sub_rate ?? o.person.hourly_rate : null;
+  const rate = leih
+    ? (o.pay?.agency_rate ?? o.person.hourly_rate)
+    : o.pay?.sub_billing === "stunde"
+      ? (o.pay?.sub_rate ?? o.person.hourly_rate)
+      : null;
   const minutes = o.rows.reduce((s, r) => s + r.minutes, 0);
 
   if (o.rows.length) {
     autoTable(doc, {
       ...tableStyle,
       startY: 36,
-      head: [["Datum", "Auftrag / Baustelle", "Von", "Bis", "Pause", "Stunden"]],
-      body: o.rows.map((r) => [deDate(r.day), r.order + (r.manual ? " *" : ""), r.from, r.to, r.breakMin ? `${r.breakMin} min` : "–", fmtH(r.minutes)]),
+      head: [
+        ["Datum", "Auftrag / Baustelle", "Von", "Bis", "Pause", "Stunden"],
+      ],
+      body: byWeek(o.rows).flatMap((w, _i, weeks) => [
+        ...w.rows.map((r) => [
+          deDate(r.day),
+          r.order + (r.manual ? " *" : ""),
+          r.from,
+          r.to,
+          r.breakMin ? `${r.breakMin} min` : "–",
+          fmtH(r.minutes),
+        ]),
+        ...(weeks.length < 2
+          ? []
+          : [
+              [
+                {
+                  content: `Summe ${w.label}`,
+                  colSpan: 5,
+                  styles: {
+                    fontStyle: "bold" as const,
+                    fillColor: [241, 245, 249] as [number, number, number],
+                  },
+                },
+                {
+                  content: fmtH(w.minutes),
+                  styles: {
+                    fontStyle: "bold" as const,
+                    halign: "right" as const,
+                    fillColor: [241, 245, 249] as [number, number, number],
+                  },
+                },
+              ],
+            ]),
+      ]),
       foot: [["", "Summe", "", "", "", fmtH(minutes)]],
-      footStyles: { fillColor: [226, 232, 240], textColor: NAVY, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 30 }, 2: { cellWidth: 14 }, 3: { cellWidth: 14 }, 4: { cellWidth: 16, halign: "right" }, 5: { cellWidth: 18, halign: "right" } },
+      footStyles: {
+        fillColor: [226, 232, 240],
+        textColor: NAVY,
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        2: { cellWidth: 14 },
+        3: { cellWidth: 14 },
+        4: { cellWidth: 16, halign: "right" },
+        5: { cellWidth: 18, halign: "right" },
+      },
     });
   }
 
@@ -124,12 +228,20 @@ export function proofPdf(o: {
   doc.setFontSize(10);
   doc.setTextColor(...NAVY);
   if (!o.rows.length && !o.external.length) {
-    doc.text("Im Zeitraum sind keine Stunden oder Fremdleistungen erfasst.", 14, y);
+    doc.text(
+      "Im Zeitraum sind keine Stunden oder Fremdleistungen erfasst.",
+      14,
+      y,
+    );
     y += 8;
   }
   if (rate != null && minutes > 0) {
     doc.setFont("helvetica", "bold");
-    doc.text(`${fmtH(minutes)} Std. × ${fmtMoney(rate)} = ${fmtMoney(hours(minutes) * rate)} netto`, 14, y);
+    doc.text(
+      `${fmtH(minutes)} Std. × ${fmtMoney(rate)} = ${fmtMoney(hours(minutes) * rate)} netto`,
+      14,
+      y,
+    );
     doc.setFont("helvetica", "normal");
     y += 6;
   }
@@ -138,16 +250,32 @@ export function proofPdf(o: {
     autoTable(doc, {
       ...tableStyle,
       startY: y + 2,
-      head: [["Rechnungsdatum", "Rechnungs-Nr.", "Auftrag", "Leistung", "Netto"]],
+      head: [
+        ["Rechnungsdatum", "Rechnungs-Nr.", "Auftrag", "Leistung", "Netto"],
+      ],
       body: o.external.map((x) => [
-        x.invoice_date ? new Date(`${x.invoice_date}T12:00:00`).toLocaleDateString("de-DE") : "–",
+        x.invoice_date
+          ? new Date(`${x.invoice_date}T12:00:00`).toLocaleDateString("de-DE")
+          : "–",
         x.invoice_no || "–",
         x.orderTitle,
         `${x.description || ""}${x.reverse_charge ? " (§ 13b)" : ""}`,
         fmtMoney(Number(x.amount_net)),
       ]),
-      foot: [["", "", "", "Summe Fremdleistungen", fmtMoney(o.external.reduce((s, x) => s + Number(x.amount_net), 0))]],
-      footStyles: { fillColor: [226, 232, 240], textColor: NAVY, fontStyle: "bold" },
+      foot: [
+        [
+          "",
+          "",
+          "",
+          "Summe Fremdleistungen",
+          fmtMoney(o.external.reduce((s, x) => s + Number(x.amount_net), 0)),
+        ],
+      ],
+      footStyles: {
+        fillColor: [226, 232, 240],
+        textColor: NAVY,
+        fontStyle: "bold",
+      },
       columnStyles: { 4: { halign: "right" } },
     });
     y = lastY(doc) + 8;
@@ -156,8 +284,11 @@ export function proofPdf(o: {
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   const notes = [
-    "Stunden = Nettoarbeitszeit ohne Pausen." + (o.rows.some((r) => r.manual) ? " * = vom Betrieb nachgetragen." : ""),
-    leih ? "Dient zum Abgleich mit der Rechnung der Zeitarbeitsfirma. Beträge netto zzgl. gesetzlicher Umsatzsteuer." : "Dient zum Abgleich mit der Rechnung des Subunternehmers.",
+    "Stunden = Nettoarbeitszeit ohne Pausen." +
+      (o.rows.some((r) => r.manual) ? " * = vom Betrieb nachgetragen." : ""),
+    leih
+      ? "Dient zum Abgleich mit der Rechnung der Zeitarbeitsfirma. Beträge netto zzgl. gesetzlicher Umsatzsteuer."
+      : "Dient zum Abgleich mit der Rechnung des Subunternehmers.",
   ];
   notes.forEach((n, i) => doc.text(n, 14, y + i * 4));
   y += 20;
