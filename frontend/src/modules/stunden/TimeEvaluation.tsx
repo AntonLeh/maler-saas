@@ -1,6 +1,7 @@
 // Arbeitsstunden (nur Admin): Zeitraum, Filter, Kennzahlen, Soll/Ist, Hinweise (ArbZG), Korrekturen, Export
 import { Fragment, useEffect, useMemo, useState } from "react";
 import * as api from "./api";
+import * as uapi from "../urlaub/api";
 import type { Correction } from "./api";
 import { EMPLOYMENT, EMPLOYMENT_ORDER } from "../mitarbeiter-arten/logic";
 import type { Pay } from "../mitarbeiter-arten/logic";
@@ -19,14 +20,14 @@ import {
   nameOf,
   netMinutes,
   presetRange,
-  sollMinutes,
+  sollFor,
   sourceOf,
   SOURCE_LABELS,
   typeOf,
   yearRange,
   ymd,
 } from "./logic";
-import type { Entry, Group, Person } from "./logic";
+import type { AbsenceCtx, Entry, Group, Person } from "./logic";
 import CorrectionDialog from "./CorrectionDialog";
 import "./st.css";
 
@@ -62,11 +63,13 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
   const [fType, setFType] = useState("");
   const [fixing, setFixing] = useState<Entry | null>(null);
   const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [absCtx, setAbsCtx] = useState<AbsenceCtx | null>(null);
 
   // Stammdaten einmal laden
   useEffect(() => {
-    Promise.all([api.loadPeople(tenantId), api.loadPays(tenantId), api.loadOrders(tenantId), api.loadCorrections(tenantId)])
-      .then(([p, pay, o, c]) => {
+    Promise.all([api.loadPeople(tenantId), api.loadPays(tenantId), api.loadOrders(tenantId), api.loadCorrections(tenantId), uapi.loadAbsences(tenantId), uapi.loadLeaves(tenantId), uapi.loadCalendar(tenantId)])
+      .then(([p, pay, o, c, ab, lv, cl]) => {
+        setAbsCtx(ab ? { absences: ab, leaves: lv, cal: cl } : null);
         setPeople(p);
         setPays(pay);
         setOrders(o);
@@ -143,11 +146,11 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
       .map(([id, v]) => {
         const p = byId.get(id);
         const pay = pays.get(id);
-        const soll = EMPLOYMENT[typeOf(p)].own ? sollMinutes(pay?.weekly_hours ?? null, from, to > ymd(new Date()) ? ymd(new Date()) : to, p?.exit_date) : 0;
+        const soll = EMPLOYMENT[typeOf(p)].own ? (p ? sollFor(p, pay?.weekly_hours ?? null, from, to > ymd(new Date()) ? ymd(new Date()) : to, absCtx) : 0) : 0;
         return { id, p, ...v, soll };
       })
       .sort((a, b) => nameOf(a.p).localeCompare(nameOf(b.p), "de"));
-  }, [filtered, byId, pays, from, to]);
+  }, [filtered, byId, pays, from, to, absCtx]);
 
   // ---------- je Auftrag ----------
   const perOrder = useMemo(() => {
@@ -507,7 +510,7 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
         )}
         {view === "entries" && filtered.length > 500 && <p className="st-small">Es werden die neuesten 500 Einträge angezeigt – für alle bitte „CSV (Excel)“ nutzen.</p>}
         <p className="st-small">
-          Soll-Stunden aus den Wochenstunden im Mitarbeiter-Formular (Mo–Fr, ohne Feiertage und Urlaub). Hinweise nach Arbeitszeitgesetz: höchstens 10 Std. am Tag, Pause ab 6 Std. 30
+          Soll-Stunden aus den Wochenstunden im Mitarbeiter-Formular – an den Arbeitstagen der Person, ohne Feiertage, Urlaub, Krankheit und andere Abwesenheiten (Überstundenabbau zählt nicht ab). Hinweise nach Arbeitszeitgesetz: höchstens 10 Std. am Tag, Pause ab 6 Std. 30
           min und ab 9 Std. 45 min, mindestens 11 Std. Ruhezeit.
         </p>
       </div>

@@ -1,4 +1,5 @@
 import { bicError, ibanError } from "../lib/bankCheck";
+import { DE_REGIONS } from "../modules/urlaub/logic";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { showConfirm } from "../lib/dialogs";
@@ -15,6 +16,7 @@ type CompanySettings = {
   country?: string | null;
   small_business?: boolean | null;
   labor_share_percent?: number | null;
+  holiday_region?: string | null;
   payment_term_days: number;
   partial_payment_term_days: number;
   default_hourly_rate: number | null;
@@ -91,6 +93,7 @@ GlobalSettingsProps) {
   const [defaultSpecialHourlyRate, setDefaultSpecialHourlyRate] = useState("0");
   const [taxRateDefault, setTaxRateDefault] = useState("19");
   const [country, setCountry] = useState("Deutschland");
+  const [holidayRegion, setHolidayRegion] = useState("");
   const [smallBusiness, setSmallBusiness] = useState(false);
   const [laborShare, setLaborShare] = useState("70");
   const [paymentTermDays, setPaymentTermDays] = useState("14");
@@ -181,6 +184,7 @@ setDefaultSpecialHourlyRate(
 setCountry(normalizeCountry(loadedSettings.country));
 setSmallBusiness(loadedSettings.small_business === true);
 setLaborShare(String(loadedSettings.labor_share_percent ?? 70));
+setHolidayRegion(loadedSettings.holiday_region ?? "");
 setTaxRateDefault(
   loadedSettings.tax_rate_default !== null &&
     loadedSettings.tax_rate_default !== undefined
@@ -465,6 +469,7 @@ if (
       country,
       // erst nach dem Datenbank-Update vorhanden
       ...(settings && "labor_share_percent" in settings ? { labor_share_percent: laborShareValue } : {}),
+      ...(settings && "holiday_region" in settings ? { holiday_region: country === "Deutschland" ? holidayRegion || null : null } : {}),
       payment_term_days: paymentTermDaysValue,
       partial_payment_term_days: partialPaymentTermDaysValue,
       company_name: companyName.trim(),
@@ -518,6 +523,7 @@ if (
     setCountry(normalizeCountry(savedSettings.country));
     setSmallBusiness(savedSettings.small_business === true);
     setLaborShare(String(savedSettings.labor_share_percent ?? 70));
+    setHolidayRegion(savedSettings.holiday_region ?? "");
 
     setCompanyName(savedSettings.company_name || "");
     setCompanyStreet(savedSettings.street || "");
@@ -692,6 +698,25 @@ if (
     Danach richten sich die Pflichthinweise auf den Rechnungen.
   </small>
 </div>
+
+{country === "Deutschland" && (
+  <div className="form-group">
+    <label htmlFor="holidayRegion">Bundesland (für Feiertage)</label>
+    <select id="holidayRegion" value={holidayRegion} onChange={(e) => setHolidayRegion(e.target.value)} disabled={!!settings && !("holiday_region" in settings)}>
+      <option value="">Bitte wählen – sonst nur bundesweite Feiertage</option>
+      {DE_REGIONS.map((r) => (
+        <option key={r.code} value={r.code}>
+          {r.label}
+        </option>
+      ))}
+    </select>
+    <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+      {settings && !("holiday_region" in settings)
+        ? "Dafür fehlt noch das Datenbank-Update (SQL „Urlaub“)."
+        : "Feiertage zählen nicht als Urlaubs- oder Arbeitstage (Urlaub & Abwesenheiten, Soll-Stunden)."}
+    </small>
+  </div>
+)}
 
 <div className="form-group">
   <label htmlFor="laborShare">Lohnanteil (%)</label>

@@ -37,6 +37,7 @@ import { AssignWarning, DocsLight, DocsReminder, DocsSection } from "./modules/n
 import { landOf } from "./modules/nachweise/logic";
 import type { PartnerDoc } from "./modules/nachweise/logic";
 import { loadDocs as loadPartnerDocs } from "./modules/nachweise/api";
+import { AbsenceAssignWarning, AbsenceBar, TeamAbsenceCard } from "./modules/urlaub/widgets";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -331,6 +332,8 @@ const pageLoaders = {
   QuoteEmailDialog: () => import("./modules/angebote/QuoteEmailDialog"),
   BuchhaltungPage: () => import("./modules/belege/BuchhaltungPage"),
   TerminkalenderPage: () => import("./modules/terminkalender/TerminkalenderPage"),
+  UrlaubPage: () => import("./modules/urlaub/UrlaubPage"),
+  LeaveSection: () => import("./modules/urlaub/LeaveSection"),
   MeineTerminePage: () => import("./modules/terminkalender/MeineTerminePage"),
   KiTelefonPage: () => import("./modules/ki-telefon/KiTelefonPage"),
   WebsitePage: () => import("./modules/website/WebsitePage"),
@@ -376,6 +379,8 @@ const QuoteItemsEditor = lazy(pageLoaders.QuoteItemsEditor);
 const QuoteEmailDialog = lazy(pageLoaders.QuoteEmailDialog);
 const BuchhaltungPage = lazy(pageLoaders.BuchhaltungPage);
 const TerminkalenderPage = lazy(pageLoaders.TerminkalenderPage);
+const UrlaubPage = lazy(pageLoaders.UrlaubPage);
+const LeaveSection = lazy(pageLoaders.LeaveSection);
 const MeineTerminePage = lazy(pageLoaders.MeineTerminePage);
 const KiTelefonPage = lazy(pageLoaders.KiTelefonPage);
 const WebsitePage = lazy(pageLoaders.WebsitePage);
@@ -535,6 +540,7 @@ type CurrentPage =
   | "business-images"
   | "approval-center"
   | "terminkalender"
+  | "urlaub"
   | "meine-termine"
   | "ki-telefon"
   | "website"
@@ -6706,6 +6712,10 @@ onReloadOrders={async () => {
                     }}
                   />
 
+                  {userProfile.role_id === ADMIN_ROLE_ID && (
+                    <AbsenceBar tenantId={userProfile.tenant_id} people={employees} onOpen={() => setCurrentPage("urlaub")} />
+                  )}
+
                   <BusinessCockpit
                   businessEvents={[
   ...businessEvents,
@@ -7419,6 +7429,7 @@ onReloadOrders={async () => {
       {userProfile?.role_id === ADMIN_ROLE_ID && (
         <AssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} docs={partnerDocs} land={partnerLand} />
       )}
+      <AbsenceAssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} from={orderForm.start_date} to={orderForm.end_date} />
     </div>
 
     <div
@@ -7784,6 +7795,11 @@ onReloadOrders={async () => {
                         <button type="button" className="btn btn-secondary" style={{ width: "auto" }} onClick={() => setManualTimeUserId(0)}>
                           🕒 Stunden nachtragen
                         </button>
+                        {userProfile?.role_id === ADMIN_ROLE_ID && (
+                          <button type="button" className="btn btn-secondary" style={{ width: "auto" }} onClick={() => setCurrentPage("urlaub")}>
+                            🏖 Urlaub & Abwesenheiten
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn btn-secondary"
@@ -10262,6 +10278,7 @@ const businessAdvisor = generateBusinessInsights();
                         {userProfile?.role_id === ADMIN_ROLE_ID && (
                           <AssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} docs={partnerDocs} land={partnerLand} />
                         )}
+                        <AbsenceAssignWarning selected={employees.filter((e) => selectedEmployeeIds.includes(String(e.id)))} from={orderForm.start_date} to={orderForm.end_date} />
                       </div>
 
                       <div className="form-group ao-field">
@@ -10482,7 +10499,12 @@ const businessAdvisor = generateBusinessInsights();
               {currentPage === "edit-employee" && userProfile?.role_id === ADMIN_ROLE_ID && (() => {
                 const person = employees.find((e) => e.id === editingEmployeeId);
                 return person ? (
+                  <>
+                  <Suspense fallback={null}>
+                    <LeaveSection tenantId={userProfile.tenant_id} person={person} onOpenOverview={() => setCurrentPage("urlaub")} />
+                  </Suspense>
                   <DocsSection tenantId={userProfile.tenant_id} currentUserId={userProfile.id} person={person} land={partnerLand} docs={partnerDocs} onChanged={reloadPartnerDocs} />
+                  </>
                 ) : null;
               })()}
 
@@ -10681,6 +10703,19 @@ const businessAdvisor = generateBusinessInsights();
   employeeNameMap={employeeNameMap}
   onPreviewImage={setSelectedProgressImagePreview}
 />
+)}
+
+{currentPage === "urlaub" && userProfile?.role_id === ADMIN_ROLE_ID && (
+  <UrlaubPage
+    tenantId={userProfile.tenant_id}
+    currentUserId={userProfile.id}
+    people={employees}
+    onBack={openDashboard}
+    onOpenPerson={(id) => {
+      const p = employees.find((e) => e.id === id);
+      if (p) openEditEmployeePage(p);
+    }}
+  />
 )}
 
 {currentPage === "terminkalender" && isAdmin && userProfile?.tenant_id && (

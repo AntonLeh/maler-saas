@@ -1,5 +1,7 @@
 // Stunden: Nettozeiten, Kosten nach Beschäftigungsart, Monatslisten, Nachweise
 import { EMPLOYMENT, minijobLimit, monthlyHours } from "../mitarbeiter-arten/logic";
+import { absentMap, DEFAULT_WEEKDAYS, kindDays, kindSummary, sollMinutes as sollWithAbsences } from "../urlaub/logic";
+import type { Absence, AbsenceKind, Calendar, Leave } from "../urlaub/logic";
 import type { EmploymentType, Pay } from "../mitarbeiter-arten/logic";
 
 export type Entry = {
@@ -127,6 +129,25 @@ export function sollMinutes(weekly: number | null, from: string, to: string, exi
   return (weekly / 5) * workdays(from, end) * 60;
 }
 
+// ---------- Soll mit Feiertagen, Arbeitstagen und Abwesenheiten (Modul Urlaub) ----------
+export type AbsenceCtx = { absences: Absence[]; leaves: Map<number, Leave>; cal: Calendar };
+const weekdaysOf = (p: Person, ctx: AbsenceCtx) => {
+  const w = ctx.leaves.get(Number(p.id))?.work_weekdays;
+  return w?.length ? w : DEFAULT_WEEKDAYS;
+};
+export function sollFor(p: Person, weekly: number | null, from: string, to: string, ctx?: AbsenceCtx | null): number {
+  if (!ctx) return sollMinutes(weekly, from, to, p.exit_date);
+  const wd = weekdaysOf(p, ctx);
+  return sollWithAbsences(weekly, from, to, { weekdays: wd, cal: ctx.cal, entryDate: ctx.leaves.get(Number(p.id))?.entry_date, exitDate: p.exit_date, absent: absentMap(Number(p.id), ctx.absences, wd, ctx.cal, from, to) });
+}
+export function absenceKinds(p: Person, from: string, to: string, ctx?: AbsenceCtx | null): Record<AbsenceKind, number> | null {
+  if (!ctx) return null;
+  return kindDays(Number(p.id), ctx.absences, weekdaysOf(p, ctx), ctx.cal, from, to);
+}
+/** Abwesenheiten einer Person im Zeitraum (genehmigt) */
+export const absencesOf = (p: Person, from: string, to: string, ctx?: AbsenceCtx | null) =>
+  ctx ? ctx.absences.filter((a) => Number(a.user_id) === Number(p.id) && a.status === "genehmigt" && a.start_date <= to && a.end_date >= from).sort((a, b) => a.start_date.localeCompare(b.start_date)) : [];
+
 // ---------- Monatsliste Steuerberater ----------
 export type StbRow = {
   person: Person;
@@ -136,9 +157,13 @@ export type StbRow = {
   minutes: number;
   soll: number;
   note: string;
+  /** Abwesenheitstage je Art im Monat (null = Modul Urlaub noch nicht eingerichtet) */
+  kinds: Record<AbsenceKind, number> | null;
+  absText: string;
+  absences: Absence[];
 };
 
-export function stbList(month: string, people: Person[], entries: Entry[], pays: Map<number, Pay>, orderTitle: (id: Entry["order_id"]) => string): StbRow[] {
+export function stbList(month: string, people: Person[], entries: Entry[], pays: Map<number, Pay>, orderTitle: (id: Entry["order_id"]) => string, ctx?: AbsenceCtx | null): StbRow[] {
   const { from, to } = monthRange(month);
   const list = inRange(entries, from, to);
   return people
@@ -158,7 +183,9 @@ export function stbList(month: string, people: Person[], entries: Entry[], pays:
       const minutes = days.reduce((s, d) => s + d.minutes, 0);
       const pay = pays.get(Number(p.id)) ?? null;
       const type = typeOf(p);
-      const soll = sollMinutes(pay?.weekly_hours ?? null, from, to, p.exit_date);
+      const soll = sollFor(p, pay?.weekly_hours ?? null, from, to, ctx);
+      const kinds = absenceKinds(p, from, to, ctx);
+      const absText = kinds ? kindSummary(kinds) : "";
       let note = "";
       if (pay?.pay_type === "monat") {
         note = `Monatsgehalt ${pay.monthly_salary != null ? fmtMoney(pay.monthly_salary) : "–"}`;
@@ -173,7 +200,7 @@ export function stbList(month: string, people: Person[], entries: Entry[], pays:
       }
       if (type === "azubi" && pay?.training_year) note = `${pay.training_year}. Lehrjahr${note ? ` · ${note}` : ""}`;
       if (p.exit_date && p.exit_date >= from && p.exit_date <= to) note += `${note ? " · " : ""}Austritt ${new Date(`${p.exit_date}T12:00:00`).toLocaleDateString("de-DE")}`;
-      return { person: p, type, pay, days, minutes, soll, note };
+      return { person: p, type, pay, days, minutes, soll, note, kinds, absText, absences: absencesOf(p, from, to, ctx) };
     })
     .sort((a, b) => nameOf(a.person).localeCompare(nameOf(b.person), "de"));
 }

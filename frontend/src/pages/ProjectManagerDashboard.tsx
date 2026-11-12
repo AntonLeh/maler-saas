@@ -37,6 +37,7 @@ type ProjectManagerDashboardProps = {
 };
 
 import TeamClock from "../modules/stunden/TeamClock";
+import { TeamAbsenceCard } from "../modules/urlaub/widgets";
 import type { Person } from "../modules/stunden/logic";
 
 export default function ProjectManagerDashboard({
@@ -135,6 +136,7 @@ export default function ProjectManagerDashboard({
 
         <div className="pm-grid">
           {teamPeople && <TeamClock people={teamPeople} orders={orders} assignments={assignments} />}
+          {teamPeople && <TeamAbsenceCard people={teamPeople} />}
           <section className="pm-card">
             <h2>Schnellzugriff</h2>
             <div className="pm-actions">

@@ -12,7 +12,9 @@ import {
   monthLabel,
   nameOf,
 } from "./logic";
-import type { ExternalCost, Person, ProofRow, StbRow } from "./logic";
+import type { AbsenceCtx, ExternalCost, Person, ProofRow, StbRow } from "./logic";
+import { countDays, DEFAULT_WEEKDAYS, KINDS } from "../urlaub/logic";
+import { monthRange } from "./logic";
 
 type Company = { name: string; street: string; city: string };
 const NAVY: [number, number, number] = [15, 23, 42];
@@ -64,7 +66,7 @@ const lastY = (doc: jsPDF) =>
     ?.finalY ?? 40;
 
 // ---------- Monatsliste Steuerberater ----------
-export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
+export function stbPdf(month: string, rows: StbRow[], company: Company, ctx?: AbsenceCtx | null): Blob {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   head(
     doc,
@@ -77,21 +79,52 @@ export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
     ...tableStyle,
     startY: 36,
     head: [
-      ["Mitarbeiter", "Beschäftigung", "Arbeitstage", "Stunden", "Hinweis"],
+      ctx
+        ? ["Mitarbeiter", "Beschäftigung", "Arbeitstage", "Stunden", "Abwesend (Tage)", "Hinweis"]
+        : ["Mitarbeiter", "Beschäftigung", "Arbeitstage", "Stunden", "Hinweis"],
     ],
-    body: rows.map((r) => [
-      nameOf(r.person),
-      EMPLOYMENT[r.type].short,
-      String(r.days.length),
-      fmtH(r.minutes),
-      r.note || "–",
-    ]),
-    columnStyles: {
-      2: { halign: "right" },
-      3: { halign: "right" },
-      4: { cellWidth: 72 },
-    },
+    body: rows.map((r) =>
+      ctx
+        ? [nameOf(r.person), EMPLOYMENT[r.type].short, String(r.days.length), fmtH(r.minutes), r.absText || "–", r.note || "–"]
+        : [nameOf(r.person), EMPLOYMENT[r.type].short, String(r.days.length), fmtH(r.minutes), r.note || "–"],
+    ),
+    columnStyles: ctx
+      ? { 2: { halign: "right" }, 3: { halign: "right" }, 4: { cellWidth: 34 }, 5: { cellWidth: 56 } }
+      : { 2: { halign: "right" }, 3: { halign: "right" }, 4: { cellWidth: 72 } },
   });
+
+  // Abwesenheiten im Monat (Urlaub, Krankheit …)
+  const absRows = ctx
+    ? rows.flatMap((r) => {
+        const wd = ctx.leaves.get(Number(r.person.id))?.work_weekdays ?? DEFAULT_WEEKDAYS;
+        const { from, to } = monthRange(month);
+        return r.absences.map((a) => [
+          nameOf(r.person),
+          KINDS[a.kind].label,
+          a.start_date === a.end_date ? deDate(a.start_date) : `${deDate(a.start_date)} – ${deDate(a.end_date)}`,
+          String(countDays(a, wd, ctx.cal, from, to)).replace(".", ","),
+          [a.au_present ? "AU liegt vor" : "", a.start_half || a.end_half ? "mit halbem Tag" : "", a.note ?? ""].filter(Boolean).join(" · ") || "–",
+        ]);
+      })
+    : [];
+  if (absRows.length) {
+    let y0 = lastY(doc) + 10;
+    if (y0 > 250) {
+      doc.addPage();
+      y0 = 20;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...NAVY);
+    doc.text("Abwesenheiten", 14, y0);
+    autoTable(doc, {
+      ...tableStyle,
+      startY: y0 + 3,
+      head: [["Mitarbeiter", "Art", "Zeitraum", "Arbeitstage im Monat", "Hinweis"]],
+      body: absRows,
+      columnStyles: { 3: { halign: "right", cellWidth: 26 } },
+    });
+  }
 
   for (const r of rows) {
     if (!r.days.length) continue;
@@ -128,7 +161,9 @@ export function stbPdf(month: string, rows: StbRow[], company: Company): Blob {
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    "Stunden = erfasste Nettoarbeitszeit (ohne Pausen). Soll-Stunden aus den Wochenstunden, Mo–Fr, ohne Feiertage und Urlaub.",
+    ctx
+      ? "Stunden = erfasste Nettoarbeitszeit (ohne Pausen). Soll-Stunden aus den Wochenstunden an den Arbeitstagen, ohne Feiertage und Abwesenheiten."
+      : "Stunden = erfasste Nettoarbeitszeit (ohne Pausen). Soll-Stunden aus den Wochenstunden, Mo–Fr, ohne Feiertage und Urlaub.",
     14,
     y,
   );

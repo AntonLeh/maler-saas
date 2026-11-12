@@ -1,6 +1,8 @@
 // Stundenlisten & Nachweise (nur Admin): Monatsliste Steuerberater, Stundennachweis Zeitarbeitsfirma, Leistungsnachweis Subunternehmer
 import { Fragment, useEffect, useMemo, useState } from "react";
 import * as api from "./api";
+import * as uapi from "../urlaub/api";
+import { KINDS, countDays, DEFAULT_WEEKDAYS } from "../urlaub/logic";
 import { EMPLOYMENT } from "../mitarbeiter-arten/logic";
 import type { Pay } from "../mitarbeiter-arten/logic";
 import {
@@ -23,7 +25,7 @@ import {
   typeOf,
   ymd,
 } from "./logic";
-import type { Entry, ExternalCost, Group, Person } from "./logic";
+import type { AbsenceCtx, Entry, ExternalCost, Group, Person } from "./logic";
 import { proofPdf, stbPdf } from "./pdf";
 import ManualTimeDialog from "./ManualTimeDialog";
 import "./st.css";
@@ -60,6 +62,7 @@ export default function ReportsPage({
   const [entries, setEntries] = useState<Entry[]>([]);
   const [external, setExternal] = useState<ExternalCost[]>([]);
   const [company, setCompany] = useState({ name: "", street: "", city: "" });
+  const [absCtx, setAbsCtx] = useState<AbsenceCtx | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
@@ -74,14 +77,18 @@ export default function ReportsPage({
   const load = async () => {
     setLoading(true);
     try {
-      const [p, pay, o, e, x, c] = await Promise.all([
+      const [p, pay, o, e, x, c, ab, lv, cl] = await Promise.all([
         api.loadPeople(tenantId),
         api.loadPays(tenantId),
         api.loadOrders(tenantId),
         api.loadEntries(tenantId),
         api.loadExternalCosts(tenantId),
         api.loadCompany(tenantId),
+        uapi.loadAbsences(tenantId),
+        uapi.loadLeaves(tenantId),
+        uapi.loadCalendar(tenantId),
       ]);
+      setAbsCtx(ab ? { absences: ab, leaves: lv, cal: cl } : null);
       setPeople(p);
       setPays(pay);
       setOrders(o);
@@ -113,8 +120,8 @@ export default function ReportsPage({
 
   // ---------- Monatsliste ----------
   const stb = useMemo(
-    () => stbList(month, people, entries, pays, orderTitle),
-    [month, people, entries, pays, orderTitle],
+    () => stbList(month, people, entries, pays, orderTitle, absCtx),
+    [month, people, entries, pays, orderTitle, absCtx],
   );
   const monthSplit = useMemo(() => {
     const { from: f, to: t } = monthRange(month);
@@ -134,7 +141,7 @@ export default function ReportsPage({
   const stbDownload = (kind: "pdf" | "csv") => {
     if (kind === "pdf")
       return download(
-        stbPdf(month, stb, company),
+        stbPdf(month, stb, company, absCtx),
         `Arbeitsstunden_${month}.pdf`,
       );
     const rows: (string | number)[][] = [
@@ -145,6 +152,7 @@ export default function ReportsPage({
         "Stunden",
         "Aufträge",
         "Hinweis",
+        "Abwesenheiten",
       ],
     ];
     for (const r of stb) {
@@ -156,6 +164,7 @@ export default function ReportsPage({
           0,
           "",
           r.note,
+          r.absText,
         ]);
       r.days.forEach((d, i) =>
         rows.push([
@@ -165,8 +174,23 @@ export default function ReportsPage({
           hours(d.minutes),
           d.orders.join(", "),
           i === 0 ? r.note : "",
+          i === 0 ? r.absText : "",
         ]),
       );
+      // Abwesenheiten einzeln (für die Lohnabrechnung)
+      for (const a of r.absences) {
+        const wd = absCtx?.leaves.get(Number(r.person.id))?.work_weekdays ?? DEFAULT_WEEKDAYS;
+        const { from: f, to: t } = monthRange(month);
+        rows.push([
+          nameOf(r.person),
+          EMPLOYMENT[r.type].short,
+          a.start_date === a.end_date ? a.start_date : `${a.start_date} bis ${a.end_date}`,
+          0,
+          "",
+          `${KINDS[a.kind].label}${a.au_present ? " (AU liegt vor)" : ""}${a.note ? ` – ${a.note}` : ""}`,
+          absCtx ? `${countDays(a, wd, absCtx.cal, f, t)} Tage` : "",
+        ]);
+      }
     }
     download(
       new Blob([csv(rows)], { type: "text/csv;charset=utf-8" }),
@@ -400,6 +424,7 @@ export default function ReportsPage({
                     <th>Beschäftigung</th>
                     <th className="r">Tage</th>
                     <th className="r">Stunden</th>
+                    <th>Abwesend</th>
                     <th>Hinweis</th>
                   </tr>
                 </thead>
@@ -410,6 +435,9 @@ export default function ReportsPage({
                       <td>{EMPLOYMENT[r.type].short}</td>
                       <td className="r">{r.days.length}</td>
                       <td className="r">{fmtH(r.minutes)}</td>
+                      <td title={r.absences.map((a) => `${KINDS[a.kind].label} ${a.start_date}${a.end_date !== a.start_date ? ` – ${a.end_date}` : ""}${a.au_present ? " (AU)" : ""}`).join("\n")}>
+                        {absCtx ? r.absText || "–" : <small>Urlaub-SQL fehlt</small>}
+                      </td>
                       <td className={r.note.includes("ACHTUNG") ? "warn" : ""}>
                         {r.note || "–"}
                       </td>
@@ -419,9 +447,10 @@ export default function ReportsPage({
               </table>
             )}
             <p className="st-small">
-              Soll-Stunden aus den Wochenstunden im Mitarbeiter-Formular (Mo–Fr,
-              ohne Feiertage und Urlaub). Die Lohnabrechnung selbst macht Ihr
-              Steuerberater.
+              Soll-Stunden aus den Wochenstunden im Mitarbeiter-Formular – an den
+              Arbeitstagen der Person, ohne Feiertage, Urlaub, Krankheit und andere
+              Abwesenheiten (Überstundenabbau zählt nicht ab). Abwesend in
+              Arbeitstagen. Die Lohnabrechnung selbst macht Ihr Steuerberater.
             </p>
           </>
         ) : (

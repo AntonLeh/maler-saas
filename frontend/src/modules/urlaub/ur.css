@@ -1,0 +1,113 @@
+/* Urlaub & Abwesenheiten */
+.ur-root { text-align: left; color: #0f172a; }
+.ur-root h2, .ur-root h3, .ur-root p, .ur-root label { text-align: left; }
+.ur-root .form-page-card { max-width: 980px; }
+.ur-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ur-head h3 { margin: 0; font-size: 18px; }
+.ur-head .btn, .ur-top-actions .btn, .ur-save, .ur-row-actions .btn, .ur-actions .btn { width: auto; }
+.ur-top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ur-small { display: block; margin: 6px 0; font-size: 12.5px; color: #64748b; line-height: 1.5; }
+.ur-muted { color: #94a3b8; font-size: 13px; }
+.ur-neg { color: #b91c1c !important; }
+.ur-msg { margin: 10px 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.ur-msg small { font-weight: 500; }
+.ur-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.ur-msg.warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.ur-msg.ok { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.ur-link { all: unset; cursor: pointer; color: #1d4ed8; font-weight: 700; }
+.ur-link:hover { text-decoration: underline; }
+
+.ur-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.ur-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin: 8px 0; }
+.ur-grid .ur-field { margin: 0; }
+.ur-field > span { font-size: 13px; font-weight: 700; color: #334155; }
+.ur-field input, .ur-field select { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 15px; background: #fff; }
+.ur-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.ur-days button { width: 46px; height: 38px; border: 1px solid #dbe3ee; border-radius: 10px; background: #fff; font: inherit; font-weight: 700; color: #64748b; cursor: pointer; }
+.ur-days button.on { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+
+.ur-konto { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 12px 0; }
+.ur-konto div { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 10px; background: #fff; }
+.ur-konto span { display: block; font-size: 12px; color: #64748b; font-weight: 600; }
+.ur-konto b { font-size: 20px; }
+.ur-konto .sum { background: #eff6ff; border-color: #bfdbfe; }
+.ur-konto .sum b { color: #1d4ed8; }
+.ur-konto .neg { background: #fef2f2; border-color: #fca5a5; }
+.ur-konto .neg b { color: #b91c1c; }
+.ur-konto .krank b { color: #b91c1c; }
+
+/* Dialog */
+.ur-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: grid; place-items: center; z-index: 1000; padding: 16px; }
+.ur-dialog { background: #fff; border-radius: 18px; padding: 18px 20px; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; text-align: left; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25); }
+.ur-dialog h3 { margin: 0 0 8px; font-size: 19px; }
+.ur-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.ur-kinds button { border: 1px solid #dbe3ee; background: #fff; border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 13.5px; font-weight: 600; color: #334155; cursor: pointer; }
+.ur-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin: 4px 0; }
+.ur-checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.ur-sum { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+.ur-sum small { display: block; color: #64748b; margin-top: 3px; }
+.ur-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+/* Seite */
+.ur-today { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 14px; font-weight: 600; margin: 8px 0; }
+.ur-tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.ur-tabs button { border: 1px solid #dbe3ee; background: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 700; color: #334155; cursor: pointer; }
+.ur-tabs button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+.ur-tabs select, .ur-filter select { padding: 7px 10px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.ur-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.ur-month { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ur-month > button:not(.ur-link) { width: 34px; height: 34px; border: 1px solid #dbe3ee; border-radius: 10px; background: #fff; font-size: 20px; cursor: pointer; }
+.ur-month b { min-width: 150px; text-align: center; font-size: 16px; }
+
+.ur-cal-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
+.ur-cal { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+.ur-cal th, .ur-cal td { border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; text-align: center; padding: 0; min-width: 26px; height: 32px; }
+.ur-cal th { background: #f8fafc; font-weight: 700; color: #334155; padding: 3px 0; }
+.ur-cal th small { display: block; font-size: 10px; color: #94a3b8; font-weight: 600; }
+.ur-cal th.we, .ur-cal th.hol { background: #eef2f7; color: #94a3b8; }
+.ur-cal th.hol { color: #b91c1c; }
+.ur-cal th.today { background: #1d4ed8; color: #fff; }
+.ur-cal th.today small { color: #dbeafe; }
+.ur-cal .who { position: sticky; left: 0; background: #fff; text-align: left; padding: 0 10px; white-space: nowrap; min-width: 130px; z-index: 1; border-right: 1px solid #e2e8f0; }
+.ur-cal th.who { background: #f8fafc; }
+.ur-cal td { cursor: pointer; font-size: 13px; }
+.ur-cal td:hover:not(.off) { outline: 2px solid #93c5fd; outline-offset: -2px; }
+.ur-cal td.off { background: repeating-linear-gradient(135deg, #f1f5f9, #f1f5f9 4px, #f8fafc 4px, #f8fafc 8px); cursor: default; }
+.ur-cal td.half { background-image: linear-gradient(135deg, transparent 50%, #fff 50%) !important; }
+.ur-cal td.today { box-shadow: inset 0 0 0 2px #1d4ed8; }
+.ur-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.ur-legend span, .ur-chip { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.ur-legend .off { background: repeating-linear-gradient(135deg, #f1f5f9, #f1f5f9 4px, #fff 4px, #fff 8px); color: #64748b; border: 1px solid #e2e8f0; }
+
+.ur-table-wrap { overflow-x: auto; }
+.ur-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ur-table th { text-align: left; font-size: 12px; color: #64748b; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.ur-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; }
+.ur-table .r { text-align: right; }
+.ur-table td.b { font-weight: 800; }
+.ur-table td.warn { color: #b45309; }
+.ur-table td.neg { color: #b91c1c; }
+.ur-row-actions { white-space: nowrap; text-align: right; }
+.ur-row-actions .btn { margin-left: 4px; }
+
+/* Dashboard-Leiste */
+.ur-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 14px; margin: 0 0 14px; }
+.ur-bar > div { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: #334155; }
+.ur-bar strong { color: #0f172a; }
+.ur-bar .btn { width: auto; flex: none; }
+.ur-bar-warn { color: #b45309; font-weight: 600; font-size: 13px; }
+
+/* Projektleiter */
+.ur-pm ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.ur-pm li { display: flex; justify-content: space-between; gap: 10px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; font-size: 14px; text-align: left; }
+.ur-pm li.now { background: #fff7ed; border-color: #fed7aa; }
+.ur-pm li span { color: #64748b; }
+
+/* Zuteilung */
+.ur-assign { text-align: left; border: 1px solid #fcd34d; background: #fffbeb; color: #78350f; border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.ur-assign p { margin: 4px 0 0; font-size: 13.5px; }
+
+@media (max-width: 640px) {
+  .ur-grid { grid-template-columns: 1fr; }
+  .ur-bar { flex-direction: column; align-items: flex-start; }
+}
