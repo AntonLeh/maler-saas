@@ -16,6 +16,7 @@ export type Absence = {
   note: string | null;
   status: Status;
   created_at?: string;
+  decision_note?: string | null;
 };
 
 export type YearData = { carry?: number | null; entitled?: number | null };
@@ -334,3 +335,7 @@ export const personName = (p?: UPerson) => `${p?.first_name ?? ""} ${p?.last_nam
 export const hasLeave = (p: UPerson) => (p.role_id === 3 || p.role_id === 4) && !["leiharbeit", "sub"].includes(String(p.employment_type ?? ""));
 /** Personen, für die Abwesenheiten eingetragen werden können (ohne Subunternehmer) */
 export const canBeAbsent = (p: UPerson) => (p.role_id === 3 || p.role_id === 4) && p.employment_type !== "sub";
+
+/** Arten, die Mitarbeiter selbst beantragen können */
+export const REQUEST_KINDS: AbsenceKind[] = ["urlaub", "ueberstunden", "unbezahlt"];
+export const STATUS_LABEL: Record<Status, string> = { beantragt: "beantragt – wartet auf Freigabe", genehmigt: "genehmigt", abgelehnt: "abgelehnt" };

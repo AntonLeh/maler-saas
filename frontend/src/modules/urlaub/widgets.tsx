@@ -10,7 +10,7 @@ const range = (a: { start_date: string; end_date: string }) => (a.start_date ===
 
 // ---------- Chef-Dashboard ----------
 export function AbsenceBar({ tenantId, people, onOpen }: { tenantId: number; people: UPerson[]; onOpen: () => void }) {
-  const [data, setData] = useState<{ abs: Absence[]; rest: { p: UPerson; rest: number }[] } | null>(null);
+  const [data, setData] = useState<{ abs: Absence[]; rest: { p: UPerson; rest: number }[]; pending: number } | null>(null);
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -25,7 +25,7 @@ export function AbsenceBar({ tenantId, people, onOpen }: { tenantId: number; peo
               .map((p) => ({ p, rest: balance(leaves.get(p.id) ?? EMPTY_LEAVE(p.id, tenantId), now.getFullYear(), abs, cal, p.exit_date, today).rest }))
               .filter((x) => x.rest > 0)
           : [];
-      setData({ abs: abs.filter((a) => a.status === "genehmigt" && a.end_date >= today && a.start_date <= addDays(today, 14)), rest });
+      setData({ abs: abs.filter((a) => a.status === "genehmigt" && a.end_date >= today && a.start_date <= addDays(today, 14)), rest, pending: abs.filter((a) => a.status === "beantragt").length });
     })();
     return () => {
       cancel = true;
@@ -45,6 +45,7 @@ export function AbsenceBar({ tenantId, people, onOpen }: { tenantId: number; peo
           {now.length ? `Heute abwesend: ${now.map((a) => `${name(a.user_id)} (${KINDS[a.kind].short})`).join(", ")}` : "Heute sind alle da."}
           {soon.length > 0 && ` · Demnächst: ${soon.slice(0, 4).map((a) => `${name(a.user_id)} ${range(a)}`).join(", ")}${soon.length > 4 ? " …" : ""}`}
         </span>
+        {data.pending > 0 && <span className="ur-bar-warn">📨 {data.pending === 1 ? "1 offener Antrag" : `${data.pending} offene Anträge`} – bitte genehmigen oder ablehnen</span>}
         {data.rest.length > 0 && <span className="ur-bar-warn">Resturlaub offen: {data.rest.map((x) => `${personName(x.p)} ${fmtNum(x.rest)} T.`).join(", ")}</span>}
       </div>
       <button type="button" className="btn btn-secondary btn-small" onClick={onOpen}>

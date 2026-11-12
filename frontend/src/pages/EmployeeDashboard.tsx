@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import MyLeaveCard from "../modules/urlaub/MyLeaveCard";
 import { supabase } from "../lib/supabase";
 import EmployeeMaterialsSection from "./EmployeeMaterialsSection";
 import { showConfirm } from "../lib/dialogs";
@@ -787,6 +788,8 @@ export default function EmployeeDashboard({
             </button>
           </div>
         )}
+
+        {!embedded && currentUserId != null && <MyLeaveCard userId={Number(currentUserId)} className="ma-leave" />}
 
         <section className="ma-orders">
           <h2>Meine Aufträge</h2>

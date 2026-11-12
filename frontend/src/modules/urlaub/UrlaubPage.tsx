@@ -1,6 +1,6 @@
 // Urlaub & Abwesenheiten (nur Inhaber): Jahresübersicht, Monatskalender, Liste
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { showConfirm } from "../../lib/dialogs";
+import { showConfirm, showPrompt } from "../../lib/dialogs";
 import * as api from "./api";
 import AbsenceDialog from "./AbsenceDialog";
 import {
@@ -81,6 +81,31 @@ export default function UrlaubPage({ tenantId, currentUserId, people, onBack, on
   const restWarn = rows.filter((r) => r.own && lateInYear && r.bal.rest > 0 && (leaves.get(r.p.id)?.vacation_days ?? 0) > 0);
   const absentToday = team.filter((p) => list.some((a) => Number(a.user_id) === p.id && a.status === "genehmigt" && a.start_date <= today && a.end_date >= today));
 
+  const pending = list.filter((a) => a.status === "beantragt").sort((a, b) => a.start_date.localeCompare(b.start_date));
+  const [deciding, setDeciding] = useState<number | null>(null);
+  const [reqError, setReqError] = useState("");
+  const rangeText = (a: Absence) => (a.start_date === a.end_date ? deDate(a.start_date) : `${deDate(a.start_date)} – ${deDate(a.end_date)}`);
+  const decide = async (a: Absence, approve: boolean) => {
+    setReqError("");
+    let reason = "";
+    if (!approve) {
+      const r = await showPrompt("Grund für die Ablehnung (geht an den Mitarbeiter):", { placeholder: "z. B. Auftrag Lindenstraße läuft in dieser Woche" });
+      if (r === null) return;
+      reason = r;
+    }
+    setDeciding(a.id);
+    try {
+      const what = a.kind === "urlaub" ? "Urlaub" : KINDS[a.kind].label;
+      const text = approve ? `✅ Dein ${what} vom ${rangeText(a)} ist genehmigt.` : `❌ Dein ${what} vom ${rangeText(a)} wurde abgelehnt${reason.trim() ? `: ${reason.trim()}` : "."}`;
+      await api.decideRequest(a, approve, reason, currentUserId, text);
+      await load();
+    } catch (e) {
+      setReqError((e as Error).message);
+    } finally {
+      setDeciding(null);
+    }
+  };
+
   const remove = async (a: Absence) => {
     if (!(await showConfirm(`${KINDS[a.kind].label} von ${personName(team.find((p) => p.id === Number(a.user_id)))} (${deDate(a.start_date)} – ${deDate(a.end_date)}) löschen?`, { danger: true, confirmLabel: "Löschen" }))) return;
     await api.deleteAbsence(a.id);
@@ -147,6 +172,43 @@ export default function UrlaubPage({ tenantId, currentUserId, people, onBack, on
                 ? "Weisen Sie die Mitarbeiter schriftlich (z. B. per E-Mail) darauf hin, den Resturlaub bis zum Jahresende zu nehmen – sonst verfällt er nicht."
                 : "Bitte rechtzeitig planen, damit der Urlaub im Urlaubsjahr genommen wird."}
             </small>
+          </div>
+        )}
+
+        {pending.length > 0 && (
+          <div className="ur-requests">
+            <h3>📨 Offene Anträge ({pending.length})</h3>
+            {reqError && <p className="ur-msg err">{reqError}</p>}
+            {pending.map((a) => {
+              const p = people.find((x) => x.id === Number(a.user_id));
+              const wd = wdOf(Number(a.user_id));
+              const d = countDays(a, wd, cal);
+              const lv = leaves.get(Number(a.user_id));
+              const restAfter = a.kind === "urlaub" && lv?.vacation_days ? balance(lv, Number(a.start_date.slice(0, 4)), [...list, { ...a, status: "genehmigt" }], cal, p?.exit_date).rest : null;
+              const clash = list.filter((o) => o.id !== a.id && o.status === "genehmigt" && Number(o.user_id) !== Number(a.user_id) && o.start_date <= a.end_date && o.end_date >= a.start_date);
+              return (
+                <div key={a.id} className="ur-req">
+                  <div>
+                    <b>
+                      {personName(p)} · {KINDS[a.kind].icon} {KINDS[a.kind].short} {rangeText(a)}
+                    </b>
+                    <small>
+                      {fmtNum(d)} Arbeitstage{restAfter != null && <span className={restAfter < 0 ? "ur-neg" : ""}> · Rest danach {fmtNum(restAfter)}</span>}
+                      {a.note ? ` · „${a.note}“` : ""}
+                      {clash.length > 0 && ` · gleichzeitig weg: ${[...new Set(clash.map((o) => personName(people.find((x) => x.id === Number(o.user_id)))))].join(", ")}`}
+                    </small>
+                  </div>
+                  <div className="ur-req-actions">
+                    <button type="button" className="btn btn-primary btn-small" disabled={deciding === a.id} onClick={() => decide(a, true)}>
+                      Genehmigen
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-small" disabled={deciding === a.id} onClick={() => decide(a, false)}>
+                      Ablehnen
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -224,9 +286,9 @@ export default function UrlaubPage({ tenantId, currentUserId, people, onBack, on
                         return (
                           <td
                             key={d}
-                            className={`${off ? "off" : ""}${a ? " abs" : ""}${half ? " half" : ""}${d === today ? " today" : ""}`}
+                            className={`${off ? "off" : ""}${a ? " abs" : ""}${a?.status === "beantragt" ? " req" : ""}${half ? " half" : ""}${d === today ? " today" : ""}`}
                             style={a && !off ? { background: KINDS[a.kind].bg, color: KINDS[a.kind].color } : undefined}
-                            title={a ? `${KINDS[a.kind].label}${half ? " (halber Tag)" : ""}${a.note ? ` – ${a.note}` : ""}` : isHoliday(d, cal) ?? ""}
+                            title={a ? `${KINDS[a.kind].label}${a.status === "beantragt" ? " (beantragt)" : ""}${half ? " (halber Tag)" : ""}${a.note ? ` – ${a.note}` : ""}` : isHoliday(d, cal) ?? ""}
                             onClick={() => (a ? setDialog({ edit: a }) : !off && absences !== null && setDialog({ userId: p.id, date: d }))}
                           >
                             {a && !off ? KINDS[a.kind].icon : ""}

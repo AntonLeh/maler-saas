@@ -83,3 +83,55 @@ export async function loadTeamAbsences(from: string, to: string): Promise<TeamAb
   if (error) return [];
   return ((data ?? []) as TeamAbsence[]).map((a) => ({ ...a, user_id: Number(a.user_id) }));
 }
+
+// ---------- Teil B: Anträge über die Mitarbeiter-App ----------
+export type MyLeave = { leave: Leave; cal: Calendar; exitDate: string | null; employmentType: string | null };
+
+/** Eigenes Urlaubskonto; null = Datenbank-Update fehlt */
+export async function loadMyLeave(userId: number): Promise<MyLeave | null> {
+  const { data, error } = await supabase.rpc("my_leave");
+  if (error || !data) return null;
+  const d = data as { vacation_days: number | null; work_weekdays: number[] | null; entry_date: string | null; years: Leave["years"] | null; exit_date: string | null; employment_type: string | null; country: string | null; holiday_region: string | null };
+  return {
+    leave: {
+      user_id: userId,
+      tenant_id: 0,
+      vacation_days: d.vacation_days != null ? Number(d.vacation_days) : null,
+      work_weekdays: d.work_weekdays?.length ? d.work_weekdays.map(Number) : DEFAULT_WEEKDAYS,
+      entry_date: d.entry_date,
+      years: d.years ?? {},
+    },
+    cal: { land: landOf(d.country), region: d.holiday_region },
+    exitDate: d.exit_date,
+    employmentType: d.employment_type,
+  };
+}
+
+export async function loadMyAbsences(userId: number): Promise<Absence[]> {
+  const { data, error } = await supabase.from("absences").select("*").eq("user_id", userId).order("start_date", { ascending: false }).limit(500);
+  if (error) return [];
+  return (data ?? []).map((a) => ({ ...a, user_id: Number(a.user_id) })) as Absence[];
+}
+
+const clean = (m: string) => m.replace(/^.*?ERROR:\s*/i, "").trim();
+
+export async function requestAbsence(v: { kind: string; start: string; end: string; startHalf: boolean; endHalf: boolean; note: string }) {
+  const { error } = await supabase.rpc("absence_request", { p_kind: v.kind, p_start: v.start, p_end: v.end, p_start_half: v.startHalf, p_end_half: v.endHalf, p_note: v.note || null });
+  if (error) throw new Error(/absence_request|Could not find/i.test(error.message) ? "Urlaubsanträge sind noch nicht eingerichtet – bitte beim Chef melden." : clean(error.message));
+}
+
+export async function cancelRequest(id: number) {
+  const { error } = await supabase.rpc("absence_cancel", { p_id: id });
+  if (error) throw new Error(clean(error.message));
+}
+
+/** Chef: Antrag genehmigen oder ablehnen und den Mitarbeiter benachrichtigen */
+export async function decideRequest(a: Absence, approve: boolean, reason: string, adminId: number, text: string) {
+  const { error } = await supabase
+    .from("absences")
+    .update({ status: approve ? "genehmigt" : "abgelehnt", decided_by: adminId, decided_at: new Date().toISOString(), decision_note: reason.trim() || null })
+    .eq("id", a.id)
+    .eq("status", "beantragt");
+  if (error) throw err(error.message, "Der Antrag konnte nicht bearbeitet werden");
+  await supabase.from("messages").insert([{ tenant_id: a.tenant_id, sender_id: adminId, recipient_id: a.user_id, order_id: null, message_type: "direct", message: text, image_url: null }]);
+}
