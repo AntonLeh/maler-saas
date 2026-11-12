@@ -66,10 +66,11 @@ export const statusInfo = (s: string) => STATUS[s] ?? { label: (s || "–").repl
 export const todayIso = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const day = (v?: string | null) => (v ? v.slice(0, 10) : "");
 
-export type Flag = { key: "overdue" | "unassigned" | "no_material" | "review" | "today"; label: string };
+export type Flag = { key: "overdue" | "unassigned" | "no_material" | "review" | "today" | "hours"; label: string };
 
-export function flagsOf(o: ListOrder, team: ListAssignment[], materialOrderIds: string[] | null, today = todayIso()): Flag[] {
+export function flagsOf(o: ListOrder, team: ListAssignment[], materialOrderIds: string[] | null, today = todayIso(), hours?: { planned: number | null; actual: number }): Flag[] {
   const f: Flag[] = [];
+  if (hours?.planned && hours.actual > hours.planned && o.status !== "abgerechnet") f.push({ key: "hours", label: "Stunden überschritten" });
   if (o.status === "zur_pruefung") f.push({ key: "review", label: "Wartet auf Freigabe" });
   if (isDone(o.status)) return f;
   if (o.status !== "zur_pruefung" && day(o.end_date) && day(o.end_date) < today) f.push({ key: "overdue", label: "Überfällig" });

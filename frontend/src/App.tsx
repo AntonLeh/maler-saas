@@ -29,6 +29,7 @@ import { WebsiteButton } from "./modules/website/widgets";
 import { EmploymentBadges, EmploymentFilter, ExitControl } from "./modules/mitarbeiter-arten/widgets";
 import { filterPeople } from "./modules/mitarbeiter-arten/logic";
 import { tabFromMode } from "./modules/auftraege/listLogic";
+import PlannedHoursField from "./modules/auftraege/PlannedHoursField";
 import type { Person as StundenPerson } from "./modules/stunden/logic";
 import { hasTimeEntries } from "./modules/mitarbeiter-arten/api";
 import { hasWebsiteAccess } from "./modules/website/types";
@@ -936,6 +937,7 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState("");
   const [showManualTime, setShowManualTime] = useState(false);
   const [manualTimeUserId, setManualTimeUserId] = useState<number | null>(null);
+  const [plannedHours, setPlannedHours] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
 
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
@@ -4998,6 +5000,8 @@ const openEmployeeOrders = () => {
     assigned_to: "",
   };
   setOrderForm(editForm);
+  const ph = (order as unknown as { planned_hours?: number | null }).planned_hours;
+  setPlannedHours(ph != null ? String(ph).replace(".", ",") : "");
 
   setEditingOrderRecord(order);
   setEditingAssignments([]);
@@ -5026,7 +5030,7 @@ const openEmployeeOrders = () => {
     setSelectedProjectManagerId(pmIdText);
     setSelectedEmployeeIds(employeeIdTexts);
     setProjectManagerWorksToo(pmWorks);
-    setOrderEditSnapshot(formSnapshot(editForm, pmIdText, [...employeeIdTexts, pmWorks ? "pm-works" : ""]));
+    setOrderEditSnapshot(formSnapshot(editForm, pmIdText, [...employeeIdTexts, pmWorks ? "pm-works" : "", `ph:${ph != null ? String(ph).replace(".", ",") : ""}`]));
   };
 
   applyAssignments(
@@ -5342,7 +5346,18 @@ assigned_project_manager_id: selectedProjectManagerId
         end_date: orderForm.end_date || null,
         assigned_project_manager_id: pmId,
         assigned_to: employeeIds.length > 0 ? employeeIds[0] : null, // Übergang (ältere Regeln)
-      };
+      } as Record<string, unknown>;
+      // Geplante Stunden: nur der Chef, und nur wenn geändert (sonst klappt Speichern auch ohne Datenbank-Update)
+      if (isAdmin) {
+        const before = (editingOrderRecord as unknown as { planned_hours?: number | null } | null)?.planned_hours ?? null;
+        const next = plannedHours.trim() ? Number(plannedHours.replace(/\./g, "").replace(",", ".")) : null;
+        if (next !== null && (!Number.isFinite(next) || next < 0)) {
+          setOrderMessage("Bitte bei „Geplante Stunden“ eine Zahl eintragen.");
+          setSavingOrder(false);
+          return;
+        }
+        if ((next ?? null) !== (before == null ? null : Number(before))) updatedOrder.planned_hours = next;
+      }
 
       const { data: updatedRows, error } = await supabase
         .from("orders")
@@ -5370,7 +5385,7 @@ assigned_project_manager_id: selectedProjectManagerId
           ...employeeIds.map((id) => ({ user_id: id, assignment_role: "employee" })),
         ];
         setEditingAssignments(nextAssignments);
-        setOrderEditSnapshot(formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : ""]));
+        setOrderEditSnapshot(formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : "", `ph:${plannedHours}`]));
         setOrderMessage("Auftrag gespeichert. Bitte jetzt unten das Material zuweisen.");
         setSavingOrder(false);
         await loadOrders(userProfile.tenant_id);
@@ -5394,7 +5409,7 @@ assigned_project_manager_id: selectedProjectManagerId
     const leaveEditOrderPage = async () => {
       const dirty =
         orderEditSnapshot &&
-        formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : ""]) !== orderEditSnapshot;
+        formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : "", `ph:${plannedHours}`]) !== orderEditSnapshot;
       if (dirty) {
         const ok = await showConfirm("Sie haben Änderungen, die noch nicht gespeichert sind. Trotzdem verlassen?", {
           title: "Ungespeicherte Änderungen",
@@ -5613,6 +5628,16 @@ assigned_project_manager_id: selectedProjectManagerId
 
     // Für Auswahllisten (Auftrag zuweisen, Material …): ausgeschiedene Personen ausblenden
     const activeEmployees = useMemo(() => employees.filter((e) => e.is_active !== false), [employees]);
+    // Erfasste Netto-Minuten je Auftrag (abgeschlossene Einträge) – für Soll-Ist
+    const orderHoursMap = useMemo(() => {
+      const m = new Map<string, number>();
+      for (const t of timeEntries) {
+        if (!t.started_at || !t.ended_at) continue;
+        const n = Math.max(0, (new Date(t.ended_at).getTime() - new Date(t.started_at).getTime()) / 60000 - Number(t.total_break_minutes || 0));
+        m.set(String(t.order_id), (m.get(String(t.order_id)) ?? 0) + n);
+      }
+      return m;
+    }, [timeEntries]);
 
     const customerNameMap = useMemo(() => {
       const map = new Map<string, string>();
@@ -6434,6 +6459,7 @@ onReloadOrders={async () => {
   onOpenOrderMaterial={(orderId) => void openOrderMaterial(orderId)}
   teamPeople={employees.filter((e) => e.is_active !== false) as unknown as StundenPerson[]}
   onOpenManualTime={() => setShowManualTime(true)}
+  orderMinutes={orderHoursMap}
 />
         {showManualTime && (
           <Suspense fallback={null}>
@@ -7166,6 +7192,10 @@ onReloadOrders={async () => {
                   onPreviewImage={setSelectedProgressImagePreview}
                   onBack={openDashboard}
                   formatDateTime={formatDateTime}
+                  hoursFor={(id) => ({
+                    planned: Number((orders.find((o) => String(o.id) === id) as unknown as { planned_hours?: number | null } | undefined)?.planned_hours) || null,
+                    actual: (orderHoursMap.get(id) ?? 0) / 60,
+                  })}
                 />
               )}
 
@@ -10268,6 +10298,19 @@ const businessAdvisor = generateBusinessInsights();
                           />
                         </div>
                       </div>
+
+                      <PlannedHoursField
+                        value={plannedHours}
+                        onChange={setPlannedHours}
+                        canEdit={isAdmin}
+                        actualHours={(orderHoursMap.get(String(editingOrderId)) ?? 0) / 60}
+                        quoteId={(() => {
+                          const r = editingOrderRecord as unknown as { accepted_quote_id?: number | null; quote_id?: number | null; generated_quote_id?: number | null } | null;
+                          return r?.accepted_quote_id ?? r?.quote_id ?? r?.generated_quote_id ?? null;
+                        })()}
+                        customerRate={Number(defaultCustomerHourlyRate) || 0}
+                        laborPct={Number(companySettings?.labor_share_percent ?? 70)}
+                      />
 
                       <div className="ao-row ao-addr">
                         <div className="form-group ao-field">

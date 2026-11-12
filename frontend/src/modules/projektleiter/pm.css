@@ -68,3 +68,5 @@
   .pm-kpis b { font-size: 22px; }
   .pm-actions { grid-template-columns: 1fr; }
 }
+.pm-dot.r-hours { background: #dc2626; }
+.pm-list-main .pm-reason.r-hours { color: #b91c1c; }

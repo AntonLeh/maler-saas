@@ -693,25 +693,23 @@ if (
   </small>
 </div>
 
-{country === "Deutschland" && (
-  <div className="form-group">
-    <label htmlFor="laborShare">Standard-Lohnanteil für Privatkunden (%)</label>
-    <input
-      id="laborShare"
-      type="number"
-      step="1"
-      min="0"
-      max="100"
-      value={laborShare}
-      onChange={(e) => setLaborShare(e.target.value)}
-      placeholder="70"
-    />
-    <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-      Anteil der Arbeitskosten am Rechnungsbetrag. Wird auf Rechnungen an Privatkunden für den Steuerabzug nach § 35a EStG ausgewiesen und
-      kann beim Erstellen jeder Rechnung angepasst werden.
-    </small>
-  </div>
-)}
+<div className="form-group">
+  <label htmlFor="laborShare">Lohnanteil (%)</label>
+  <input
+    id="laborShare"
+    type="number"
+    step="1"
+    min="0"
+    max="100"
+    value={laborShare}
+    onChange={(e) => setLaborShare(e.target.value)}
+    placeholder="70"
+  />
+  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+    Anteil der Arbeitskosten an Ihren Preisen. Damit schlägt MalerSaaS die geplanten Stunden eines Auftrags aus dem Angebot vor.
+    {country === "Deutschland" && " Auf Rechnungen an Privatkunden wird er außerdem für den Steuerabzug nach § 35a EStG ausgewiesen (bei jeder Rechnung anpassbar)."}
+  </small>
+</div>
 
 <div className="form-group">
   <label style={{ display: "flex", gap: 8, alignItems: "center" }}>

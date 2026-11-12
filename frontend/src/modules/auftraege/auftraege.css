@@ -91,3 +91,19 @@
 /* Projektleiter arbeitet selbst mit */
 .ao-pm-works { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
 .ao-pm-works input { width: 18px; height: 18px; }
+
+/* Geplante Stunden */
+.ao-planned { align-items: start; }
+.ao-planned-input { display: flex; gap: 8px; }
+.ao-planned-input input { flex: 1; min-width: 0; }
+.ao-planned-input .btn { width: auto; white-space: nowrap; }
+.ao-planned-ro { margin: 6px 0 0; font-weight: 700; }
+.ao-planned-hint { display: block; margin-top: 4px; font-size: 12px; color: #475569; line-height: 1.4; }
+.ao-planned-bar { display: flex; flex-direction: column; gap: 3px; padding-top: 6px; }
+.ao-planned-bar b { font-size: 15px; }
+.ao-planned-bar span { font-size: 12.5px; color: #64748b; }
+.ao-planned-bar i { display: block; height: 6px; border-radius: 3px; background: #e2e8f0; overflow: hidden; }
+.ao-planned-bar em { display: block; height: 100%; background: #22c55e; }
+.ao-planned-bar.h-warn em { background: #f59e0b; }
+.ao-planned-bar.h-over em { background: #dc2626; }
+.ao-planned-bar.h-over span { color: #b91c1c; font-weight: 700; }

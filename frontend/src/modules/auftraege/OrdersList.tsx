@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import * as L from "./listLogic";
 import type { ListAssignment, ListOrder, Sort, Tab } from "./listLogic";
+import { fmtHours, hoursState } from "./planHours";
 import "./orders-list.css";
 
 type Person = { id: number; first_name: string | null; last_name: string | null; role_id: number; is_active?: boolean | null };
@@ -31,6 +32,8 @@ type Props<O extends ListOrder> = {
   onPreviewImage: (url: string) => void;
   onBack: () => void;
   formatDateTime: (v: string) => string;
+  /** Geplante und erfasste Stunden je Auftrag */
+  hoursFor?: (orderId: string) => { planned: number | null; actual: number };
 };
 
 function readSort(): Sort {
@@ -189,7 +192,9 @@ export default function OrdersList<O extends ListOrder>(p: Props<O>) {
                   const pm = team.filter((a) => a.assignment_role === "project_manager");
                   const workers = team.filter((a) => a.assignment_role === "employee" && !pm.some((x) => x.user_id === a.user_id));
                   const pmWorks = pm.some((x) => team.some((a) => a.assignment_role === "employee" && a.user_id === x.user_id));
-                  const flags = L.flagsOf(o, team, p.materialOrderIds, today);
+                  const hrs = p.hoursFor?.(id);
+                  const hs = hrs ? hoursState(hrs.planned, hrs.actual) : null;
+                  const flags = L.flagsOf(o, team, p.materialOrderIds, today, hrs);
                   const st = L.statusInfo(o.status);
                   const progress = p.progressFor(id);
                   const isOpen = open.has(id);
@@ -237,6 +242,14 @@ export default function OrdersList<O extends ListOrder>(p: Props<O>) {
                         </td>
                         <td data-label="Zeitraum" className={overdue ? "ol-overdue" : ""}>
                           {L.fmtDay(o.start_date)} – {L.fmtDay(o.end_date)}
+                          {hrs && hs && (
+                            <div className={`ol-hours h-${hs}`} title={`${fmtHours(hrs.actual)} von ${fmtHours(hrs.planned ?? 0)} geplanten Stunden`}>
+                              <i style={{ width: `${Math.min(100, (hrs.actual / (hrs.planned || 1)) * 100)}%` }} />
+                              <span>
+                                {fmtHours(hrs.actual)} / {fmtHours(hrs.planned ?? 0)} Std.
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="ol-actions" data-label="">
                           <button type="button" className={`ol-btn ${isOpen ? "on" : ""}`} onClick={() => toggle(id)} disabled={!progress.length} title="Fortschritt anzeigen">

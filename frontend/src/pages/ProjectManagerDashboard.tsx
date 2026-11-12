@@ -32,6 +32,8 @@ type ProjectManagerDashboardProps = {
   teamPeople?: Person[];
   /** „Stunden nachtragen“ öffnen */
   onOpenManualTime?: () => void;
+  /** erfasste Netto-Minuten je Auftrag (Soll-Ist) */
+  orderMinutes?: Map<string, number>;
 };
 
 import TeamClock from "../modules/stunden/TeamClock";
@@ -61,6 +63,7 @@ export default function ProjectManagerDashboard({
   onOpenOrderMaterial,
   teamPeople,
   onOpenManualTime,
+  orderMinutes,
 }: ProjectManagerDashboardProps) {
   const [openAppointments, setOpenAppointments] = useState(0);
 
@@ -82,8 +85,8 @@ export default function ProjectManagerDashboard({
 
   const kpis = useMemo(() => pmKpis(orders, assignments), [orders, assignments]);
   const attention = useMemo(
-    () => attentionList(orders, assignments, new Date(), 6, hasMaterials && materialOrderIds ? new Set(materialOrderIds) : null),
-    [orders, assignments, hasMaterials, materialOrderIds]
+    () => attentionList(orders, assignments, new Date(), 6, hasMaterials && materialOrderIds ? new Set(materialOrderIds) : null, orderMinutes ?? null),
+    [orders, assignments, hasMaterials, materialOrderIds, orderMinutes]
   );
   const firstName = userName.split(" ")[0] || userName;
 

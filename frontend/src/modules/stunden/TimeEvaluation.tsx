@@ -51,7 +51,7 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
   const [openEntries, setOpenEntries] = useState<Entry[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [pays, setPays] = useState<Map<number, Pay>>(new Map());
-  const [orders, setOrders] = useState<{ id: number; title: string; city: string | null; status: string }[]>([]);
+  const [orders, setOrders] = useState<{ id: number; title: string; city: string | null; status: string; planned_hours: number | null }[]>([]);
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -398,6 +398,8 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
                 <th>Auftrag</th>
                 <th>Wer</th>
                 <th className="r">Stunden</th>
+                <th className="r">Geplant</th>
+                <th className="r">Abweichung</th>
                 <th className="r">Kosten</th>
               </tr>
             </thead>
@@ -425,6 +427,20 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
                   <td className="r" data-label="Stunden">
                     {fmtH(r.minutes)}
                   </td>
+                  {(() => {
+                    const planned = orders.find((o) => String(o.id) === r.k)?.planned_hours ?? null;
+                    const diff = planned ? r.minutes / 60 - planned : null;
+                    return (
+                      <>
+                        <td className="r" data-label="Geplant">
+                          {planned ? planned.toLocaleString("de-DE", { maximumFractionDigits: 1 }) : "–"}
+                        </td>
+                        <td className={`r ${diff == null ? "" : diff > 0 ? "neg" : "pos"}`} data-label="Abweichung">
+                          {diff == null ? "–" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toLocaleString("de-DE", { maximumFractionDigits: 1 })}`}
+                        </td>
+                      </>
+                    );
+                  })()}
                   <td className="r" data-label="Kosten">
                     {fmtMoney(r.cost, cur)}
                   </td>

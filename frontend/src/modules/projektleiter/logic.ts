@@ -7,10 +7,11 @@ export type PmOrder = {
   address_city: string | null;
   start_date: string | null;
   end_date: string | null;
+  planned_hours?: number | null;
 };
 export type PmAssignment = { order_id: string | number; user_id: number; assignment_role: string };
 
-export type AttentionReason = "review" | "no_team" | "no_material" | "overdue" | "start_today";
+export type AttentionReason = "review" | "no_team" | "no_material" | "overdue" | "start_today" | "hours";
 export type AttentionItem = { order: PmOrder; reason: AttentionReason; text: string };
 
 const DONE = new Set(["fertig", "abgerechnet"]);
@@ -54,7 +55,9 @@ export function attentionList(
   assignments: PmAssignment[],
   now = new Date(),
   max = 6,
-  materialOrderIds?: Set<string> | null
+  materialOrderIds?: Set<string> | null,
+  /** erfasste Netto-Minuten je Auftrag */
+  orderMinutes?: Map<string, number> | null
 ): AttentionItem[] {
   const today = todayIso(now);
   const out: AttentionItem[] = [];
@@ -72,6 +75,15 @@ export function attentionList(
     for (const o of active)
       if (teamSize(o.id, assignments) > 0 && !materialOrderIds.has(String(o.id)))
         push(o, "no_material", "Material fehlt – Team ist eingeteilt, aber kein Material zugewiesen");
+  if (orderMinutes)
+    for (const o of active) {
+      const planned = Number(o.planned_hours) || 0;
+      const actual = (orderMinutes.get(String(o.id)) ?? 0) / 60;
+      if (planned > 0 && actual >= planned * 0.9) {
+        const f = (h: number) => h.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+        push(o, "hours", actual > planned ? `Stunden überschritten: ${f(actual)} von ${f(planned)} geplanten Std.` : `Bald keine Stunden mehr: ${f(actual)} von ${f(planned)} geplanten Std.`);
+      }
+    }
   for (const o of active) if (o.end_date && o.end_date.slice(0, 10) < today) push(o, "overdue", `Enddatum ${fmtDate(o.end_date)} überschritten`);
   for (const o of active) if ((o.start_date || "").slice(0, 10) === today) push(o, "start_today", "Startet heute");
   return out.slice(0, max);

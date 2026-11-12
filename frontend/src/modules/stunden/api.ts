@@ -53,10 +53,18 @@ export async function loadPays(tenantId: number): Promise<Map<number, Pay>> {
   return m;
 }
 
-export async function loadOrders(tenantId: number): Promise<{ id: number; title: string; city: string | null; status: string }[]> {
-  const { data, error } = await supabase.from("orders").select("id, title, address_city, status").eq("tenant_id", tenantId).order("id", { ascending: false });
-  if (error) return [];
-  return (data ?? []).map((o) => ({ id: Number(o.id), title: String(o.title ?? `Auftrag ${o.id}`), city: (o.address_city as string) ?? null, status: String(o.status ?? "") }));
+export async function loadOrders(tenantId: number): Promise<{ id: number; title: string; city: string | null; status: string; planned_hours: number | null }[]> {
+  let res: { data: Record<string, unknown>[] | null; error: unknown } = await supabase.from("orders").select("id, title, address_city, status, planned_hours").eq("tenant_id", tenantId).order("id", { ascending: false });
+  // ohne Datenbank-Update (Planstunden) ohne die Spalte laden
+  if (res.error) res = await supabase.from("orders").select("id, title, address_city, status").eq("tenant_id", tenantId).order("id", { ascending: false });
+  if (res.error) return [];
+  return (res.data ?? []).map((o) => ({
+    id: Number(o.id),
+    title: String(o.title ?? `Auftrag ${o.id}`),
+    city: (o.address_city as string) ?? null,
+    status: String(o.status ?? ""),
+    planned_hours: o.planned_hours != null ? Number(o.planned_hours) : null,
+  }));
 }
 
 // ---------- Fremdleistungen ----------
