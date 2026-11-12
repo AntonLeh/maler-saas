@@ -120,3 +120,14 @@
 
 .mt-moves li.usage { background: #f5f3ff; }
 .mt-site { font-weight: 600; color: #334155; }
+
+/* Auftrag: eigene Übernahme bestätigen / Verbrauch buchen (Projektleiter) */
+.om-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.om-actions .btn { width: auto; padding: 6px 10px; font-size: 13px; min-height: 0; }
+.om-book-row td { background: #f8faff; }
+.om-book { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.om-book label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: #334155; }
+.om-book label.grow { flex: 1 1 180px; }
+.om-book input, .om-book select { padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 400; background: #fff; }
+.om-book input[inputmode="decimal"] { width: 90px; }
+.om-book .btn { width: auto; }

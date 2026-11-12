@@ -10735,6 +10735,7 @@ const businessAdvisor = generateBusinessInsights();
                         employees={activeEmployees}
                         currentUserId={userProfile.id}
                         currency={companySettings?.currency || "EUR"}
+                        showCosts={isAdmin}
                         onAssignmentsChanged={(count) => {
                           setEditingMaterialCount(count);
                           if (count > 0 && editingOrderId) {
