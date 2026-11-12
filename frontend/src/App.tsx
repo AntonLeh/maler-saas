@@ -5018,10 +5018,12 @@ const openEmployeeOrders = () => {
     const employeeIdTexts = list
       .filter((a) => a.assignment_role === "employee" && String(a.user_id) !== pmIdText)
       .map((a) => String(a.user_id));
+    const pmWorks = !!pmIdText && list.some((a) => a.assignment_role === "employee" && String(a.user_id) === pmIdText);
     setEditingAssignments(list);
     setSelectedProjectManagerId(pmIdText);
     setSelectedEmployeeIds(employeeIdTexts);
-    setOrderEditSnapshot(formSnapshot(editForm, pmIdText, employeeIdTexts));
+    setProjectManagerWorksToo(pmWorks);
+    setOrderEditSnapshot(formSnapshot(editForm, pmIdText, [...employeeIdTexts, pmWorks ? "pm-works" : ""]));
   };
 
   applyAssignments(
@@ -5280,14 +5282,14 @@ assigned_project_manager_id: selectedProjectManagerId
       }
       // Hinweis: Mitarbeiter eingeteilt, aber noch kein Material
       let goToMaterial = false;
-      if (hasFeature("materials") && employeeIds.length > 0 && editingMaterialCount === 0) {
+      if (hasFeature("materials") && (employeeIds.length > 0 || projectManagerWorksToo) && editingMaterialCount === 0) {
         goToMaterial = await showConfirm(
           "Mitarbeiter sind eingeteilt, aber für diesen Auftrag ist noch kein Material zugewiesen.\n\nSoll nach dem Speichern gleich das Material zugewiesen werden?",
           { title: "Material zuweisen", tone: "warning", confirmLabel: "Jetzt Material zuweisen", cancelLabel: "Später" }
         );
       }
 
-      const { toDelete, toInsert } = diffAssignments(editingAssignments, pmId, employeeIds);
+      const { toDelete, toInsert } = diffAssignments(editingAssignments, pmId, employeeIds, projectManagerWorksToo);
 
       if (toInsert.length > 0) {
         const { error: insertError } = await supabase.from("order_assignments").insert(
@@ -5365,7 +5367,7 @@ assigned_project_manager_id: selectedProjectManagerId
           ...employeeIds.map((id) => ({ user_id: id, assignment_role: "employee" })),
         ];
         setEditingAssignments(nextAssignments);
-        setOrderEditSnapshot(formSnapshot(orderForm, selectedProjectManagerId, selectedEmployeeIds));
+        setOrderEditSnapshot(formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : ""]));
         setOrderMessage("Auftrag gespeichert. Bitte jetzt unten das Material zuweisen.");
         setSavingOrder(false);
         await loadOrders(userProfile.tenant_id);
@@ -5389,7 +5391,7 @@ assigned_project_manager_id: selectedProjectManagerId
     const leaveEditOrderPage = async () => {
       const dirty =
         orderEditSnapshot &&
-        formSnapshot(orderForm, selectedProjectManagerId, selectedEmployeeIds) !== orderEditSnapshot;
+        formSnapshot(orderForm, selectedProjectManagerId, [...selectedEmployeeIds, projectManagerWorksToo ? "pm-works" : ""]) !== orderEditSnapshot;
       if (dirty) {
         const ok = await showConfirm("Sie haben Änderungen, die noch nicht gespeichert sind. Trotzdem verlassen?", {
           title: "Ungespeicherte Änderungen",
@@ -10534,6 +10536,13 @@ const businessAdvisor = generateBusinessInsights();
                           </select>
                         </div>
                       </div>
+
+                      {selectedProjectManagerId && (
+                        <label className="ao-pm-works">
+                          <input type="checkbox" checked={projectManagerWorksToo} onChange={(e) => setProjectManagerWorksToo(e.target.checked)} />
+                          <span>Projektleiter führt den Auftrag selbst mit aus (Ausführungsauftrag)</span>
+                        </label>
+                      )}
 
                       <div className="form-group ao-field">
                         <label>

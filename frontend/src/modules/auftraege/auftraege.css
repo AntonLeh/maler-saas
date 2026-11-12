@@ -87,3 +87,7 @@
 /* Hinweis „Material zuweisen“ */
 .ao-material-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 14px; font-weight: 600; text-align: left; }
 .ao-material-hint .btn { width: auto; padding: 8px 14px; font-size: 14px; }
+
+/* Projektleiter arbeitet selbst mit */
+.ao-pm-works { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
+.ao-pm-works input { width: 18px; height: 18px; }

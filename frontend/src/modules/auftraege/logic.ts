@@ -6,7 +6,9 @@ export type AssignmentLite = { user_id: number | string; assignment_role: string
 export function diffAssignments(
   current: AssignmentLite[],
   projectManagerId: number | null,
-  employeeIds: number[]
+  employeeIds: number[],
+  /** Projektleiter arbeitet selbst mit (Ausführungsauftrag) */
+  projectManagerWorks = false
 ) {
   const key = (userId: number | string, role: string) => `${Number(userId)}|${role}`;
   const desired = new Map<string, { user_id: number; assignment_role: string }>();
@@ -15,6 +17,7 @@ export function diffAssignments(
     if (id === projectManagerId) continue;
     desired.set(key(id, "employee"), { user_id: id, assignment_role: "employee" });
   }
+  if (projectManagerId && projectManagerWorks) desired.set(key(projectManagerId, "employee"), { user_id: projectManagerId, assignment_role: "employee" });
   const existing = new Set(current.map((a) => key(a.user_id, a.assignment_role)));
   const toDelete = current.filter((a) => !desired.has(key(a.user_id, a.assignment_role)));
   const toInsert = [...desired.entries()].filter(([k]) => !existing.has(k)).map(([, v]) => v);
