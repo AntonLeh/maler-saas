@@ -289,6 +289,9 @@ const pageLoaders = {
   PlatformOwnerDashboard: () => import("./pages/PlatformOwnerDashboard"),
   AdminTimeEvaluation: () => import("./components/AdminTimeEvaluation"),
   EmployeeEditor: () => import("./modules/mitarbeiter-arten/EmployeeEditor"),
+  StundenReports: () => import("./modules/stunden/ReportsPage"),
+  OrderCostsSection: () => import("./modules/stunden/OrderCostsSection"),
+  ManualTimeDialog: () => import("./modules/stunden/ManualTimeDialog"),
   GlobalSettings: () => import("./pages/GlobalSettings"),
   InvoicesPage: () => import("./pages/InvoicesPage"),
   CompanyOnboardingPage: () => import("./pages/CompanyOnboardingPage"),
@@ -331,6 +334,9 @@ const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
 const AdminTimeEvaluation = lazy(pageLoaders.AdminTimeEvaluation);
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
+const StundenReports = lazy(pageLoaders.StundenReports);
+const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
+const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
 const GlobalSettings = lazy(pageLoaders.GlobalSettings);
 const InvoicesPage = lazy(pageLoaders.InvoicesPage);
 const CompanyOnboardingPage = lazy(pageLoaders.CompanyOnboardingPage);
@@ -494,6 +500,7 @@ type CurrentPage =
   | "create-employee"
   | "edit-employee"
   | "time-evaluation"
+  | "stundenlisten"
   | "settings"
   | "create-site-visit"
   | "pricing-rules"
@@ -925,6 +932,9 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const [customerSearch, setCustomerSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState("");
+  const [showManualTime, setShowManualTime] = useState(false);
+  const [timeEvalKey, setTimeEvalKey] = useState(0);
+  const [timeEvalMessage, setTimeEvalMessage] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
 
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
@@ -1432,6 +1442,12 @@ const loadOrderAnalysis = async () => {
 
     if (timeError) throw timeError;
 
+    // Fremdleistungen (Subunternehmer-Rechnungen) – ohne Datenbank-Update einfach leer
+    const { data: externalData } = await supabase
+      .from("order_external_costs")
+      .select("order_id, amount_net")
+      .eq("tenant_id", userProfile.tenant_id);
+
     const analysis =
       ordersData?.map((order: any) => {
         const orderInvoices =
@@ -1450,7 +1466,11 @@ const loadOrderAnalysis = async () => {
           0
         );
 
-        const grossProfit = revenue - laborCost;
+        const externalCost = (externalData ?? [])
+          .filter((x: any) => String(x.order_id) === String(order.id))
+          .reduce((sum: number, x: any) => sum + Number(x.amount_net || 0), 0);
+
+        const grossProfit = revenue - laborCost - externalCost;
 
         return {
           id: order.id,
@@ -1458,7 +1478,8 @@ const loadOrderAnalysis = async () => {
           status: order.status,
           revenue,
           invoiceCount: orderInvoices.length,
-          laborCost,
+          laborCost: laborCost + externalCost,
+          externalCost,
           grossProfit,
         };
       }) || [];
@@ -8143,14 +8164,41 @@ onReloadOrders={async () => {
                         <p>Übersicht über Arbeitszeiten, Pausen und Nettozeiten.</p>
                       </div>
 
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={openDashboard}
-                      >
-                        Zurück zum Dashboard
-                      </button>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="btn btn-secondary" style={{ width: "auto" }} onClick={() => setShowManualTime(true)}>
+                          + Stunden nachtragen
+                        </button>
+                        {isAdmin && (
+                          <button type="button" className="btn btn-primary" style={{ width: "auto" }} onClick={() => setCurrentPage("stundenlisten")}>
+                            📄 Stundenlisten & Nachweise
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ width: "auto" }}
+                          onClick={openDashboard}
+                        >
+                          Zurück zum Dashboard
+                        </button>
+                      </div>
                     </div>
+
+                    {timeEvalMessage && <p className="info-text ea-list-msg">{timeEvalMessage}</p>}
+                    {showManualTime && (
+                      <ManualTimeDialog
+                        people={activeEmployees}
+                        orders={orders
+                          .filter((o) => !["abgerechnet", "storniert"].includes(o.status))
+                          .map((o) => ({ id: Number(o.id), title: o.title, city: o.address_city }))}
+                        onSaved={(msg) => {
+                          setShowManualTime(false);
+                          setTimeEvalMessage(msg);
+                          setTimeEvalKey((k) => k + 1);
+                        }}
+                        onClose={() => setShowManualTime(false)}
+                      />
+                    )}
 
                     <div style={{ marginBottom: "20px" }}>
                       <p><strong>Währung:</strong> {currencyCode}</p>
@@ -8162,9 +8210,13 @@ onReloadOrders={async () => {
                       )}
                     </div>
 
-                    <AdminTimeEvaluation />
+                    <AdminTimeEvaluation key={timeEvalKey} />
                   </div>
                 </section>
+              )}
+
+              {currentPage === "stundenlisten" && isAdmin && userProfile && (
+                <StundenReports tenantId={userProfile.tenant_id} currencySymbol={currencySymbol} onBack={() => setCurrentPage("time-evaluation")} />
               )}
 
               {currentPage === "business-intelligence" && (() => {
@@ -10672,6 +10724,17 @@ const businessAdvisor = generateBusinessInsights();
                         }}
                       />
                     </div>
+                  )}
+
+                  {editingOrderId && userProfile && (isAdmin || userProfile.role_id === 3) && (
+                    <OrderCostsSection
+                      tenantId={userProfile.tenant_id}
+                      orderId={Number(editingOrderId)}
+                      orderTitle={orders.find((o) => String(o.id) === String(editingOrderId))?.title ?? "Auftrag"}
+                      currentUserId={userProfile.id}
+                      roleId={userProfile.role_id}
+                      currencySymbol={currencySymbol}
+                    />
                   )}
 
                   </div>

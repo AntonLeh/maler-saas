@@ -72,6 +72,9 @@ type ApprovalCenterPageProps = {
   materialConsumptionLogs: MaterialConsumptionLog[];
 };
 
+import ApprovalCosts from "../modules/stunden/ApprovalCosts";
+import type { Entry, Person } from "../modules/stunden/logic";
+
 export default function ApprovalCenterPage({
   onBack,
   orders,
@@ -181,58 +184,6 @@ const totalWorkMinutes = orderTimeEntries.reduce((sum, entry) => {
 
 const totalWorkHours = totalWorkMinutes / 60;
 
-const laborCostByEmployee = orderTimeEntries.reduce(
-  (map, entry) => {
-    if (!entry.started_at || !entry.ended_at) {
-      return map;
-    }
-
-    const startedAt = new Date(entry.started_at).getTime();
-    const endedAt = new Date(entry.ended_at).getTime();
-
-    if (Number.isNaN(startedAt) || Number.isNaN(endedAt)) {
-      return map;
-    }
-
-    const grossMinutes = Math.max(0, (endedAt - startedAt) / 1000 / 60);
-    const breakMinutes = Number(entry.total_break_minutes || 0);
-    const netMinutes = Math.max(0, grossMinutes - breakMinutes);
-
-    const employee = employees.find(
-      (emp) => Number(emp.id) === Number(entry.user_id)
-    );
-
-    const employeeName =
-      `${employee?.first_name ?? ""} ${employee?.last_name ?? ""}`.trim() ||
-      employee?.email ||
-      `Mitarbeiter #${entry.user_id}`;
-
-    const hourlyRate = Number(employee?.hourly_rate || 0);
-
-    const current = map.get(entry.user_id) || {
-      name: employeeName,
-      minutes: 0,
-      hourlyRate,
-      cost: 0,
-    };
-
-    current.minutes += netMinutes;
-    current.cost += (netMinutes / 60) * hourlyRate;
-
-    map.set(entry.user_id, current);
-
-    return map;
-  },
-  new Map<number, { name: string; minutes: number; hourlyRate: number; cost: number }>()
-);
-
-const laborCostRows = Array.from(laborCostByEmployee.values());
-
-const totalLaborCost = laborCostRows.reduce(
-  (sum, row) => sum + row.cost,
-  0
-);
-
 const materialCost = materialConsumptionLogs
   .filter(
     (log) =>
@@ -247,7 +198,6 @@ const materialCost = materialConsumptionLogs
     0
   );
 
-const totalOrderCost = totalLaborCost + materialCost;
 
       return (
         <div
@@ -307,35 +257,12 @@ const totalOrderCost = totalLaborCost + materialCost;
   </strong>
 </p>
 
-<p style={{ margin: 0, color: "#475569" }}>
-  💰 Arbeitskosten:{" "}
-  <strong>
-    {totalLaborCost.toLocaleString("de-DE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} €
-  </strong>
-</p>
-
-<p style={{ margin: 0, color: "#475569" }}>
-  🎨 Materialkosten:{" "}
-  <strong>
-    {materialCost.toLocaleString("de-DE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} €
-  </strong>
-</p>
-
-<p style={{ margin: 0, color: "#0f172a", fontWeight: 700 }}>
-  📊 Gesamtkosten:{" "}
-  <strong>
-    {totalOrderCost.toLocaleString("de-DE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} €
-  </strong>
-</p>
+<ApprovalCosts
+  orderId={Number(order.id)}
+  entries={orderTimeEntries as unknown as Entry[]}
+  people={employees as unknown as Person[]}
+  materialCost={materialCost}
+/>
 
   </div>
 

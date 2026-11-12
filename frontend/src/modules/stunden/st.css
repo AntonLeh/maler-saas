@@ -1,0 +1,60 @@
+/* Stunden, Fremdleistungen, Nachweise */
+.st-root, .st-section, .st-modal { text-align: left; color: #0f172a; }
+.st-root h2, .st-root h3, .st-section h3, .st-section h4, .st-modal h3, .st-root p, .st-section p { text-align: left; }
+.st-page { max-width: 1180px; }
+.st-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.st-actions .btn, .st-bar .btn, .st-root .page-topbar .btn { width: auto; }
+.st-small { margin: 6px 0; font-size: 12.5px; color: #64748b; line-height: 1.5; }
+.st-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+.st-msg.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.st-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.st-empty { padding: 14px; border: 1px dashed #cbd5e1; border-radius: 12px; color: #475569; font-size: 14px; background: #fff; }
+.st-link { background: none; border: 0; padding: 6px 0; color: #1d4ed8; font: inherit; font-weight: 700; cursor: pointer; }
+
+.st-section { border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px 18px; background: #fff; margin-top: 18px; }
+.st-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 10px; }
+.st-head h3 { margin: 0; font-size: 18px; }
+
+.st-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 10px 0 14px; }
+.st-split > div { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; display: flex; flex-direction: column; gap: 2px; }
+.st-split > div.zero { opacity: 0.55; }
+.st-split > div.sum { background: #eff6ff; border-color: #bfdbfe; }
+.st-split span { font-size: 12px; font-weight: 700; color: #475569; }
+.st-split b { font-size: 18px; }
+.st-split small { font-size: 12px; color: #64748b; }
+
+.st-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+.st-table th { text-align: left; font-size: 12px; color: #64748b; font-weight: 700; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.st-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.st-table td small { display: block; font-size: 12px; color: #64748b; }
+.st-table .r { text-align: right; white-space: nowrap; }
+.st-table td.warn { color: #b91c1c; font-weight: 700; }
+.st-x { border: 1px solid #fecaca; background: #fff; color: #b91c1c; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; font-weight: 700; }
+
+.st-form { border: 1px solid #c7d2fe; background: #f8faff; border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+.st-form h4 { margin: 0 0 8px; font-size: 15px; }
+.st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.st-grid .full { grid-column: 1 / -1; }
+.st-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.st-field > span { font-size: 12px; font-weight: 700; color: #334155; }
+.st-field input, .st-field select { padding: 9px 11px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; width: 100%; box-sizing: border-box; }
+.st-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #334155; }
+.st-check input { width: 18px; height: 18px; }
+
+.st-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+.st-tabs button { border: 1px solid #dbe3ee; background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 700; color: #334155; cursor: pointer; }
+.st-tabs button.on { background: #0f172a; border-color: #0f172a; color: #fff; }
+.st-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 6px; }
+.st-bar .st-field { min-width: 170px; }
+
+.st-modal-bg { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: grid; place-items: center; padding: 16px; z-index: 1000; }
+.st-modal { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; background: #fff; border-radius: 18px; padding: 18px 20px; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25); }
+.st-modal h3 { margin: 0 0 4px; font-size: 19px; }
+.st-total { margin: 4px 0 12px; font-size: 14px; color: #334155; }
+.st-total b { font-size: 17px; color: #0f172a; }
+
+@media (max-width: 640px) {
+  .st-grid { grid-template-columns: 1fr; }
+  .st-table { font-size: 13px; }
+  .st-table th, .st-table td { padding: 7px 6px; }
+}

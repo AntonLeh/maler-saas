@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { GROUP_LABELS, groupOf } from "../modules/stunden/logic";
+import type { Group, Person } from "../modules/stunden/logic";
 
 type EmployeeTimeSummary = {
   employee_id: number;
@@ -79,6 +81,7 @@ export default function AdminTimeEvaluation() {
   const [details, setDetails] = useState<TimeEvaluationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [people, setPeople] = useState<Person[]>([]);
 
   const totalEmployees = employeeSummary.length;
 
@@ -128,6 +131,9 @@ const topEmployee =
       if (empError) throw empError;
       if (orderError) throw orderError;
       if (detailError) throw detailError;
+
+      const { data: peopleData } = await supabase.from("app_users").select("*");
+      setPeople((peopleData ?? []) as Person[]);
 
       setEmployeeSummary((empData ?? []) as EmployeeTimeSummary[]);
       setOrderSummary((orderData ?? []) as OrderTimeSummary[]);
@@ -197,6 +203,20 @@ const topEmployee =
     <span>💰 Lohnkosten</span>
     <strong>{formatEuropeanNumber(totalLaborCost)}</strong>
   </div>
+  {(["own", "leih", "sub"] as Group[])
+    .map((g) => ({
+      g,
+      cost: details
+        .filter((d) => groupOf(people.find((p) => Number(p.id) === Number(d.employee_id))) === g)
+        .reduce((sum, d) => sum + Number(d.labor_cost || 0), 0),
+    }))
+    .filter((x, _i, all) => x.cost > 0 && all.filter((y) => y.cost > 0).length > 1)
+    .map((x) => (
+      <div className="kpi-card" key={x.g}>
+        <span>{x.g === "own" ? "👷" : x.g === "leih" ? "🔁" : "🤝"} {GROUP_LABELS[x.g]}</span>
+        <strong>{formatEuropeanNumber(x.cost)}</strong>
+      </div>
+    ))}
 
   <div className="kpi-card">
     <span>🏆 Top Mitarbeiter</span>
