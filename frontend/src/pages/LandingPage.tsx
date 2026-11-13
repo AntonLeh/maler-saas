@@ -696,6 +696,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <a href="/maler-software">Maler-Software</a>
           <a href="/rechnungen">Rechnungen</a>
           <a href="/zeiterfassung">Zeiterfassung</a>
+          <a href="/ratgeber">Ratgeber</a>
           <button type="button" onClick={onOpenImpressum}>
             Impressum
           </button>

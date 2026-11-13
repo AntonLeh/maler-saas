@@ -13,6 +13,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   youtube: "YouTube",
   google: "Google",
   email: "E-Mail",
+  ratgeber: "Ratgeber (Google)",
   direkt: "Direkt / ohne Herkunft",
 };
 export const sourceLabel = (s: string) => SOURCE_LABEL[s] ?? s.charAt(0).toUpperCase() + s.slice(1);

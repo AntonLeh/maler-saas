@@ -10,6 +10,7 @@ import ShotlistPanel from "./ShotlistPanel";
 import AgentPanel from "./AgentPanel";
 import SuccessView from "./SuccessView";
 import ImageLibrary from "./ImageLibrary";
+import RatgeberPanel from "./RatgeberPanel";
 import { resolveImage } from "./api";
 import { renderToBlob } from "./graphic";
 import "./ow2.css";
@@ -350,6 +351,7 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
         ? [
             { k: "youtube_title", label: "Titel", rows: 1 },
             { k: "youtube_description", label: "Beschreibung", rows: 6 },
+            { k: "youtube_tags", label: "Tags (mit Komma getrennt, bei YouTube unter „Tags“ einfügen)", rows: 2 },
             { k: "youtube_script", label: "Skript", rows: 12 },
           ]
         : [{ k: key as keyof Texts, label: "Text", rows: 12 }];
@@ -520,6 +522,7 @@ export default function OwnerMarketing({
   const [agent, setAgent] = useState(false);
   const [success, setSuccess] = useState(initialSuccess);
   const [library, setLibrary] = useState(false);
+  const [ratgeber, setRatgeber] = useState(false);
   const [openId, setOpenId] = useState<number | null>(initialOpenId);
   const [filter, setFilter] = useState<Status | "alle" | "freigabe">(initialFilter);
 
@@ -555,8 +558,11 @@ export default function OwnerMarketing({
             <p>Beiträge für Facebook, Instagram und LinkedIn · Kurzvideo-Skripte · Grafiken</p>
           </div>
           <div className="ow2-top-actions">
-            {!open && !creating && !agent && !success && !library && (
+            {!open && !creating && !agent && !success && !library && !ratgeber && (
               <>
+                <button type="button" className="btn btn-secondary" onClick={() => setRatgeber(true)}>
+                  📝 Ratgeber
+                </button>
                 <button type="button" className="btn btn-secondary" onClick={() => setLibrary(true)}>
                   🖼 Bilder
                 </button>
@@ -591,6 +597,7 @@ export default function OwnerMarketing({
         )}
 
         {library && !open && <ImageLibrary onClose={() => setLibrary(false)} />}
+        {ratgeber && !open && <RatgeberPanel onClose={() => setRatgeber(false)} />}
 
         {success && !open && (
           <SuccessView
@@ -630,6 +637,7 @@ export default function OwnerMarketing({
           !creating &&
           !agent &&
           !library &&
+          !ratgeber &&
           !success && (
             <>
               {due.length > 0 && (

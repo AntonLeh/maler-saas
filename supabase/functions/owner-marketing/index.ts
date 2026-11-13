@@ -8,6 +8,8 @@
 //   { action: "voice", text, voice: "female"|"male" }      -> { ok, audio: base64 (MP3) }   ElevenLabs Text-to-Speech
 //   { action: "shotlist", topic, script }                 -> { ok, shotlist }   Drehanleitung fürs YouTube-Erklärvideo
 //   { action: "plan", start, weeks, weekdays, mix, youtube_per_month } -> { ok, items }   Redaktionsplan-Vorschlag (nicht gespeichert)
+//   { action: "seo_keywords" }                           -> { ok, items }   Suchbegriffe für Ratgeber-Artikel
+//   { action: "seo_article", keyword, title? }          -> { ok, article }  Ratgeber-Artikel (gespeichert wird im Browser)
 //   { action: "prepare", ids? }                            -> { ok, done, remaining }   Texte für bis zu 3 Beiträge ohne Texte schreiben
 // POST …/owner-marketing?hook=<DELETION_HOOK_TOKEN>  { action: "auto" }  (Zeitplan, täglich): ab dem 25. Plan für den
 //   Folgemonat (wenn Automatik an), danach je Lauf bis zu 3 Beiträge vorbereiten, Nachricht an den Inhaber, wenn fertig.
@@ -22,6 +24,7 @@ import { SHOTLIST_PROMPT, SHOTLIST_TOOL, SYSTEM_PROMPT, TOOL, VOICES, cleanResul
 import { KNOWLEDGE_WITH_PRICES } from "../help-chat/prompt.ts";
 import { encodeBase64, mediaTypeFor } from "../receipt-ai/logic.ts";
 import * as A from "./agent.ts";
+import * as S from "./seo.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const HEADERS = {
@@ -277,6 +280,36 @@ serve(async (req) => {
     if (body.action === "prepare") {
       const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter((n: number) => Number.isInteger(n) && n > 0).slice(0, 100);
       return json({ ok: true, ...(await prepare(ids.length ? ids : null, 3)) });
+    }
+
+    // ---------- SEO-Agent ----------
+    if (body.action === "seo_keywords") {
+      const { data: arts } = await db.from("owner_articles").select("keyword, title").limit(500);
+      const existing = (arts ?? []).flatMap((a: any) => [a.keyword, a.title]).filter(Boolean);
+      const data = await callClaude({
+        max_tokens: 3000,
+        system: S.KEYWORD_SYSTEM,
+        tools: [S.KEYWORD_TOOL],
+        tool_choice: { type: "tool", name: "suchbegriffe" },
+        messages: [{ role: "user", content: `Bereits vorhandene Artikel:\n<vorhanden>\n${existing.slice(0, 200).map((t: string) => `- ${String(t).slice(0, 100)}`).join("\n") || "(noch keine)"}\n</vorhanden>\n\nSchlage 10 neue Suchbegriffe vor.` }],
+      });
+      const items = S.cleanKeywords((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, existing);
+      if (!items.length) return json({ ok: false, error: "Es konnten keine Vorschläge erstellt werden. Bitte noch einmal versuchen." }, 422);
+      return json({ ok: true, items });
+    }
+    if (body.action === "seo_article") {
+      const keyword = String(body.keyword ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+      if (!keyword) return json({ ok: false, error: "Bitte einen Suchbegriff angeben." }, 400);
+      const data = await callClaude({
+        max_tokens: 8000,
+        system: S.ARTICLE_SYSTEM,
+        tools: [S.ARTICLE_TOOL],
+        tool_choice: { type: "tool", name: "artikel" },
+        messages: [{ role: "user", content: `Suchbegriff: ${keyword}\nArbeitstitel: ${String(body.title ?? "").slice(0, 90) || "(frei)"}\n\nSchreibe den Artikel.` }],
+      });
+      const article = S.cleanArticle((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, keyword);
+      if (!article) return json({ ok: false, error: "Der Artikel konnte nicht erstellt werden. Bitte noch einmal versuchen." }, 422);
+      return json({ ok: true, article });
     }
 
     // ---------- Design-Agent: Bilder beschreiben ----------

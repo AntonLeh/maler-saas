@@ -13,6 +13,7 @@ export type Texts = {
   youtube_title: string;
   youtube_description: string;
   youtube_script: string;
+  youtube_tags?: string;
   /** vom Video-Generator bearbeitete Szenen */
   video_scenes?: { text: string; image: string | null; seconds: number; hint?: string }[];
   video_voice?: "none" | "female" | "male";
@@ -281,4 +282,96 @@ export function suggestImages(images: LibImage[], post: Pick<Post, "topic" | "ti
     .sort((a, b) => Number(b.base > 0) - Number(a.base > 0) || b.total - a.total || String(a.i.last_used_at ?? "").localeCompare(String(b.i.last_used_at ?? "")))
     .slice(0, n)
     .map((x) => x.i);
+}
+
+// ---------- SEO-Agent: Ratgeber-Artikel ----------
+export type ArticleFaq = { q: string; a: string };
+export type Article = {
+  id: number;
+  slug: string;
+  keyword: string;
+  title: string;
+  meta_title: string;
+  meta_description: string;
+  intro: string;
+  body: string;
+  faq: ArticleFaq[];
+  related_pages: string[];
+  status: "entwurf" | "veroeffentlicht";
+  reason: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type KeywordIdea = { keyword: string; title: string; intent: "information" | "vergleich" | "kauf"; reason: string; priority: number };
+export const FEATURE_PAGES: Record<string, string> = {
+  "maler-software": "Software für Malerbetriebe",
+  "aufmass-angebote": "Aufmaß & Angebote",
+  auftragsverwaltung: "Auftragsverwaltung",
+  zeiterfassung: "Zeiterfassung",
+  materialverwaltung: "Materialverwaltung",
+  rechnungen: "Rechnungen & E-Rechnung",
+  kundenportal: "Kundenportal",
+  leistungsbewertung: "Leistungsbewertung",
+  fachkraefte: "Fachkräfte-Pool",
+  buchhaltung: "Buchhaltung",
+  "ki-telefon": "KI-Telefon",
+  "firmen-website": "Firmen-Website",
+  auswertungen: "Auswertungen",
+  "werbung-mit-ki": "Werbung mit KI",
+};
+export const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70)
+    .replace(/-+$/g, "");
+export const wordCount = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+
+/** Markdown-Blöcke für die Vorschau (gleiche Regeln wie die Ratgeber-Seite) */
+export type MdBlock = { t: "h2" | "h3" | "p"; text: string } | { t: "ul"; items: string[] };
+export function mdBlocks(md: string): MdBlock[] {
+  const out: MdBlock[] = [];
+  let para: string[] = [];
+  let list: string[] = [];
+  const fp = () => {
+    if (para.length) out.push({ t: "p", text: para.join(" ") });
+    para = [];
+  };
+  const fl = () => {
+    if (list.length) out.push({ t: "ul", items: list });
+    list = [];
+  };
+  for (const raw of md.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) {
+      fp();
+      fl();
+      continue;
+    }
+    const h = /^(#{2,3})\s+(.*)$/.exec(line);
+    if (h) {
+      fp();
+      fl();
+      out.push({ t: h[1].length === 2 ? "h2" : "h3", text: h[2] });
+      continue;
+    }
+    const li = /^[-*]\s+(.*)$/.exec(line) ?? /^\d+[.)]\s+(.*)$/.exec(line);
+    if (li) {
+      fp();
+      list.push(li[1]);
+      continue;
+    }
+    if (/^#\s+/.test(line)) continue;
+    fl();
+    para.push(line);
+  }
+  fp();
+  fl();
+  return out;
 }

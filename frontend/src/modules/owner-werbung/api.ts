@@ -1,6 +1,6 @@
 // Owner-Werbung: Datenbank, Bilder, KI-Funktion
 import { supabase } from "../../lib/supabase";
-import type { AgentSettings, GraphicData, Goal, LibImage, Post, Proposal, Shotlist, Texts } from "./logic";
+import type { AgentSettings, Article, GraphicData, Goal, KeywordIdea, LibImage, Post, Proposal, Shotlist, Texts } from "./logic";
 import { DEFAULT_AGENT } from "./logic";
 import type { AdCost, OriginData } from "./success";
 
@@ -282,4 +282,46 @@ export async function tagImages(ids: number[] = []) {
   const r = await callFn<{ done?: number; failed?: number; remaining?: number }>({ action: "tag_images", ids }, "Die Bilder konnten nicht beschrieben werden.");
   if (typeof r.remaining !== "number") throw new Error(OLD_FN);
   return { done: r.done ?? 0, failed: r.failed ?? 0, remaining: r.remaining };
+}
+
+// ---------- SEO-Agent: Ratgeber ----------
+const ART_SQL = "Für den Ratgeber fehlt noch das Datenbank-Update (SQL „Ratgeber“).";
+
+/** null = Datenbank-Update fehlt */
+export async function loadArticles(): Promise<Article[] | null> {
+  const { data, error } = await supabase.from("owner_articles").select("*").order("updated_at", { ascending: false }).limit(500);
+  if (error) return null;
+  return (data ?? []) as Article[];
+}
+
+export async function saveArticle(id: number | null, v: Partial<Omit<Article, "id" | "created_at">>): Promise<Article> {
+  const payload = { ...v, updated_at: new Date().toISOString() };
+  const res = id
+    ? await supabase.from("owner_articles").update(payload).eq("id", id).select("*").single()
+    : await supabase.from("owner_articles").insert(payload).select("*").single();
+  if (res.error) {
+    const m = res.error.message;
+    if (/duplicate key|unique/i.test(m)) throw new Error("Diese Adresse (Slug) gibt es schon – bitte eine andere wählen.");
+    if (/slug_check|check constraint/i.test(m)) throw new Error("Die Adresse darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.");
+    throw new Error(/owner_articles|schema cache/i.test(m) ? ART_SQL : "Der Artikel konnte nicht gespeichert werden.");
+  }
+  return res.data as Article;
+}
+
+export async function deleteArticle(id: number) {
+  const { error } = await supabase.from("owner_articles").delete().eq("id", id);
+  if (error) throw new Error("Der Artikel konnte nicht gelöscht werden.");
+}
+
+export async function keywordIdeas(): Promise<KeywordIdea[]> {
+  const r = await callFn<{ items?: KeywordIdea[] }>({ action: "seo_keywords" }, "Es konnten keine Vorschläge erstellt werden.");
+  if (!Array.isArray(r.items)) throw new Error(OLD_FN);
+  return r.items;
+}
+
+export type ArticleDraft = Pick<Article, "title" | "meta_title" | "meta_description" | "slug" | "intro" | "body" | "faq" | "related_pages" | "keyword">;
+export async function writeArticle(keyword: string, title = ""): Promise<ArticleDraft> {
+  const r = await callFn<{ article?: ArticleDraft }>({ action: "seo_article", keyword, title }, "Der Artikel konnte nicht erstellt werden.");
+  if (!r.article) throw new Error(OLD_FN);
+  return r.article;
 }

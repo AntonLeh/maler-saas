@@ -20,6 +20,18 @@
       "destination": "/api/site?slug=:slug&page=:page*"
     },
     {
+      "source": "/ratgeber",
+      "destination": "/api/ratgeber"
+    },
+    {
+      "source": "/ratgeber/",
+      "destination": "/api/ratgeber"
+    },
+    {
+      "source": "/ratgeber/:slug",
+      "destination": "/api/ratgeber?slug=:slug"
+    },
+    {
       "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen|werbung-mit-ki)",
       "destination": "/seo/:page/index.html"
     },

@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://maler-saas.com/sitemap.xml
+Sitemap: https://maler-saas.com/ratgeber/sitemap.xml
