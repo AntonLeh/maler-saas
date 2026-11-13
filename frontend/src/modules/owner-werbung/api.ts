@@ -1,7 +1,7 @@
 // Owner-Werbung: Datenbank, Bilder, KI-Funktion
 import { supabase } from "../../lib/supabase";
 import type { AgentSettings, Article, GraphicData, Goal, KeywordIdea, LibImage, Post, Proposal, Shotlist, Texts } from "./logic";
-import { DEFAULT_AGENT } from "./logic";
+import { DEFAULT_AGENT, parseGscCsv } from "./logic";
 import type { AdCost, OriginData } from "./success";
 
 const BUCKET = "owner-marketing";
@@ -324,4 +324,27 @@ export async function writeArticle(keyword: string, title = ""): Promise<Article
   const r = await callFn<{ article?: ArticleDraft }>({ action: "seo_article", keyword, title }, "Der Artikel konnte nicht erstellt werden.");
   if (!r.article) throw new Error(OLD_FN);
   return r.article;
+}
+
+/** Search-Console-Export lesen: ZIP (enthält Suchanfragen.csv/Queries.csv) oder direkt die CSV */
+export async function readGscExport(file: File): Promise<{ query: string; impressions: number }[]> {
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let csv = "";
+  if (/\.zip$/i.test(file.name) || (bytes[0] === 0x50 && bytes[1] === 0x4b)) {
+    let files: Record<string, Uint8Array>;
+    try {
+      files = unzipSync(bytes);
+    } catch {
+      throw new Error("Die ZIP-Datei konnte nicht geöffnet werden.");
+    }
+    const name = Object.keys(files).find((n) => /(suchanfragen|queries)\.csv$/i.test(n));
+    if (!name) throw new Error("In der ZIP-Datei fehlt „Suchanfragen.csv“. Bitte in der Search Console unter Leistung → Exportieren → „CSV herunterladen“ wählen.");
+    csv = strFromU8(files[name]);
+  } else {
+    csv = await file.text();
+  }
+  const list = parseGscCsv(csv);
+  if (!list.length) throw new Error("In der Datei wurden keine Suchanfragen gefunden.");
+  return list;
 }

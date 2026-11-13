@@ -354,6 +354,28 @@ export default function RatgeberPanel({ onClose }: Props) {
               ✍️ Artikel schreiben
             </button>
           </div>
+          <label className={`btn btn-secondary ow2-upload-btn${busy ? " disabled" : ""}`}>
+            <input
+              type="file"
+              accept=".zip,.csv,application/zip,text/csv"
+              disabled={!!busy}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try {
+                  const list = await api.readGscExport(f);
+                  const text = L.queriesToText(list);
+                  setGsc(text);
+                  setMsg({ ok: true, text: `${list.length} Suchanfragen aus „${f.name}“ erkannt – der Agent plant jetzt die Artikel …` });
+                  await suggest(text);
+                } catch (err) {
+                  setMsg({ ok: false, text: (err as Error).message });
+                }
+              }}
+            />
+            📁 Search-Console-Export (ZIP) hochladen
+          </label>
           <button type="button" className="ow2-link" onClick={() => setShowGsc(!showGsc)}>
             {showGsc ? "▾" : "▸"} Suchbegriffe aus der Google Search Console einfügen
           </button>

@@ -375,3 +375,48 @@ export function mdBlocks(md: string): MdBlock[] {
   fl();
   return out;
 }
+
+// ---------- Search-Console-Export (ZIP/CSV) ----------
+/** Eine CSV-Zeile mit Anführungszeichen korrekt zerlegen */
+function csvCells(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') q = false;
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === "," || c === ";" || c === "\t") {
+      out.push(cur);
+      cur = "";
+    } else cur += c;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+/** „Suchanfragen.csv“ (oder „Queries.csv“) aus der Search Console → Suchbegriffe mit Impressionen */
+export function parseGscCsv(text: string): { query: string; impressions: number }[] {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const head = csvCells(lines[0]).map((h) => h.toLowerCase());
+  const qi = 0;
+  const ii = head.findIndex((h) => /impression/.test(h));
+  const out: { query: string; impressions: number }[] = [];
+  for (const line of lines.slice(1)) {
+    const cells = csvCells(line);
+    const query = (cells[qi] ?? "").toLowerCase().slice(0, 100);
+    if (query.length < 3) continue;
+    const impressions = ii >= 0 ? Number(String(cells[ii] ?? "0").replace(/[^\d]/g, "")) || 0 : 0;
+    out.push({ query, impressions });
+  }
+  return out.sort((a, b) => b.impressions - a.impressions);
+}
+
+/** Als Text für den Agenten: „suchbegriff<TAB>impressionen“ je Zeile */
+export const queriesToText = (list: { query: string; impressions: number }[]) => list.map((q) => `${q.query}\t${q.impressions}`).join("\n");
