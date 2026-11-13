@@ -3,7 +3,7 @@
 export const LEGAL_VERSIONS = {
   agb: "2026-09-13",
   avv: "2026-11-08",
-  datenschutz: "2026-11-08",
+  datenschutz: "2026-11-13",
 } as const;
 
 const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];

@@ -8,6 +8,7 @@ import GraphicEditor from "./GraphicEditor";
 import VideoMaker from "./VideoMaker";
 import ShotlistPanel from "./ShotlistPanel";
 import AgentPanel from "./AgentPanel";
+import SuccessView from "./SuccessView";
 import { resolveImage } from "./api";
 import { renderToBlob } from "./graphic";
 import "./ow2.css";
@@ -172,6 +173,33 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const campaign = post.utm_campaign || L.campaignSlug(post.title);
+  const [shortCode, setShortCode] = useState<string | null>(post.short_code ?? null);
+
+  // Kurzlink einmalig anlegen (ohne SQL „Erfolgsmessung“ bleibt es beim langen Link)
+  useEffect(() => {
+    if (post.short_code || post.short_code === undefined) return;
+    let cancel = false;
+    (async () => {
+      for (let i = 0; i < 3 && !cancel; i++) {
+        try {
+          const code = L.makeShortCode(post.title || post.topic);
+          const saved = await api.savePost(post.id, { short_code: code, utm_campaign: campaign });
+          if (!cancel) {
+            setShortCode(saved.short_code ?? code);
+            onSaved(saved);
+          }
+          return;
+        } catch {
+          /* Code schon vergeben → neuer Versuch */
+        }
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+    // nur beim Öffnen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id]);
 
   const channels = post.source === "agent" && post.channels?.length ? L.CHANNELS.filter((c) => post.channels!.includes(c.key)) : L.CHANNELS;
   const [approving, setApproving] = useState(false);
@@ -254,12 +282,12 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   };
 
   const copyChannel = async (key: ChannelKey) => {
-    const ok = await copy(L.channelText(texts, key, campaign));
+    const ok = await copy(L.channelText(texts, key, campaign, shortCode));
     setMsg({ text: ok ? "Text kopiert – beim Posten ins Textfeld einfügen." : "Kopieren nicht möglich – bitte Text markieren.", ok });
   };
 
   const share = async (key: ChannelKey) => {
-    const text = L.channelText(texts, key, campaign);
+    const text = L.channelText(texts, key, campaign, shortCode);
     await copy(text);
     try {
       const file = new File([await graphicBlob()], `${campaign}.png`, { type: "image/png" });
@@ -415,7 +443,7 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
         <p className="ow2-small">
           {channel === "instagram" || channel === "video"
             ? `Auf Instagram sind Links nicht anklickbar. Link für Ihre Bio: ${L.utmLink("instagram", "bio")}`
-            : `{LINK} wird beim Kopieren ersetzt durch: ${L.utmLink(cur.utm, campaign)}`}
+            : `{LINK} wird beim Kopieren ersetzt durch: ${shortCode ? `https://${L.shortLink(shortCode, cur.utm)}` : L.utmLink(cur.utm, campaign)}`}
         </p>
         <div className="ow2-actions left">
           <button type="button" className="btn btn-primary" onClick={() => copyChannel(channel)}>
@@ -458,11 +486,22 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
 // =====================================================================
 // Übersicht
 // =====================================================================
-export default function OwnerMarketing({ onBack, initialOpenId = null, initialFilter = "alle" }: { onBack: () => void; initialOpenId?: number | null; initialFilter?: "alle" | "freigabe" }) {
+export default function OwnerMarketing({
+  onBack,
+  initialOpenId = null,
+  initialFilter = "alle",
+  initialSuccess = false,
+}: {
+  onBack: () => void;
+  initialOpenId?: number | null;
+  initialFilter?: "alle" | "freigabe";
+  initialSuccess?: boolean;
+}) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [agent, setAgent] = useState(false);
+  const [success, setSuccess] = useState(initialSuccess);
   const [openId, setOpenId] = useState<number | null>(initialOpenId);
   const [filter, setFilter] = useState<Status | "alle" | "freigabe">(initialFilter);
 
@@ -498,8 +537,11 @@ export default function OwnerMarketing({ onBack, initialOpenId = null, initialFi
             <p>Beiträge für Facebook, Instagram und LinkedIn · Kurzvideo-Skripte · Grafiken</p>
           </div>
           <div className="ow2-top-actions">
-            {!open && !creating && !agent && (
+            {!open && !creating && !agent && !success && (
               <>
+                <button type="button" className="btn btn-secondary" onClick={() => setSuccess(true)}>
+                  📈 Erfolg
+                </button>
                 <button type="button" className="btn btn-primary" onClick={() => setAgent(true)}>
                   🤖 Agent
                 </button>
@@ -523,6 +565,17 @@ export default function OwnerMarketing({ onBack, initialOpenId = null, initialFi
               setCreating(false);
               setPosts((list) => [p, ...(list ?? [])]);
               setOpenId(p.id);
+            }}
+          />
+        )}
+
+        {success && !open && (
+          <SuccessView
+            posts={posts ?? []}
+            onClose={() => setSuccess(false)}
+            onOpenPost={(id) => {
+              setSuccess(false);
+              setOpenId(id);
             }}
           />
         )}
@@ -552,7 +605,8 @@ export default function OwnerMarketing({ onBack, initialOpenId = null, initialFi
           />
         ) : (
           !creating &&
-          !agent && (
+          !agent &&
+          !success && (
             <>
               {due.length > 0 && (
                 <div className="ow2-due">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAttribution } from "../../lib/attribution";
 import { supabase } from "../../lib/supabase";
 import { LEGAL_VERSIONS } from "../../lib/legalVersions";
 import AuthLegal from "./AuthLegal";
@@ -65,6 +66,8 @@ export default function RegisterPage({ onBackToLogin, onOpenAgb, onOpenDatenschu
             // Nachweis: welche Fassung von AGB, AVV und Datenschutzhinweisen galt und dass als Unternehmer gehandelt wird
             // (Zeitpunkt = Anlage des Zugangs, siehe legal_acceptances() in der Datenbank)
             legal_accepted: { ...LEGAL_VERSIONS, unternehmer: true },
+            // Herkunft (Werbe-Link), falls vorhanden – für die Erfolgsmessung im Owner-Bereich
+            ...(getAttribution() ? { signup_origin: getAttribution() } : {}),
           },
         },
       });

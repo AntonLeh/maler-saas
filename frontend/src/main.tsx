@@ -4,6 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import HelpChat from './components/HelpChat.tsx'
 import { inject } from '@vercel/analytics'
+import { captureAttribution } from './lib/attribution'
+
+// Herkunft aus Werbe-Links merken (nur im Speicher, keine Cookies) – vor dem ersten Rendern
+captureAttribution()
 
 // Besucherzahlen für maler-saas.com (Vercel Web Analytics, ohne Cookies).
 // Nicht gezählt: angemeldete Nutzer (Betriebe, Mitarbeiter) und das Kundenportal.

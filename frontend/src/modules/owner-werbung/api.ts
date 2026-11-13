@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import type { AgentSettings, GraphicData, Goal, Post, Proposal, Shotlist, Texts } from "./logic";
 import { DEFAULT_AGENT } from "./logic";
+import type { AdCost, OriginData } from "./success";
 
 const BUCKET = "owner-marketing";
 
@@ -197,4 +198,31 @@ export async function prepare(ids: number[]) {
 
 export async function approve(p: Post): Promise<Post> {
   return savePost(p.id, { approved_at: new Date().toISOString(), status: p.planned_for ? "geplant" : "entwurf" });
+}
+
+// ---------- Erfolgsmessung ----------
+
+/** Herkunft je Firma; null = Datenbank-Update fehlt */
+export async function loadOrigins(): Promise<Map<number, OriginData> | null> {
+  const { data, error } = await supabase.rpc("owner_signup_origins");
+  if (error) return null;
+  const m = new Map<number, OriginData>();
+  for (const r of (data ?? []) as { tenant_id: number; origin: OriginData }[]) m.set(Number(r.tenant_id), r.origin ?? null);
+  return m;
+}
+
+export async function loadAdCosts(): Promise<AdCost[] | null> {
+  const { data, error } = await supabase.from("owner_ad_costs").select("*").order("created_at", { ascending: false });
+  if (error) return null;
+  return (data ?? []).map((c) => ({ ...c, amount: Number(c.amount) })) as AdCost[];
+}
+
+export async function addAdCost(v: Omit<AdCost, "id" | "created_at">) {
+  const { error } = await supabase.from("owner_ad_costs").insert(v);
+  if (error) throw new Error(/owner_ad_costs|schema cache/i.test(error.message) ? "Dafür fehlt noch das Datenbank-Update (SQL „Erfolgsmessung“)." : "Die Kosten konnten nicht gespeichert werden.");
+}
+
+export async function deleteAdCost(id: number) {
+  const { error } = await supabase.from("owner_ad_costs").delete().eq("id", id);
+  if (error) throw new Error("Die Kosten konnten nicht gelöscht werden.");
 }

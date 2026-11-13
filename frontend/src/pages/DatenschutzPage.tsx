@@ -1070,6 +1070,23 @@ export default function DatenschutzPage({
           </p>
 
           <p>
+            Herkunft einer Registrierung: Wer über einen Link aus einem
+            unserer Beiträge in sozialen Netzwerken oder aus einer Anzeige
+            zu MalerSaaS kommt (z. B. maler-saas.com/go/… oder Links mit
+            utm-Kennung), dessen Link-Kennung (Kanal und Beitrag) wird
+            nur im Arbeitsspeicher des Browsers gehalten – ohne Cookies
+            und ohne Speicherung im Endgerät. Registriert sich der
+            Besucher im selben Besuch, wird diese Kennung zusammen mit
+            dem Zugang gespeichert, damit wir auswerten können, welche
+            Beiträge und Anzeigen zu Registrierungen führen. Es werden
+            keine Daten an soziale Netzwerke oder Werbeanbieter
+            übermittelt. Rechtsgrundlage ist Artikel 6 Absatz 1
+            Buchstabe f DSGVO (berechtigtes Interesse an der Messung
+            des Erfolgs unserer Werbung). Die Kennung wird mit dem
+            Zugang gelöscht.
+          </p>
+
+          <p>
             Werbe- oder Marketing-Tracking-Systeme werden nicht
             eingesetzt. Insbesondere werden kein Google Analytics, kein
             Meta- beziehungsweise Facebook-Pixel, kein TikTok-Pixel

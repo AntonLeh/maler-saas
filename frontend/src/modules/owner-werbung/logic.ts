@@ -58,6 +58,8 @@ export type Post = {
   approved_at?: string | null;
   plan_month?: string | null;
   prepare_error?: string | null;
+  /** Kurzlink-Code (ab SQL „Erfolgsmessung“) */
+  short_code?: string | null;
 };
 
 export const TOPICS: string[] = [
@@ -128,9 +130,28 @@ export function utmLink(source: string, campaign: string, path = "/") {
 /** {LINK} im Text durch den Kanal-Link ersetzen */
 export const withLink = (text: string, link: string) => text.replace(/\{LINK\}/g, link);
 
+/** Kurzlink je Kanal: maler-saas.com/go/winter7k-f */
+const CH_SUFFIX: Record<string, string> = { facebook: "f", instagram: "i", linkedin: "l", video: "v", youtube: "y" };
+export const shortLink = (code: string, channel: string) => `${SITE.replace(/^https:\/\//, "")}/go/${code}-${CH_SUFFIX[channel] ?? "f"}`;
+
+/** Kurzer Code aus dem Titel, z. B. „winter7k“ */
+export function makeShortCode(title: string, rnd = Math.random): string {
+  const word =
+    title
+      .toLowerCase()
+      .replace(/ä/g, "ae")
+      .replace(/ö/g, "oe")
+      .replace(/ü/g, "ue")
+      .replace(/ß/g, "ss")
+      .split(/[^a-z0-9]+/)
+      .find((w) => w.length >= 4 && !["fuer", "eine", "einen", "ihre", "mehr", "ohne", "statt", "jetzt", "beim", "wenn"].includes(w)) ?? "post";
+  const tail = Array.from({ length: 2 }, () => "abcdefghjkmnpqrstuvwxyz23456789"[Math.floor(rnd() * 31)]).join("");
+  return `${word.slice(0, 12)}${tail}`;
+}
+
 /** Text für einen Kanal (inkl. Link), so wie er kopiert wird */
-export function channelText(texts: Partial<Texts>, key: ChannelKey, campaign: string): string {
-  const link = (src: string) => utmLink(src, campaign);
+export function channelText(texts: Partial<Texts>, key: ChannelKey, campaign: string, shortCode?: string | null): string {
+  const link = (src: string) => (shortCode ? `https://${shortLink(shortCode, src)}` : utmLink(src, campaign));
   switch (key) {
     case "facebook":
       return withLink(texts.facebook ?? "", link("facebook"));
