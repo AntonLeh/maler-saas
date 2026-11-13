@@ -9,6 +9,7 @@ import VideoMaker from "./VideoMaker";
 import ShotlistPanel from "./ShotlistPanel";
 import AgentPanel from "./AgentPanel";
 import SuccessView from "./SuccessView";
+import ImageLibrary from "./ImageLibrary";
 import { resolveImage } from "./api";
 import { renderToBlob } from "./graphic";
 import "./ow2.css";
@@ -174,6 +175,17 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const campaign = post.utm_campaign || L.campaignSlug(post.title);
   const [shortCode, setShortCode] = useState<string | null>(post.short_code ?? null);
+  const [library, setLibrary] = useState<L.LibImage[]>([]);
+  const [now] = useState(() => Date.now());
+  useEffect(() => {
+    let cancel = false;
+    void api.loadImages().then((r) => !cancel && setLibrary(r ?? []));
+    return () => {
+      cancel = true;
+    };
+  }, []);
+  const suggested = useMemo(() => L.suggestImages(library, { ...post, title }, now), [library, post, title, now]);
+  const chosenLib = library.find((i) => i.path === graphic.image) ?? null;
 
   // Kurzlink einmalig anlegen (ohne SQL „Erfolgsmessung“ bleibt es beim langen Link)
   useEffect(() => {
@@ -412,7 +424,12 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
       </div>
 
       <h3 className="ow2-h3">Grafik</h3>
-      <GraphicEditor value={graphic} uploads={post.images ?? []} onChange={setGraphic} onDownload={downloadGraphic} busy={busy === "png"} />
+      <GraphicEditor value={graphic} uploads={post.images ?? []} onChange={setGraphic} onDownload={downloadGraphic} busy={busy === "png"} library={library} suggested={suggested} />
+      {chosenLib?.realistic && (
+        <p className="ow2-msg warn">
+          🏷 Dieses Bild wirkt wie ein echtes Foto und ist mit KI erstellt: Beim Posten auf Facebook und Instagram bitte <b>„KI-Label hinzufügen“</b> einschalten.
+        </p>
+      )}
 
       <h3 className="ow2-h3">Texte</h3>
       <div className="ow2-tabs" role="tablist">
@@ -502,6 +519,7 @@ export default function OwnerMarketing({
   const [creating, setCreating] = useState(false);
   const [agent, setAgent] = useState(false);
   const [success, setSuccess] = useState(initialSuccess);
+  const [library, setLibrary] = useState(false);
   const [openId, setOpenId] = useState<number | null>(initialOpenId);
   const [filter, setFilter] = useState<Status | "alle" | "freigabe">(initialFilter);
 
@@ -537,8 +555,11 @@ export default function OwnerMarketing({
             <p>Beiträge für Facebook, Instagram und LinkedIn · Kurzvideo-Skripte · Grafiken</p>
           </div>
           <div className="ow2-top-actions">
-            {!open && !creating && !agent && !success && (
+            {!open && !creating && !agent && !success && !library && (
               <>
+                <button type="button" className="btn btn-secondary" onClick={() => setLibrary(true)}>
+                  🖼 Bilder
+                </button>
                 <button type="button" className="btn btn-secondary" onClick={() => setSuccess(true)}>
                   📈 Erfolg
                 </button>
@@ -568,6 +589,8 @@ export default function OwnerMarketing({
             }}
           />
         )}
+
+        {library && !open && <ImageLibrary onClose={() => setLibrary(false)} />}
 
         {success && !open && (
           <SuccessView
@@ -606,6 +629,7 @@ export default function OwnerMarketing({
         ) : (
           !creating &&
           !agent &&
+          !library &&
           !success && (
             <>
               {due.length > 0 && (

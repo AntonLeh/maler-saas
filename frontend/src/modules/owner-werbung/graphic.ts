@@ -1,6 +1,6 @@
 // Grafik-Generator für MalerSaaS-Werbung (Canvas, ohne externe Bibliotheken)
 
-export type Template = "funktion" | "tipp" | "angebot";
+export type Template = "funktion" | "tipp" | "angebot" | "foto";
 export type Format = "1x1" | "4x5" | "9x16";
 
 export type GraphicSpec = {
@@ -23,6 +23,7 @@ export const TEMPLATES: Record<Template, string> = {
   funktion: "Funktion mit Screenshot",
   tipp: "Tipp-Kachel",
   angebot: "14 Tage kostenlos",
+  foto: "Foto mit Text",
 };
 
 /** Mitgelieferte Screenshots der App (öffentliche Bilder der Website) */
@@ -167,6 +168,14 @@ function checkList(ctx: CanvasRenderingContext2D, points: string[], x: number, y
   return cy;
 }
 
+/** Bild „cover“: füllt die ganze Fläche (Ausschnitt mittig) */
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * scale;
+  const dh = img.naturalHeight * scale;
+  ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+
 /** Zeichnet die Grafik in ein Canvas der Zielgröße */
 export async function render(canvas: HTMLCanvasElement, spec: GraphicSpec, logoUrl = "/images/logo.png") {
   const { w, h } = FORMATS[spec.format];
@@ -187,7 +196,36 @@ export async function render(canvas: HTMLCanvasElement, spec: GraphicSpec, logoU
   const shift = airy ? (story ? 300 : 90) : 0;
   const big = airy ? 1.18 : 1;
 
-  if (spec.template === "tipp") {
+  if (spec.template === "foto") {
+    // Foto über die ganze Fläche, oben und unten abgedunkelt für gut lesbare Schrift
+    ctx.fillStyle = NAVY;
+    ctx.fillRect(0, 0, w, h);
+    if (img) drawCover(ctx, img, w, h);
+    const top = ctx.createLinearGradient(0, 0, 0, h * 0.28);
+    top.addColorStop(0, "rgba(15,23,42,0.7)");
+    top.addColorStop(1, "rgba(15,23,42,0)");
+    ctx.fillStyle = top;
+    ctx.fillRect(0, 0, w, h * 0.28);
+    const bottom = ctx.createLinearGradient(0, h * 0.38, 0, h);
+    bottom.addColorStop(0, "rgba(15,23,42,0)");
+    bottom.addColorStop(0.45, "rgba(15,23,42,0.78)");
+    bottom.addColorStop(1, "rgba(15,23,42,0.94)");
+    ctx.fillStyle = bottom;
+    ctx.fillRect(0, h * 0.38, w, h * 0.62);
+    brand(ctx, logo, pad, topY, true);
+    // Text von unten aufbauen: erst messen, dann zeichnen
+    const footerTop = h - (story ? 250 : 110);
+    const hs = tall ? 80 : 70;
+    const ss = 36;
+    ctx.font = `850 ${hs}px ${FONT}`;
+    const hl = wrapLines((s) => ctx.measureText(s).width, spec.headline || "MalerSaaS", w - pad * 2, 3);
+    ctx.font = `500 ${ss}px ${FONT}`;
+    const sl = spec.subline ? wrapLines((s) => ctx.measureText(s).width, spec.subline, w - pad * 2, 2) : [];
+    const blockH = hl.length * hs * 1.12 + (sl.length ? 22 + sl.length * ss * 1.3 : 0);
+    let y = footerTop - 40 - blockH;
+    y = drawText(ctx, spec.headline || "MalerSaaS", pad, y, w - pad * 2, hs, 850, "#fff", 3, 1.12);
+    if (sl.length) drawText(ctx, spec.subline, pad, y + 22, w - pad * 2, ss, 500, "#e2e8f0", 2, 1.3);
+  } else if (spec.template === "tipp") {
     ctx.fillStyle = "#f8fafc";
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = BLUE2;

@@ -221,7 +221,11 @@ const SHOTS: [RegExp, string][] = [
 ];
 export const screenshotFor = (topic: string) => SHOTS.find(([re]) => re.test(topic))?.[1] ?? "/images/maler-saas-landing-collage.png";
 
-export function graphicFor(goal: string, topic: string, g?: { headline?: string; subline?: string; points?: string[] }) {
+export function graphicFor(goal: string, topic: string, g?: { headline?: string; subline?: string; points?: string[] }, photo?: string | null) {
+  // mit passendem Foto aus der Bibliothek: Vorlage „Foto mit Text“ (Funktionen behalten den App-Screenshot)
+  if (photo && goal !== "funktion") {
+    return { template: "foto", format: "1x1", headline: g?.headline ?? "", subline: g?.subline ?? "", points: g?.points ?? [], image: photo };
+  }
   return {
     template: goal === "testphase" ? "angebot" : goal === "tipp" ? "tipp" : "funktion",
     format: "1x1",
@@ -233,3 +237,83 @@ export function graphicFor(goal: string, topic: string, g?: { headline?: string;
 }
 
 export const emptyTexts = (t: unknown) => !t || typeof t !== "object" || !["facebook", "instagram", "linkedin"].some((k) => String((t as Record<string, unknown>)[k] ?? "").trim());
+
+// ---------- Design-Agent: Bild aus der Bibliothek wählen ----------
+export type LibImage = { id: number; path: string; description: string | null; tags: string[] | null; last_used_at: string | null };
+
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss");
+const STOP = new Set(["eine", "einen", "einer", "fuer", "ihre", "ihren", "mehr", "ohne", "statt", "jetzt", "beim", "wenn", "dann", "oder", "sind", "wird", "werden", "malersaas", "maler", "malerbetrieb", "malerbetriebe", "betrieb", "betriebe", "tipp", "tipps"]);
+export const stems = (s: string) => new Set(norm(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.slice(0, 6)));
+
+const SEASONS: Record<string, number[]> = { winter: [12, 1, 2], fruehling: [3, 4, 5], fruehjahr: [3, 4, 5], sommer: [6, 7, 8], herbst: [9, 10, 11] };
+
+/** Punktzahl: gemeinsame Wortstämme (base), dazu Jahreszeit und Abwechslung (total) */
+export function imageScoreParts(img: LibImage, text: string, month: number | null, now = Date.now()): { base: number; total: number } {
+  const want = stems(text);
+  const tags = (img.tags ?? []).map(norm);
+  const have = stems(`${img.description ?? ""} ${tags.join(" ")}`);
+  let base = 0;
+  for (const w of want) if (have.has(w)) base += 2;
+  for (const t of tags) if (want.has(t.slice(0, 6))) base += 1;
+  let total = base;
+  if (month) {
+    for (const [season, months] of Object.entries(SEASONS)) {
+      if (!tags.includes(season)) continue;
+      total += months.includes(month) ? 2 : -1;
+    }
+  }
+  if (img.last_used_at) {
+    const days = (now - Date.parse(img.last_used_at)) / 86400000;
+    if (days < 21) total -= 4;
+    else if (days < 60) total -= 1;
+  }
+  return { base, total };
+}
+export const imageScore = (img: LibImage, text: string, month: number | null, now = Date.now()) => imageScoreParts(img, text, month, now).total;
+
+/** Bestes passendes Bild; für Tipps/Saison/Testphase notfalls das insgesamt beste (Abwechslung), für Funktionen sonst keins */
+export function pickImage(images: LibImage[], text: string, goal: string, plannedFor: string | null, exclude: Set<string>, now = Date.now()): LibImage | null {
+  const month = plannedFor ? Number(plannedFor.slice(5, 7)) : null;
+  const pool = images.filter((i) => !exclude.has(i.path));
+  if (!pool.length) return null;
+  const ranked = pool
+    .map((i) => ({ i, ...imageScoreParts(i, text, month, now) }))
+    .sort((a, b) => Number(b.base > 0) - Number(a.base > 0) || b.total - a.total || String(a.i.last_used_at ?? "").localeCompare(String(b.i.last_used_at ?? "")));
+  if (ranked[0].base > 0) return ranked[0].i;
+  return goal === "funktion" ? null : ranked[0].i;
+}
+
+// ---------- Bild-Beschreibung (KI) ----------
+export const IMAGE_TOOL = {
+  name: "bild",
+  description: "Beschreibung eines Werbebilds",
+  input_schema: {
+    type: "object",
+    properties: {
+      description: { type: "string", maxLength: 160, description: "Ein Satz auf Deutsch: was ist zu sehen" },
+      tags: { type: "array", maxItems: 12, items: { type: "string", maxLength: 24 }, description: "Stichworte, Kleinbuchstaben, deutsch, je ein Wort" },
+      realistic: { type: "boolean", description: "true, wenn das Bild fotorealistisch Menschen oder echte Szenen zeigt" },
+    },
+    required: ["description", "tags", "realistic"],
+  },
+};
+export const IMAGE_PROMPT = `Beschreibe dieses Werbebild für eine Software für Malerbetriebe kurz.
+- description: ein Satz, was zu sehen ist (z. B. „Maler streicht eine Innenwand mit der Rolle in einem hellen Altbau“).
+- tags: 5–12 einzelne Wörter, klein, deutsch: Ort (innen/aussen/fassade/buero/baustelle), Jahreszeit falls erkennbar (winter/fruehling/sommer/herbst),
+  Tätigkeit (streichen/spachteln/tapezieren/lackieren/planen/aufmass/beratung), Gegenstände (rolle/pinsel/leiter/tablet/handy/farbe), Personen (person/team/kunde).
+- realistic: true bei fotorealistischen Menschen oder Szenen (dann verlangen Facebook/Instagram ein KI-Label), false bei Grafiken, Icons, Illustrationen.
+Gib das Ergebnis über das Werkzeug "bild" zurück.`;
+
+// deno-lint-ignore no-explicit-any
+export function cleanImageInfo(input: any) {
+  const description = String(input?.description ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const tags = [...new Set((Array.isArray(input?.tags) ? input.tags : []).map((t: unknown) => norm(String(t)).replace(/[^a-z0-9-]/g, "").slice(0, 24)).filter(Boolean))].slice(0, 12);
+  if (!description && !tags.length) return null;
+  return { description, tags, realistic: !!input?.realistic };
+}

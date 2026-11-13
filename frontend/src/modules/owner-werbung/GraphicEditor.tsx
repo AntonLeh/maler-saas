@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FORMATS, SCREENSHOTS, TEMPLATES, render } from "./graphic";
 import type { Format, Template } from "./graphic";
-import type { GraphicData } from "./logic";
+import type { GraphicData, LibImage } from "./logic";
 import * as api from "./api";
 import { resolveImage } from "./api";
 
@@ -11,11 +11,28 @@ type Props = {
   onChange: (g: GraphicData) => void;
   onDownload: () => void;
   busy: boolean;
+  /** Bildbibliothek (Design-Agent): passende Vorschläge zuerst */
+  library?: LibImage[];
+  suggested?: LibImage[];
 };
 
-export default function GraphicEditor({ value, uploads, onChange, onDownload, busy }: Props) {
+export default function GraphicEditor({ value, uploads, onChange, onDownload, busy, library = [], suggested = [] }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [uploadUrls, setUploadUrls] = useState<Record<string, string>>({});
+  const [showAll, setShowAll] = useState(false);
+  const libShown = showAll ? library : suggested;
+  const libKey = libShown.map((i) => i.path).join("|");
+  const [libUrls, setLibUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const paths = libKey ? libKey.split("|") : [];
+    Promise.all(paths.map(async (p) => [p, await api.imageUrl(p).catch(() => "")] as const)).then((pairs) => {
+      if (!cancelled) setLibUrls((old) => ({ ...old, ...Object.fromEntries(pairs) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [libKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +115,30 @@ export default function GraphicEditor({ value, uploads, onChange, onDownload, bu
             />
           ))}
         </div>
+        {library.length > 0 && (
+          <div className="ow2-field">
+            <label>
+              {showAll ? "Alle Bilder aus Ihrer Bibliothek" : "Passend aus Ihrer Bibliothek"}
+              <button type="button" className="ow2-link" onClick={() => setShowAll(!showAll)}>
+                {showAll ? "Nur passende" : `Alle (${library.length})`}
+              </button>
+            </label>
+            <div className="ow2-thumbs">
+              {libShown.map((img) => (
+                <button
+                  key={img.path}
+                  type="button"
+                  className={value.image === img.path ? "on" : ""}
+                  title={img.description ?? ""}
+                  onClick={() => set({ image: img.path, template: value.template === "funktion" ? value.template : "foto" })}
+                >
+                  {libUrls[img.path] ? <img src={libUrls[img.path]} alt={img.description ?? ""} /> : "…"}
+                  {img.realistic && <span>KI-Label</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="ow2-field">
           <label>Bild</label>
           <div className="ow2-thumbs">

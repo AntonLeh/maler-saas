@@ -27,7 +27,7 @@ export type Shotlist = {
 };
 
 export type GraphicData = {
-  template: "funktion" | "tipp" | "angebot";
+  template: "funktion" | "tipp" | "angebot" | "foto";
   format: "1x1" | "4x5" | "9x16";
   headline: string;
   subline: string;
@@ -234,3 +234,51 @@ export function mixPercent(mix: Record<AgentGoal, number>): Record<AgentGoal, nu
 /** Heute (oder überfällig) zu posten: freigegeben/geplant, noch nicht veröffentlicht */
 export const postToday = (posts: Post[], today: string) =>
   posts.filter((p) => p.status === "geplant" && p.planned_for && p.planned_for <= today && !needsApproval(p)).sort((a, b) => String(a.planned_for).localeCompare(String(b.planned_for)));
+
+// ---------- Bildbibliothek (Design-Agent) ----------
+export type LibImage = {
+  id: number;
+  path: string;
+  description: string | null;
+  tags: string[];
+  realistic: boolean;
+  ai_generated: boolean;
+  width: number | null;
+  height: number | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+const normDe = (s: string) => s.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
+const STOPWORDS = new Set(["eine", "einen", "einer", "fuer", "ihre", "ihren", "mehr", "ohne", "statt", "jetzt", "beim", "wenn", "dann", "oder", "sind", "wird", "werden", "malersaas", "maler", "malerbetrieb", "malerbetriebe", "betrieb", "betriebe", "tipp", "tipps"]);
+const stemsOf = (s: string) => new Set(normDe(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOPWORDS.has(w)).map((w) => w.slice(0, 6)));
+const SEASON_MONTHS: Record<string, number[]> = { winter: [12, 1, 2], fruehling: [3, 4, 5], fruehjahr: [3, 4, 5], sommer: [6, 7, 8], herbst: [9, 10, 11] };
+
+/** Wie gut passt ein Bild zum Beitrag (gleiche Regeln wie beim Agenten): base = Wortübereinstimmung, total = mit Jahreszeit/Abwechslung */
+export function imageScore(img: Pick<LibImage, "description" | "tags" | "last_used_at">, text: string, month: number | null, now: number): { base: number; total: number } {
+  const want = stemsOf(text);
+  const tags = (img.tags ?? []).map(normDe);
+  const have = stemsOf(`${img.description ?? ""} ${tags.join(" ")}`);
+  let base = 0;
+  for (const w of want) if (have.has(w)) base += 2;
+  for (const t of tags) if (want.has(t.slice(0, 6))) base += 1;
+  let total = base;
+  if (month) for (const [season, months] of Object.entries(SEASON_MONTHS)) if (tags.includes(season)) total += months.includes(month) ? 2 : -1;
+  if (img.last_used_at) {
+    const days = (now - Date.parse(img.last_used_at)) / 86400000;
+    if (days < 21) total -= 4;
+    else if (days < 60) total -= 1;
+  }
+  return { base, total };
+}
+
+/** Die passendsten Bilder zu einem Beitrag */
+export function suggestImages(images: LibImage[], post: Pick<Post, "topic" | "title" | "keywords" | "planned_for"> & { hook?: string | null }, now: number, n = 6): LibImage[] {
+  const text = [post.topic, post.title, post.hook, post.keywords].filter(Boolean).join(" ");
+  const month = post.planned_for ? Number(post.planned_for.slice(5, 7)) : null;
+  return images
+    .map((i) => ({ i, ...imageScore(i, text, month, now) }))
+    .sort((a, b) => Number(b.base > 0) - Number(a.base > 0) || b.total - a.total || String(a.i.last_used_at ?? "").localeCompare(String(b.i.last_used_at ?? "")))
+    .slice(0, n)
+    .map((x) => x.i);
+}

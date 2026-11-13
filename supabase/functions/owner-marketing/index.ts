@@ -109,13 +109,25 @@ async function prepare(ids: number[] | null, limit = 3) {
   const { data } = await q;
   const open = (data ?? []).filter((p: any) => A.emptyTexts(p.texts) && !(p.prepare_error && !ids?.length));
   const batch = open.slice(0, limit);
+  // Bildbibliothek (Design-Agent); ohne Datenbank-Update leer
+  const { data: lib } = await db.from("owner_marketing_images").select("id, path, description, tags, last_used_at").limit(500);
+  const images: A.LibImage[] = lib ?? [];
+  const taken = new Set<string>();
+  const photoFor = new Map<number, A.LibImage | null>();
+  for (const p of batch) {
+    const img = images.length ? A.pickImage(images, [p.topic, p.hook, p.keywords].filter(Boolean).join(" "), p.goal, p.planned_for, taken) : null;
+    if (img) taken.add(img.path);
+    photoFor.set(p.id, img);
+  }
   const results = await Promise.allSettled(
     batch.map(async (p: any) => {
       const yt = Array.isArray(p.channels) && p.channels.includes("youtube");
       const kw = [p.hook ? `Aufhänger: ${p.hook}` : "", p.keywords ? `Stichworte: ${p.keywords}` : ""].filter(Boolean).join("\n");
       const r = await writeTexts(p.topic, p.goal, kw, yt, Array.isArray(p.images) ? p.images : []);
       if (!r) throw new Error("leer");
-      const g = p.graphic && p.graphic.headline ? p.graphic : A.graphicFor(p.goal, p.topic, r.graphic);
+      const photo = photoFor.get(p.id) ?? null;
+      const g = p.graphic && p.graphic.headline ? p.graphic : A.graphicFor(p.goal, p.topic, r.graphic, photo?.path ?? null);
+      if (photo && g.image === photo.path) await db.from("owner_marketing_images").update({ last_used_at: new Date().toISOString() }).eq("id", photo.id);
       const { error } = await db
         .from("owner_marketing_posts")
         .update({ title: r.title || p.topic, texts: r.texts, graphic: g, utm_campaign: p.utm_campaign || A.campaignSlug(r.title || p.topic), prepare_error: null, updated_at: new Date().toISOString() })
@@ -265,6 +277,37 @@ serve(async (req) => {
     if (body.action === "prepare") {
       const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter((n: number) => Number.isInteger(n) && n > 0).slice(0, 100);
       return json({ ok: true, ...(await prepare(ids.length ? ids : null, 3)) });
+    }
+
+    // ---------- Design-Agent: Bilder beschreiben ----------
+    if (body.action === "tag_images") {
+      const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter((n: number) => Number.isInteger(n) && n > 0).slice(0, 200);
+      let q = db.from("owner_marketing_images").select("id, path").is("description", null).order("id").limit(200);
+      if (ids.length) q = db.from("owner_marketing_images").select("id, path").in("id", ids).order("id");
+      const { data: todo, error } = await q;
+      if (error) return json({ ok: false, error: "Für die Bildbibliothek fehlt noch das Datenbank-Update (SQL „Owner-Bilder“)." }, 400);
+      const batch = (todo ?? []).slice(0, 4);
+      const results = await Promise.allSettled(
+        batch.map(async (img: any) => {
+          const { data: blob } = await db.storage.from("owner-marketing").download(img.path);
+          if (!blob || blob.size > 4.5 * 1024 * 1024) throw new Error("Bild zu groß");
+          const mt = mediaTypeFor(img.path, blob.type);
+          if (!mt || mt === "application/pdf") throw new Error("Format");
+          const data = await callClaude({
+            max_tokens: 600,
+            tools: [A.IMAGE_TOOL],
+            tool_choice: { type: "tool", name: "bild" },
+            messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mt, data: encodeBase64(new Uint8Array(await blob.arrayBuffer())) } }, { type: "text", text: A.IMAGE_PROMPT }] }],
+          });
+          const info = A.cleanImageInfo((data.content ?? []).find((c: any) => c.type === "tool_use")?.input);
+          if (!info) throw new Error("leer");
+          const { error: upErr } = await db.from("owner_marketing_images").update(info).eq("id", img.id);
+          if (upErr) throw upErr;
+        }),
+      );
+      const done = results.filter((r) => r.status === "fulfilled").length;
+      for (const r of results) if (r.status === "rejected") console.error("tag_images", r.reason);
+      return json({ ok: true, done, failed: batch.length - done, remaining: Math.max(0, (todo ?? []).length - done) });
     }
 
     // ---------- Agent: Automatik jetzt ausführen (zum Testen) ----------

@@ -1,6 +1,6 @@
 // Owner-Werbung: Datenbank, Bilder, KI-Funktion
 import { supabase } from "../../lib/supabase";
-import type { AgentSettings, GraphicData, Goal, Post, Proposal, Shotlist, Texts } from "./logic";
+import type { AgentSettings, GraphicData, Goal, LibImage, Post, Proposal, Shotlist, Texts } from "./logic";
 import { DEFAULT_AGENT } from "./logic";
 import type { AdCost, OriginData } from "./success";
 
@@ -225,4 +225,61 @@ export async function addAdCost(v: Omit<AdCost, "id" | "created_at">) {
 export async function deleteAdCost(id: number) {
   const { error } = await supabase.from("owner_ad_costs").delete().eq("id", id);
   if (error) throw new Error("Die Kosten konnten nicht gelöscht werden.");
+}
+
+// ---------- Bildbibliothek ----------
+const IMG_SQL = "Für die Bildbibliothek fehlt noch das Datenbank-Update (SQL „Owner-Bilder“).";
+
+/** null = Datenbank-Update fehlt */
+export async function loadImages(): Promise<LibImage[] | null> {
+  const { data, error } = await supabase.from("owner_marketing_images").select("*").order("created_at", { ascending: false }).limit(1000);
+  if (error) return null;
+  return (data ?? []).map((r) => ({ ...r, tags: r.tags ?? [] })) as LibImage[];
+}
+
+/** Bild verkleinern (max. 1600 px), in library/ hochladen und eintragen */
+export async function uploadLibraryImage(file: File): Promise<LibImage> {
+  let blob: Blob = file;
+  let width: number | null = null;
+  let height: number | null = null;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * scale);
+    c.height = Math.round(bmp.height * scale);
+    c.getContext("2d")?.drawImage(bmp, 0, 0, c.width, c.height);
+    width = c.width;
+    height = c.height;
+    blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("x"))), "image/jpeg", 0.86));
+  } catch {
+    /* Original verwenden */
+  }
+  const path = `library/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const up = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg" });
+  if (up.error) throw new Error(friendly(up.error, "Bild konnte nicht hochgeladen werden."));
+  const { data, error } = await supabase.from("owner_marketing_images").insert({ path, width, height }).select("*").single();
+  if (error) {
+    await supabase.storage.from(BUCKET).remove([path]);
+    throw new Error(/owner_marketing_images|schema cache/i.test(error.message) ? IMG_SQL : "Bild konnte nicht gespeichert werden.");
+  }
+  return { ...data, tags: data.tags ?? [] } as LibImage;
+}
+
+export async function updateImage(id: number, v: Partial<Pick<LibImage, "description" | "tags" | "realistic" | "ai_generated">>) {
+  const { error } = await supabase.from("owner_marketing_images").update(v).eq("id", id);
+  if (error) throw new Error("Bild konnte nicht gespeichert werden.");
+}
+
+export async function deleteImage(img: LibImage) {
+  const { error } = await supabase.from("owner_marketing_images").delete().eq("id", img.id);
+  if (error) throw new Error("Bild konnte nicht gelöscht werden.");
+  await supabase.storage.from(BUCKET).remove([img.path]);
+}
+
+/** KI beschreibt bis zu 4 Bilder je Aufruf (mehrfach aufrufen, bis remaining = 0) */
+export async function tagImages(ids: number[] = []) {
+  const r = await callFn<{ done?: number; failed?: number; remaining?: number }>({ action: "tag_images", ids }, "Die Bilder konnten nicht beschrieben werden.");
+  if (typeof r.remaining !== "number") throw new Error(OLD_FN);
+  return { done: r.done ?? 0, failed: r.failed ?? 0, remaining: r.remaining };
 }
