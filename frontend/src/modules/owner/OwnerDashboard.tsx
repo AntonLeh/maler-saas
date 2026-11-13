@@ -311,6 +311,7 @@ const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
 const OwnerCalendar = lazy(() => import("../owner-termine/OwnerCalendar"));
 const UpcomingAppointments = lazy(() => import("../owner-termine/UpcomingAppointments"));
+const TodayPosts = lazy(() => import("../owner-werbung/TodayPosts"));
 
 export default function OwnerDashboard({ onBack }: Props) {
   const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar">("overview");
@@ -323,6 +324,8 @@ export default function OwnerDashboard({ onBack }: Props) {
   const [sort, setSort] = useState<Sort>("new");
   const [openId, setOpenId] = useState<number | null>(null);
   const [deletionReload, setDeletionReload] = useState(0);
+  const [marketingOpen, setMarketingOpen] = useState<number | null>(null);
+  const [marketingApproval, setMarketingApproval] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -395,7 +398,7 @@ export default function OwnerDashboard({ onBack }: Props) {
   if (view === "marketing") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
-        <OwnerMarketing onBack={() => setView("overview")} />
+        <OwnerMarketing initialOpenId={marketingOpen} initialFilter={marketingOpen === null && marketingApproval ? "freigabe" : "alle"} onBack={() => { setMarketingOpen(null); setMarketingApproval(false); setView("overview"); }} />
       </Suspense>
     );
   }
@@ -459,6 +462,13 @@ export default function OwnerDashboard({ onBack }: Props) {
 
         <Suspense fallback={null}>
           <UpcomingAppointments onOpen={() => setView("calendar")} />
+          <TodayPosts
+            onOpen={(id) => {
+              setMarketingOpen(id);
+              setMarketingApproval(id === null);
+              setView("marketing");
+            }}
+          />
         </Suspense>
 
         {error && <p className="ow-error">{error}</p>}

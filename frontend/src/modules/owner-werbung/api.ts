@@ -1,11 +1,13 @@
 // Owner-Werbung: Datenbank, Bilder, KI-Funktion
 import { supabase } from "../../lib/supabase";
-import type { GraphicData, Goal, Post, Shotlist, Texts } from "./logic";
+import type { AgentSettings, GraphicData, Goal, Post, Proposal, Shotlist, Texts } from "./logic";
+import { DEFAULT_AGENT } from "./logic";
 
 const BUCKET = "owner-marketing";
 
 const friendly = (err: unknown, fallback: string) => {
   const msg = String((err as { message?: string })?.message ?? err ?? "");
+  if (/owner_marketing_agent|(source|approved_at|plan_month|agent_reason|hook|channels).*(column|schema cache)|column.*(source|approved_at|plan_month|agent_reason|hook|channels)/i.test(msg)) return "Für den Agenten fehlt noch das Datenbank-Update (SQL „Owner-Agent“).";
   if (/owner_marketing_posts|does not exist|schema cache/i.test(msg)) return "Für die Werbung fehlt noch das Datenbank-Update (SQL „Owner-Werbung“).";
   if (/failed to fetch|network/i.test(msg)) return "Keine Internetverbindung.";
   return fallback;
@@ -124,4 +126,67 @@ export async function resolveImage(image: string | null): Promise<string | null>
   if (!image) return null;
   if (image.startsWith("/images/")) return image;
   return imageUrl(image);
+}
+
+// ---------- Content- & Planungs-Agent ----------
+/** Einstellungen; null = Datenbank-Update fehlt */
+export async function loadAgent(): Promise<AgentSettings | null> {
+  const { data, error } = await supabase.from("owner_marketing_agent").select("*").eq("id", 1).maybeSingle();
+  if (error) return null;
+  if (!data) return { ...DEFAULT_AGENT };
+  return {
+    auto_enabled: !!data.auto_enabled,
+    weekdays: Array.isArray(data.weekdays) && data.weekdays.length ? data.weekdays.map(Number) : DEFAULT_AGENT.weekdays,
+    channels: Array.isArray(data.channels) && data.channels.length ? data.channels : DEFAULT_AGENT.channels,
+    mix: { ...DEFAULT_AGENT.mix, ...(data.mix ?? {}) },
+    youtube_per_month: Number(data.youtube_per_month) || 0,
+    last_plan_month: data.last_plan_month ?? null,
+  };
+}
+
+export async function saveAgent(s: AgentSettings) {
+  const { error } = await supabase.from("owner_marketing_agent").upsert({
+    id: 1,
+    auto_enabled: s.auto_enabled,
+    weekdays: s.weekdays,
+    per_week: Math.max(1, Math.min(7, s.weekdays.length)),
+    channels: s.channels,
+    mix: s.mix,
+    youtube_per_month: s.youtube_per_month,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(friendly(error, "Die Einstellungen konnten nicht gespeichert werden."));
+}
+
+export const proposePlan = (v: { start: string; weeks: number; weekdays: number[]; mix: AgentSettings["mix"]; youtube_per_month: number }) =>
+  callFn<{ items: Proposal[] }>({ action: "plan", ...v }, "Der Plan konnte nicht erstellt werden.").then((r) => r.items);
+
+/** Vorschläge als Entwürfe speichern (noch ohne Texte) */
+export async function acceptProposals(items: Proposal[], channels: string[]): Promise<Post[]> {
+  const rows = items.map((it) => ({
+    topic: it.topic,
+    goal: it.goal,
+    keywords: it.keywords || null,
+    hook: it.hook || null,
+    agent_reason: it.reason || null,
+    title: it.topic,
+    texts: {},
+    status: "entwurf",
+    planned_for: it.date,
+    source: "agent",
+    plan_month: it.date.slice(0, 7),
+    channels: it.youtube ? [...new Set([...channels, "youtube"])] : channels.filter((c) => c !== "youtube"),
+    updated_at: new Date().toISOString(),
+  }));
+  const { data, error } = await supabase.from("owner_marketing_posts").insert(rows).select("*");
+  if (error) throw new Error(friendly(error, "Die Vorschläge konnten nicht gespeichert werden."));
+  return (data as Post[]) ?? [];
+}
+
+/** Texte für bis zu 3 Beiträge schreiben lassen (mehrfach aufrufen, bis remaining = 0) */
+export const prepare = (ids: number[]) =>
+  callFn<{ done: number; failed: number; remaining: number }>({ action: "prepare", ids }, "Die Texte konnten nicht erstellt werden.");
+
+export async function approve(p: Post): Promise<Post> {
+  return savePost(p.id, { approved_at: new Date().toISOString(), status: p.planned_for ? "geplant" : "entwurf" });
 }

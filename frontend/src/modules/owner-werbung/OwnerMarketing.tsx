@@ -7,6 +7,7 @@ import type { ChannelKey, GraphicData, Goal, Post, Status, Texts } from "./logic
 import GraphicEditor from "./GraphicEditor";
 import VideoMaker from "./VideoMaker";
 import ShotlistPanel from "./ShotlistPanel";
+import AgentPanel from "./AgentPanel";
 import { resolveImage } from "./api";
 import { renderToBlob } from "./graphic";
 import "./ow2.css";
@@ -167,12 +168,45 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   const [status, setStatus] = useState<Status>(post.status);
   const [planned, setPlanned] = useState(post.planned_for ?? "");
   const [published, setPublished] = useState<string[]>(post.published_channels ?? []);
-  const [channel, setChannel] = useState<ChannelKey>("facebook");
+  const [channel, setChannel] = useState<ChannelKey>(post.source === "agent" && post.channels?.length ? ((L.CHANNELS.find((c) => post.channels!.includes(c.key))?.key ?? "facebook") as ChannelKey) : "facebook");
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const campaign = post.utm_campaign || L.campaignSlug(post.title);
 
-  const channels = L.CHANNELS;
+  const channels = post.source === "agent" && post.channels?.length ? L.CHANNELS.filter((c) => post.channels!.includes(c.key)) : L.CHANNELS;
+  const [approving, setApproving] = useState(false);
+  const approveNow = async () => {
+    if (dirty) await save();
+    setApproving(true);
+    try {
+      const saved = await api.approve({ ...post, planned_for: planned || null });
+      setStatus(saved.status);
+      onSaved(saved);
+      setMsg({ text: saved.planned_for ? `Freigegeben – geplant für ${dateDe(saved.planned_for)}.` : "Freigegeben.", ok: true });
+    } catch (e) {
+      setMsg({ text: (e as Error).message, ok: false });
+    } finally {
+      setApproving(false);
+    }
+  };
+  const writeNow = async () => {
+    setBusy("write");
+    try {
+      await api.prepare([post.id]);
+      const fresh = (await api.loadPosts()).find((p) => p.id === post.id);
+      if (fresh) {
+        setTexts(fresh.texts || {});
+        setTitle(fresh.title);
+        if (fresh.graphic) setGraphic(fresh.graphic);
+        onSaved(fresh);
+      }
+    } catch (e) {
+      setMsg({ text: (e as Error).message, ok: false });
+    } finally {
+      setBusy("");
+    }
+  };
+
   const dirty =
     JSON.stringify([texts, title, graphic, status, planned, published]) !==
     JSON.stringify([post.texts || {}, post.title, post.graphic ?? api.defaultGraphic(post.goal), post.status, post.planned_for ?? "", post.published_channels ?? []]);
@@ -243,7 +277,8 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
   const togglePublished = async (key: ChannelKey) => {
     const next = published.includes(key) ? published.filter((k) => k !== key) : [...published, key];
     setPublished(next);
-    const allMain = ["facebook", "instagram", "linkedin"].every((k) => next.includes(k));
+    const main = post.source === "agent" && post.channels?.length ? post.channels.filter((c) => c !== "youtube") : ["facebook", "instagram", "linkedin"];
+    const allMain = main.every((k) => next.includes(k));
     const st: Status = allMain ? "veroeffentlicht" : status === "veroeffentlicht" ? (planned ? "geplant" : "entwurf") : status;
     setStatus(st);
     await save({ published_channels: next, status: st });
@@ -296,6 +331,29 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
         </div>
       </div>
       {msg && <p className={`ow2-msg ${msg.ok ? "ok" : "err"}`}>{msg.text}</p>}
+
+      {post.source === "agent" && (
+        <div className={`ow2-agent-note${L.needsApproval(post) ? " wait" : ""}`}>
+          <div>
+            <b>🤖 Vom Agenten geplant{post.approved_at ? " · freigegeben" : " · wartet auf Ihre Freigabe"}</b>
+            {post.hook && <span>Aufhänger: {post.hook}</span>}
+            {post.agent_reason && <small>💡 {post.agent_reason}</small>}
+            {post.prepare_error && <small className="err">{post.prepare_error}</small>}
+          </div>
+          <div className="ow2-actions left">
+            {!L.hasTexts({ texts }) && (
+              <button type="button" className="btn btn-secondary" onClick={writeNow} disabled={!!busy}>
+                {busy === "write" ? "KI schreibt … (ca. 20 Sek.)" : "✍️ Texte jetzt schreiben"}
+              </button>
+            )}
+            {L.needsApproval(post) && (
+              <button type="button" className="btn btn-primary" onClick={approveNow} disabled={approving || !L.hasTexts({ texts })}>
+                {approving ? "…" : "✅ Geprüft – freigeben"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="ow2-plan">
         <div className="ow2-field">
@@ -400,12 +458,13 @@ function Editor({ post, onSaved, onClose, onDeleted }: { post: Post; onSaved: (p
 // =====================================================================
 // Übersicht
 // =====================================================================
-export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
+export default function OwnerMarketing({ onBack, initialOpenId = null, initialFilter = "alle" }: { onBack: () => void; initialOpenId?: number | null; initialFilter?: "alle" | "freigabe" }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
-  const [openId, setOpenId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<Status | "alle">("alle");
+  const [agent, setAgent] = useState(false);
+  const [openId, setOpenId] = useState<number | null>(initialOpenId);
+  const [filter, setFilter] = useState<Status | "alle" | "freigabe">(initialFilter);
 
   const load = useCallback(async () => {
     try {
@@ -425,9 +484,10 @@ export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
 
   const sorted = useMemo(() => L.sortPosts(posts ?? []), [posts]);
   const due = useMemo(() => L.dueThisWeek(posts ?? [], today()), [posts]);
-  const visible = filter === "alle" ? sorted : sorted.filter((p) => p.status === filter);
+  const visible = filter === "alle" ? sorted : filter === "freigabe" ? sorted.filter(L.needsApproval) : sorted.filter((p) => p.status === filter && !L.needsApproval(p));
+  const approvalCount = (posts ?? []).filter(L.needsApproval).length;
   const open = (posts ?? []).find((p) => p.id === openId) ?? null;
-  const counts = (s: Status) => (posts ?? []).filter((p) => p.status === s).length;
+  const counts = (s: Status) => (posts ?? []).filter((p) => p.status === s && !L.needsApproval(p)).length;
 
   return (
     <section className="single-page-section ow2-root">
@@ -438,10 +498,15 @@ export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
             <p>Beiträge für Facebook, Instagram und LinkedIn · Kurzvideo-Skripte · Grafiken</p>
           </div>
           <div className="ow2-top-actions">
-            {!open && !creating && (
-              <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-                + Neuer Beitrag
-              </button>
+            {!open && !creating && !agent && (
+              <>
+                <button type="button" className="btn btn-primary" onClick={() => setAgent(true)}>
+                  🤖 Agent
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+                  + Neuer Beitrag
+                </button>
+              </>
             )}
             <button type="button" className="btn btn-secondary" onClick={onBack}>
               Zurück
@@ -462,6 +527,18 @@ export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
           />
         )}
 
+        {agent && !open && (
+          <AgentPanel
+            posts={posts ?? []}
+            onPostsChanged={load}
+            onClose={() => setAgent(false)}
+            onShowApproval={() => {
+              setAgent(false);
+              setFilter("freigabe");
+            }}
+          />
+        )}
+
         {open ? (
           <Editor
             key={open.id}
@@ -474,7 +551,8 @@ export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
             }}
           />
         ) : (
-          !creating && (
+          !creating &&
+          !agent && (
             <>
               {due.length > 0 && (
                 <div className="ow2-due">
@@ -488,29 +566,35 @@ export default function OwnerMarketing({ onBack }: { onBack: () => void }) {
                 </div>
               )}
               <div className="ow2-seg ow2-filter">
-                {(["alle", "geplant", "entwurf", "veroeffentlicht"] as const).map((f) => (
-                  <button key={f} type="button" className={filter === f ? "on" : ""} onClick={() => setFilter(f)}>
-                    {f === "alle" ? `Alle (${posts?.length ?? 0})` : `${L.STATUS_LABELS[f]} (${counts(f)})`}
-                  </button>
-                ))}
+                {(["alle", "freigabe", "geplant", "entwurf", "veroeffentlicht"] as const).map((f) =>
+                  f === "freigabe" && !approvalCount ? null : (
+                    <button key={f} type="button" className={`${filter === f ? "on" : ""}${f === "freigabe" ? " warn" : ""}`} onClick={() => setFilter(f)}>
+                      {f === "alle" ? `Alle (${posts?.length ?? 0})` : f === "freigabe" ? `✋ Zur Freigabe (${approvalCount})` : `${L.STATUS_LABELS[f]} (${counts(f)})`}
+                    </button>
+                  ),
+                )}
               </div>
               {posts === null ? (
                 <p className="ow2-empty">Wird geladen …</p>
               ) : visible.length === 0 ? (
                 <p className="ow2-empty">
-                  Noch keine Beiträge. Tippen Sie auf <b>„+ Neuer Beitrag“</b> – die KI schreibt Texte für alle Kanäle, Sie gestalten die Grafik.
+                  Noch keine Beiträge. Tippen Sie auf <b>„🤖 Agent“</b> für einen ganzen Redaktionsplan oder auf <b>„+ Neuer Beitrag“</b> für einen einzelnen Beitrag.
                 </p>
               ) : (
                 <ul className="ow2-list">
                   {visible.map((p) => (
                     <li key={p.id}>
                       <button type="button" onClick={() => setOpenId(p.id)}>
-                        <span className={`ow2-status s-${p.status}`}>{L.STATUS_LABELS[p.status]}</span>
+                        <span className={`ow2-status s-${L.needsApproval(p) ? "freigabe" : p.status}`}>{L.needsApproval(p) ? "Freigabe" : L.STATUS_LABELS[p.status]}</span>
                         <span className="ow2-li-main">
-                          <b>{p.title}</b>
+                          <b>
+                            {p.source === "agent" && <span title="vom Agenten">🤖 </span>}
+                            {p.title}
+                          </b>
                           <small>
                             {L.GOAL_LABELS[p.goal]} · {p.topic}
-                            {p.planned_for ? ` · geplant ${dateDe(p.planned_for)}` : ""}
+                            {p.planned_for ? ` · ${dateDe(p.planned_for)}` : ""}
+                            {p.source === "agent" && !L.hasTexts(p) ? (p.prepare_error ? " · ⚠️ Texte fehlgeschlagen" : " · ✍️ Texte folgen") : ""}
                           </small>
                         </span>
                         <span className="ow2-li-ch">

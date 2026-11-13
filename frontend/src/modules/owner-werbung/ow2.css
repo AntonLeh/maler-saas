@@ -129,3 +129,54 @@
 .ow2-howto ol { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: #334155; display: flex; flex-direction: column; gap: 6px; }
 .ow2-howto kbd { background: #fff; border: 1px solid #cbd5e1; border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; font-size: 12px; }
 @media (max-width: 640px) { .ow2-vrender { grid-template-columns: 1fr; } .ow2-vpreview { max-width: 260px; } }
+
+/* ---------- Content- & Planungs-Agent ---------- */
+.ow2-agent { text-align: left; }
+.ow2-agent-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ow2-agent-head h3 { margin: 0 0 2px; }
+.ow2-agent-head .btn { width: auto; flex: none; }
+.ow2-agent-status { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.ow2-pill { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.ow2-pill.warn { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+.ow2-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.ow2-days button { min-width: 42px; height: 36px; padding: 0 10px; border: 1px solid #dbe3ee; border-radius: 10px; background: #fff; font: inherit; font-weight: 700; color: #64748b; cursor: pointer; }
+.ow2-days button.on { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.ow2-inline { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 600; color: #334155; }
+.ow2-inline select { width: auto; padding: 5px 8px; }
+.ow2-mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; }
+.ow2-mix label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #334155; }
+.ow2-mix label span { display: flex; justify-content: space-between; }
+.ow2-mix input[type="range"] { width: 100%; accent-color: #1d4ed8; }
+.ow2-auto { align-items: flex-start !important; gap: 10px; color: #334155 !important; font-weight: 500 !important; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; }
+.ow2-auto input { margin-top: 3px; }
+.ow2-auto small { display: block; color: #64748b; margin-top: 3px; }
+.ow2-agent-plan { border-top: 1px solid #e2e8f0; margin-top: 12px; padding-top: 10px; }
+.ow2-agent-plan h4 { margin: 0 0 6px; font-size: 15px; }
+.ow2-progress { position: relative; margin: 10px 0; border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 12px; padding: 10px 12px 14px; font-size: 13.5px; font-weight: 600; color: #1e3a8a; display: flex; justify-content: space-between; gap: 8px; overflow: hidden; }
+.ow2-progress i { position: absolute; left: 0; bottom: 0; height: 4px; background: #1d4ed8; transition: width 0.4s; }
+.ow2-link { all: unset; cursor: pointer; color: #1d4ed8; font-size: 13px; font-weight: 700; }
+.ow2-proposals { margin-top: 12px; display: grid; gap: 8px; }
+.ow2-prop-head { display: flex; justify-content: space-between; align-items: center; }
+.ow2-prop { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #fff; }
+.ow2-prop.off { opacity: 0.5; }
+.ow2-prop > input { margin-top: 8px; width: 18px; height: 18px; flex: none; }
+.ow2-prop-main { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.ow2-prop-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ow2-prop-row input, .ow2-prop-row select { width: auto; padding: 5px 8px; border: 1px solid #dbe3ee; border-radius: 8px; font: inherit; font-size: 13px; }
+.ow2-prop-topic { font-weight: 700; font-size: 14.5px; padding: 6px 8px; border: 1px solid #dbe3ee; border-radius: 8px; font-family: inherit; }
+.ow2-prop-hook { font-size: 13px; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; font-family: inherit; }
+.ow2-prop small { color: #64748b; font-size: 12.5px; }
+.ow2-yt { font-size: 12px; font-weight: 700; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 2px 8px; }
+.ow2-agent-note { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 12px; padding: 10px 12px; margin: 10px 0; text-align: left; }
+.ow2-agent-note.wait { border-color: #fcd34d; background: #fffbeb; }
+.ow2-agent-note > div:first-child { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; min-width: 0; flex: 1; }
+.ow2-agent-note small { color: #64748b; }
+.ow2-agent-note small.err { color: #b91c1c; }
+.ow2-agent-note .btn { width: auto; }
+.ow2-status.s-freigabe { background: #fef3c7; color: #92400e; }
+.ow2-filter button.warn:not(.on) { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+.ow2-today { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; text-align: left; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 14px; margin: 0 0 12px; font-size: 14px; }
+.ow2-today-list { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ow2-today-list button { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 10px; padding: 5px 10px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.ow2-field > label.ow2-auto span { color: #334155; font-weight: 500; }
+.ow2-field > label.ow2-auto span b { color: #0f172a; }

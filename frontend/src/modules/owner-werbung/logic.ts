@@ -50,6 +50,14 @@ export type Post = {
   published_channels: string[];
   created_at: string;
   updated_at: string;
+  /** Agent (ab SQL „Agent“) */
+  source?: "manuell" | "agent";
+  agent_reason?: string | null;
+  hook?: string | null;
+  channels?: string[];
+  approved_at?: string | null;
+  plan_month?: string | null;
+  prepare_error?: string | null;
 };
 
 export const TOPICS: string[] = [
@@ -155,3 +163,53 @@ export function dueThisWeek(posts: Post[], today: string): Post[] {
   const endIso = end.toISOString().slice(0, 10);
   return posts.filter((p) => p.status === "geplant" && p.planned_for && p.planned_for <= endIso);
 }
+
+// ---------- Content- & Planungs-Agent ----------
+export type AgentGoal = "tipp" | "funktion" | "testphase" | "saison";
+export const AGENT_GOALS: AgentGoal[] = ["tipp", "funktion", "testphase", "saison"];
+export type AgentSettings = {
+  auto_enabled: boolean;
+  weekdays: number[];
+  channels: string[];
+  mix: Record<AgentGoal, number>;
+  youtube_per_month: number;
+  last_plan_month: string | null;
+};
+export const DEFAULT_AGENT: AgentSettings = {
+  auto_enabled: false,
+  weekdays: [2, 4, 6],
+  channels: ["facebook", "instagram", "linkedin"],
+  mix: { tipp: 40, funktion: 30, testphase: 20, saison: 10 },
+  youtube_per_month: 0,
+  last_plan_month: null,
+};
+export const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+export const AGENT_CHANNELS: { key: string; label: string }[] = [
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "video", label: "Kurzvideo" },
+];
+export type Proposal = { date: string; goal: AgentGoal; youtube: boolean; topic: string; hook: string; keywords: string; reason: string };
+
+export const hasTexts = (p: Pick<Post, "texts">) => ["facebook", "instagram", "linkedin"].some((k) => String((p.texts as Record<string, unknown>)?.[k] ?? "").trim());
+/** wartet auf Freigabe durch den Inhaber */
+export const needsApproval = (p: Post) => p.source === "agent" && !p.approved_at && p.status !== "veroeffentlicht";
+
+/** Nächster Montag (oder morgen, falls heute Sonntag) */
+export function nextMonday(today = new Date()): string {
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
+  const add = ((8 - d.getDay()) % 7) || 7;
+  d.setDate(d.getDate() + add);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Anteile in Prozent (gerundet, Summe 100) */
+export function mixPercent(mix: Record<AgentGoal, number>): Record<AgentGoal, number> {
+  const total = AGENT_GOALS.reduce((s, g) => s + (mix[g] || 0), 0) || 1;
+  return Object.fromEntries(AGENT_GOALS.map((g) => [g, Math.round(((mix[g] || 0) / total) * 100)])) as Record<AgentGoal, number>;
+}
+
+/** Heute (oder überfällig) zu posten: freigegeben/geplant, noch nicht veröffentlicht */
+export const postToday = (posts: Post[], today: string) =>
+  posts.filter((p) => p.status === "geplant" && p.planned_for && p.planned_for <= today && !needsApproval(p)).sort((a, b) => String(a.planned_for).localeCompare(String(b.planned_for)));
