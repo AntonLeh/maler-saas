@@ -313,8 +313,8 @@ export async function deleteArticle(id: number) {
   if (error) throw new Error("Der Artikel konnte nicht gelöscht werden.");
 }
 
-export async function keywordIdeas(): Promise<KeywordIdea[]> {
-  const r = await callFn<{ items?: KeywordIdea[] }>({ action: "seo_keywords" }, "Es konnten keine Vorschläge erstellt werden.");
+export async function keywordIdeas(queries = ""): Promise<KeywordIdea[]> {
+  const r = await callFn<{ items?: KeywordIdea[] }>({ action: "seo_keywords", queries }, "Es konnten keine Vorschläge erstellt werden.");
   if (!Array.isArray(r.items)) throw new Error(OLD_FN);
   return r.items;
 }

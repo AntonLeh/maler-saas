@@ -2,6 +2,43 @@ import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
 import "./MalerSoftwarePage.css";
 
+const SEO_TITLE = "Maler Software & Malerprogramm für Malerbetriebe | MalerSaaS";
+const SEO_DESCRIPTION =
+  "Maler Software aus der Cloud: Aufmaß, Angebot, Aufträge, Zeiterfassung und Rechnung in einem Malerprogramm. 14 Tage kostenlos testen – endet automatisch.";
+
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Was ist eine Maler Software?",
+    a: "Eine Maler Software (auch Malerprogramm oder Branchensoftware für Maler) bündelt die Abläufe eines Malerbetriebs in einem Programm: Aufmaß, Angebote, Aufträge, Mitarbeiter und Zeiterfassung, Material und Rechnungen. MalerSaaS ist speziell für Maler- und Lackiererbetriebe gemacht.",
+  },
+  {
+    q: "Welche Software hilft Malern bei der Auftragsabwicklung?",
+    a: "Hilfreich ist eine Software, die den ganzen Weg abdeckt – vom Aufmaß über das Angebot und den Auftrag bis zur Rechnung –, damit nichts doppelt eingegeben werden muss. Am besten testen Sie mit echten Aufträgen, ob die Abläufe zu Ihrem Betrieb passen; MalerSaaS können Sie dafür 14 Tage kostenlos nutzen.",
+  },
+  {
+    q: "Gibt es die Malersoftware als App und in der Cloud?",
+    a: "Ja. MalerSaaS läuft im Browser am PC, auf dem Tablet und auf dem Handy – ohne Installation. Mitarbeiter nutzen auf der Baustelle die Mitarbeiter-App, die Daten liegen sicher in der Cloud.",
+  },
+  {
+    q: "Kann ich mit dem Malerprogramm auch Aufmaß und Kalkulation machen?",
+    a: "Ja. Sie erfassen das Aufmaß (auch per Sprache), erstellen daraus Angebote mit Ihren Preisen und übernehmen angenommene Angebote direkt als Auftrag und später in die Rechnung.",
+  },
+  {
+    q: "Ist MalerSaaS auch für Lackierer und kleine Betriebe geeignet?",
+    a: "Ja. MalerSaaS richtet sich an Maler- und Lackiererbetriebe in Deutschland, Österreich und der Schweiz – vom Ein-Mann-Betrieb bis zum Betrieb mit mehreren Kolonnen.",
+  },
+  {
+    q: "Was kostet die Software?",
+    a: "Die Tarife finden Sie auf der Startseite. Sie können MalerSaaS 14 Tage kostenlos testen; die Testphase endet automatisch, ein Abo ist dafür nicht nötig.",
+  },
+];
+
+const FAQ_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+}).replace(/</g, "\\u003c");
+
 export default function MalerSoftwarePage({
   onRegister,
   onLogin,
@@ -19,10 +56,11 @@ export default function MalerSoftwarePage({
   return (
     <>
   <SeoMeta
-    title="Software für Malerbetriebe | MalerSaaS"
-    description="Software für Malerbetriebe: Mit MalerSaaS Aufmaß, Angebote, Aufträge, Zeiterfassung, Materialverwaltung und Rechnungen digital verwalten."
+    title={SEO_TITLE}
+    description={SEO_DESCRIPTION}
     canonical="https://maler-saas.com/maler-software"
   />
+  <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_LD }} />
 
   <div className="maler-software-page">
     <header className="maler-software-header">
@@ -87,10 +125,10 @@ export default function MalerSoftwarePage({
     <section className="maler-software-hero">
   <div className="maler-software-hero-content">
     <p className="maler-software-badge">
-      MalerSaaS – digitale Betriebssoftware für das Malerhandwerk
+      Branchensoftware für Maler und Lackierer – das Malerprogramm aus der Cloud
     </p>
 
-    <h1>Software für Malerbetriebe</h1>
+    <h1>Maler Software für Ihren Malerbetrieb</h1>
 
     <p className="maler-software-hero-text">
       MalerSaaS unterstützt Malerbetriebe dabei, ihre täglichen
@@ -412,6 +450,21 @@ export default function MalerSoftwarePage({
   </div>
 </section>
 
+<section className="maler-software-target maler-software-faq">
+  <div className="maler-software-section-inner">
+    <h2>Häufige Fragen zur Maler Software</h2>
+    {FAQ.map((f) => (
+      <details key={f.q}>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+    <p className="maler-software-faq-more">
+      Mehr Praxiswissen für Malerbetriebe finden Sie im <a href="/ratgeber">Ratgeber</a>.
+    </p>
+  </div>
+</section>
+
 <section className="maler-software-cta">
   <div className="maler-software-cta-inner">
     <p className="maler-software-cta-label">
@@ -450,6 +503,7 @@ export default function MalerSoftwarePage({
 
   <div className="maler-software-footer-links">
     <a href="/">Startseite</a>
+    <a href="/ratgeber">Ratgeber</a>
 
     <button type="button" onClick={onOpenImpressum}>
       Impressum

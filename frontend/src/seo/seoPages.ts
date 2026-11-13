@@ -16,11 +16,12 @@ export type SeoPage = {
 const PAGES: SeoPage[] = [
   {
     path: "/maler-software",
-    title: "Software für Malerbetriebe | MalerSaaS",
+    title: "Maler Software & Malerprogramm für Malerbetriebe | MalerSaaS",
     description:
-      "Software für Malerbetriebe: Mit MalerSaaS Aufmaß, Angebote, Aufträge, Zeiterfassung, Materialverwaltung und Rechnungen digital verwalten.",
-    h1: "Software für Malerbetriebe",
-    intro: "",
+      "Maler Software aus der Cloud: Aufmaß, Angebot, Aufträge, Zeiterfassung und Rechnung in einem Malerprogramm. 14 Tage kostenlos testen – endet automatisch.",
+    h1: "Maler Software für Ihren Malerbetrieb",
+    intro:
+      "MalerSaaS ist die Branchensoftware für Maler und Lackierer: Aufmaß, Angebote, Aufträge, Mitarbeiter, Zeiterfassung, Material und Rechnungen in einem Malerprogramm – im Browser, auf Tablet und Handy.",
   },
   {
     path: "/aufmass-angebote",

@@ -257,3 +257,6 @@
 .ow2-prio.p2 { background: #dbeafe; color: #1d4ed8; }
 .ow2-prop .btn { width: auto; flex: none; align-self: center; }
 .ow2-tabs .ow2-small { margin-left: auto; align-self: center; }
+.ow2-gsc { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; margin: 8px 0; display: grid; gap: 8px; }
+.ow2-gsc textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.ow2-gsc .btn { width: auto; justify-self: start; }

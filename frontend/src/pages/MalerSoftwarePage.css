@@ -809,3 +809,9 @@
 .maler-software-feature-link:visited {
   color: #23875d;
 }
+/* Häufige Fragen */
+.maler-software-faq details { max-width: 860px; margin: 10px auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 18px; text-align: left; }
+.maler-software-faq summary { font-weight: 700; cursor: pointer; color: #0f172a; font-size: 1.02rem; }
+.maler-software-faq details p { margin: 10px 0 0; color: #475569; line-height: 1.6; }
+.maler-software-faq-more { text-align: center; margin-top: 18px; }
+.maler-software-faq-more a { color: #1d4ed8; font-weight: 700; }

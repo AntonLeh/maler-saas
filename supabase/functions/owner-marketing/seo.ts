@@ -173,3 +173,23 @@ export function cleanArticle(input: any, keyword: string) {
     keyword,
   };
 }
+
+/** Eingefügte Search-Console-Liste lesen: „maler software  0  53“ → { query, impressions } */
+export function parseQueries(text: string): { query: string; impressions: number }[] {
+  const out = new Map<string, number>();
+  for (const raw of String(text ?? "").split(/\r?\n/).slice(0, 400)) {
+    const line = raw.replace(/\s+/g, " ").trim();
+    if (!line || /^(häufigste suchanfragen|suchanfragen|klicks|impressionen)/i.test(line)) continue;
+    const nums = (line.match(/(?:^|\s)(\d[\d.]*)(?=\s|$)/g) ?? []).map((n) => Number(n.trim().replace(/\./g, "")));
+    const query = line.replace(/(?:\s+\d[\d.,%]*)+\s*$/, "").trim().toLowerCase().slice(0, 100);
+    if (query.length < 3) continue;
+    const imp = nums.length ? nums[nums.length - 1] : 0;
+    out.set(query, Math.max(out.get(query) ?? 0, imp));
+  }
+  return [...out.entries()].map(([query, impressions]) => ({ query, impressions })).sort((a, b) => b.impressions - a.impressions).slice(0, 150);
+}
+
+export const SEED_HINT = `Zusätzlich liegen echte Suchanfragen aus der Google Search Console vor (Begriff · Impressionen).
+Plane die Artikel so, dass sie diese Suchanfragen abdecken: fasse ähnliche Begriffe zu einem Artikel zusammen (z. B. „maler software“, „malersoftware“, „software für maler“),
+wähle als keyword den häufigsten Begriff der Gruppe und nenne in reason die abgedeckten Suchanfragen und ihre Impressionen.
+Ignoriere Firmen- oder Produktnamen anderer Anbieter und Begriffe ohne Bezug. Priorität 1 für Gruppen mit den meisten Impressionen.`;

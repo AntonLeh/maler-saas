@@ -267,6 +267,8 @@ export default function RatgeberPanel({ onClose }: Props) {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [own, setOwn] = useState("");
+  const [gsc, setGsc] = useState("");
+  const [showGsc, setShowGsc] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
 
   const reload = async () => setArticles(await api.loadArticles());
@@ -278,11 +280,11 @@ export default function RatgeberPanel({ onClose }: Props) {
     };
   }, []);
 
-  const suggest = async () => {
-    setBusy("ideas");
+  const suggest = async (queries = "") => {
+    setBusy(queries ? "gsc" : "ideas");
     setMsg(null);
     try {
-      setIdeas(await api.keywordIdeas());
+      setIdeas(await api.keywordIdeas(queries));
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
     } finally {
@@ -344,7 +346,7 @@ export default function RatgeberPanel({ onClose }: Props) {
       ) : (
         <>
           <div className="ow2-lib-bar">
-            <button type="button" className="btn btn-primary" onClick={suggest} disabled={!!busy}>
+            <button type="button" className="btn btn-primary" onClick={() => suggest()} disabled={!!busy}>
               {busy === "ideas" ? "Agent sucht Themen … (ca. 30 Sek.)" : "🔎 Themen vorschlagen"}
             </button>
             <input className="ow2-lib-search" value={own} onChange={(e) => setOwn(e.target.value)} placeholder="Oder eigener Suchbegriff, z. B. Stundenzettel Maler Vorlage" />
@@ -352,6 +354,21 @@ export default function RatgeberPanel({ onClose }: Props) {
               ✍️ Artikel schreiben
             </button>
           </div>
+          <button type="button" className="ow2-link" onClick={() => setShowGsc(!showGsc)}>
+            {showGsc ? "▾" : "▸"} Suchbegriffe aus der Google Search Console einfügen
+          </button>
+          {showGsc && (
+            <div className="ow2-gsc">
+              <p className="ow2-small">
+                Search Console → Leistung → Reiter „Suchanfragen“ → Tabelle markieren und kopieren (oder oben rechts „Exportieren“ → Google Sheets und die Spalten kopieren) und hier einfügen. Der
+                Agent fasst ähnliche Begriffe zusammen und plant passende Artikel – die mit den meisten Impressionen zuerst.
+              </p>
+              <textarea rows={6} value={gsc} onChange={(e) => setGsc(e.target.value)} placeholder={"maler software\t0\t53\nsoftware für maler\t0\t45\n…"} />
+              <button type="button" className="btn btn-primary" onClick={() => suggest(gsc)} disabled={!!busy || gsc.trim().length < 5}>
+                {busy === "gsc" ? "Agent plant … (ca. 30 Sek.)" : "🔎 Daraus Artikel planen"}
+              </button>
+            </div>
+          )}
           {busy.startsWith("write:") && <p className="ow2-msg ok">✍️ Der Agent schreibt den Artikel „{busy.slice(6)}“ … das dauert etwa 1 Minute.</p>}
           {msg && <p className={`ow2-msg ${msg.ok ? "ok" : "err"}`}>{msg.text}</p>}
 

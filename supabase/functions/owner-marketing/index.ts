@@ -284,6 +284,8 @@ serve(async (req) => {
 
     // ---------- SEO-Agent ----------
     if (body.action === "seo_keywords") {
+      const seeds = S.parseQueries(String(body.queries ?? "").slice(0, 20000));
+      const seedText = seeds.length ? `${S.SEED_HINT}\n<suchanfragen>\n${seeds.map((q) => `- ${q.query} · ${q.impressions}`).join("\n")}\n</suchanfragen>\n\n` : "";
       const { data: arts } = await db.from("owner_articles").select("keyword, title").limit(500);
       const existing = (arts ?? []).flatMap((a: any) => [a.keyword, a.title]).filter(Boolean);
       const data = await callClaude({
@@ -291,7 +293,7 @@ serve(async (req) => {
         system: S.KEYWORD_SYSTEM,
         tools: [S.KEYWORD_TOOL],
         tool_choice: { type: "tool", name: "suchbegriffe" },
-        messages: [{ role: "user", content: `Bereits vorhandene Artikel:\n<vorhanden>\n${existing.slice(0, 200).map((t: string) => `- ${String(t).slice(0, 100)}`).join("\n") || "(noch keine)"}\n</vorhanden>\n\nSchlage 10 neue Suchbegriffe vor.` }],
+        messages: [{ role: "user", content: `Bereits vorhandene Artikel:\n<vorhanden>\n${existing.slice(0, 200).map((t: string) => `- ${String(t).slice(0, 100)}`).join("\n") || "(noch keine)"}\n</vorhanden>\n\n${seedText}Schlage ${seeds.length ? "bis zu 10" : "10"} neue Artikel vor.` }],
       });
       const items = S.cleanKeywords((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, existing);
       if (!items.length) return json({ ok: false, error: "Es konnten keine Vorschläge erstellt werden. Bitte noch einmal versuchen." }, 422);
