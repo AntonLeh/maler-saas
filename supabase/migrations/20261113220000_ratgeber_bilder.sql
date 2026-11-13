@@ -19,3 +19,8 @@ create policy ratgeber_owner_update on storage.objects for update to authenticat
 drop policy if exists ratgeber_owner_delete on storage.objects;
 create policy ratgeber_owner_delete on storage.objects for delete to authenticated
   using (bucket_id = 'ratgeber' and public.current_role_id() = 1);
+
+-- Lesen (für „überschreiben“ beim erneuten Veröffentlichen nötig)
+drop policy if exists ratgeber_owner_select on storage.objects;
+create policy ratgeber_owner_select on storage.objects for select to authenticated
+  using (bucket_id = 'ratgeber' and public.current_role_id() = 1);

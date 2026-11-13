@@ -333,7 +333,16 @@ export async function copyToPublic(slug: string, imagePath: string): Promise<str
   const { data, error } = await supabase.storage.from(BUCKET).download(imagePath);
   if (error || !data) throw new Error("Das Titelbild konnte nicht geladen werden.");
   const up = await supabase.storage.from(PUBLIC_BUCKET).upload(target, data, { contentType: data.type || "image/jpeg", upsert: true, cacheControl: "604800" });
-  if (up.error) throw new Error(/bucket|not found|policy|row-level/i.test(up.error.message) ? "Für Ratgeber-Bilder fehlt noch das Datenbank-Update (SQL „Ratgeber-Bilder“)." : "Das Titelbild konnte nicht veröffentlicht werden.");
+  if (up.error) {
+    console.error("ratgeber upload", up.error);
+    throw new Error(
+      /bucket not found/i.test(up.error.message)
+        ? "Für Ratgeber-Bilder fehlt noch das Datenbank-Update (SQL „Ratgeber-Bilder“)."
+        : /row-level|policy|unauthorized|403/i.test(up.error.message)
+          ? "Keine Berechtigung für den Ratgeber-Bildspeicher – bitte das SQL „Ratgeber-Bilder (Nachtrag)“ ausführen."
+          : `Das Titelbild konnte nicht veröffentlicht werden: ${up.error.message}`,
+    );
+  }
   return target;
 }
 
