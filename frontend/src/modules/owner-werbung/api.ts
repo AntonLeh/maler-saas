@@ -319,7 +319,27 @@ export async function keywordIdeas(queries = ""): Promise<KeywordIdea[]> {
   return r.items;
 }
 
-export type ArticleDraft = Pick<Article, "title" | "meta_title" | "meta_description" | "slug" | "intro" | "body" | "faq" | "related_pages" | "keyword">;
+export type ArticleDraft = Pick<Article, "title" | "meta_title" | "meta_description" | "slug" | "intro" | "body" | "faq" | "related_pages" | "keyword" | "image_path" | "image_alt" | "image_ai_label">;
+
+// ---------- Ratgeber-Titelbild ----------
+const PUBLIC_BUCKET = "ratgeber";
+export const publicImageUrl = (path: string) => supabase.storage.from(PUBLIC_BUCKET).getPublicUrl(path).data.publicUrl;
+/** Öffentlicher Name des Bilds: <slug>/<dateiname> – ändert sich, wenn ein anderes Bild gewählt wird */
+export const publicNameFor = (slug: string, imagePath: string) => `${slug}/${imagePath.split("/").pop()?.replace(/[^a-z0-9._-]/gi, "") || "bild.jpg"}`;
+
+/** Bild aus der privaten Bibliothek in den öffentlichen Ratgeber-Speicher kopieren */
+export async function copyToPublic(slug: string, imagePath: string): Promise<string> {
+  const target = publicNameFor(slug, imagePath);
+  const { data, error } = await supabase.storage.from(BUCKET).download(imagePath);
+  if (error || !data) throw new Error("Das Titelbild konnte nicht geladen werden.");
+  const up = await supabase.storage.from(PUBLIC_BUCKET).upload(target, data, { contentType: data.type || "image/jpeg", upsert: true, cacheControl: "604800" });
+  if (up.error) throw new Error(/bucket|not found|policy|row-level/i.test(up.error.message) ? "Für Ratgeber-Bilder fehlt noch das Datenbank-Update (SQL „Ratgeber-Bilder“)." : "Das Titelbild konnte nicht veröffentlicht werden.");
+  return target;
+}
+
+export async function removePublic(path: string | null | undefined) {
+  if (path) await supabase.storage.from(PUBLIC_BUCKET).remove([path]);
+}
 export async function writeArticle(keyword: string, title = ""): Promise<ArticleDraft> {
   const r = await callFn<{ article?: ArticleDraft }>({ action: "seo_article", keyword, title }, "Der Artikel konnte nicht erstellt werden.");
   if (!r.article) throw new Error(OLD_FN);

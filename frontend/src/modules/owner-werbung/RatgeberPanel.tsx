@@ -1,5 +1,5 @@
 // SEO-Agent: Ratgeber-Artikel für maler-saas.com/ratgeber – Themen vorschlagen, schreiben lassen, prüfen, veröffentlichen
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { showConfirm } from "../../lib/dialogs";
 import * as api from "./api";
@@ -75,6 +75,99 @@ function Preview({ a }: { a: Pick<Article, "title" | "intro" | "body" | "faq"> }
   );
 }
 
+/** Titelbild wählen: passende Bilder aus der Bibliothek, alle Bilder, eigenes hochladen, entfernen */
+function CoverPicker({ a, onChange }: { a: Article; onChange: (p: Partial<Article>) => void }) {
+  const [library, setLibrary] = useState<L.LibImage[] | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [all, setAll] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [now] = useState(() => Date.now());
+  useEffect(() => {
+    let cancel = false;
+    void api.loadImages().then((r) => !cancel && setLibrary(r ?? []));
+    return () => {
+      cancel = true;
+    };
+  }, []);
+  const shown = useMemo(() => {
+    if (!library) return [];
+    const list = all ? library : L.suggestImages(library, { topic: a.keyword, title: a.title, keywords: a.intro, planned_for: null }, now, 6);
+    return list;
+  }, [library, all, a.keyword, a.title, a.intro, now]);
+  const key = [a.image_path ?? "", ...shown.map((i) => i.path)].join("|");
+  useEffect(() => {
+    let cancel = false;
+    const paths = key.split("|").filter(Boolean);
+    Promise.all(paths.map(async (p) => [p, await api.imageUrl(p).catch(() => "")] as const)).then((pairs) => !cancel && setUrls((o) => ({ ...o, ...Object.fromEntries(pairs) })));
+    return () => {
+      cancel = true;
+    };
+  }, [key]);
+  const pick = (img: L.LibImage) => onChange({ image_path: img.path, image_alt: img.description || a.title, image_ai_label: img.realistic });
+  const upload = async (f: File | undefined) => {
+    if (!f) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const img = await api.uploadLibraryImage(f);
+      setLibrary((l) => [img, ...(l ?? [])]);
+      pick(img);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="ow2-cover">
+      <div className="ow2-cover-main">
+        {a.image_path && urls[a.image_path] ? <img src={urls[a.image_path]} alt={a.image_alt ?? ""} /> : <div className="ow2-cover-empty">kein Titelbild</div>}
+        {a.image_path && a.image_ai_label && <small>wird angezeigt mit „Symbolbild (KI-generiert)“</small>}
+      </div>
+      <div className="ow2-cover-side">
+        <b>Titelbild</b>
+        <div className="ow2-thumbs">
+          {shown.map((img) => (
+            <button key={img.path} type="button" className={a.image_path === img.path ? "on" : ""} title={img.description ?? ""} onClick={() => pick(img)}>
+              {urls[img.path] ? <img src={urls[img.path]} alt="" /> : "…"}
+            </button>
+          ))}
+        </div>
+        <div className="ow2-actions left">
+          {library && library.length > 6 && (
+            <button type="button" className="ow2-link" onClick={() => setAll(!all)}>
+              {all ? "Nur passende" : `Alle Bilder (${library.length})`}
+            </button>
+          )}
+          <label className={`ow2-link ow2-upload-link${busy ? " disabled" : ""}`}>
+            <input type="file" accept="image/*" onChange={(e) => void upload(e.target.files?.[0])} disabled={busy} />
+            {busy ? "Lädt …" : "Eigenes Bild hochladen"}
+          </label>
+          {a.image_path && (
+            <button type="button" className="ow2-link" onClick={() => onChange({ image_path: null, image_alt: null, image_ai_label: false })}>
+              Kein Bild
+            </button>
+          )}
+        </div>
+        {a.image_path && (
+          <>
+            <div className="ow2-field">
+              <label>Bildbeschreibung (Alternativtext für Google)</label>
+              <input value={a.image_alt ?? ""} maxLength={160} onChange={(e) => onChange({ image_alt: e.target.value })} />
+            </div>
+            <label className="ow2-check">
+              <input type="checkbox" checked={!!a.image_ai_label} onChange={(e) => onChange({ image_ai_label: e.target.checked })} /> „Symbolbild (KI-generiert)“ unter dem Bild anzeigen
+            </label>
+          </>
+        )}
+        {library && library.length === 0 && <small className="ow2-small">Noch keine Bilder in der Bibliothek (Werbung → 🖼 Bilder).</small>}
+        {err && <p className="ow2-msg err">{err}</p>}
+      </div>
+    </div>
+  );
+}
+
 function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; onSaved: (a: Article) => void; onClose: () => void; onDeleted: () => void }) {
   const [a, setA] = useState<Article>(article);
   const [busy, setBusy] = useState("");
@@ -90,7 +183,22 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
     setMsg(null);
     try {
       const next = { ...a, ...extra, slug: L.slugify(a.slug) || L.slugify(a.title) };
+      // Titelbild: nur bei veröffentlichten Artikeln öffentlich (Kopie aus der privaten Bibliothek)
+      const hasImageCols = "image_path" in a;
+      let imagePublic = next.image_public ?? null;
+      if (hasImageCols) {
+        const want = next.status === "veroeffentlicht" && next.image_path ? api.publicNameFor(next.slug, next.image_path) : null;
+        if (want && want !== imagePublic) {
+          const created = await api.copyToPublic(next.slug, next.image_path!);
+          if (imagePublic && imagePublic !== created) await api.removePublic(imagePublic);
+          imagePublic = created;
+        } else if (!want && imagePublic) {
+          await api.removePublic(imagePublic);
+          imagePublic = null;
+        }
+      }
       const saved = await api.saveArticle(a.id, {
+        ...(hasImageCols ? { image_path: next.image_path ?? null, image_public: imagePublic, image_alt: (next.image_alt ?? "").trim() || null, image_ai_label: !!next.image_ai_label } : {}),
         slug: next.slug,
         keyword: next.keyword,
         title: next.title.trim(),
@@ -119,6 +227,7 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
     if (!(await showConfirm(`Artikel „${a.title}“ löschen?${a.status === "veroeffentlicht" ? " Er ist dann auch nicht mehr öffentlich." : ""}`, { danger: true, confirmLabel: "Löschen" }))) return;
     try {
       await api.deleteArticle(a.id);
+      await api.removePublic(a.image_public);
       onDeleted();
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -164,6 +273,8 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
           </a>
         </p>
       )}
+
+      {"image_path" in a && <CoverPicker a={a} onChange={set} />}
 
       <div className="ow2-serp">
         <small>So erscheint der Artikel ungefähr bei Google:</small>
@@ -300,7 +411,17 @@ export default function RatgeberPanel({ onClose }: Props) {
       let slug = d.slug;
       const taken = new Set((articles ?? []).map((x) => x.slug));
       for (let i = 2; taken.has(slug); i++) slug = `${d.slug}-${i}`;
-      const saved = await api.saveArticle(null, { ...d, slug, status: "entwurf", reason });
+      let saved: Article;
+      try {
+        saved = await api.saveArticle(null, { ...d, slug, status: "entwurf", reason });
+      } catch {
+        // ohne SQL „Ratgeber-Bilder“: ohne Bildfelder speichern
+        const { image_path: _p, image_alt: _a, image_ai_label: _l, ...rest } = d;
+        void _p;
+        void _a;
+        void _l;
+        saved = await api.saveArticle(null, { ...rest, slug, status: "entwurf", reason });
+      }
       setIdeas((list) => (list ?? []).filter((x) => x.keyword !== keyword));
       await reload();
       setOpenId(saved.id);

@@ -260,3 +260,11 @@
 .ow2-gsc { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; margin: 8px 0; display: grid; gap: 8px; }
 .ow2-gsc textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dbe3ee; border-radius: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
 .ow2-gsc .btn { width: auto; justify-self: start; }
+.ow2-cover { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; background: #fff; margin: 10px 0; }
+.ow2-cover-main img, .ow2-cover-empty { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; display: grid; place-items: center; background: #f1f5f9; color: #94a3b8; font-size: 14px; }
+.ow2-cover-main small { display: block; color: #64748b; font-size: 12px; margin-top: 4px; }
+.ow2-cover-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ow2-upload-link { position: relative; overflow: hidden; }
+.ow2-upload-link input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ow2-upload-link.disabled { opacity: 0.5; pointer-events: none; }
+@media (max-width: 640px) { .ow2-cover { grid-template-columns: 1fr; } }

@@ -299,6 +299,11 @@ export type Article = {
   related_pages: string[];
   status: "entwurf" | "veroeffentlicht";
   reason: string | null;
+  /** Titelbild (ab SQL „Ratgeber-Bilder“): Pfad in der privaten Bibliothek, öffentliche Kopie, Alternativtext */
+  image_path?: string | null;
+  image_public?: string | null;
+  image_alt?: string | null;
+  image_ai_label?: boolean;
   published_at: string | null;
   created_at: string;
   updated_at: string;

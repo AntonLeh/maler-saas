@@ -311,7 +311,13 @@ serve(async (req) => {
       });
       const article = S.cleanArticle((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, keyword);
       if (!article) return json({ ok: false, error: "Der Artikel konnte nicht erstellt werden. Bitte noch einmal versuchen." }, 422);
-      return json({ ok: true, article });
+      // Titelbild aus der Bildbibliothek (Design-Agent); ohne Bibliothek ohne Bild
+      const { data: lib } = await db.from("owner_marketing_images").select("id, path, description, tags, last_used_at, realistic").limit(500);
+      const img = lib?.length ? A.pickImage(lib, `${keyword} ${article.title} ${article.intro}`, "tipp", null, new Set()) : null;
+      const withImage = img
+        ? { ...article, image_path: img.path, image_alt: (img as any).description || article.title, image_ai_label: !!(img as any).realistic }
+        : article;
+      return json({ ok: true, article: withImage });
     }
 
     // ---------- Design-Agent: Bilder beschreiben ----------

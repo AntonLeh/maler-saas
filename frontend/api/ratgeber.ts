@@ -25,8 +25,14 @@ type Article = {
   related_pages?: string[];
   published_at?: string | null;
   updated_at?: string | null;
+  image_public?: string | null;
+  image_alt?: string | null;
+  image_ai_label?: boolean;
 };
-type ListItem = { slug: string; title: string; intro?: string; published_at?: string | null; updated_at?: string | null };
+type ListItem = { slug: string; title: string; intro?: string; published_at?: string | null; updated_at?: string | null; image_public?: string | null; image_alt?: string | null };
+
+/** öffentliche Adresse eines Ratgeber-Bilds */
+export const imageUrl = (path?: string | null) => (path && /^[a-z0-9/_.-]{1,200}$/i.test(path) ? `${SUPABASE_URL}/storage/v1/object/public/ratgeber/${path}` : "");
 
 const PAGES: Record<string, string> = {
   "maler-software": "Software für Malerbetriebe",
@@ -125,9 +131,14 @@ article h2{font-size:24px;line-height:1.3;margin:32px 0 10px}article h3{font-siz
 .card h2{font-size:20px;margin:0 0 6px;color:#0f172a}.card p{margin:0;color:#475569}.card small{color:#64748b}
 footer{border-top:1px solid #e2e8f0;padding:22px 0 30px;color:#64748b;font-size:14px}footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}footer a{color:#64748b}
 .note{font-size:13px;color:#64748b;margin-top:22px}
+figure.hero{margin:0 0 22px}figure.hero img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:14px;display:block;background:#e2e8f0}
+figure.hero figcaption{font-size:12px;color:#94a3b8;margin-top:6px}
+.card{display:grid;grid-template-columns:1fr;gap:14px}.card.has-img{grid-template-columns:180px 1fr;align-items:start}
+.card img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block;background:#e2e8f0}
+@media(max-width:560px){.card.has-img{grid-template-columns:1fr}}
 `;
 
-function page(o: { title: string; description: string; canonical: string; body: string; ld?: string; noindex?: boolean }): string {
+function page(o: { title: string; description: string; canonical: string; body: string; ld?: string; noindex?: boolean; image?: string }): string {
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -141,7 +152,7 @@ ${o.noindex ? '<meta name="robots" content="noindex">' : ""}
 <meta property="og:title" content="${esc(o.title)}">
 <meta property="og:description" content="${esc(o.description)}">
 <meta property="og:url" content="${esc(o.canonical)}">
-<meta property="og:image" content="${ORIGIN}/images/maler-saas-landing-collage.png">
+<meta property="og:image" content="${esc(o.image || `${ORIGIN}/images/maler-saas-landing-collage.png`)}">
 <link rel="icon" href="/favicon.png">
 <style>${CSS}</style>
 ${o.ld ?? ""}
@@ -177,6 +188,7 @@ export function renderArticle(a: Article): string {
   const url = `${ORIGIN}/ratgeber/${a.slug}`;
   const faq = (a.faq ?? []).filter((f) => f.q && f.a);
   const related = (a.related_pages ?? []).filter((p) => p in PAGES);
+  const img = imageUrl(a.image_public);
   const ld =
     jsonLd({
       "@context": "https://schema.org",
@@ -186,6 +198,7 @@ export function renderArticle(a: Article): string {
       datePublished: a.published_at,
       dateModified: a.updated_at || a.published_at,
       mainEntityOfPage: url,
+      ...(img ? { image: [img] } : {}),
       author: { "@type": "Organization", name: "MalerSaaS", url: ORIGIN },
       publisher: { "@type": "Organization", name: "MalerSaaS", logo: { "@type": "ImageObject", url: `${ORIGIN}/images/logo.png` } },
     }) +
@@ -204,6 +217,7 @@ export function renderArticle(a: Article): string {
 <article>
 <h1>${esc(a.title)}</h1>
 <div class="meta">${a.published_at ? `Veröffentlicht am ${esc(deDate(a.published_at))}` : ""}${a.updated_at && a.published_at && a.updated_at.slice(0, 10) > a.published_at.slice(0, 10) ? ` · aktualisiert am ${esc(deDate(a.updated_at))}` : ""}</div>
+${img ? `<figure class="hero"><img src="${esc(img)}" alt="${esc(a.image_alt || a.title)}" width="1600" height="900" fetchpriority="high">${a.image_ai_label ? "<figcaption>Symbolbild (KI-generiert)</figcaption>" : ""}</figure>` : ""}
 ${a.intro ? `<p class="intro">${inline(a.intro)}</p>` : ""}
 ${mdToHtml(a.body ?? "")}
 <div class="box"><h2>MalerSaaS 14 Tage kostenlos testen</h2><p>Aufmaß, Angebote, Aufträge, Zeiterfassung und Rechnungen an einem Ort – speziell für Malerbetriebe. Die Testphase endet automatisch.</p><a class="btn" href="${cta(a.slug)}">Jetzt kostenlos testen</a></div>
@@ -211,7 +225,7 @@ ${faq.length ? `<section class="faq"><h2>Häufige Fragen</h2>${faq.map((f) => `<
 ${related.length ? `<h2>Passende Funktionen</h2><div class="related">${related.map((p) => `<a href="/${p}">${esc(PAGES[p])}</a>`).join("")}</div>` : ""}
 <p class="note">Hinweis: Dieser Ratgeber gibt allgemeine Informationen und ersetzt keine Rechts- oder Steuerberatung im Einzelfall.</p>
 </article>`;
-  return page({ title: `${a.meta_title || a.title} | MalerSaaS`, description: a.meta_description || a.intro || a.title, canonical: url, body, ld });
+  return page({ title: `${a.meta_title || a.title} | MalerSaaS`, description: a.meta_description || a.intro || a.title, canonical: url, body, ld, image: img });
 }
 
 export function renderList(items: ListItem[]): string {
@@ -220,7 +234,16 @@ export function renderList(items: ListItem[]): string {
 <h1>Ratgeber für Malerbetriebe</h1>
 <p class="intro">Praxiswissen für Inhaber und Meister: Angebote, Aufmaß, Zeiterfassung, Rechnungen, Organisation im Büro und auf der Baustelle.</p>
 <div class="list">
-${items.length ? items.map((i) => `<a class="card" href="/ratgeber/${esc(i.slug)}"><h2>${esc(i.title)}</h2>${i.intro ? `<p>${esc(i.intro.slice(0, 220))}${i.intro.length > 220 ? "…" : ""}</p>` : ""}${i.published_at ? `<small>${esc(deDate(i.published_at))}</small>` : ""}</a>`).join("\n") : "<p>Die ersten Artikel erscheinen in Kürze.</p>"}
+${
+    items.length
+      ? items
+          .map((i) => {
+            const im = imageUrl(i.image_public);
+            return `<a class="card${im ? " has-img" : ""}" href="/ratgeber/${esc(i.slug)}">${im ? `<img src="${esc(im)}" alt="${esc(i.image_alt || i.title)}" loading="lazy" width="360" height="270">` : ""}<div><h2>${esc(i.title)}</h2>${i.intro ? `<p>${esc(i.intro.slice(0, 220))}${i.intro.length > 220 ? "…" : ""}</p>` : ""}${i.published_at ? `<small>${esc(deDate(i.published_at))}</small>` : ""}</div></a>`;
+          })
+          .join("\n")
+      : "<p>Die ersten Artikel erscheinen in Kürze.</p>"
+  }
 </div>`;
   return page({ title: "Ratgeber für Malerbetriebe | MalerSaaS", description: "Praxiswissen für Malerbetriebe: Angebote, Aufmaß, Zeiterfassung, Rechnungen und Organisation – verständlich erklärt.", canonical: `${ORIGIN}/ratgeber`, body });
 }
