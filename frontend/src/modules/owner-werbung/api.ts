@@ -158,8 +158,13 @@ export async function saveAgent(s: AgentSettings) {
   if (error) throw new Error(friendly(error, "Die Einstellungen konnten nicht gespeichert werden."));
 }
 
-export const proposePlan = (v: { start: string; weeks: number; weekdays: number[]; mix: AgentSettings["mix"]; youtube_per_month: number }) =>
-  callFn<{ items: Proposal[] }>({ action: "plan", ...v }, "Der Plan konnte nicht erstellt werden.").then((r) => r.items);
+const OLD_FN = "Die Funktion „owner-marketing“ ist noch die alte Fassung – bitte im Terminal neu veröffentlichen: npx supabase functions deploy owner-marketing --no-verify-jwt";
+
+export async function proposePlan(v: { start: string; weeks: number; weekdays: number[]; mix: AgentSettings["mix"]; youtube_per_month: number }): Promise<Proposal[]> {
+  const r = await callFn<{ items?: Proposal[] }>({ action: "plan", ...v }, "Der Plan konnte nicht erstellt werden.");
+  if (!Array.isArray(r.items)) throw new Error(OLD_FN);
+  return r.items;
+}
 
 /** Vorschläge als Entwürfe speichern (noch ohne Texte) */
 export async function acceptProposals(items: Proposal[], channels: string[]): Promise<Post[]> {
@@ -184,8 +189,11 @@ export async function acceptProposals(items: Proposal[], channels: string[]): Pr
 }
 
 /** Texte für bis zu 3 Beiträge schreiben lassen (mehrfach aufrufen, bis remaining = 0) */
-export const prepare = (ids: number[]) =>
-  callFn<{ done: number; failed: number; remaining: number }>({ action: "prepare", ids }, "Die Texte konnten nicht erstellt werden.");
+export async function prepare(ids: number[]) {
+  const r = await callFn<{ done?: number; failed?: number; remaining?: number }>({ action: "prepare", ids }, "Die Texte konnten nicht erstellt werden.");
+  if (typeof r.remaining !== "number") throw new Error(OLD_FN);
+  return { done: r.done ?? 0, failed: r.failed ?? 0, remaining: r.remaining };
+}
 
 export async function approve(p: Post): Promise<Post> {
   return savePost(p.id, { approved_at: new Date().toISOString(), status: p.planned_for ? "geplant" : "entwurf" });
