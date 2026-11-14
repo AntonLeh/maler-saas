@@ -63,6 +63,9 @@ export type Post = {
   helpful_by_me: boolean;
   author: Author;
   comments?: Comment[];
+  /** eigener Beitrag, KI-Vorprüfung läuft noch */
+  ai_pending?: boolean;
+  people_consent?: boolean;
 };
 
 export type Comment = {
@@ -134,6 +137,10 @@ export type QueueItem = {
     warnings?: number;
     created_at: string;
     author: Author | null;
+    hidden_reason?: string | null;
+    ai_status?: string | null;
+    ai_reason?: string | null;
+    people_consent?: boolean;
   } | null;
 };
 
@@ -227,6 +234,7 @@ export const RULES: { short: string; text: string }[] = [
   { short: "Keine Preis- oder Gebietsabsprachen", text: "Erfahrungen zur Kalkulation sind erlaubt, Absprachen über Preise, Kunden oder Gebiete nicht (Kartellrecht)." },
   { short: "Nichts Rechtswidriges", text: "Keine Angebote zu Schwarzarbeit, keine Urheberrechtsverletzungen, keine sonstigen rechtswidrigen Inhalte." },
   { short: "Keine verbindliche Rechts- oder Steuerberatung", text: "Erfahrungen teilen ist willkommen. Im Einzelfall helfen Steuerberater, Anwalt oder Innung." },
+  { short: "Automatische Vorprüfung", text: "Neue Beiträge und Antworten werden vor dem Veröffentlichen automatisch mit KI auf Verstöße geprüft. Auffällige Inhalte werden nur zurückgehalten – entscheiden tut immer ein Mensch aus der Moderation." },
   { short: "Melden statt streiten", text: "Melden Sie Verstöße über „Melden“. Die Moderation prüft, entscheidet, begründet ihre Entscheidung und Sie können einmal widersprechen." },
   { short: "Folgen bei Verstößen", text: "Inhalte können ausgeblendet oder entfernt, Mitglieder verwarnt oder gesperrt werden. Bei Gefahr für Leib und Leben informieren wir die Behörden." },
 ];

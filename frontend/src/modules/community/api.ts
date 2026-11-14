@@ -23,8 +23,8 @@ export const join = (rulesVersion: string) => rpc<Access>("community_join", { p_
 export const feed = (o: { topic?: string | null; author?: number | null; before?: number | null; query?: string | null } = {}) =>
   rpc<Post[]>("community_feed", { p_topic: o.topic ?? null, p_author: o.author ?? null, p_before: o.before ?? null, p_query: o.query ?? null });
 export const getPost = (id: number) => rpc<Post | null>("community_post_get", { p_id: id });
-export const createPost = (kind: string, topic: string, body: string, images: string[]) =>
-  rpc<number>("community_post_create", { p_kind: kind, p_topic: topic, p_body: body, p_images: images });
+export const createPost = (kind: string, topic: string, body: string, images: string[], peopleConsent = false) =>
+  rpc<number>("community_post_create", { p_kind: kind, p_topic: topic, p_body: body, p_images: images, p_people_consent: peopleConsent });
 export const updatePost = (id: number, topic: string, body: string) => rpc<void>("community_post_update", { p_id: id, p_topic: topic, p_body: body });
 export async function deletePost(id: number) {
   const images = await rpc<string[] | null>("community_post_delete", { p_id: id });
@@ -207,3 +207,15 @@ export async function proofUrl(path: string): Promise<string> {
   if (error || !data?.signedUrl) throw new Error("Nachweis konnte nicht geöffnet werden.");
   return data.signedUrl;
 }
+
+// ---------- KI-Vorprüfung ----------
+/** Prüft einen eigenen neuen/geänderten Beitrag oder eine Antwort. Ergebnis: "sichtbar", "pruefung" oder "unveraendert". */
+export async function aiCheck(type: "post" | "comment", id: number): Promise<string> {
+  const r = await callFn<{ status: string }>("ai_check", { type, id });
+  return r.status;
+}
+export async function aiGet(): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("community_ai_get");
+  return error ? null : !!data;
+}
+export const aiSet = (on: boolean) => rpc<void>("community_ai_set", { p_on: on });

@@ -1,12 +1,13 @@
 // MalerTreff-Community: Aufgaben, die Server-Rechte brauchen
 //   POST { action: "verify", member, approve, reason }   – Moderation: Nachweis freigeben/ablehnen + E-Mail an das Mitglied
 //   POST { action: "delete_account" }                    – Externe (ohne MalerSaaS-Konto) löschen ihr Konto selbst (DSGVO)
-// Alle Aufrufe mit Anmeldung (Bearer-Token). Secrets (vorhanden): BREVO_API_KEY, BREVO_SENDER_EMAIL
+//   POST { action: "ai_check", type, id }                – KI-Vorprüfung eines eigenen neuen/geänderten Beitrags oder einer Antwort
+// Alle Aufrufe mit Anmeldung (Bearer-Token). Secrets (vorhanden): BREVO_API_KEY, BREVO_SENDER_EMAIL, ANTHROPIC_API_KEY
 // Deploy: npx supabase functions deploy community --no-verify-jwt
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { decisionMail } from "./logic.ts";
+import { AI_SYSTEM, AI_TOOL, type AiJob, type AiVerdict, aiUserText, decisionMail, parseVerdict, toBase64 } from "./logic.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const env = (k: string) => Deno.env.get(k) ?? "";
@@ -48,6 +49,44 @@ async function removeFolder(bucket: string, folder: string) {
   if (paths.length) await db.storage.from(bucket).remove(paths);
 }
 
+/** KI-Prüfung: Text und Fotos an das schnelle Modell. null = KI nicht erreichbar/keine gültige Antwort */
+async function aiCheck(job: AiJob): Promise<AiVerdict | null> {
+  const key = env("ANTHROPIC_API_KEY");
+  if (!key) return null;
+  // deno-lint-ignore no-explicit-any
+  const content: any[] = [{ type: "text", text: aiUserText(job) }];
+  for (const [i, path] of job.images.slice(0, 4).entries()) {
+    const { data } = await db.storage.from("community").download(path);
+    if (!data) continue;
+    content.push({ type: "text", text: `Foto ${i + 1}:` });
+    content.push({ type: "image", source: { type: "base64", media_type: data.type || "image/jpeg", data: toBase64(new Uint8Array(await data.arrayBuffer())) } });
+  }
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-haiku-5-5",
+        max_tokens: 300,
+        system: AI_SYSTEM,
+        tools: [AI_TOOL],
+        tool_choice: { type: "tool", name: "pruefung" },
+        messages: [{ role: "user", content }],
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error("anthropic", res.status, JSON.stringify(data).slice(0, 300));
+      return null;
+    }
+    return parseVerdict(data);
+  } catch (e) {
+    console.error("anthropic", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: HEADERS });
   if (req.method !== "POST") return fail("Nur POST", 405);
@@ -77,6 +116,24 @@ serve(async (req) => {
       const m = decisionMail({ name: data.display_name, approved: !!data.approved, reason: data.reason, link: `${site}/malertreff` });
       const mailed = await sendMail(email, m.subject, m.html);
       return json({ ok: true, mailed });
+    }
+
+    if (body.action === "ai_check") {
+      const type = body.type === "comment" ? "comment" : "post";
+      const { data: job, error } = await asUser.rpc("community_ai_job", { p_type: type, p_id: Number(body.id) });
+      if (error) return fail(error.message);
+      if (!job) return json({ ok: true, status: "unveraendert" });
+      const v = await aiCheck(job as AiJob);
+      // KI nicht erreichbar -> trotzdem veröffentlichen (Melden bleibt möglich)
+      const { data: status, error: e2 } = await db.rpc("community_ai_result", {
+        p_type: type,
+        p_id: Number(body.id),
+        p_result: v ? v.result : "fehler",
+        p_reason: v?.reason ?? null,
+        p_danger: v?.danger ?? false,
+      });
+      if (e2) return fail(e2.message, 500);
+      return json({ ok: true, status });
     }
 
     if (body.action === "delete_account") {

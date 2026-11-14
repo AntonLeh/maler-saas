@@ -18,6 +18,7 @@ export function Feed({ me, author = null, onOpenPost, onOpenProfile }: FeedProps
   const [q, setQ] = useState("");
   const [reload, setReload] = useState(0);
   const [composer, setComposer] = useState(false);
+  const retried = useRef(new Set<number>());
 
   useEffect(() => {
     let cancel = false;
@@ -28,6 +29,12 @@ export function Feed({ me, author = null, onOpenPost, onOpenProfile }: FeedProps
         setPosts(list ?? []);
         setMore((list ?? []).length === 20);
         setErr(null);
+        // Hängt bei eigenen Beiträgen noch die KI-Prüfung (z. B. Seite zu früh geschlossen)? Einmal erneut anstoßen.
+        const pending = (list ?? []).filter((x) => x.ai_pending && !retried.current.has(x.id));
+        if (pending.length) {
+          pending.forEach((x) => retried.current.add(x.id));
+          void Promise.all(pending.map((x) => api.aiCheck("post", x.id).catch(() => undefined))).then(() => !cancel && setReload((r) => r + 1));
+        }
       })
       .catch((e: Error) => !cancel && setErr(e.message))
       .finally(() => !cancel && setLoading(false));
@@ -122,6 +129,14 @@ export function Feed({ me, author = null, onOpenPost, onOpenProfile }: FeedProps
   );
 }
 
+function PendingNote({ ai }: { ai: boolean }) {
+  return (
+    <p className="cm-msg warn">
+      {ai ? "Wird automatisch geprüft – in wenigen Sekunden für alle sichtbar." : "Wird von der Moderation geprüft – nur für Sie sichtbar."}
+    </p>
+  );
+}
+
 function PostCard({ p, onOpen, onOpenProfile, onHelpful }: { p: Post; onOpen: () => void; onOpenProfile: (id: number) => void; onHelpful: () => void }) {
   const long = p.body.length > 420;
   return (
@@ -134,7 +149,7 @@ function PostCard({ p, onOpen, onOpenProfile, onHelpful }: { p: Post; onOpen: ()
         <span className="cm-topic">{topicLabel(p.topic)}</span>
         {p.solution_comment_id && <span className="cm-solved">✅ Gelöst</span>}
       </div>
-      {p.status === "pruefung" && <p className="cm-msg warn">Wird von der Moderation geprüft – nur für Sie sichtbar.</p>}
+      {p.status === "pruefung" && <PendingNote ai={!!p.ai_pending} />}
       <button type="button" className="cm-body-btn" onClick={onOpen}>
         <p className="cm-body">{long ? `${p.body.slice(0, 400).trimEnd()} …` : p.body}</p>
         {long && <span className="cm-link">Weiterlesen</span>}
@@ -158,8 +173,9 @@ function Composer({ me, onCancel, onCreated }: { me: Member; onCancel: () => voi
   const [topic, setTopic] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"" | "upload" | "check">("");
   const [err, setErr] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const previews = useMemo(() => files.map((f) => ({ f, url: URL.createObjectURL(f) })), [files]);
   useEffect(() => () => previews.forEach((p) => URL.revokeObjectURL(p.url)), [previews]);
@@ -173,19 +189,24 @@ function Composer({ me, onCancel, onCreated }: { me: Member; onCancel: () => voi
   const submit = async () => {
     const v = validatePost(body, topic, files.length);
     if (v) return setErr(v);
-    setBusy(true);
+    setBusy("upload");
     setErr(null);
     let paths: string[] = [];
+    let id: number;
     try {
       paths = files.length ? await api.uploadImages(files) : [];
-      const id = await api.createPost(kind, topic, body.trim(), paths);
-      onCreated(id);
+      id = await api.createPost(kind, topic, body.trim(), paths, files.length > 0 && consent);
     } catch (e) {
       if (paths.length) await api.deleteImages(paths);
       setErr((e as Error).message);
-    } finally {
-      setBusy(false);
+      setBusy("");
+      return;
     }
+    // KI-Vorprüfung: meist wenige Sekunden. Klappt der Aufruf nicht, wird beim nächsten Laden erneut geprüft.
+    setBusy("check");
+    await api.aiCheck("post", id).catch(() => undefined);
+    setBusy("");
+    onCreated(id);
   };
 
   return (
@@ -238,14 +259,22 @@ function Composer({ me, onCancel, onCreated }: { me: Member; onCancel: () => voi
         )}
         <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
       </div>
-      {files.length > 0 && <p className="cm-small">{PHOTO_HINT}</p>}
+      {files.length > 0 && (
+        <>
+          <p className="cm-small">{PHOTO_HINT}</p>
+          <label className="cm-check small">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            Die abgebildeten Personen sind einverstanden (falls Personen erkennbar sind).
+          </label>
+        </>
+      )}
       {err && <p className="cm-msg err">{err}</p>}
       <div className="cm-actions">
-        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy}>
+        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>
           Abbrechen
         </button>
-        <button type="button" className="btn btn-primary" onClick={submit} disabled={busy}>
-          {busy ? "Wird veröffentlicht …" : "Veröffentlichen"}
+        <button type="button" className="btn btn-primary" onClick={submit} disabled={!!busy}>
+          {busy === "upload" ? "Wird gespeichert …" : busy === "check" ? "Wird geprüft …" : "Veröffentlichen"}
         </button>
       </div>
     </div>
@@ -288,8 +317,9 @@ export function PostDetail({ id, me, onBack, onOpenProfile }: DetailProps) {
     if (answer.trim().length < 2) return setErr("Bitte eine Antwort schreiben.");
     setBusy(true);
     await run(async () => {
-      await api.createComment(id, answer.trim());
+      const cid = await api.createComment(id, answer.trim());
       setAnswer("");
+      await api.aiCheck("comment", cid).catch(() => undefined);
     });
     setBusy(false);
   };
@@ -333,7 +363,7 @@ export function PostDetail({ id, me, onBack, onOpenProfile }: DetailProps) {
           <span className="cm-topic">{topicLabel(post.topic)}</span>
           {post.solution_comment_id && <span className="cm-solved">✅ Gelöst</span>}
         </div>
-        {post.status === "pruefung" && <p className="cm-msg warn">Wird von der Moderation geprüft – nur für Sie sichtbar.</p>}
+        {post.status === "pruefung" && <PendingNote ai={!!post.ai_pending} />}
         {edit ? (
           <div className="cm-composer flat">
             <label className="cm-field">
@@ -359,6 +389,7 @@ export function PostDetail({ id, me, onBack, onOpenProfile }: DetailProps) {
                     const v = validatePost(edit.body, edit.topic, 0);
                     if (v) throw new Error(v);
                     await api.updatePost(post.id, edit.topic, edit.body.trim());
+                    await api.aiCheck("post", post.id).catch(() => undefined);
                     setEdit(null);
                   })
                 }

@@ -154,6 +154,12 @@ function ModItem({ it, onDone, onError }: { it: QueueItem; onDone: () => void; o
           sofort informieren (DSA Art. 18).
         </p>
       )}
+      {c?.hidden_reason === "ki" && (
+        <p className="cm-msg warn">
+          🤖 {c.ai_status === "auffaellig" ? `Von der KI zurückgehalten: ${c.ai_reason ?? "auffällig"}` : "Die automatische Prüfung ist nicht abgeschlossen – bitte selbst prüfen."}
+          {c.people_consent ? " · Autor bestätigt: abgebildete Personen sind einverstanden." : ""}
+        </p>
+      )}
       <AuthorLine a={author} at={c?.created_at} />
       {c ? <p className="cm-body full">{c.body || "(kein Text)"}</p> : <p className="cm-muted">Inhalt nicht mehr vorhanden.</p>}
       {c?.images && <Photos paths={c.images} small />}
@@ -232,9 +238,11 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [reload, setReload] = useState(0);
   const [extOpen, setExtOpen] = useState<boolean | null>(null);
+  const [aiOn, setAiOn] = useState<boolean | null>(null);
   useEffect(() => {
     let cancel = false;
     void api.signupOpen().then((v) => !cancel && setExtOpen(v));
+    void api.aiGet().then((v) => !cancel && setAiOn(v));
     void api
       .ownerOverview()
       .then((x) => {
@@ -264,6 +272,15 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
       setMsg({ ok: true, text: "Gespeichert." });
       setReload((r) => r + 1);
       onChanged?.();
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    }
+  };
+
+  const toggleAi = async (on: boolean) => {
+    try {
+      await api.aiSet(on);
+      setAiOn(on);
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
     }
@@ -348,6 +365,15 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
           Speichern
         </button>
       </div>
+
+      <h3 className="cm-h3">KI-Vorprüfung</h3>
+      <label className="cm-switch">
+        <input type="checkbox" checked={!!aiOn} disabled={aiOn === null} onChange={(e) => toggleAi(e.target.checked)} />
+        <span>
+          <b>Neue Beiträge und Antworten automatisch prüfen</b>
+          <small>Auffällige Inhalte werden zurückgehalten und landen unter „Moderation“. Ist die KI nicht erreichbar, erscheinen Beiträge trotzdem.</small>
+        </span>
+      </label>
 
       <h3 className="cm-h3">Konten für Externe</h3>
       <label className="cm-switch">
