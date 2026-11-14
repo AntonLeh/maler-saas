@@ -1,17 +1,18 @@
 // MalerTreff-Community (Stufe 1): Beitritt mit Regeln, Feed, Benachrichtigungen, Profil, Chef-Freigabe, Moderation, Owner-Einstellungen
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./api";
-import { ModerationPanel, OwnerSettings, StaffPanel } from "./Admin";
+import { ModerationPanel, OwnerSettings, StaffPanel, VerifyPanel } from "./Admin";
+import { MalerSaaSHint, ProofCard } from "./External";
 import { MyProfile, Notices, ProfileView, RulesList } from "./Extras";
 import { Feed, PostDetail } from "./Feed";
 import { COMMUNITY_NAME, needsJoin } from "./logic";
 import type { Access } from "./logic";
 import "./cm.css";
 
-type Tab = "feed" | "notices" | "profile" | "staff" | "mod" | "owner" | "rules";
-type Props = { onBack: () => void; isChef?: boolean };
+type Tab = "feed" | "notices" | "profile" | "staff" | "mod" | "verify" | "owner" | "rules";
+type Props = { onBack?: () => void; isChef?: boolean; onAccountDeleted?: () => void };
 
-export default function CommunityPage({ onBack, isChef = false }: Props) {
+export default function CommunityPage({ onBack, isChef = false, onAccountDeleted }: Props) {
   const [access, setAccess] = useState<Access | null | undefined>(undefined);
   const [tab, setTab] = useState<Tab>("feed");
   const [postId, setPostId] = useState<number | null>(null);
@@ -53,16 +54,21 @@ export default function CommunityPage({ onBack, isChef = false }: Props) {
             <h2>💬 {COMMUNITY_NAME}</h2>
             <p>Die Community für Maler, Lackierer und verwandte Gewerke – Fragen stellen, Projekte zeigen, voneinander lernen.</p>
           </div>
-          <button type="button" className="btn btn-secondary" style={{ width: "auto" }} onClick={onBack}>
-            Zurück
-          </button>
+          {onBack && (
+            <button type="button" className="btn btn-secondary" style={{ width: "auto" }} onClick={onBack}>
+              Zurück
+            </button>
+          )}
         </div>
 
         {access === undefined && <p className="cm-muted">Lädt …</p>}
         {access === null && <p className="cm-msg err">{api.NEEDS_SQL}</p>}
         {access && !access.enabled && <p className="cm-msg warn">Die Community ist noch nicht freigeschaltet.</p>}
         {access?.enabled && needsJoin(access) && <JoinCard access={access} onJoined={setAccess} />}
-        {access?.enabled && !needsJoin(access) && me?.status === "wartet" && (
+        {access?.enabled && !needsJoin(access) && me?.status === "wartet" && access.external && (me.kind === "betrieb" || me.kind === "zulieferer") && (
+          <ProofCard me={me} onDone={refresh} />
+        )}
+        {access?.enabled && !needsJoin(access) && me?.status === "wartet" && !access.external && (
           <div className="cm-msg warn">
             Ihre Anfrage ist eingegangen. Ihr Chef muss Sie noch freischalten – er hat eine Nachricht bekommen.
           </div>
@@ -96,6 +102,11 @@ export default function CommunityPage({ onBack, isChef = false }: Props) {
                   Moderation
                 </button>
               )}
+              {access.is_mod && (
+                <button type="button" className={tab === "verify" ? "on" : ""} onClick={() => go("verify")}>
+                  Freigaben{(access.verify_pending ?? 0) > 0 && <span className="cm-dot">{access.verify_pending}</span>}
+                </button>
+              )}
               {access.is_owner && (
                 <button type="button" className={tab === "owner" ? "on" : ""} onClick={() => go("owner")}>
                   Einstellungen
@@ -111,15 +122,20 @@ export default function CommunityPage({ onBack, isChef = false }: Props) {
             ) : tab === "feed" && postId != null ? (
               <PostDetail id={postId} me={me} onBack={() => setPostId(null)} onOpenProfile={openProfile} />
             ) : tab === "feed" ? (
-              <Feed me={me} onOpenPost={openPost} onOpenProfile={openProfile} />
+              <>
+                {access.external && me.kind === "betrieb" && <MalerSaaSHint />}
+                <Feed me={me} onOpenPost={openPost} onOpenProfile={openProfile} />
+              </>
             ) : tab === "notices" ? (
               <Notices onOpenPost={openPost} onRead={refresh} />
             ) : tab === "profile" ? (
-              <MyProfile me={me} onSaved={refresh} />
+              <MyProfile me={me} onSaved={refresh} external={!!access.external} onDeleted={onAccountDeleted} />
             ) : tab === "staff" ? (
               <StaffPanel onChanged={refresh} />
             ) : tab === "mod" ? (
               <ModerationPanel onChanged={refresh} />
+            ) : tab === "verify" ? (
+              <VerifyPanel onChanged={refresh} />
             ) : tab === "owner" ? (
               <OwnerSettings onChanged={refresh} />
             ) : (
@@ -155,7 +171,11 @@ function JoinCard({ access, onJoined }: { access: Access; onJoined: (a: Access) 
         <ul className="cm-join-points">
           <li>Fachfragen stellen und Kollegen helfen</li>
           <li>Projekte mit Fotos zeigen</li>
-          <li>Sie erscheinen mit Ihrem Namen und Ihrer Firma aus MalerSaaS – Adresse und Telefon bleiben verborgen</li>
+          <li>
+            {access.external
+              ? "Sie erscheinen mit den Angaben aus Ihrer Anmeldung – E-Mail-Adresse bleibt verborgen"
+              : "Sie erscheinen mit Ihrem Namen und Ihrer Firma aus MalerSaaS – Adresse und Telefon bleiben verborgen"}
+          </li>
         </ul>
       )}
       <RulesList version={access.rules_version} />

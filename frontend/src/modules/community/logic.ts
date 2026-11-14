@@ -22,7 +22,14 @@ export type Member = {
   bio: string | null;
   rules_version: string | null;
   warnings: number;
+  website?: string | null;
+  impressum_url?: string | null;
+  proof_status?: ProofStatus | null;
+  proof_note?: string | null;
 };
+
+export type ProofStatus = "fehlt" | "eingereicht" | "geprueft" | "abgelehnt";
+export type ExternalKind = "betrieb" | "zulieferer" | "privat";
 
 export type Access = {
   enabled: boolean;
@@ -32,6 +39,10 @@ export type Access = {
   member: Member | null;
   unread: number;
   staff_pending: number;
+  /** angemeldet ohne MalerSaaS-Konto (externes Mitglied) */
+  external?: boolean;
+  signup_open?: boolean;
+  verify_pending?: number;
 };
 
 export type Author = { id: number; name: string; kind: MemberKind; company: string | null; region: string | null; is_mod: boolean };
@@ -87,6 +98,23 @@ export type Profile = {
   is_mod: boolean;
   posts: number;
   solutions: number;
+  website?: string | null;
+  impressum_url?: string | null;
+};
+
+export type VerifyEntry = {
+  id: number;
+  kind: "betrieb" | "zulieferer";
+  display_name: string;
+  company: string | null;
+  trade: string | null;
+  region: string | null;
+  website: string | null;
+  impressum_url: string | null;
+  proof_path: string | null;
+  proof_status: ProofStatus | null;
+  proof_note: string | null;
+  created_at: string;
 };
 
 export type QueueItem = {
@@ -260,3 +288,59 @@ export const ACTION_LABEL: Record<ModAction, string> = {
   sperren: "gesperrt",
   entsperren: "entsperrt",
 };
+
+// ---------- Konten für Externe ----------
+export const EXTERNAL_KINDS: { id: ExternalKind; title: string; text: string; proof: string | null }[] = [
+  { id: "betrieb", title: "Malerbetrieb", text: "Maler, Lackierer, Stuckateure, Bodenleger und verwandte Gewerke aus Deutschland, Österreich und der Schweiz.", proof: "Gewerbeschein oder Eintrag in die Handwerksrolle" },
+  { id: "zulieferer", title: "Zulieferer", text: "Hersteller, Händler, Werkzeug, Gerüstbau – mit Firmenseite und gekennzeichneten Anzeigen.", proof: "Gewerbeschein oder Handelsregisterauszug" },
+  { id: "privat", title: "Privatperson", text: "Heimwerker, Interessierte und Arbeitssuchende – Fragen stellen und mitlesen.", proof: null },
+];
+
+export type SignupForm = {
+  kind: ExternalKind;
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  password2: string;
+  company: string;
+  trade: string;
+  region: string;
+  website: string;
+  impressum_url: string;
+  age16: boolean;
+  rules: boolean;
+  privacy: boolean;
+};
+
+export const emptySignup = (kind: ExternalKind): SignupForm => ({
+  kind, first_name: "", last_name: "", email: "", password: "", password2: "", company: "", trade: "", region: "", website: "", impressum_url: "", age16: false, rules: false, privacy: false,
+});
+
+/** Fehlertext oder null – Passwortregeln prüft zusätzlich passwordProblem() aus dem Login-Modul */
+export function validateSignup(f: SignupForm): string | null {
+  if (!f.first_name.trim() || !f.last_name.trim()) return "Bitte Vor- und Nachname angeben.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) return "Bitte eine gültige E-Mail-Adresse angeben.";
+  if (f.kind !== "privat" && !f.company.trim()) return "Bitte den Firmennamen angeben.";
+  if (f.kind === "zulieferer" && (!f.website.trim() || !f.impressum_url.trim())) return "Bitte Website und Link zum Impressum angeben.";
+  if (!f.age16) return "Die Community ist erst ab 16 Jahren.";
+  if (!f.rules) return "Bitte die Community-Regeln akzeptieren.";
+  if (!f.privacy) return "Bitte die Datenschutzhinweise zur Kenntnis nehmen.";
+  return null;
+}
+
+export const withHttps = (u: string) => {
+  const t = u.trim();
+  return !t ? "" : /^https?:\/\//i.test(t) ? t : `https://${t}`;
+};
+
+export const PROOF_TYPES = "application/pdf,image/jpeg,image/png,image/webp";
+export const PROOF_MAX_MB = 10;
+export function proofExt(file: { name: string; type: string }): "pdf" | "jpg" | "png" | "webp" | null {
+  const t = file.type.toLowerCase();
+  if (t === "application/pdf") return "pdf";
+  if (t === "image/jpeg") return "jpg";
+  if (t === "image/png") return "png";
+  if (t === "image/webp") return "webp";
+  return null;
+}

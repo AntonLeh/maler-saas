@@ -1,7 +1,7 @@
 // MalerTreff-Community: Datenbank-Aufrufe und Fotos
-import { supabase } from "../../lib/supabase";
-import { fitSize } from "./logic";
-import type { Access, Notice, OwnerOverview, Post, Profile, Queue, StaffEntry } from "./logic";
+import { supabase, supabaseUrl } from "../../lib/supabase";
+import { fitSize, proofExt, withHttps } from "./logic";
+import type { Access, Notice, OwnerOverview, Post, Profile, Queue, SignupForm, StaffEntry, VerifyEntry } from "./logic";
 
 export const NEEDS_SQL = "Für die Community fehlt noch das Datenbank-Update (SQL „Community“).";
 const missing = (m: string) => /schema cache|does not exist|Could not find the function/i.test(m);
@@ -118,4 +118,92 @@ export async function imageUrls(paths: string[]): Promise<Record<string, string>
     }
   }
   return out;
+}
+
+// ---------- Konten für Externe ----------
+/** Server-Funktion „community“ (Freigabe mit E-Mail, Konto löschen) */
+async function callFn<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Bitte erneut anmelden.");
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/community`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...body }),
+    });
+  } catch {
+    throw new Error("Der Server ist gerade nicht erreichbar. Bitte später noch einmal versuchen.");
+  }
+  if (res.status === 404) throw new Error("Die Server-Funktion „community“ ist noch nicht bereitgestellt.");
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok || !out.ok) throw new Error(out.error || `Fehler (Status ${res.status}).`);
+  return out as T;
+}
+
+/** Ist die Anmeldung für Externe offen? (auch ohne Login) – null = Datenbank-Update fehlt */
+export async function signupOpen(): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("community_signup_open");
+  if (error) return null;
+  return !!data;
+}
+
+/** Öffentliche Angaben für die Seite /malertreff – null = Datenbank-Update fehlt */
+export async function publicInfo(): Promise<{ signup_open: boolean; rules_version: string } | null> {
+  const { data, error } = await supabase.rpc("community_public_info");
+  if (error || !data) return null;
+  return data as { signup_open: boolean; rules_version: string };
+}
+
+export async function signupExternal(f: SignupForm, rulesVersion: string): Promise<void> {
+  const { error } = await supabase.auth.signUp({
+    email: f.email.trim(),
+    password: f.password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/malertreff`,
+      data: {
+        signup_type: "community",
+        community_kind: f.kind,
+        first_name: f.first_name.trim(),
+        last_name: f.last_name.trim(),
+        company: f.kind === "privat" ? "" : f.company.trim(),
+        trade: f.trade.trim(),
+        region: f.region.trim(),
+        website: f.kind === "zulieferer" ? withHttps(f.website) : "",
+        impressum_url: f.kind === "zulieferer" ? withHttps(f.impressum_url) : "",
+        age16: f.age16,
+        community_rules: rulesVersion,
+        community_accepted_at: new Date().toISOString(),
+      },
+    },
+  });
+  if (error) throw error;
+}
+
+export const externalSet = (on: boolean) => rpc<void>("community_external_set", { p_on: on });
+export const profileLinks = (website: string, impressum: string) => rpc<void>("community_profile_links", { p_website: website, p_impressum: impressum });
+export const verifyList = () => rpc<VerifyEntry[]>("community_verify_list");
+export const verifyDecide = (member: number, approve: boolean, reason: string) => callFn<{ mailed: boolean }>("verify", { member, approve, reason });
+export const deleteAccount = () => callFn<void>("delete_account");
+
+const PROOFS = "community-proofs";
+export async function uploadProof(file: File): Promise<void> {
+  const ext = proofExt(file);
+  if (!ext) throw new Error("Bitte eine PDF-Datei oder ein Foto (JPG, PNG) hochladen.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Die Datei ist größer als 10 MB.");
+  const { data } = await supabase.auth.getUser();
+  const uid = data.user?.id;
+  if (!uid) throw new Error("Bitte erneut anmelden.");
+  const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(PROOFS).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(/bucket|not found/i.test(error.message) ? NEEDS_SQL : `Upload fehlgeschlagen: ${error.message}`);
+  await rpc<void>("community_proof_submit", { p_path: path });
+}
+
+/** Nachweis für die Moderation öffnen (Link 10 Minuten gültig) */
+export async function proofUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(PROOFS).createSignedUrl(path, 600);
+  if (error || !data?.signedUrl) throw new Error("Nachweis konnte nicht geöffnet werden.");
+  return data.signedUrl;
 }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { showConfirm, showPrompt } from "../../lib/dialogs";
 import * as api from "./api";
 import { ACTION_LABEL, MEMBER_KINDS, reasonLabel, RULES, timeAgo, topicLabel } from "./logic";
-import type { ModAction, OwnerOverview, Queue, QueueItem, StaffEntry } from "./logic";
+import type { ModAction, OwnerOverview, Queue, QueueItem, StaffEntry, VerifyEntry } from "./logic";
 import { AuthorLine, Photos } from "./Shared";
 
 const TYPE_LABEL = { post: "Beitrag", comment: "Antwort", member: "Mitglied" } as const;
@@ -231,8 +231,10 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
   const [search, setSearch] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [reload, setReload] = useState(0);
+  const [extOpen, setExtOpen] = useState<boolean | null>(null);
   useEffect(() => {
     let cancel = false;
+    void api.signupOpen().then((v) => !cancel && setExtOpen(v));
     void api
       .ownerOverview()
       .then((x) => {
@@ -261,6 +263,23 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
       await api.saveSettings(enabled, beta);
       setMsg({ ok: true, text: "Gespeichert." });
       setReload((r) => r + 1);
+      onChanged?.();
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    }
+  };
+
+  const toggleExternal = async (on: boolean) => {
+    if (on) {
+      const ok = await showConfirm(
+        "Anmeldung für Externe öffnen? Dann können sich Betriebe ohne MalerSaaS, Zulieferer und Privatpersonen unter maler-saas.com/malertreff registrieren und die Community sehen. Für Tests kurz öffnen und danach wieder schließen.",
+        { confirmLabel: "Öffnen" },
+      );
+      if (!ok) return;
+    }
+    try {
+      await api.externalSet(on);
+      setExtOpen(on);
       onChanged?.();
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -329,6 +348,18 @@ export function OwnerSettings({ onChanged }: { onChanged?: () => void }) {
           Speichern
         </button>
       </div>
+
+      <h3 className="cm-h3">Konten für Externe</h3>
+      <label className="cm-switch">
+        <input type="checkbox" checked={!!extOpen} disabled={extOpen === null} onChange={(e) => toggleExternal(e.target.checked)} />
+        <span>
+          <b>Anmeldung für Externe offen</b>
+          <small>
+            Betriebe ohne MalerSaaS, Zulieferer und Privatpersonen unter <a href="/malertreff" target="_blank" rel="noreferrer">maler-saas.com/malertreff</a>. Aus = die Seite zeigt
+            „Demnächst“, und externe Konten sehen die Community nicht.
+          </small>
+        </span>
+      </label>
 
       <h3 className="cm-h3">Mitglieder ({o.members.length})</h3>
       <p className="cm-small">Moderatoren (z. B. Ihre Frau) sehen den Reiter „Moderation“, aber nichts aus Ihrem Owner-Dashboard. Sie müssen dafür Mitglied sein.</p>
@@ -435,6 +466,136 @@ export function StaffPanel({ onChanged }: { onChanged?: () => void }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Moderation: Nachweise externer Betriebe und Zulieferer prüfen */
+export function VerifyPanel({ onChanged }: { onChanged?: () => void }) {
+  const [list, setList] = useState<VerifyEntry[] | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState<number | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    void api
+      .verifyList()
+      .then((l) => !cancel && setList(l))
+      .catch((e: Error) => !cancel && setMsg({ ok: false, text: e.message }));
+    return () => {
+      cancel = true;
+    };
+  }, [reload]);
+
+  const open = async (path: string) => {
+    const win = window.open("", "_blank");
+    try {
+      const url = await api.proofUrl(path);
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch (e) {
+      win?.close();
+      setMsg({ ok: false, text: (e as Error).message });
+    }
+  };
+
+  const decide = async (v: VerifyEntry, approve: boolean) => {
+    let reason = "";
+    if (approve) {
+      if (!(await showConfirm(`${v.company ?? v.display_name} freischalten?`, { confirmLabel: "Freischalten" }))) return;
+    } else {
+      const r = await showPrompt("Warum wird der Nachweis abgelehnt? Die Person bekommt den Grund per E-Mail und kann einen neuen Nachweis hochladen.", {
+        title: "Nachweis ablehnen",
+        multiline: true,
+        confirmLabel: "Ablehnen",
+        validate: (x) => (x.trim().length < 5 ? "Bitte kurz begründen." : null),
+      });
+      if (r === null) return;
+      reason = r.trim();
+    }
+    setBusy(v.id);
+    setMsg(null);
+    try {
+      const res = await api.verifyDecide(v.id, approve, reason);
+      setMsg({ ok: true, text: `${approve ? "Freigeschaltet" : "Abgelehnt"}.${res.mailed ? " E-Mail wurde verschickt." : " Hinweis: Die E-Mail konnte nicht verschickt werden – die Person sieht das Ergebnis beim nächsten Anmelden."}` });
+      setReload((x) => x + 1);
+      onChanged?.();
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!list) return msg ? <p className="cm-msg err">{msg.text}</p> : <p className="cm-muted">Lädt …</p>;
+  const ready = list.filter((v) => v.proof_status === "eingereicht");
+  const waiting = list.filter((v) => v.proof_status !== "eingereicht");
+  return (
+    <div>
+      <p className="cm-small">
+        Prüfen Sie, ob der Nachweis zum Firmennamen passt und ein Gewerbe im Maler-, Lackierer- oder verwandten Handwerk bzw. ein Zulieferer ist. Nachweise werden 30 Tage nach
+        Ihrer Entscheidung automatisch gelöscht.
+      </p>
+      {msg && <p className={`cm-msg ${msg.ok ? "ok" : "err"}`}>{msg.text}</p>}
+      <h3 className="cm-h3">Zu prüfen ({ready.length})</h3>
+      {ready.length === 0 && <div className="cm-empty">Keine Nachweise zu prüfen.</div>}
+      {ready.map((v) => (
+        <div key={v.id} className="cm-card">
+          <div className="cm-mod-head">
+            <b>{v.company ?? v.display_name}</b>
+            <span className="cm-topic">{MEMBER_KINDS[v.kind]}</span>
+            <span>seit {timeAgo(v.created_at)}</span>
+          </div>
+          <p className="cm-small">
+            {v.display_name}
+            {v.trade ? ` · ${v.trade}` : ""}
+            {v.region ? ` · ${v.region}` : ""}
+          </p>
+          {(v.website || v.impressum_url) && (
+            <p className="cm-small">
+              {v.website && (
+                <a href={v.website} target="_blank" rel="noreferrer nofollow">
+                  Website
+                </a>
+              )}
+              {v.website && v.impressum_url && " · "}
+              {v.impressum_url && (
+                <a href={v.impressum_url} target="_blank" rel="noreferrer nofollow">
+                  Impressum
+                </a>
+              )}
+            </p>
+          )}
+          <div className="cm-actions left">
+            {v.proof_path && (
+              <button type="button" className="btn btn-secondary" onClick={() => open(v.proof_path!)}>
+                📄 Nachweis ansehen
+              </button>
+            )}
+            <button type="button" className="btn btn-secondary danger" disabled={busy === v.id} onClick={() => decide(v, false)}>
+              Ablehnen
+            </button>
+            <button type="button" className="btn btn-primary" disabled={busy === v.id} onClick={() => decide(v, true)}>
+              Freischalten
+            </button>
+          </div>
+        </div>
+      ))}
+      {waiting.length > 0 && (
+        <>
+          <h3 className="cm-h3">Warten auf Nachweis ({waiting.length})</h3>
+          {waiting.map((v) => (
+            <div key={v.id} className="cm-staff">
+              <div>
+                <b>{v.company ?? v.display_name}</b>
+                <small>
+                  {MEMBER_KINDS[v.kind]} · {v.proof_status === "abgelehnt" ? `abgelehnt: ${v.proof_note ?? ""}` : "noch kein Nachweis hochgeladen"} · {timeAgo(v.created_at)}
+                </small>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

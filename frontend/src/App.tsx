@@ -335,6 +335,7 @@ const pageLoaders = {
   TerminkalenderPage: () => import("./modules/terminkalender/TerminkalenderPage"),
   UrlaubPage: () => import("./modules/urlaub/UrlaubPage"),
   CommunityPage: () => import("./modules/community/CommunityPage"),
+  MalerTreffPage: () => import("./modules/community/MalerTreffPage"),
   LeaveSection: () => import("./modules/urlaub/LeaveSection"),
   MeineTerminePage: () => import("./modules/terminkalender/MeineTerminePage"),
   KiTelefonPage: () => import("./modules/ki-telefon/KiTelefonPage"),
@@ -383,6 +384,7 @@ const BuchhaltungPage = lazy(pageLoaders.BuchhaltungPage);
 const TerminkalenderPage = lazy(pageLoaders.TerminkalenderPage);
 const UrlaubPage = lazy(pageLoaders.UrlaubPage);
 const CommunityPage = lazy(pageLoaders.CommunityPage);
+const MalerTreffPage = lazy(pageLoaders.MalerTreffPage);
 const LeaveSection = lazy(pageLoaders.LeaveSection);
 const MeineTerminePage = lazy(pageLoaders.MeineTerminePage);
 const KiTelefonPage = lazy(pageLoaders.KiTelefonPage);
@@ -843,6 +845,11 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   // Fachkräfte-Pool: öffentliche Seiten (Anmeldung, eigenes Profil, Kontaktanfrage beantworten)
   if (/^\/fachkraefte(\/|$)/.test(window.location.pathname)) {
     return <PublicPoolPage />;
+  }
+
+  // MalerTreff-Community: eigene Seite mit Anmeldung für Externe (Betriebe ohne MalerSaaS, Zulieferer, Privatpersonen)
+  if (/^\/malertreff(\/|$)/.test(window.location.pathname)) {
+    return <MalerTreffPage />;
   }
 
   const [orderForm, setOrderForm] = useState<OrderFormData>({
@@ -6619,10 +6626,14 @@ onReloadOrders={async () => {
 
           {!loadingData && !userProfile && (
             <div className="card">
-              <h2>Benutzerprofil nicht gefunden</h2>
+              <h2>Kein MalerSaaS-Firmenkonto gefunden</h2>
               <p>
-                In <code>app_users</code> wurde kein Datensatz zum eingeloggten
-                Supabase-User gefunden.
+                Zu dieser Anmeldung gibt es keinen MalerSaaS-Zugang. Haben Sie ein Konto für die Community MalerTreff?
+              </p>
+              <p>
+                <a className="btn btn-primary" style={{ width: "auto", display: "inline-block" }} href="/malertreff">
+                  Zum MalerTreff
+                </a>
               </p>
             </div>
           )}

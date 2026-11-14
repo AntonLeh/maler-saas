@@ -2,12 +2,14 @@
 //   POST ?hook=<DELETION_HOOK_TOKEN>        (Zeitplan, pg_cron)
 //   POST  mit Anmeldung des Plattform-Inhabers  (Knopf „Jetzt prüfen“)
 // 1) Vorwarnung per E-Mail 7 Tage vor der Löschung  2) Übersicht der fälligen Firmen an den Plattform-Inhaber
+// 3) MalerTreff: Nachweise 30 Tage nach der Prüfung löschen
 // Gelöscht wird NICHT automatisch – das macht der Plattform-Inhaber im Owner-Dashboard.
 // Secrets: BREVO_API_KEY, BREVO_SENDER_EMAIL (vorhanden), DELETION_HOOK_TOKEN (neu, frei wählbar)
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { type DueRow, fmtDate, isDue, needsWarning, warningMail } from "./logic.ts";
+import { cleanupCommunityProofs } from "./community.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -56,6 +58,9 @@ serve(async (req) => {
       if (!me || Number(me.role_id) !== 1) return json({ ok: false, error: "Nur für den Plattform-Inhaber." }, 403);
     }
 
+    // MalerTreff: alte Nachweise löschen (30 Tage nach der Prüfung)
+    const proofsDeleted = await cleanupCommunityProofs(db).catch((e) => (console.error("community proofs", e), 0));
+
     const { data, error } = await db.rpc("tenant_deletion_list");
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as DueRow[];
@@ -95,7 +100,7 @@ serve(async (req) => {
       }
     }
 
-    return json({ ok: true, warned: sent, failed, due: due.map((r) => r.tenant_id) });
+    return json({ ok: true, warned: sent, failed, due: due.map((r) => r.tenant_id), proofsDeleted });
   } catch (e) {
     console.error("deletion-check", e);
     return json({ ok: false, error: (e as Error).message }, 500);

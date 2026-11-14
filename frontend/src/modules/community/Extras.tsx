@@ -1,6 +1,6 @@
 // MalerTreff: Regeln, Benachrichtigungen mit Widerspruch, Profile
 import { useEffect, useState } from "react";
-import { showAlert, showPrompt } from "../../lib/dialogs";
+import { showAlert, showConfirm, showPrompt } from "../../lib/dialogs";
 import * as api from "./api";
 import { Feed } from "./Feed";
 import { CONTACT_EMAIL, initials, isDraftRules, MEMBER_KINDS, RULES, timeAgo } from "./logic";
@@ -93,7 +93,9 @@ export function Notices({ onOpenPost, onRead }: { onOpenPost?: (id: number) => v
   );
 }
 
-export function MyProfile({ me, onSaved }: { me: Member; onSaved: () => void }) {
+export function MyProfile({ me, onSaved, external = false, onDeleted }: { me: Member; onSaved: () => void; external?: boolean; onDeleted?: () => void }) {
+  const [website, setWebsite] = useState(me.website ?? "");
+  const [impressum, setImpressum] = useState(me.impressum_url ?? "");
   const [trade, setTrade] = useState(me.trade ?? "");
   const [region, setRegion] = useState(me.region ?? "");
   const [bio, setBio] = useState(me.bio ?? "");
@@ -101,6 +103,7 @@ export function MyProfile({ me, onSaved }: { me: Member; onSaved: () => void }) 
   const save = async () => {
     try {
       await api.updateProfile(trade, region, bio);
+      if (me.kind === "zulieferer") await api.profileLinks(website, impressum);
       setMsg({ ok: true, text: "Profil gespeichert." });
       onSaved();
     } catch (e) {
@@ -117,12 +120,17 @@ export function MyProfile({ me, onSaved }: { me: Member; onSaved: () => void }) 
             {MEMBER_KINDS[me.kind]}
             {me.company ? ` · ${me.company}` : ""}
           </small>
-          <small className="cm-muted">Name und Firma kommen aus Ihrem MalerSaaS-Konto.</small>
+          <small className="cm-muted">{external ? "Name und Firma stammen aus Ihrer Anmeldung. Änderungen bitte per E-Mail an uns." : "Name und Firma kommen aus Ihrem MalerSaaS-Konto."}</small>
         </div>
       </div>
       <label className="cm-field">
-        <span>Gewerk / Spezialgebiet</span>
-        <input value={trade} maxLength={80} onChange={(e) => setTrade(e.target.value)} placeholder="z. B. Malermeister, Fassaden, Lackierer" />
+        <span>{me.kind === "privat" ? "Interesse" : me.kind === "zulieferer" ? "Sortiment" : "Gewerk / Spezialgebiet"}</span>
+        <input
+          value={trade}
+          maxLength={80}
+          onChange={(e) => setTrade(e.target.value)}
+          placeholder={me.kind === "privat" ? "z. B. Renovierung, Jobsuche" : me.kind === "zulieferer" ? "z. B. Farben & Lacke" : "z. B. Malermeister, Fassaden, Lackierer"}
+        />
       </label>
       <label className="cm-field">
         <span>Region</span>
@@ -130,14 +138,59 @@ export function MyProfile({ me, onSaved }: { me: Member; onSaved: () => void }) 
       </label>
       <label className="cm-field">
         <span>Über mich</span>
-        <textarea rows={3} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Ein, zwei Sätze für die Kollegen" />
+        <textarea rows={3} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Ein, zwei Sätze über Sie" />
       </label>
+      {me.kind === "zulieferer" && (
+        <>
+          <label className="cm-field">
+            <span>Website</span>
+            <input value={website} maxLength={200} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" />
+          </label>
+          <label className="cm-field">
+            <span>Link zum Impressum (Pflicht für Anzeigen)</span>
+            <input value={impressum} maxLength={200} onChange={(e) => setImpressum(e.target.value)} placeholder="https://…/impressum" />
+          </label>
+        </>
+      )}
       {msg && <p className={`cm-msg ${msg.ok ? "ok" : "err"}`}>{msg.text}</p>}
       <div className="cm-actions">
         <button type="button" className="btn btn-primary" onClick={save}>
           Speichern
         </button>
       </div>
+      {external && <DeleteAccount onDeleted={onDeleted} />}
+    </div>
+  );
+}
+
+/** Externe löschen ihr MalerTreff-Konto selbst (alle Beiträge, Antworten und Fotos werden mitgelöscht) */
+function DeleteAccount({ onDeleted }: { onDeleted?: () => void }) {
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    const ok = await showConfirm("Ihr MalerTreff-Konto mit allen Beiträgen, Antworten und Fotos endgültig löschen? Das lässt sich nicht rückgängig machen.", {
+      title: "Konto löschen",
+      danger: true,
+      confirmLabel: "Endgültig löschen",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await api.deleteAccount();
+      onDeleted?.();
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="cm-danger-zone">
+      <h3 className="cm-h3">Konto löschen</h3>
+      <p className="cm-small">Ihr Konto, Ihre Beiträge, Antworten und Fotos werden sofort und endgültig gelöscht.</p>
+      {err && <p className="cm-msg err">{err}</p>}
+      <button type="button" className="btn btn-secondary danger" onClick={run} disabled={busy}>
+        {busy ? "Wird gelöscht …" : "Mein Konto löschen"}
+      </button>
     </div>
   );
 }
@@ -177,6 +230,21 @@ export function ProfileView({ id, me, onBack, onOpenPost }: { id: number; me: Me
             </div>
           </div>
           {p.bio && <p className="cm-body full">{p.bio}</p>}
+          {(p.website || p.impressum_url) && (
+            <p className="cm-small">
+              {p.website && (
+                <a href={p.website} target="_blank" rel="noreferrer nofollow">
+                  🌐 Website
+                </a>
+              )}
+              {p.website && p.impressum_url && " · "}
+              {p.impressum_url && (
+                <a href={p.impressum_url} target="_blank" rel="noreferrer nofollow">
+                  Impressum
+                </a>
+              )}
+            </p>
+          )}
           <div className="cm-stats">
             <span>
               <b>{p.posts}</b> Beiträge
