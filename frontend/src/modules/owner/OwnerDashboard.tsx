@@ -307,6 +307,7 @@ function Detail({
 }
 
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
+const CommunityPage = lazy(() => import("../community/CommunityPage"));
 const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
 const OwnerCalendar = lazy(() => import("../owner-termine/OwnerCalendar"));
@@ -315,7 +316,7 @@ const TodayPosts = lazy(() => import("../owner-werbung/TodayPosts"));
 const OriginSummary = lazy(() => import("../owner-werbung/OriginSummary"));
 
 export default function OwnerDashboard({ onBack }: Props) {
-  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar">("overview");
+  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar" | "community">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -421,6 +422,14 @@ export default function OwnerDashboard({ onBack }: Props) {
     );
   }
 
+  if (view === "community") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <CommunityPage onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   if (view === "books") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
@@ -449,6 +458,9 @@ export default function OwnerDashboard({ onBack }: Props) {
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setView("calendar")}>
               📅 Termine
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setView("community")}>
+              💬 MalerTreff
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren

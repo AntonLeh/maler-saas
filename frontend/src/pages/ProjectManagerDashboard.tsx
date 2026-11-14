@@ -24,6 +24,8 @@ type ProjectManagerDashboardProps = {
   // Terminkalender-Modul (optional)
   currentUserId?: number;
   onOpenAppointments?: () => void;
+  /** MalerTreff-Community öffnen (Kachel erscheint nur, wenn freigeschaltet) */
+  onOpenCommunity?: () => void;
   /** Aufträge mit zugewiesenem Material (null = unbekannt, kein Hinweis) */
   materialOrderIds?: string[] | null;
   /** Auftrag direkt beim Material-Bereich öffnen */
@@ -39,6 +41,7 @@ type ProjectManagerDashboardProps = {
 import TeamClock from "../modules/stunden/TeamClock";
 import { TeamAbsenceCard } from "../modules/urlaub/widgets";
 import MyLeaveCard from "../modules/urlaub/MyLeaveCard";
+import { CommunityTile } from "../modules/community/widgets";
 import type { Person } from "../modules/stunden/logic";
 
 export default function ProjectManagerDashboard({
@@ -61,6 +64,7 @@ export default function ProjectManagerDashboard({
   hasMaterials,
   currentUserId,
   onOpenAppointments,
+  onOpenCommunity,
   materialOrderIds,
   onOpenOrderMaterial,
   teamPeople,
@@ -139,6 +143,7 @@ export default function ProjectManagerDashboard({
           {teamPeople && <TeamClock people={teamPeople} orders={orders} assignments={assignments} />}
           {teamPeople && <TeamAbsenceCard people={teamPeople} />}
           {currentUserId != null && <MyLeaveCard userId={currentUserId} className="pm-card" />}
+          {onOpenCommunity && <CommunityTile variant="card" onOpen={onOpenCommunity} />}
           <section className="pm-card">
             <h2>Schnellzugriff</h2>
             <div className="pm-actions">

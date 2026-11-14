@@ -1,0 +1,7 @@
+/* MalerTreff: Einstieg auf den Dashboards */
+.cm-tile-badge { background: #dc2626; color: #fff; border-radius: 999px; font-size: 11px; font-weight: 800; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.cm-tile-card { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 12px; align-items: center; width: 100%; padding: 14px 16px; border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff); border: 1px solid #c7d2fe; color: #1e3a8a; text-align: left; }
+.cm-tile-card:hover { border-color: #818cf8; }
+.cm-tile-card b { display: block; font-size: 15.5px; }
+.cm-tile-card small { display: block; color: #475569; font-size: 13px; margin-top: 2px; }

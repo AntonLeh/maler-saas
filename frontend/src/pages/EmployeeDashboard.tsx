@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MyLeaveCard from "../modules/urlaub/MyLeaveCard";
+import { CommunityTile } from "../modules/community/widgets";
 import { supabase } from "../lib/supabase";
 import EmployeeMaterialsSection from "./EmployeeMaterialsSection";
 import { showConfirm } from "../lib/dialogs";
@@ -92,6 +93,8 @@ type EmployeeDashboardProps = {
   companyName?: string;
   onImpressum?: () => void;
   onDatenschutz?: () => void;
+  /** MalerTreff-Community öffnen (Kachel erscheint nur, wenn freigeschaltet) */
+  onOpenCommunity?: () => void;
   /** Eingebettet (z. B. „Meine Ausführungsaufträge“ beim Projektleiter): ohne eigene Kopfzeile */
   embedded?: boolean;
 };
@@ -138,6 +141,7 @@ export default function EmployeeDashboard({
   companyName,
   onImpressum,
   onDatenschutz,
+  onOpenCommunity,
   embedded = false,
 }: EmployeeDashboardProps) {
   const [now, setNow] = useState(() => new Date());
@@ -790,6 +794,7 @@ export default function EmployeeDashboard({
         )}
 
         {!embedded && currentUserId != null && <MyLeaveCard userId={Number(currentUserId)} className="ma-leave" />}
+        {!embedded && onOpenCommunity && <CommunityTile variant="card" className="ma-leave" onOpen={onOpenCommunity} />}
 
         <section className="ma-orders">
           <h2>Meine Aufträge</h2>

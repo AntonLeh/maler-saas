@@ -38,6 +38,7 @@ import { landOf } from "./modules/nachweise/logic";
 import type { PartnerDoc } from "./modules/nachweise/logic";
 import { loadDocs as loadPartnerDocs } from "./modules/nachweise/api";
 import { AbsenceAssignWarning, AbsenceBar, TeamAbsenceCard } from "./modules/urlaub/widgets";
+import { CommunityTile } from "./modules/community/widgets";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -333,6 +334,7 @@ const pageLoaders = {
   BuchhaltungPage: () => import("./modules/belege/BuchhaltungPage"),
   TerminkalenderPage: () => import("./modules/terminkalender/TerminkalenderPage"),
   UrlaubPage: () => import("./modules/urlaub/UrlaubPage"),
+  CommunityPage: () => import("./modules/community/CommunityPage"),
   LeaveSection: () => import("./modules/urlaub/LeaveSection"),
   MeineTerminePage: () => import("./modules/terminkalender/MeineTerminePage"),
   KiTelefonPage: () => import("./modules/ki-telefon/KiTelefonPage"),
@@ -380,6 +382,7 @@ const QuoteEmailDialog = lazy(pageLoaders.QuoteEmailDialog);
 const BuchhaltungPage = lazy(pageLoaders.BuchhaltungPage);
 const TerminkalenderPage = lazy(pageLoaders.TerminkalenderPage);
 const UrlaubPage = lazy(pageLoaders.UrlaubPage);
+const CommunityPage = lazy(pageLoaders.CommunityPage);
 const LeaveSection = lazy(pageLoaders.LeaveSection);
 const MeineTerminePage = lazy(pageLoaders.MeineTerminePage);
 const KiTelefonPage = lazy(pageLoaders.KiTelefonPage);
@@ -541,6 +544,7 @@ type CurrentPage =
   | "approval-center"
   | "terminkalender"
   | "urlaub"
+  | "community"
   | "meine-termine"
   | "ki-telefon"
   | "website"
@@ -6303,6 +6307,15 @@ if (
       return <StaffLockedPage onLogout={handleLogout} />;
     }
 
+    if (!loadingData && userProfile && (isEmployee || userProfile.role_id === 3) && currentPage === "community") {
+      return (
+        <>
+          <StaffGraceBanner access={staffAcc} />
+          <CommunityPage onBack={() => setCurrentPage(isProjectManager ? "dashboard" : "employee-dashboard")} />
+        </>
+      );
+    }
+
     if (
   !loadingData &&
   userProfile &&
@@ -6347,6 +6360,7 @@ onReloadOrders={async () => {
           onEndBreak={handleEmployeeEndBreak}
           onEndWork={handleEmployeeEndWork}
           companyName={String((companySettings as { company_name?: string } | null)?.company_name ?? "")}
+          onOpenCommunity={() => setCurrentPage("community")}
           onImpressum={() => {
             legalBackPageRef.current = "employee-dashboard";
             setCurrentPage("impressum");
@@ -6477,6 +6491,7 @@ onReloadOrders={async () => {
   unreadMessages={unreadMessages}
   currentUserId={userProfile.id}
   onOpenAppointments={() => setCurrentPage("meine-termine")}
+  onOpenCommunity={() => setCurrentPage("community")}
   materialOrderIds={materialOrderIds}
   onOpenOrderMaterial={(orderId) => void openOrderMaterial(orderId)}
   teamPeople={employees.filter((e) => e.is_active !== false) as unknown as StundenPerson[]}
@@ -7059,6 +7074,7 @@ onReloadOrders={async () => {
   onOpen={() => setCurrentPage("fachkraefte")}
 />
 {isAdmin && <BelegeButton onOpen={() => setCurrentPage("belege")} />}
+<CommunityTile onOpen={() => setCurrentPage("community")} />
 
 </section>
                 </>
@@ -10703,6 +10719,10 @@ const businessAdvisor = generateBusinessInsights();
   employeeNameMap={employeeNameMap}
   onPreviewImage={setSelectedProgressImagePreview}
 />
+)}
+
+{currentPage === "community" && isAdmin && userProfile && (
+  <CommunityPage onBack={openDashboard} isChef={userProfile.role_id === ADMIN_ROLE_ID} />
 )}
 
 {currentPage === "urlaub" && userProfile?.role_id === ADMIN_ROLE_ID && (
