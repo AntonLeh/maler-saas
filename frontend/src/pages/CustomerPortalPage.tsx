@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Portaldaten kommen untypisiert aus der Datenbankfunktion */
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { generateQuotePdf } from "../lib/quotePdf";
 import { generateInvoicePdf, snapshotSources } from "../lib/invoicePdf";
 import { showAlert, showConfirm } from "../lib/dialogs";
+import "./CustomerPortal.css";
 
 type PortalData = {
   quote?: any;
@@ -172,9 +174,9 @@ export default function CustomerPortalPage() {
 
   if (loading) {
     return (
-      <div className="dashboard-page">
-        <div className="dashboard-container">
-          <div className="card">Kundenportal wird geladen...</div>
+      <div className="cp-page">
+        <div className="cp-wrap">
+          <div className="cp-card cp-center">Ihr Projekt wird geladen …</div>
         </div>
       </div>
     );
@@ -182,11 +184,11 @@ export default function CustomerPortalPage() {
 
   if (errorMessage || !data) {
     return (
-      <div className="dashboard-page">
-        <div className="dashboard-container">
-          <div className="card">
-            <h2>Kundenportal</h2>
-            <p className="info-text">{errorMessage}</p>
+      <div className="cp-page">
+        <div className="cp-wrap">
+          <div className="cp-card cp-center">
+            <h2>Link nicht verfügbar</h2>
+            <p className="cp-sub">{errorMessage}</p>
           </div>
         </div>
       </div>
@@ -286,7 +288,7 @@ export default function CustomerPortalPage() {
     } else {
       await showAlert(
         "Ihre Bewertung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es später noch einmal.",
-        { tone: "success", title: "Erledigt" }
+        { tone: "error", title: "Das hat nicht geklappt" }
       );
     }
   } finally {
@@ -294,628 +296,419 @@ export default function CustomerPortalPage() {
   }
 };
 
-  return (
-    <div className="dashboard-page">
-      <div className="dashboard-container">
-        <section className="card">
-          <h1>Kundenportal</h1>
-          <p className="info-text">
-  Willkommen im Kundenportal{" "}
-  <strong>
-    {customer?.company_name
-      ? `der ${customer.company_name}`
-      : `${customer?.first_name || ""} ${customer?.last_name || ""}`.trim() || "unseres Hauses"}
-  </strong>.
-  Hier können Sie den aktuellen Stand Ihres Projekts jederzeit transparent einsehen.
-</p>
-          <div
-  style={{
-    marginTop: "20px",
-    display: "grid",
-    gridTemplateColumns: "repeat(6, 1fr)",
-    gap: "10px",
-  }}
->
-  {[
-    "Angebot",
-    "Bestätigt",
-    "Geplant",
-    "In Arbeit",
-    "Prüfung",
-    "Fertig",
-  ].map((step, index) => {
-    const stepNumber = index + 1;
-    const active = currentStep >= stepNumber;
+  const symbol = companySettings.currency_symbol || (companySettings.currency === "CHF" ? "CHF" : "€");
+  const firmName = companySettings.company_name || "Ihr Malerbetrieb";
+  const customerName = customer?.company_name || `${customer?.first_name || ""} ${customer?.last_name || ""}`.trim();
+  const phone = String(companySettings.phone || "").trim();
+  const email = String(companySettings.email || "").trim();
+  const quoteOpen = !!quote && (quote.status === "sent" || quote.status === "draft") && !order;
+  const invoicePaid = isPaid(invoice?.status);
+  const invoiceDue = invoice ? dueDate(invoice, companySettings) : null;
+  const finished = order?.status === "fertig" || order?.status === "abgerechnet";
+  const latestImages = progress
+    .slice()
+    .reverse()
+    .flatMap((e) => e.images || [])
+    .slice(0, 4);
+  const steps = ["Angebot", "Bestätigt", "Geplant", "In Arbeit", "Prüfung", "Fertig"];
 
-    return (
-      <div
-        key={step}
-        style={{
-          textAlign: "center",
-          padding: "7px 6px",
-          borderRadius: "8px",
-          background: active ? "#6d916f" : "#e5e7eb",
-          color: active ? "#fff" : "#6b7280",
-          fontWeight: 600,
-          fontSize: "11px",
-          transition: "all .2s ease",
-        }}
-      >
-        {step}
-      </div>
-    );
-  })}
-</div>
-        </section>
-
-        {quote && (
-          <section className="card">
-            <h2>Angebot</h2>
-            <p>
-              <strong>Angebotsnummer:</strong>{" "}
-              {quote.quote_number || quote.number || quote.id}
-            </p>
-            <p>
-              <strong>Status:</strong>{" "}
-                <span className="status-badge">
-                {getPortalStatusLabel(quote.status)}
-                </span>
-            </p>
-            <p>
-              <strong>Datum:</strong>{" "}
-              {quote.quote_date
-                ? new Date(quote.quote_date).toLocaleDateString("de-DE")
-                : "-"}
-            </p>
-
-            {quote.total_amount && (
-              <p>
-                <strong>Gesamtbetrag:</strong>{" "}
-                {Number(quote.total_amount).toLocaleString("de-CH", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-            )}
-
-            <div
-  style={{
-    display: "flex",
-    gap: "6px",
-    flexWrap: "wrap",
-    marginTop: "14px",
-  }}
->
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={() =>
-      generateQuotePdf({
-        quoteDetail: quote,
-        quoteItems,
-        companySettings,
-        currencySymbol: companySettings.currency_symbol || "CHF",
-        customers: customer ? [customer] : [],
-      })
-    }
-  >
-    📄 PDF-Angebot ansehen
-  </button>
-
-  <button
-  type="button"
-  className="btn btn-primary"
-  onClick={async () => {
-    const confirmed = await showConfirm(
-      "Möchten Sie dieses Angebot verbindlich bestätigen?",
-      { title: "Angebot annehmen", confirmLabel: "Ja, verbindlich bestätigen" }
-    );
-
+  const acceptQuote = async () => {
+    const confirmed = await showConfirm("Möchten Sie dieses Angebot verbindlich bestätigen?", { title: "Angebot annehmen", confirmLabel: "Ja, verbindlich bestätigen" });
     if (!confirmed) return;
-
-    const { data: result, error } = await supabase.rpc(
-      "customer_accept_quote",
-      {
-        p_token: token,
-      }
-    );
-
+    const { data: result, error } = await supabase.rpc("customer_accept_quote", { p_token: token });
     if (error) {
       console.error("Fehler beim Bestätigen des Angebots:", error);
       await showAlert(acceptErrorText(error.message), { tone: "error", title: "Das hat nicht geklappt" });
       return;
     }
-
-    await showAlert(result?.message || "Angebot wurde bestätigt.");
-
+    await showAlert(result?.message || "Vielen Dank! Ihr Angebot wurde bestätigt.", { tone: "success", title: "Bestätigt" });
     window.location.reload();
-  }}
->
-  ✅ Angebot bestätigen
-</button>
-</div>
-          </section>
-        )}
+  };
 
-        {order && (
-          <section className="card">
-            <h2>Auftrag</h2>
-            <p>
-              <strong>Titel:</strong> {order.title || "-"}
-            </p>
-            <p>
-              <strong>Status:</strong>{" "}
-                <span className="status-badge">
-                {getPortalStatusLabel(order.status)}
-                </span>
-            </p>
-            <p>
-              <strong>Adresse:</strong>{" "}
-              {[order.address_street, order.address_zip, order.address_city]
-                .filter(Boolean)
-                .join(", ") || "-"}
-            </p>
-          </section>
-        )}
+  const openQuotePdf = () =>
+    generateQuotePdf({ quoteDetail: quote, quoteItems, companySettings, currencySymbol: symbol, customers: customer ? [customer] : [] });
 
-        {invoice && (
-  <section
-    className="card"
-    style={{
-      background: "#f0fdf4",
-      border: "1px solid #bbf7d0",
-    }}
-  >
-    <h2>Rechnung</h2>
-
-    <p>
-      <strong>Rechnungsnummer:</strong>{" "}
-      {invoice.invoice_number || invoice.number || invoice.id}
-    </p>
-
-    <p>
-      <strong>Status:</strong>{" "}
-      <span className="status-badge">
-        {getPortalStatusLabel(invoice.status)}
-      </span>
-    </p>
-
-    <p>
-      <strong>Datum:</strong>{" "}
-      {invoice.invoice_date
-        ? new Date(invoice.invoice_date).toLocaleDateString("de-DE")
-        : "-"}
-    </p>
-
-    <p>
-      <strong>Gesamtbetrag:</strong>{" "}
-      {Number(invoice.total_amount || invoice.total || 0).toLocaleString("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}{" "}
-      {companySettings.currency_symbol || "CHF"}
-    </p>
-
-    <button
-  type="button"
-  className="btn btn-secondary"
-  onClick={() => {
+  const openInvoicePdf = () => {
     const frozen = snapshotSources(invoice);
     if (frozen) {
       import("../lib/einvoiceFiles")
         .then(({ downloadInvoicePdf }) => downloadInvoicePdf(invoice, frozen))
         .catch((e) => {
-        console.error("PDF", e);
-        void showAlert("Das PDF konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
-      });
+          console.error("PDF", e);
+          void showAlert("Das PDF konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
+        });
       return;
     }
-    generateInvoicePdf({
-      invoice,
-      invoiceItems: quoteItems || [],
-      order,
-      customer,
-      companySettings,
-      currencySymbol: companySettings.currency_symbol || "CHF",
-    });
-  }}
->
-  📄 PDF-Rechnung ansehen
-</button>
-  </section>
-)}
+    generateInvoicePdf({ invoice, invoiceItems: quoteItems || [], order, customer, companySettings, currencySymbol: symbol });
+  };
 
-  {(order?.status === "fertig" || order?.status === "abgerechnet") && (
-  <section
-  className="card"
-  style={{
-    marginTop: 40,
-    background: "#f8fbff",
-    border: "2px solid #2563eb",
-    borderRadius: 16,
-    padding: 28,
-    boxShadow: "0 10px 30px rgba(37,99,235,0.08)",
-  }}
->
-    <h2 style={{ color: "#1d4ed8", marginBottom: 10 }}>
-  🌟 Ihre Meinung ist uns wichtig
-</h2>
-
-<p
-  className="info-text"
-  style={{
-    fontSize: "15px",
-    marginBottom: "24px",
-  }}
->
-  Vielen Dank, dass Sie uns Ihr Vertrauen geschenkt haben.
-  <br />
-  Mit Ihrer Bewertung helfen Sie uns, unseren Service
-  kontinuierlich zu verbessern.
-</p>
-
-    <p className="info-text">
-      Wie zufrieden waren Sie mit der Ausführung dieses Auftrags?
-    </p>
-
-        {(reviewSent || data.review_completed) && (
-      <div className="message-box success">
-        ✅ Vielen Dank! Für diesen Auftrag wurde bereits eine Bewertung abgegeben.
-      </div>
-    )}
-
-        {!data.review_completed && !reviewSent && (
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 25,
-          marginBottom: 15,
-        }}
-      >
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setShowReviewForm(!showReviewForm)}
-        >
-          {showReviewForm
-            ? "⬆️ Bewertung ausblenden"
-            : "⭐ Bewertung starten"}
-        </button>
-      </div>
-    )}
-
-    {!data.review_completed && !reviewSent && showReviewForm && (
-    <div className="form-stack">
-
-  <div className="form-group">
-    <label>⭐ Gesamtzufriedenheit</label>
-    <select
-      value={overallRating}
-      onChange={(e) => setOverallRating(e.target.value)}
-    >
-      <option value="">Bitte auswählen</option>
-      <option value="5">★★★★★ Sehr zufrieden</option>
-      <option value="4">★★★★☆ Zufrieden</option>
-      <option value="3">★★★☆☆ In Ordnung</option>
-      <option value="2">★★☆☆☆ Verbesserungswürdig</option>
-      <option value="1">★☆☆☆☆ Unzufrieden</option>
-    </select>
-  </div>
-
-  <div className="form-group">
-    <label>🎨 Arbeitsqualität</label>
-    <select
-      value={qualityRating}
-      onChange={(e) => setQualityRating(e.target.value)}
-    >
-      <option value="">Bitte auswählen</option>
-      <option value="5">★★★★★</option>
-      <option value="4">★★★★☆</option>
-      <option value="3">★★★☆☆</option>
-      <option value="2">★★☆☆☆</option>
-      <option value="1">★☆☆☆☆</option>
-    </select>
-  </div>
-
-  <div className="form-group">
-    <label>😊 Freundlichkeit</label>
-    <select
-      value={friendlinessRating}
-      onChange={(e) => setFriendlinessRating(e.target.value)}
-    >
-      <option value="">Bitte auswählen</option>
-      <option value="5">★★★★★</option>
-      <option value="4">★★★★☆</option>
-      <option value="3">★★★☆☆</option>
-      <option value="2">★★☆☆☆</option>
-      <option value="1">★☆☆☆☆</option>
-    </select>
-  </div>
-
-  <div className="form-group">
-    <label>🧹 Sauberkeit</label>
-    <select
-      value={cleanlinessRating}
-      onChange={(e) => setCleanlinessRating(e.target.value)}
-    >
-      <option value="">Bitte auswählen</option>
-      <option value="5">★★★★★</option>
-      <option value="4">★★★★☆</option>
-      <option value="3">★★★☆☆</option>
-      <option value="2">★★☆☆☆</option>
-      <option value="1">★☆☆☆☆</option>
-    </select>
-  </div>
-
-  <div className="form-group">
-    <label>⏰ Termintreue</label>
-    <select
-      value={punctualityRating}
-      onChange={(e) => setPunctualityRating(e.target.value)}
-    >
-      <option value="">Bitte auswählen</option>
-      <option value="5">★★★★★</option>
-      <option value="4">★★★★☆</option>
-      <option value="3">★★★☆☆</option>
-      <option value="2">★★☆☆☆</option>
-      <option value="1">★☆☆☆☆</option>
-    </select>
-  </div>
-
-  <div className="form-group">
-    <label>💬 Kommentar</label>
-
-    <textarea
-      rows={4}
-      value={customerComment}
-      onChange={(e) => setCustomerComment(e.target.value)}
-      placeholder="Ihre Meinung ist uns wichtig..."
-    />
-  </div>
-
-  <div className="form-group">
-    <label>🤝 Würden Sie uns weiterempfehlen? (0 – 10) 0 = Nein 10 = Ja</label>
-
-    <input
-      type="number"
-      min={0}
-      max={10}
-      value={recommendation}
-      onChange={(e) => setRecommendation(e.target.value)}
-    />
-  </div>
-
-{publishInfo?.available && publishInfo.consent_text && (
-  <div className="form-group">
-    <label
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-        fontWeight: 400,
-        textAlign: "left",
-        cursor: "pointer",
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        borderRadius: 10,
-        padding: "12px 14px",
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={publishConsent}
-        onChange={(e) => setPublishConsent(e.target.checked)}
-        style={{ marginTop: 4, width: 18, height: 18, flex: "0 0 auto" }}
-      />
-      <span>
-        {publishInfo.consent_text}
-        <br />
-        <small style={{ color: "#64748b" }}>Freiwillig – ohne Häkchen bleibt Ihre Bewertung intern.</small>
-      </span>
-    </label>
-  </div>
-)}
-
-{assignedEmployees.length > 0 && (
-  <div style={{ marginTop: 30 }}>
-    <h3>👷 Mitarbeiter bewerten (optional)</h3>
-
-    <p className="info-text">
-      Wenn Sie möchten, können Sie auch die einzelnen Mitarbeiter bewerten.
-    </p>
-
-    {assignedEmployees.map((employee: any) => (
-      <div
-        key={employee.id}
-        className="card"
-        style={{
-          marginTop: 15,
-          padding: 15,
-          background: "#f8fafc",
-        }}
-      >
-        <strong>
-          {employee.first_name} {employee.last_name}
-        </strong>
-
-        <div className="form-group" style={{ marginTop: 12 }}>
-          <label>Bewertung</label>
-
-          <select
-            value={employeeRatings[employee.id] || ""}
-            onChange={(e) =>
-              setEmployeeRatings({
-                ...employeeRatings,
-                [employee.id]: Number(e.target.value),
-              })
-            }
-          >
-            <option value="">Keine Bewertung</option>
-            <option value="5">★★★★★</option>
-            <option value="4">★★★★☆</option>
-            <option value="3">★★★☆☆</option>
-            <option value="2">★★☆☆☆</option>
-            <option value="1">★☆☆☆☆</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Kommentar (optional)</label>
-
-          <textarea
-            rows={2}
-            value={employeeComments[employee.id] || ""}
-            onChange={(e) =>
-              setEmployeeComments({
-                ...employeeComments,
-                [employee.id]: e.target.value,
-              })
-            }
-          />
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-
-  <button
-  type="button"
-  className="btn btn-primary"
-  onClick={submitCustomerReview}
-  disabled={sendingReview}
->
-  {sendingReview ? "Bewertung wird gespeichert..." : "Bewertung absenden"}
-</button>
-
-</div>
-)}
-  </section>
-)}
-
-        <section className="card">
-          <h2>Fortschritt</h2>
-
-          {progress.length === 0 ? (
-            <p className="info-text">
-              Noch keine Fortschrittsmeldungen vorhanden.
-            </p>
-          ) : (
-            <div className="list-grid">
-              {progress.map((entry) => (
-                <div key={entry.id} className="customer-item">
-                  <div className="customer-meta">
-                    <span>
-                      {entry.created_at
-                        ? new Date(entry.created_at).toLocaleString("de-DE")
-                        : ""}
-                    </span>
-                    <span className="status-badge">
-                    {getPortalStatusLabel(entry.status)}
-                    </span>
-                  </div>
-
-                  <p style={{ marginTop: "0.5rem" }}>{entry.note}</p>
-
-                  {entry.images?.length > 0 && (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(140px, 1fr))",
-                        gap: "10px",
-                        marginTop: "12px",
-                      }}
-                    >
-                      {entry.images.map((img: any) => (
-                        <button
-  key={img.id}
-  type="button"
-  onClick={() => setSelectedImagePreview(img.image_url)}
-  style={{
-    padding: 0,
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-  }}
->
-  <img
-    src={img.image_url}
-    alt="Fortschritt"
-    style={{
-      width: "100%",
-      height: "140px",
-      objectFit: "cover",
-      borderRadius: "10px",
-      border: "1px solid #ddd",
-    }}
-  />
-</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+  // Nächster Schritt für den Kunden
+  let next: React.ReactNode = null;
+  if (quoteOpen) {
+    next = (
+      <>
+        <h2>Ihr Angebot liegt bereit</h2>
+        <p>Bitte prüfen Sie das Angebot. Wenn alles passt, bestätigen Sie es mit einem Klick – wir melden uns dann zur Terminplanung.</p>
+        <div className="cp-facts">
+          <div>
+            <span>Betrag</span>
+            <b>{money(quote.total_amount, symbol)}</b>
+          </div>
+          {quote.valid_until && (
+            <div>
+              <span>Gültig bis</span>
+              <b>{date(quote.valid_until)}</b>
             </div>
           )}
+        </div>
+        <div className="cp-actions">
+          <button type="button" className="btn btn-secondary" onClick={openQuotePdf}>
+            📄 Angebot ansehen (PDF)
+          </button>
+          <button type="button" className="btn btn-primary" onClick={acceptQuote}>
+            ✅ Angebot verbindlich bestätigen
+          </button>
+        </div>
+      </>
+    );
+  } else if (invoice && !invoicePaid) {
+    next = (
+      <>
+        <h2>Ihre Rechnung</h2>
+        <p>Vielen Dank für Ihren Auftrag! Hier finden Sie Ihre Rechnung.</p>
+        <div className="cp-facts">
+          <div>
+            <span>Betrag</span>
+            <b>{money(invoice.total_amount ?? invoice.total, symbol)}</b>
+          </div>
+          {invoiceDue && (
+            <div>
+              <span>Fällig bis</span>
+              <b>{date(invoiceDue)}</b>
+            </div>
+          )}
+          <div>
+            <span>Rechnungsnummer</span>
+            <b>{invoice.invoice_number || invoice.number || invoice.id}</b>
+          </div>
+        </div>
+        {companySettings.iban && (
+          <div className="cp-bank">
+            <b>Bitte überweisen an</b>
+            <span>{firmName}</span>
+            <span>IBAN: {formatIban(companySettings.iban)}</span>
+            {companySettings.bic && <span>BIC: {companySettings.bic}</span>}
+            {companySettings.bank_name && <span>{companySettings.bank_name}</span>}
+            <span>Verwendungszweck: {invoice.invoice_number || invoice.number || invoice.id}</span>
+          </div>
+        )}
+        <div className="cp-actions">
+          <button type="button" className="btn btn-primary" onClick={openInvoicePdf}>
+            📄 Rechnung ansehen (PDF)
+          </button>
+        </div>
+      </>
+    );
+  } else if (finished) {
+    next = null; // Bewertung folgt unten als eigener Kasten
+  } else if (order) {
+    next = (
+      <>
+        <h2>{order.status === "neu" ? "Ihr Auftrag ist eingeplant" : order.status === "pausiert" ? "Ihr Auftrag ist kurz pausiert" : "Wir sind für Sie im Einsatz"}</h2>
+        <p>
+          {order.status === "neu"
+            ? "Wir haben Ihren Auftrag eingeplant. Hier sehen Sie, sobald es losgeht."
+            : "Unten sehen Sie den aktuellen Baufortschritt mit Fotos. Bei Fragen erreichen Sie uns jederzeit."}
+        </p>
+        {latestImages.length > 0 && (
+          <div className="cp-thumbs">
+            {latestImages.map((img: any, i: number) => (
+              <button type="button" key={i} onClick={() => setSelectedImagePreview(img.image_url)}>
+                <img src={img.image_url} alt="Foto vom Baufortschritt" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="cp-page">
+      <div className="cp-wrap">
+        <header className="cp-head">
+          <div className="cp-firm">
+            {companySettings.logo_url ? <img src={companySettings.logo_url} alt={firmName} /> : <span className="cp-firm-initial">{firmName.slice(0, 1)}</span>}
+            <div>
+              <b>{firmName}</b>
+              <small>Ihr Projekt{order?.title ? `: ${order.title}` : ""}</small>
+            </div>
+          </div>
+          {(phone || email) && (
+            <div className="cp-contact">
+              {phone && (
+                <a className="btn btn-secondary" href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                  📞 Anrufen
+                </a>
+              )}
+              {email && (
+                <a className="btn btn-secondary" href={`mailto:${email}`}>
+                  ✉️ E-Mail
+                </a>
+              )}
+            </div>
+          )}
+        </header>
+
+        <section className="cp-card">
+          <p className="cp-hello">Guten Tag{customerName ? `, ${customerName}` : ""}!</p>
+          <p className="cp-sub">Hier sehen Sie jederzeit den aktuellen Stand Ihres Projekts.</p>
+          <ol className="cp-steps" aria-label="Projektstand">
+            {steps.map((s, i) => (
+              <li key={s} className={i + 1 < currentStep ? "done" : i + 1 === currentStep ? "now" : ""}>
+                <span className="cp-dot">{i + 1 < currentStep ? "✓" : i + 1}</span>
+                <span className="cp-step-label">{s}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="cp-now">
+            Aktuell: <b>{statusText(currentStatus)}</b>
+          </p>
         </section>
+
+        {next && <section className="cp-card cp-next">{next}</section>}
+
+        {finished && (
+          <section className="cp-card cp-review">
+            <h2>Wie zufrieden sind Sie?</h2>
+            {reviewSent || data.review_completed ? (
+              <p className="cp-ok">✅ Vielen Dank für Ihre Bewertung!</p>
+            ) : !showReviewForm ? (
+              <>
+                <p>Ihr Auftrag ist abgeschlossen – vielen Dank für Ihr Vertrauen! Mit Ihrer Bewertung helfen Sie uns, noch besser zu werden.</p>
+                <div className="cp-actions">
+                  <button type="button" className="btn btn-primary" onClick={() => setShowReviewForm(true)}>
+                    ⭐ Jetzt bewerten
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="cp-form">
+                <Stars label="Gesamtzufriedenheit *" value={overallRating} onChange={setOverallRating} big />
+                <div className="cp-stars-grid">
+                  <Stars label="Arbeitsqualität" value={qualityRating} onChange={setQualityRating} />
+                  <Stars label="Freundlichkeit" value={friendlinessRating} onChange={setFriendlinessRating} />
+                  <Stars label="Sauberkeit" value={cleanlinessRating} onChange={setCleanlinessRating} />
+                  <Stars label="Termintreue" value={punctualityRating} onChange={setPunctualityRating} />
+                </div>
+                <div className="cp-field">
+                  <span>Würden Sie uns weiterempfehlen?</span>
+                  <div className="cp-nps" role="radiogroup" aria-label="Weiterempfehlung von 0 bis 10">
+                    {Array.from({ length: 11 }, (_, n) => (
+                      <button key={n} type="button" role="radio" aria-checked={recommendation === String(n)} className={recommendation === String(n) ? "on" : ""} onClick={() => setRecommendation(String(n))}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <small className="cp-nps-legend">
+                    <span>0 = auf keinen Fall</span>
+                    <span>10 = auf jeden Fall</span>
+                  </small>
+                </div>
+                <label className="cp-field">
+                  <span>Ihr Kommentar (freiwillig)</span>
+                  <textarea rows={4} value={customerComment} onChange={(e) => setCustomerComment(e.target.value)} placeholder="Was hat Ihnen gefallen, was können wir besser machen?" />
+                </label>
+                {assignedEmployees.length > 0 && (
+                  <div className="cp-employees">
+                    <b>Mitarbeiter bewerten (freiwillig)</b>
+                    {assignedEmployees.map((employee: any) => (
+                      <div key={employee.id} className="cp-employee">
+                        <Stars
+                          label={`${employee.first_name || ""} ${employee.last_name || ""}`.trim() || "Mitarbeiter"}
+                          value={employeeRatings[employee.id] ? String(employeeRatings[employee.id]) : ""}
+                          onChange={(v) => setEmployeeRatings({ ...employeeRatings, [employee.id]: Number(v) })}
+                        />
+                        <input
+                          value={employeeComments[employee.id] || ""}
+                          onChange={(e) => setEmployeeComments({ ...employeeComments, [employee.id]: e.target.value })}
+                          placeholder="Kommentar (freiwillig)"
+                          aria-label="Kommentar zum Mitarbeiter"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {publishInfo?.available && publishInfo.consent_text && (
+                  <label className="cp-consent">
+                    <input type="checkbox" checked={publishConsent} onChange={(e) => setPublishConsent(e.target.checked)} />
+                    <span>
+                      {publishInfo.consent_text}
+                      <small>Freiwillig – ohne Häkchen bleibt Ihre Bewertung intern.</small>
+                    </span>
+                  </label>
+                )}
+                <div className="cp-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowReviewForm(false)}>
+                    Später
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={submitCustomerReview} disabled={sendingReview}>
+                    {sendingReview ? "Wird gesendet …" : "Bewertung absenden"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        <div className="cp-docs">
+          {quote && (
+            <section className="cp-card cp-doc">
+              <h3>Angebot</h3>
+              <dl>
+                <dt>Nummer</dt>
+                <dd>{quote.quote_number || quote.number || quote.id}</dd>
+                <dt>Datum</dt>
+                <dd>{date(quote.quote_date)}</dd>
+                {quote.total_amount != null && (
+                  <>
+                    <dt>Betrag</dt>
+                    <dd>{money(quote.total_amount, symbol)}</dd>
+                  </>
+                )}
+                <dt>Status</dt>
+                <dd>{quoteOpen ? "Wartet auf Ihre Bestätigung" : quote.status === "rejected" ? "Abgelehnt" : "Bestätigt"}</dd>
+              </dl>
+              <button type="button" className="cp-link" onClick={openQuotePdf}>
+                PDF ansehen
+              </button>
+            </section>
+          )}
+          {order && (
+            <section className="cp-card cp-doc">
+              <h3>Auftrag</h3>
+              <dl>
+                <dt>Projekt</dt>
+                <dd>{order.title || "–"}</dd>
+                <dt>Adresse</dt>
+                <dd>{[order.address_street, [order.address_zip, order.address_city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–"}</dd>
+                <dt>Status</dt>
+                <dd>{statusText(order.status)}</dd>
+              </dl>
+            </section>
+          )}
+          {invoice && (
+            <section className="cp-card cp-doc">
+              <h3>Rechnung</h3>
+              <dl>
+                <dt>Nummer</dt>
+                <dd>{invoice.invoice_number || invoice.number || invoice.id}</dd>
+                <dt>Datum</dt>
+                <dd>{date(invoice.invoice_date)}</dd>
+                <dt>Betrag</dt>
+                <dd>{money(invoice.total_amount ?? invoice.total, symbol)}</dd>
+                <dt>Status</dt>
+                <dd className={invoicePaid ? "cp-paid" : ""}>{invoiceStatusText(invoice.status, invoiceDue)}</dd>
+              </dl>
+              <button type="button" className="cp-link" onClick={openInvoicePdf}>
+                PDF ansehen
+              </button>
+            </section>
+          )}
+        </div>
+
+        {(order || progress.length > 0) && (
+          <section className="cp-card">
+            <h2>Baufortschritt</h2>
+            {progress.length === 0 ? (
+              <p className="cp-sub">Sobald es losgeht, sehen Sie hier Neuigkeiten und Fotos von der Baustelle.</p>
+            ) : (
+              <ol className="cp-timeline">
+                {progress
+                  .slice()
+                  .reverse()
+                  .map((entry: any) => (
+                    <li key={entry.id}>
+                      <div className="cp-tl-head">
+                        <time>{dateTime(entry.created_at)}</time>
+                        {entry.status && <span className="cp-tag">{statusText(entry.status)}</span>}
+                      </div>
+                      {entry.note && <p>{entry.note}</p>}
+                      {entry.images?.length > 0 && (
+                        <div className="cp-thumbs">
+                          {entry.images.map((img: any, i: number) => (
+                            <button type="button" key={i} onClick={() => setSelectedImagePreview(img.image_url)}>
+                              <img src={img.image_url} alt="Foto vom Baufortschritt" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+              </ol>
+            )}
+          </section>
+        )}
+
+        <footer className="cp-foot">
+          {[firmName, companySettings.street, [companySettings.zip, companySettings.city].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}
+        </footer>
       </div>
 
-{selectedImagePreview && (
-  <div
-    onClick={() => setSelectedImagePreview(null)}
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.85)",
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-    }}
-  >
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        setSelectedImagePreview(null);
-      }}
-      style={{
-        position: "absolute",
-        top: "18px",
-        right: "18px",
-        width: "42px",
-        height: "42px",
-        borderRadius: "50%",
-        border: "none",
-        background: "#fff",
-        color: "#111",
-        fontSize: "22px",
-        fontWeight: 700,
-        cursor: "pointer",
-      }}
-    >
-      ✕
-    </button>
-
-    <img
-      src={selectedImagePreview}
-      alt="Fortschritt groß"
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        maxWidth: "100%",
-        maxHeight: "85vh",
-        borderRadius: "14px",
-        background: "#fff",
-        objectFit: "contain",
-      }}
-    />
-  </div>
-)}
-
+      {selectedImagePreview && (
+        <div className="cp-lightbox" role="dialog" aria-label="Foto" onClick={() => setSelectedImagePreview(null)}>
+          <img src={selectedImagePreview} alt="Foto vom Baufortschritt" />
+          <button type="button" aria-label="Schließen" onClick={() => setSelectedImagePreview(null)}>
+            ✕
+          </button>
+        </div>
+      )}
     </div>
-
-
-
   );
+}
+
+// ---------- Hilfen ----------
+function Stars({ label, value, onChange, big }: { label: string; value: string; onChange: (v: string) => void; big?: boolean }) {
+  const n = Number(value) || 0;
+  return (
+    <div className={`cp-stars${big ? " big" : ""}`}>
+      <span>{label}</span>
+      <div role="radiogroup" aria-label={label}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button key={i} type="button" role="radio" aria-checked={n === i} aria-label={`${i} von 5 Sternen`} className={i <= n ? "on" : ""} onClick={() => onChange(String(i))}>
+            ★
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const money = (v: unknown, symbol: string) =>
+  `${Number(v || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
+const date = (v?: string | null) => (v ? new Date(v).toLocaleDateString("de-DE") : "–");
+const dateTime = (v?: string | null) => (v ? new Date(v).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : "");
+const formatIban = (v: string) => String(v).replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+const isPaid = (s?: string) => ["paid", "bezahlt"].includes(String(s ?? "").toLowerCase());
+
+function dueDate(invoice: any, settings: any): string | null {
+  if (invoice?.due_date) return invoice.due_date;
+  if (!invoice?.invoice_date) return null;
+  const d = new Date(invoice.invoice_date);
+  d.setDate(d.getDate() + (Number(settings?.payment_term_days) || 14));
+  return d.toISOString().slice(0, 10);
+}
+
+function invoiceStatusText(status?: string, due?: string | null): string {
+  const s = String(status ?? "").toLowerCase();
+  if (s === "paid" || s === "bezahlt") return "Bezahlt – vielen Dank!";
+  if (s === "storniert" || s === "cancelled") return "Storniert";
+  if (s === "teilbezahlt" || s === "partial") return "Teilweise bezahlt";
+  if (due && new Date(due).getTime() < Date.now() - 86_400_000) return "Überfällig";
+  return "Offen";
+}
+
+/** Status ohne Symbole für die Anzeige */
+function statusText(status?: string): string {
+  return getPortalStatusLabel(status).replace(/^[^\p{L}]+/u, "");
 }
