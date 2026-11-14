@@ -1,0 +1,4 @@
+.land-hint { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; text-align: left; background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; border-radius: 14px; padding: 12px 14px; margin: 0 0 14px; font-size: 14px; line-height: 1.45; }
+.land-hint b { flex-basis: 100%; font-size: 15px; }
+.land-hint span { flex: 1 1 320px; }
+.land-hint .btn { width: auto; }

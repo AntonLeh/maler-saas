@@ -1,4 +1,5 @@
 import { bicError, ibanError } from "../lib/bankCheck";
+import { CountryHint } from "../modules/land/CountryHint";
 import { DE_REGIONS } from "../modules/urlaub/logic";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
@@ -583,6 +584,7 @@ if (
 
         {message && <div className="success-message">{message}</div>}
         {errorMessage && <div className="error-message">{errorMessage}</div>}
+        {settings && <CountryHint settings={settings} />}
 
         <div className="settings-section">
           <h3>Preise &amp; Währung</h3>

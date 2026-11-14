@@ -13,8 +13,8 @@
 .au-field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
 .au-field > span, .au-field label { font-size: 14px; font-weight: 600; color: #334155; text-align: left; }
 .au-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.au-field input, .au-pw input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 16px; background: #fff; color: #0f172a; }
-.au-field input:focus, .au-pw input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18); }
+.au-field input, .au-field select, .au-pw input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 16px; background: #fff; color: #0f172a; }
+.au-field input:focus, .au-field select:focus, .au-pw input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18); }
 .au-pw { position: relative; }
 .au-pw input { padding-right: 48px; }
 .au-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; border: none; background: none; border-radius: 8px; color: #64748b; cursor: pointer; padding: 0; }

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { COUNTRIES, COUNTRY_PRESET } from "../land/logic";
+import type { Country } from "../land/logic";
 import { getAttribution } from "../../lib/attribution";
 import { supabase } from "../../lib/supabase";
 import { LEGAL_VERSIONS } from "../../lib/legalVersions";
@@ -16,6 +18,7 @@ type Props = {
 
 export default function RegisterPage({ onBackToLogin, onOpenAgb, onOpenDatenschutz, onOpenImpressum }: Props) {
   const [companyName, setCompanyName] = useState("");
+  const [country, setCountry] = useState<Country | "">("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -35,6 +38,10 @@ export default function RegisterPage({ onBackToLogin, onOpenAgb, onOpenDatenschu
     const mail = cleanEmail(email);
     if (!companyName.trim() || !firstName.trim() || !lastName.trim() || !mail) {
       setMessage({ text: "Bitte füllen Sie alle Pflichtfelder aus.", tone: "error" });
+      return;
+    }
+    if (!country) {
+      setMessage({ text: "Bitte wählen Sie das Land Ihres Betriebs – davon hängen Währung und Mehrwertsteuer ab.", tone: "error" });
       return;
     }
     const pwProblem = passwordProblem(password, passwordRepeat);
@@ -60,6 +67,8 @@ export default function RegisterPage({ onBackToLogin, onOpenAgb, onOpenDatenschu
           data: {
             signup_type: "company",
             company_name: companyName.trim(),
+            // Land: Währung und Mehrwertsteuer werden danach automatisch passend gesetzt
+            country,
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             phone: phone.trim(),
@@ -133,6 +142,20 @@ export default function RegisterPage({ onBackToLogin, onOpenAgb, onOpenDatenschu
             <label className="au-field" htmlFor="rg-company">
               <span>Firmenname *</span>
               <input id="rg-company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} autoComplete="organization" required autoFocus />
+            </label>
+
+            <label className="au-field" htmlFor="rg-country">
+              <span>Land des Betriebs *</span>
+              <select id="rg-country" value={country} onChange={(e) => setCountry(e.target.value as Country)} required>
+                <option value="" disabled>
+                  Bitte wählen …
+                </option>
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c} ({COUNTRY_PRESET[c].currency}, {COUNTRY_PRESET[c].tax.toLocaleString("de-DE")} % MwSt.)
+                  </option>
+                ))}
+              </select>
             </label>
 
             <div className="au-row">

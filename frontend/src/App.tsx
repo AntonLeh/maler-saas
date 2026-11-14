@@ -39,6 +39,7 @@ import type { PartnerDoc } from "./modules/nachweise/logic";
 import { loadDocs as loadPartnerDocs } from "./modules/nachweise/api";
 import { AbsenceAssignWarning, AbsenceBar, TeamAbsenceCard } from "./modules/urlaub/widgets";
 import { CommunityTile } from "./modules/community/widgets";
+import { CountryHint } from "./modules/land/CountryHint";
 import { hasWebsiteAccess } from "./modules/website/types";
 import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
@@ -6681,6 +6682,7 @@ onReloadOrders={async () => {
 
               {currentPage === "dashboard" && isAdmin && userProfile?.role_id !== 1 && (
                 <>
+                  <CountryHint tenantId={userProfile?.tenant_id} onOpenSettings={() => setCurrentPage("settings")} />
                   <section className="stats-grid stats-grid-5">
                     <button
                       type="button"
