@@ -307,6 +307,7 @@ function Detail({
 }
 
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
+import { CommunityModBadge } from "../community/widgets";
 const CommunityPage = lazy(() => import("../community/CommunityPage"));
 const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
@@ -461,6 +462,7 @@ export default function OwnerDashboard({ onBack }: Props) {
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setView("community")}>
               💬 MalerTreff
+              <CommunityModBadge />
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => void load()}>
               ↻ Aktualisieren

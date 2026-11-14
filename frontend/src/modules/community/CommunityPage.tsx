@@ -99,7 +99,7 @@ export default function CommunityPage({ onBack, isChef = false, onAccountDeleted
               )}
               {access.is_mod && (
                 <button type="button" className={tab === "mod" ? "on" : ""} onClick={() => go("mod")}>
-                  Moderation
+                  Moderation{(access.mod_pending ?? 0) > 0 && <span className="cm-dot">{access.mod_pending}</span>}
                 </button>
               )}
               {access.is_mod && (

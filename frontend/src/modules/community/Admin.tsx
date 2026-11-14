@@ -144,8 +144,12 @@ function ModItem({ it, onDone, onError }: { it: QueueItem; onDone: () => void; o
     <div className={`cm-card cm-mod-item${it.danger ? " danger" : ""}`}>
       <div className="cm-mod-head">
         <b>{TYPE_LABEL[it.type]}</b>
-        {it.report_count > 0 ? <span>{it.report_count} Meldung(en)</span> : <span>vorläufig ausgeblendet</span>}
-        {c?.status && <span className="cm-topic">{STATUS_LABEL[c.status] ?? c.status}</span>}
+        {it.report_count > 0 ? (
+          <span>{it.report_count} Meldung(en)</span>
+        ) : (
+          <span>{c?.hidden_reason === "ki" ? "von der KI zurückgehalten" : "vorläufig ausgeblendet"}</span>
+        )}
+        {c?.status && (it.report_count > 0 || c.status !== "pruefung") && <span className="cm-topic">{STATUS_LABEL[c.status] ?? c.status}</span>}
         {c?.topic && <span className="cm-topic">{topicLabel(c.topic)}</span>}
       </div>
       {it.danger && (

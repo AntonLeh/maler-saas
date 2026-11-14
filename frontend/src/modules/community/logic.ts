@@ -43,6 +43,8 @@ export type Access = {
   external?: boolean;
   signup_open?: boolean;
   verify_pending?: number;
+  /** offene Moderationsfälle (Meldungen, zurückgehaltene Inhalte, Widersprüche) */
+  mod_pending?: number;
 };
 
 export type Author = { id: number; name: string; kind: MemberKind; company: string | null; region: string | null; is_mod: boolean };

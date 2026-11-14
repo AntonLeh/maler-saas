@@ -16,7 +16,7 @@ export function CommunityTile({ onOpen, variant = "button", className }: { onOpe
     };
   }, []);
   if (!a?.enabled) return null;
-  const badge = (a.unread ?? 0) + (a.staff_pending ?? 0);
+  const badge = (a.unread ?? 0) + (a.staff_pending ?? 0) + (a.mod_pending ?? 0) + (a.verify_pending ?? 0);
   if (variant === "card") {
     return (
       <button type="button" className={`cm-tile-card ${className ?? ""}`} onClick={onOpen}>
@@ -38,4 +38,17 @@ export function CommunityTile({ onOpen, variant = "button", className }: { onOpe
       {badge > 0 && <span className="cm-tile-badge">{badge}</span>}
     </button>
   );
+}
+
+/** Zahl offener Moderationsfälle und Freigaben (für den Knopf im Owner-Dashboard) */
+export function CommunityModBadge() {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let cancel = false;
+    void api.loadAccess().then((x) => !cancel && setN((x?.mod_pending ?? 0) + (x?.verify_pending ?? 0)));
+    return () => {
+      cancel = true;
+    };
+  }, []);
+  return n > 0 ? <span className="cm-tile-badge" title="Offene Fälle in der Moderation">{n}</span> : null;
 }
