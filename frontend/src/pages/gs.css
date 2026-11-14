@@ -1,0 +1,69 @@
+/* Einstellungen: Reiter, Felder, Speichern-Leiste */
+.gs-root .card { max-width: 980px; margin: 0 auto; text-align: left; }
+.gs-root .page-topbar .btn { width: auto; }
+.gs-tabs { display: flex; gap: 2px; border-bottom: 1px solid #e2e8f0; margin: 8px 0 18px; overflow-x: auto; scrollbar-width: none; }
+.gs-tabs button { all: unset; cursor: pointer; padding: 11px 14px; font-weight: 700; font-size: 14.5px; color: #64748b; border-bottom: 3px solid transparent; white-space: nowrap; }
+.gs-tabs button.on { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+.gs-tabs button:hover:not(.on) { color: #0f172a; }
+.gs-section h3 { text-align: left; font-size: 16px; margin: 22px 0 10px; color: #0f172a; }
+.gs-section h3:first-child { margin-top: 4px; }
+.gs-lead { text-align: left; color: #475569; font-size: 14.5px; margin: 0 0 14px; line-height: 1.5; }
+.gs-muted { color: #94a3b8; font-size: 13.5px; text-align: left; }
+.gs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; }
+.gs-field { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; min-width: 0; text-align: left; }
+.gs-wide { grid-column: 1 / -1; }
+.gs-field > label { font-size: 13.5px; font-weight: 700; color: #334155; text-align: left; }
+.gs-field input:not([type="checkbox"]):not([type="file"]), .gs-field select, .gs-field textarea, .gs-pos input:not([type="checkbox"]), .gs-pos select {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; font-size: 15px; background: #fff; color: #0f172a;
+}
+.gs-field textarea { resize: vertical; line-height: 1.5; font-family: inherit; }
+.gs-field input:focus, .gs-field select:focus, .gs-field textarea:focus, .gs-pos input:focus, .gs-pos select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16); }
+.gs-field input:disabled { background: #f1f5f9; color: #94a3b8; }
+.gs-field small { color: #64748b; font-size: 12.5px; line-height: 1.45; text-align: left; }
+.gs-field small.gs-err { color: #b91c1c; font-weight: 600; }
+.gs-check { display: flex !important; gap: 10px; align-items: flex-start; font-size: 14.5px !important; font-weight: 600 !important; cursor: pointer; }
+.gs-check input { width: 18px; height: 18px; margin-top: 1px; flex: none; }
+.gs-check.small { font-size: 13px !important; font-weight: 500 !important; align-items: center; white-space: nowrap; }
+.gs-check.small input { width: 16px; height: 16px; margin: 0; }
+.gs-advanced { margin: 10px 0 4px; text-align: left; }
+.gs-advanced summary { cursor: pointer; color: #475569; font-size: 13.5px; font-weight: 600; }
+.gs-logo { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.gs-logo img { max-width: 200px; max-height: 80px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px; background: #fff; }
+.gs-logo-empty { color: #94a3b8; font-size: 13.5px; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 18px 22px; }
+.gs-file { width: auto !important; cursor: pointer; }
+/* Zusatzpositionen */
+.gs-positions { display: flex; flex-direction: column; gap: 8px; }
+.gs-pos { display: grid; grid-template-columns: minmax(0, 1fr) 110px 130px auto auto; gap: 8px; align-items: center; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 10px; background: #fff; }
+.gs-pos.off { background: #f8fafc; opacity: 0.75; }
+.gs-pos-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gs-pos-main input:first-child { font-weight: 700; }
+.gs-pos-main input:last-child { font-size: 13.5px !important; padding: 7px 10px !important; color: #475569 !important; }
+.gs-price { display: flex; align-items: center; gap: 6px; }
+.gs-price span { color: #64748b; font-size: 13.5px; }
+.gs-del { all: unset; cursor: pointer; padding: 6px 8px; border-radius: 8px; font-size: 16px; }
+.gs-del:hover { background: #fef2f2; }
+.gs-add { align-self: flex-start; width: auto !important; }
+/* Angebotstexte */
+.gs-texts { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.gs-preview { position: sticky; top: 12px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; background: #f8fafc; font-size: 13px; color: #334155; text-align: left; }
+.gs-preview small { display: block; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; margin-bottom: 6px; }
+.gs-preview b { display: block; margin-bottom: 8px; }
+.gs-preview p { white-space: pre-wrap; margin: 8px 0; line-height: 1.45; }
+.gs-preview i { color: #94a3b8; }
+.gs-preview-pos { display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 6px 0; color: #64748b; }
+.gs-preview-terms { font-size: 12px; color: #64748b; }
+/* Speichern-Leiste */
+.gs-savebar { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px -24px -24px; padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.96); border-top: 1px solid #e2e8f0; border-radius: 0 0 20px 20px; backdrop-filter: blur(6px); }
+.gs-savebar span { color: #64748b; font-size: 13.5px; }
+.gs-savebar.dirty { background: #fffbeb; border-top-color: #fcd34d; }
+.gs-savebar.dirty span { color: #92400e; font-weight: 700; }
+.gs-savebar .btn { width: auto; }
+@media (max-width: 720px) {
+  .gs-grid { grid-template-columns: 1fr; }
+  .gs-texts { grid-template-columns: 1fr; }
+  .gs-preview { position: static; }
+  .gs-pos { grid-template-columns: 1fr 1fr; }
+  .gs-pos-main { grid-column: 1 / -1; }
+  .gs-savebar { margin: 18px -16px -16px; padding: 10px 16px; }
+}

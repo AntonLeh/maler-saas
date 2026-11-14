@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { showConfirm } from "../lib/dialogs";
 import DataExportSection from "../modules/export/DataExportSection";
+import "./gs.css";
 
 type CompanySettings = {
   id: number;
@@ -126,6 +127,9 @@ GlobalSettingsProps) {
   const [additionalPositions, setAdditionalPositions] = useState<AdditionalQuotePosition[]>([]);
   const [loadingAdditionalPositions, setLoadingAdditionalPositions] = useState(false);
   const [additionalPositionsMessage, setAdditionalPositionsMessage] = useState<string | null>(null);
+  const [deletedPositionIds, setDeletedPositionIds] = useState<number[]>([]);
+  const [tab, setTab] = useState<"firma" | "steuer" | "preise" | "texte" | "kalender" | "daten">("firma");
+  const [dirty, setDirty] = useState(false);
 
   const loadSettings = async () => {
     try {
@@ -285,49 +289,64 @@ const loadAdditionalPositions = async () => {
   }
 };
 
-const updateAdditionalPositionValue = (
-  id: number,
-  field: "unit_price" | "is_active",
-  value: string | boolean
-) => {
-  setAdditionalPositions((prev) =>
-    prev.map((position) =>
-      position.id === id
-        ? {
-            ...position,
-            [field]: value,
-          }
-        : position
-    )
-  );
+const editPosition = (id: number, patch: Partial<AdditionalQuotePosition>) => {
+  setAdditionalPositions((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  setDirty(true);
 };
 
-const saveAdditionalPositions = async () => {
+const addPosition = () => {
+  setAdditionalPositions((prev) => [...prev, { id: Math.min(0, ...prev.map((x) => x.id)) - 1, tenant_id: tenantId, title: "", description: "", unit: "pauschal", unit_price: 0, is_active: true, created_at: "" }]);
+  setDirty(true);
+};
+
+const removePosition = async (p: AdditionalQuotePosition) => {
+  if (!(await showConfirm(`Zusatzposition „${p.title || "ohne Namen"}“ löschen? Bestehende Angebote bleiben unverändert.`, { danger: true, confirmLabel: "Löschen" }))) return;
+  setAdditionalPositions((prev) => prev.filter((x) => x.id !== p.id));
+  if (p.id > 0) setDeletedPositionIds((prev) => [...prev, p.id]);
+  setDirty(true);
+};
+
+/** Zusatzpositionen speichern: ändern, neu anlegen, löschen */
+const savePositions = async (): Promise<boolean> => {
+  const missing = additionalPositions.find((p) => !p.title.trim());
+  if (missing) {
+    setTab("preise");
+    setErrorMessage("Bitte jeder Zusatzposition eine Bezeichnung geben (oder die leere Position löschen).");
+    return false;
+  }
   try {
     setSaving(true);
-    setErrorMessage(null);
-    setAdditionalPositionsMessage(null);
-
-    for (const position of additionalPositions) {
-      const { error } = await supabase
-        .from("additional_quote_positions")
-        .update({
-          unit_price: Number(position.unit_price) || 0,
-          is_active: position.is_active,
-        })
-        .eq("id", position.id)
-        .eq("tenant_id", tenantId);
-
+    for (const id of deletedPositionIds) {
+      const { error } = await supabase.from("additional_quote_positions").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     }
-
-    setAdditionalPositionsMessage("Zusatzpositionen wurden gespeichert.");
+    for (const p of additionalPositions) {
+      const row = {
+        title: p.title.trim(),
+        description: (p.description ?? "").trim() || null,
+        unit: p.unit || "pauschal",
+        unit_price: Number(String(p.unit_price).replace(",", ".")) || 0,
+        is_active: p.is_active,
+      };
+      const { error } =
+        p.id > 0
+          ? await supabase.from("additional_quote_positions").update(row).eq("id", p.id).eq("tenant_id", tenantId)
+          : await supabase.from("additional_quote_positions").insert({ ...row, tenant_id: tenantId });
+      if (error) throw error;
+    }
+    setDeletedPositionIds([]);
     await loadAdditionalPositions();
-  } catch (error: any) {
+    return true;
+  } catch (err) {
+    const error = err as { message?: string };
     console.error("Fehler beim Speichern der Zusatzpositionen:", error);
-    setAdditionalPositionsMessage(
-      error?.message || "Zusatzpositionen konnten nicht gespeichert werden."
+    setTab("preise");
+    setErrorMessage(
+      /row-level security|permission/i.test(error?.message ?? "")
+        ? "Zusatzpositionen konnten nicht gespeichert werden – dafür fehlt noch das Datenbank-Update (SQL „Zusatzpositionen“)."
+        : error?.message || "Zusatzpositionen konnten nicht gespeichert werden."
     );
+    return false;
   } finally {
     setSaving(false);
   }
@@ -375,7 +394,7 @@ const handleLogoUpload = async (file: File) => {
   }
 };
 
-    const handleSave = async () => {
+    const handleSave = async (): Promise<boolean> => {
   try {
     const {
       data: { session },
@@ -389,7 +408,7 @@ const handleLogoUpload = async (file: File) => {
       const field = document.getElementById(ibanError(companyIban) ? "companyIban" : "companyBic");
       field?.scrollIntoView({ behavior: "smooth", block: "center" });
       field?.focus();
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -409,7 +428,7 @@ const handleLogoUpload = async (file: File) => {
   paymentTermDaysValue > 365
 ) {
   setErrorMessage("Das Zahlungsziel muss zwischen 1 und 365 Tagen liegen.");
-  return;
+  return false;
 }
 
 const partialPaymentTermDaysValue = Number(partialPaymentTermDays);
@@ -422,38 +441,38 @@ if (
   setErrorMessage(
     "Das Zahlungsziel für Abschlagsrechnungen muss zwischen 1 und 365 Tagen liegen."
   );
-  return;
+  return false;
 }
 
     if (Number.isNaN(hourlyRateValue) || hourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen bisherigen Standard-Stundensatz eingeben.");
-      return;
+      return false;
     }
 
     if (Number.isNaN(specialHourlyRateValue) || specialHourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen Sonderleistungs-Stundensatz eingeben.");
-      return;
+      return false;
     }
 
     if (Number.isNaN(internalHourlyRateValue) || internalHourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen internen Standard-Stundensatz eingeben.");
-      return;
+      return false;
     }
 
     if (Number.isNaN(customerHourlyRateValue) || customerHourlyRateValue < 0) {
       setErrorMessage("Bitte einen gültigen Kunden-Stundensatz eingeben.");
-      return;
+      return false;
     }
 
     if (Number.isNaN(taxRateValue) || taxRateValue < 0) {
       setErrorMessage("Bitte einen gültigen Standard-Steuersatz eingeben.");
-      return;
+      return false;
     }
 
     const laborShareValue = Number(String(laborShare).replace(",", "."));
     if (Number.isNaN(laborShareValue) || laborShareValue < 0 || laborShareValue > 100) {
       setErrorMessage("Der Lohnanteil muss zwischen 0 und 100 % liegen.");
-      return;
+      return false;
     }
 
     const payload = {
@@ -543,15 +562,46 @@ if (
     setQuoteFooterText(savedSettings.quote_footer_text || "");
     setQuoteTermsText(savedSettings.quote_terms_text || "");
     setMessage("Einstellungen wurden erfolgreich gespeichert.");
+    return true;
   } catch (error: any) {
     console.error("Fehler beim Speichern der Einstellungen:", error);
     setErrorMessage(
       error?.message || "Die Einstellungen konnten nicht gespeichert werden."
     );
+    return false;
   } finally {
     setSaving(false);
   }
 };
+
+  // ---------- Reiter, ein Speichern-Knopf, Warnung bei ungespeicherten Änderungen ----------
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  const saveAll = async () => {
+    if (ibanError(companyIban) || bicError(companyBic)) {
+      setTab("steuer");
+      setMessage(null);
+      setErrorMessage(ibanError(companyIban) || bicError(companyBic));
+      return;
+    }
+    const ok = await handleSave();
+    if (!ok) return;
+    const posOk = await savePositions();
+    if (posOk) {
+      setDirty(false);
+      setMessage("Alle Einstellungen wurden gespeichert.");
+    }
+  };
+
+  const leave = async () => {
+    if (dirty && !(await showConfirm("Sie haben ungespeicherte Änderungen. Seite trotzdem verlassen?", { confirmLabel: "Verlassen", cancelLabel: "Zurück" }))) return;
+    onBack();
+  };
 
   if (loading) {
     return (
@@ -564,597 +614,340 @@ if (
     );
   }
 
+  const preset = COUNTRY_PRESETS[country];
+  const TABS: { id: SettingsTab; label: string }[] = [
+    { id: "firma", label: "Firma" },
+    { id: "steuer", label: "Steuer & Zahlung" },
+    { id: "preise", label: "Preise & Kalkulation" },
+    { id: "texte", label: "Angebotstexte" },
+    { id: "kalender", label: "Kalender & Urlaub" },
+    { id: "daten", label: "Daten" },
+  ];
+
   return (
-    <section className="single-page-section">
+    <section className="single-page-section gs-root">
       <div className="card">
         <div className="page-topbar">
-  <div>
-    <h2>Einstellungen</h2>
-    <p>Zentrale Vorgaben für Preise, Währung und Standardwerte.</p>
-  </div>
-
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={onBack}
-  >
-    Zurück zum Dashboard
-  </button>
-</div>
-
-        {message && <div className="success-message">{message}</div>}
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
-        {settings && <CountryHint settings={settings} />}
-
-        <div className="settings-section">
-          <h3>Preise &amp; Währung</h3>
-
-          <div className="settings-grid">
-            <div className="form-group">
-              <label htmlFor="currency">Währungscode</label>
-              <input
-                id="currency"
-                type="text"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                placeholder="z. B. EUR"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="currencySymbol">Währungssymbol</label>
-              <input
-                id="currencySymbol"
-                type="text"
-                value={currencySymbol}
-                onChange={(e) => setCurrencySymbol(e.target.value)}
-                placeholder="z. B. €"
-              />
-            </div>
-
-            <div className="form-group">
-  <label htmlFor="defaultHourlyRate">Bisheriger Standard-Stundensatz</label>
-  <input
-    id="defaultHourlyRate"
-    type="number"
-    step="0.01"
-    min="0"
-    value={defaultHourlyRate}
-    onChange={(e) => setDefaultHourlyRate(e.target.value)}
-    placeholder="0.00"
-  />
-</div>
-
-<div className="form-group">
-  <label htmlFor="defaultInternalHourlyRate">
-    Interner Standard-Stundensatz
-  </label>
-  <input
-    id="defaultInternalHourlyRate"
-    type="number"
-    step="0.01"
-    min="0"
-    value={defaultInternalHourlyRate}
-    onChange={(e) => setDefaultInternalHourlyRate(e.target.value)}
-    placeholder="0.00"
-  />
-</div>
-
-<div className="form-group">
-  <label htmlFor="defaultCustomerHourlyRate">
-    Kunden-Stundensatz
-  </label>
-  <input
-    id="defaultCustomerHourlyRate"
-    type="number"
-    step="0.01"
-    min="0"
-    value={defaultCustomerHourlyRate}
-    onChange={(e) => setDefaultCustomerHourlyRate(e.target.value)}
-    placeholder="0.00"
-  />
-</div>
-
-<div className="form-group">
-  <label htmlFor="defaultSpecialHourlyRate">
-    Sonderleistungs-Stundensatz
-  </label>
-  <input
-    id="defaultSpecialHourlyRate"
-    type="number"
-    step="0.01"
-    min="0"
-    value={defaultSpecialHourlyRate}
-    onChange={(e) => setDefaultSpecialHourlyRate(e.target.value)}
-    placeholder="0.00"
-  />
-</div>
-
-<div className="form-group">
-  <label htmlFor="companyCountry">Firmenland</label>
-  <select
-    id="companyCountry"
-    value={country}
-    onChange={async (e) => {
-      const next = e.target.value;
-      setCountry(next);
-      const preset = COUNTRY_PRESETS[next];
-      if (
-        preset &&
-        (await showConfirm(`Steuersatz und Währung für ${next} übernehmen (${preset.tax} %, ${preset.symbol})?`, {
-          confirmLabel: "Ja, übernehmen",
-          cancelLabel: "Nein",
-        }))
-      ) {
-        if (!smallBusiness) setTaxRateDefault(String(preset.tax));
-        setCurrency(preset.currency);
-        setCurrencySymbol(preset.symbol);
-      }
-    }}
-  >
-    <option value="Deutschland">Deutschland</option>
-    <option value="Österreich">Österreich</option>
-    <option value="Schweiz">Schweiz</option>
-  </select>
-  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-    Danach richten sich die Pflichthinweise auf den Rechnungen.
-  </small>
-</div>
-
-{country === "Deutschland" && (
-  <div className="form-group">
-    <label htmlFor="holidayRegion">Bundesland (für Feiertage)</label>
-    <select id="holidayRegion" value={holidayRegion} onChange={(e) => setHolidayRegion(e.target.value)} disabled={!!settings && !("holiday_region" in settings)}>
-      <option value="">Bitte wählen – sonst nur bundesweite Feiertage</option>
-      {DE_REGIONS.map((r) => (
-        <option key={r.code} value={r.code}>
-          {r.label}
-        </option>
-      ))}
-    </select>
-    <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-      {settings && !("holiday_region" in settings)
-        ? "Dafür fehlt noch das Datenbank-Update (SQL „Urlaub“)."
-        : "Feiertage zählen nicht als Urlaubs- oder Arbeitstage (Urlaub & Abwesenheiten, Soll-Stunden)."}
-    </small>
-  </div>
-)}
-
-<div className="form-group">
-  <label htmlFor="laborShare">Lohnanteil (%)</label>
-  <input
-    id="laborShare"
-    type="number"
-    step="1"
-    min="0"
-    max="100"
-    value={laborShare}
-    onChange={(e) => setLaborShare(e.target.value)}
-    placeholder="70"
-  />
-  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-    Anteil der Arbeitskosten an Ihren Preisen. Damit schlägt MalerSaaS die geplanten Stunden eines Auftrags aus dem Angebot vor.
-    {country === "Deutschland" && " Auf Rechnungen an Privatkunden wird er außerdem für den Steuerabzug nach § 35a EStG ausgewiesen (bei jeder Rechnung anpassbar)."}
-  </small>
-</div>
-
-<div className="form-group">
-  <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-    <input
-      type="checkbox"
-      checked={smallBusiness}
-      onChange={(e) => {
-        const on = e.target.checked;
-        setSmallBusiness(on);
-        setTaxRateDefault(on ? "0" : String(COUNTRY_PRESETS[country]?.tax ?? 19));
-      }}
-    />
-    {country === "Schweiz" ? "Nicht MWST-pflichtig (keine Mehrwertsteuer)" : "Kleinunternehmer (keine Umsatzsteuer)"}
-  </label>
-  <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-    {country === "Österreich"
-      ? "Kleinunternehmerregelung nach § 6 Abs. 1 Z 27 UStG (Umsatz bis 55.000 € im Jahr)."
-      : country === "Schweiz"
-      ? "Für Betriebe unter 100.000 CHF Jahresumsatz, die nicht im MWST-Register eingetragen sind."
-      : "Kleinunternehmerregelung nach § 19 UStG (Vorjahr bis 25.000 €, laufendes Jahr bis 100.000 €)."}{" "}
-    Angebote und Rechnungen werden dann ohne Steuer erstellt, die Rechnung erhält den passenden Pflichthinweis. Bitte im Zweifel mit dem
-    Steuerberater klären.
-  </small>
-</div>
-
-<div className="form-group">
-  <label htmlFor="taxRateDefault">Standard-MwSt (%)</label>
-  <input
-    id="taxRateDefault"
-    type="number"
-    step="0.01"
-    min="0"
-    value={smallBusiness ? "0" : taxRateDefault}
-    disabled={smallBusiness}
-    onChange={(e) => setTaxRateDefault(e.target.value)}
-    placeholder="19"
-  />
-</div>
-<div className="form-group">
-  <label htmlFor="paymentTermDays">Zahlungsziel (Tage)</label>
-  <input
-    id="paymentTermDays"
-    type="number"
-    step="1"
-    min="1"
-    max="365"
-    value={paymentTermDays}
-    onChange={(e) => setPaymentTermDays(e.target.value)}
-    placeholder="14"
-  />
-</div>
-
-<div className="form-group">
-  <label htmlFor="partialPaymentTermDays">
-    Zahlungsziel Abschlagsrechnungen (Tage)
-  </label>
-  <input
-    id="partialPaymentTermDays"
-    type="number"
-    step="1"
-    min="1"
-    max="365"
-    value={partialPaymentTermDays}
-    onChange={(e) => setPartialPaymentTermDays(e.target.value)}
-    placeholder="14"
-  />
-</div>
-
+          <div>
+            <h2>Einstellungen</h2>
+            <p>Firmendaten, Steuer, Preise und Vorgaben für Angebote und Rechnungen.</p>
           </div>
+          <button type="button" className="btn btn-secondary" onClick={leave}>
+            Zurück zum Dashboard
+          </button>
+        </div>
 
-          <div className="settings-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Speichert..." : "Einstellungen speichern"}
+        {settings && <CountryHint settings={settings} />}
+        {message && !dirty && <div className="success-message">{message}</div>}
+        {errorMessage && <div className="error-message">{errorMessage}</div>}
+
+        <nav className="gs-tabs" aria-label="Bereiche der Einstellungen">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="gs-body" onChangeCapture={() => setDirty(true)}>
+          {tab === "firma" && (
+            <div className="gs-section">
+              <p className="gs-lead">Diese Angaben stehen auf Ihren Angeboten und Rechnungen.</p>
+              <div className="gs-grid">
+                <Field id="companyName" label="Firmenname" wide>
+                  <input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Malerbetrieb Muster GmbH" />
+                </Field>
+                <Field id="companyStreet" label="Straße und Hausnummer" wide>
+                  <input id="companyStreet" value={companyStreet} onChange={(e) => setCompanyStreet(e.target.value)} />
+                </Field>
+                <Field id="companyZip" label="PLZ">
+                  <input id="companyZip" value={companyZip} onChange={(e) => setCompanyZip(e.target.value)} inputMode="numeric" />
+                </Field>
+                <Field id="companyCity" label="Ort">
+                  <input id="companyCity" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} />
+                </Field>
+                <Field id="companyPhone" label="Telefon">
+                  <input id="companyPhone" type="tel" value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
+                </Field>
+                <Field id="companyEmail" label="E-Mail">
+                  <input id="companyEmail" type="email" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
+                </Field>
+                <Field id="companyWebsite" label="Website" wide>
+                  <input id="companyWebsite" value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="www.ihre-firma.de" />
+                </Field>
+                <Field id="companyLogo" label="Firmenlogo" hint="PNG, JPG oder WebP. Erscheint oben auf Angeboten und Rechnungen." wide>
+                  <div className="gs-logo">
+                    {companyLogoUrl ? <img src={companyLogoUrl} alt="Firmenlogo" /> : <span className="gs-logo-empty">Noch kein Logo</span>}
+                    <label className="btn btn-secondary gs-file">
+                      {uploadingLogo ? "Wird hochgeladen …" : companyLogoUrl ? "Logo ändern" : "Logo hochladen"}
+                      <input
+                        id="companyLogo"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        hidden
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setDirty(true);
+                            void handleLogoUpload(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {tab === "steuer" && (
+            <div className="gs-section">
+              <h3>Land und Mehrwertsteuer</h3>
+              <div className="gs-grid">
+                <Field id="companyCountry" label="Land des Betriebs" hint="Danach richten sich Währung, Steuersatz und die Pflichthinweise auf Rechnungen.">
+                  <select
+                    id="companyCountry"
+                    value={country}
+                    onChange={async (e) => {
+                      const next = e.target.value;
+                      setCountry(next);
+                      const p = COUNTRY_PRESETS[next];
+                      if (
+                        p &&
+                        (await showConfirm(`Steuersatz und Währung für ${next} übernehmen (${p.tax} %, ${p.symbol})?`, {
+                          confirmLabel: "Ja, übernehmen",
+                          cancelLabel: "Nein",
+                        }))
+                      ) {
+                        if (!smallBusiness) setTaxRateDefault(String(p.tax));
+                        setCurrency(p.currency);
+                        setCurrencySymbol(p.symbol);
+                      }
+                    }}
+                  >
+                    <option value="Deutschland">Deutschland</option>
+                    <option value="Österreich">Österreich</option>
+                    <option value="Schweiz">Schweiz</option>
+                  </select>
+                </Field>
+                <Field id="taxRateDefault" label="Mehrwertsteuer (%)" hint={preset ? `Üblich in ${country}: ${preset.tax.toLocaleString("de-DE")} %` : undefined}>
+                  <input
+                    id="taxRateDefault"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={smallBusiness ? "0" : taxRateDefault}
+                    disabled={smallBusiness}
+                    onChange={(e) => setTaxRateDefault(e.target.value)}
+                  />
+                </Field>
+                <div className="gs-field gs-wide">
+                  <label className="gs-check">
+                    <input
+                      type="checkbox"
+                      checked={smallBusiness}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setSmallBusiness(on);
+                        setTaxRateDefault(on ? "0" : String(COUNTRY_PRESETS[country]?.tax ?? 19));
+                      }}
+                    />
+                    {country === "Schweiz" ? "Nicht MWST-pflichtig (keine Mehrwertsteuer)" : "Kleinunternehmer (keine Umsatzsteuer)"}
+                  </label>
+                  <small>
+                    {country === "Österreich"
+                      ? "Kleinunternehmerregelung nach § 6 Abs. 1 Z 27 UStG (Umsatz bis 55.000 € im Jahr)."
+                      : country === "Schweiz"
+                      ? "Für Betriebe unter 100.000 CHF Jahresumsatz, die nicht im MWST-Register eingetragen sind."
+                      : "Kleinunternehmerregelung nach § 19 UStG (Vorjahr bis 25.000 €, laufendes Jahr bis 100.000 €)."}{" "}
+                    Angebote und Rechnungen sind dann ohne Steuer und erhalten den Pflichthinweis. Im Zweifel mit dem Steuerberater klären.
+                  </small>
+                </div>
+                <Field id="companyTaxNumber" label="Steuernummer">
+                  <input id="companyTaxNumber" value={companyTaxNumber} onChange={(e) => setCompanyTaxNumber(e.target.value)} />
+                </Field>
+                <Field id="companyVatId" label={country === "Schweiz" ? "MWST-Nummer (UID)" : "USt-IdNr."}>
+                  <input id="companyVatId" value={companyVatId} onChange={(e) => setCompanyVatId(e.target.value)} placeholder={country === "Schweiz" ? "CHE-123.456.789 MWST" : country === "Österreich" ? "ATU12345678" : "DE123456789"} />
+                </Field>
+              </div>
+              <details className="gs-advanced">
+                <summary>Erweitert: Währung von Hand ändern</summary>
+                <div className="gs-grid">
+                  <Field id="currency" label="Währungscode">
+                    <input id="currency" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="EUR" />
+                  </Field>
+                  <Field id="currencySymbol" label="Währungssymbol">
+                    <input id="currencySymbol" value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} placeholder="€" />
+                  </Field>
+                </div>
+              </details>
+
+              <h3>Bankverbindung</h3>
+              <div className="gs-grid">
+                <Field id="companyBankName" label="Bank">
+                  <input id="companyBankName" value={companyBankName} onChange={(e) => setCompanyBankName(e.target.value)} />
+                </Field>
+                <Field id="companyIban" label="IBAN" error={ibanError(companyIban)}>
+                  <input id="companyIban" value={companyIban} onChange={(e) => setCompanyIban(e.target.value)} placeholder="DE00 0000 0000 0000 0000 00" />
+                </Field>
+                <Field id="companyBic" label="BIC" error={bicError(companyBic)}>
+                  <input id="companyBic" value={companyBic} onChange={(e) => setCompanyBic(e.target.value)} />
+                </Field>
+              </div>
+
+              <h3>Zahlungsziele</h3>
+              <div className="gs-grid">
+                <Field id="paymentTermDays" label="Rechnungen (Tage)">
+                  <input id="paymentTermDays" type="number" step="1" min="1" max="365" value={paymentTermDays} onChange={(e) => setPaymentTermDays(e.target.value)} />
+                </Field>
+                <Field id="partialPaymentTermDays" label="Abschlagsrechnungen (Tage)">
+                  <input id="partialPaymentTermDays" type="number" step="1" min="1" max="365" value={partialPaymentTermDays} onChange={(e) => setPartialPaymentTermDays(e.target.value)} />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {tab === "preise" && (
+            <div className="gs-section">
+              <h3>Stundensätze und Kalkulation</h3>
+              <div className="gs-grid">
+                <Field id="defaultCustomerHourlyRate" label={`Kunden-Stundensatz (${currencySymbol})`} hint="Was Sie dem Kunden pro Stunde berechnen (Vorschlag in Angeboten und bei Regiearbeiten).">
+                  <input id="defaultCustomerHourlyRate" type="number" step="0.01" min="0" value={defaultCustomerHourlyRate} onChange={(e) => setDefaultCustomerHourlyRate(e.target.value)} />
+                </Field>
+                <Field id="defaultInternalHourlyRate" label={`Interner Stundensatz (${currencySymbol})`} hint="Was Sie eine Arbeitsstunde intern kostet – für Auswertungen und Nachkalkulation.">
+                  <input id="defaultInternalHourlyRate" type="number" step="0.01" min="0" value={defaultInternalHourlyRate} onChange={(e) => setDefaultInternalHourlyRate(e.target.value)} />
+                </Field>
+                <Field
+                  id="laborShare"
+                  label="Lohnanteil (%)"
+                  hint={`Anteil der Arbeitskosten an Ihren Preisen. Daraus schlägt MalerSaaS die geplanten Stunden eines Auftrags vor.${country === "Deutschland" ? " Auf Rechnungen an Privatkunden wird er für den Steuerabzug nach § 35a EStG ausgewiesen." : ""}`}
+                >
+                  <input id="laborShare" type="number" step="1" min="0" max="100" value={laborShare} onChange={(e) => setLaborShare(e.target.value)} />
+                </Field>
+              </div>
+
+              <h3>Zusatzpositionen</h3>
+              <p className="gs-lead">Fertige Positionen, die Sie im Angebot mit einem Klick hinzufügen – z. B. Anfahrt, Endreinigung, Sondermüll.</p>
+              {loadingAdditionalPositions && <p className="gs-muted">Lädt …</p>}
+              {additionalPositionsMessage && <p className="gs-muted">{additionalPositionsMessage}</p>}
+              <div className="gs-positions">
+                {additionalPositions.map((p) => (
+                  <div key={p.id} className={`gs-pos${p.is_active ? "" : " off"}`}>
+                    <div className="gs-pos-main">
+                      <input value={p.title} onChange={(e) => editPosition(p.id, { title: e.target.value })} aria-label="Bezeichnung" placeholder="Bezeichnung" />
+                      <input value={p.description ?? ""} onChange={(e) => editPosition(p.id, { description: e.target.value })} aria-label="Beschreibung" placeholder="Beschreibung (freiwillig)" />
+                    </div>
+                    <select value={p.unit} onChange={(e) => editPosition(p.id, { unit: e.target.value })} aria-label="Einheit">
+                      {unitOptions(p.unit).map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="gs-price">
+                      <input type="number" step="0.01" min="0" value={p.unit_price} onChange={(e) => editPosition(p.id, { unit_price: e.target.value as unknown as number })} aria-label="Preis" />
+                      <span>{currencySymbol}</span>
+                    </label>
+                    <label className="gs-check small">
+                      <input type="checkbox" checked={p.is_active} onChange={(e) => editPosition(p.id, { is_active: e.target.checked })} />
+                      aktiv
+                    </label>
+                    <button type="button" className="gs-del" onClick={() => removePosition(p)} aria-label={`${p.title || "Position"} löschen`} title="Löschen">
+                      🗑
+                    </button>
+                  </div>
+                ))}
+                {additionalPositions.length === 0 && !loadingAdditionalPositions && <p className="gs-muted">Noch keine Zusatzpositionen.</p>}
+                <button type="button" className="btn btn-secondary gs-add" onClick={addPosition}>
+                  + Neue Position
+                </button>
+              </div>
+            </div>
+          )}
+
+          {tab === "texte" && (
+            <div className="gs-section">
+              <p className="gs-lead">Diese Texte erscheinen auf jedem neuen Angebot. Im einzelnen Angebot können Sie sie weiterhin anpassen.</p>
+              <div className="gs-texts">
+                <div>
+                  <Field id="quoteIntroText" label="Einleitung (über den Positionen)" wide>
+                    <textarea id="quoteIntroText" rows={4} value={quoteIntroText} onChange={(e) => setQuoteIntroText(e.target.value)} placeholder="Vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen folgende Leistungen an:" />
+                  </Field>
+                  <Field id="quoteFooterText" label="Schluss (unter den Positionen)" wide>
+                    <textarea id="quoteFooterText" rows={4} value={quoteFooterText} onChange={(e) => setQuoteFooterText(e.target.value)} placeholder="Wir freuen uns auf Ihren Auftrag." />
+                  </Field>
+                  <Field id="quoteTermsText" label="Bedingungen / Hinweise" wide>
+                    <textarea id="quoteTermsText" rows={4} value={quoteTermsText} onChange={(e) => setQuoteTermsText(e.target.value)} placeholder="Das Angebot ist 30 Tage gültig." />
+                  </Field>
+                </div>
+                <aside className="gs-preview" aria-label="Vorschau">
+                  <small>Vorschau</small>
+                  <b>Angebot Nr. 2026-001</b>
+                  <p>{quoteIntroText || <i>Einleitung …</i>}</p>
+                  <div className="gs-preview-pos">
+                    <span>1 · Wände streichen</span>
+                    <span>…</span>
+                  </div>
+                  <p>{quoteFooterText || <i>Schluss …</i>}</p>
+                  {quoteTermsText && <p className="gs-preview-terms">{quoteTermsText}</p>}
+                </aside>
+              </div>
+            </div>
+          )}
+
+          {tab === "kalender" && (
+            <div className="gs-section">
+              {country === "Deutschland" ? (
+                <div className="gs-grid">
+                  <Field
+                    id="holidayRegion"
+                    label="Bundesland (für Feiertage)"
+                    hint={settings && !("holiday_region" in settings) ? "Dafür fehlt noch das Datenbank-Update (SQL „Urlaub“)." : "Feiertage zählen nicht als Urlaubs- oder Arbeitstage (Urlaub & Abwesenheiten, Soll-Stunden)."}
+                    wide
+                  >
+                    <select id="holidayRegion" value={holidayRegion} onChange={(e) => setHolidayRegion(e.target.value)} disabled={!!settings && !("holiday_region" in settings)}>
+                      <option value="">Bitte wählen – sonst nur bundesweite Feiertage</option>
+                      {DE_REGIONS.map((r) => (
+                        <option key={r.code} value={r.code}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              ) : (
+                <p className="gs-lead">Für {country} werden die landesweiten gesetzlichen Feiertage verwendet.</p>
+              )}
+            </div>
+          )}
+
+          {tab === "daten" && <DataExportSection tenantId={tenantId} country={country} currencySymbol={currencySymbol} />}
+        </div>
+
+        {tab !== "daten" && (
+          <div className={`gs-savebar${dirty ? " dirty" : ""}`}>
+            <span>{dirty ? "Ungespeicherte Änderungen" : settings?.updated_at ? `Gespeichert · ${new Date(settings.updated_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}` : ""}</span>
+            <button type="button" className="btn btn-primary" onClick={saveAll} disabled={saving || uploadingLogo}>
+              {saving ? "Speichert …" : "Alles speichern"}
             </button>
           </div>
-        </div>
-
-        <h3 style={{ marginTop: "30px" }}>Firmendaten für Angebote</h3>
-
-  <div className="settings-grid">
-  <div className="form-group">
-    <label htmlFor="companyName">Firmenname</label>
-    <input
-      id="companyName"
-      type="text"
-      value={companyName}
-      onChange={(e) => setCompanyName(e.target.value)}
-      placeholder="z. B. Maler Mustermann GmbH"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyStreet">Straße</label>
-    <input
-      id="companyStreet"
-      type="text"
-      value={companyStreet}
-      onChange={(e) => setCompanyStreet(e.target.value)}
-      placeholder="Straße und Hausnummer"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyZip">PLZ</label>
-    <input
-      id="companyZip"
-      type="text"
-      value={companyZip}
-      onChange={(e) => setCompanyZip(e.target.value)}
-      placeholder="PLZ"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyCity">Ort</label>
-    <input
-      id="companyCity"
-      type="text"
-      value={companyCity}
-      onChange={(e) => setCompanyCity(e.target.value)}
-      placeholder="Ort"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyPhone">Telefon</label>
-    <input
-      id="companyPhone"
-      type="text"
-      value={companyPhone}
-      onChange={(e) => setCompanyPhone(e.target.value)}
-      placeholder="Telefonnummer"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyEmail">E-Mail</label>
-    <input
-      id="companyEmail"
-      type="email"
-      value={companyEmail}
-      onChange={(e) => setCompanyEmail(e.target.value)}
-      placeholder="firma@example.com"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyWebsite">Webseite</label>
-    <input
-      id="companyWebsite"
-      type="text"
-      value={companyWebsite}
-      onChange={(e) => setCompanyWebsite(e.target.value)}
-      placeholder="www.example.com"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyTaxNumber">Steuernummer</label>
-    <input
-      id="companyTaxNumber"
-      type="text"
-      value={companyTaxNumber}
-      onChange={(e) => setCompanyTaxNumber(e.target.value)}
-      placeholder="Steuernummer"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyVatId">USt-IdNr. / MwSt-Nr.</label>
-    <input
-      id="companyVatId"
-      type="text"
-      value={companyVatId}
-      onChange={(e) => setCompanyVatId(e.target.value)}
-      placeholder="USt-IdNr. / MwSt-Nr."
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyBankName">Bank</label>
-    <input
-      id="companyBankName"
-      type="text"
-      value={companyBankName}
-      onChange={(e) => setCompanyBankName(e.target.value)}
-      placeholder="Bankname"
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyIban">IBAN</label>
-    <input
-      id="companyIban"
-      type="text"
-      value={companyIban}
-      onChange={(e) => setCompanyIban(e.target.value)}
-      placeholder="IBAN"
-    />
-    {ibanError(companyIban) && <small style={{ color: "#b91c1c" }}>{ibanError(companyIban)}</small>}
-    {country === "Schweiz" && companyIban.trim() && !/^(CH|LI)/i.test(companyIban.trim()) && (
-      <small style={{ color: "#b45309", display: "block" }}>Für die QR-Rechnung (Zahlteil) wird eine Schweizer oder Liechtensteiner IBAN benötigt.</small>
-    )}
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="companyBic">BIC</label>
-    <input
-      id="companyBic"
-      type="text"
-      value={companyBic}
-      onChange={(e) => setCompanyBic(e.target.value)}
-      placeholder="BIC"
-    />
-    {bicError(companyBic) && <small style={{ color: "#b91c1c" }}>{bicError(companyBic)}</small>}
-  </div>
-  <div className="form-group">
-  <label htmlFor="companyLogo">Firmenlogo</label>
-  <input
-    id="companyLogo"
-    type="file"
-    accept="image/png,image/jpeg,image/webp"
-    onChange={(e) => {
-      const file = e.target.files?.[0];
-
-      if (file) {
-        handleLogoUpload(file);
-      }
-    }}
-  />
-
-  {uploadingLogo && <p className="info-text">Logo wird hochgeladen...</p>}
-
-  {companyLogoUrl && (
-    <div style={{ marginTop: "10px" }}>
-      <img
-        src={companyLogoUrl}
-        alt="Firmenlogo"
-        style={{
-          maxWidth: "180px",
-          maxHeight: "80px",
-          objectFit: "contain",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          padding: "6px",
-          background: "#fff",
-        }}
-      />
-    </div>
-  )}
-</div>
-
-<div className="form-group" style={{ gridColumn: "1 / -1" }}>
-  <label htmlFor="quoteIntroText">Einleitungstext für Angebote</label>
-  <textarea
-    id="quoteIntroText"
-    value={quoteIntroText}
-    onChange={(e) => setQuoteIntroText(e.target.value)}
-    rows={4}
-    placeholder="Vielen Dank für Ihre Anfrage..."
-  />
-</div>
-
-<div className="form-group" style={{ gridColumn: "1 / -1" }}>
-  <label htmlFor="quoteFooterText">Schlusstext für Angebote</label>
-  <textarea
-    id="quoteFooterText"
-    value={quoteFooterText}
-    onChange={(e) => setQuoteFooterText(e.target.value)}
-    rows={4}
-    placeholder="Wir freuen uns auf die Zusammenarbeit..."
-  />
-</div>
-
-<div className="form-group" style={{ gridColumn: "1 / -1" }}>
-  <label htmlFor="quoteTermsText">Bedingungen / Hinweise</label>
-  <textarea
-    id="quoteTermsText"
-    value={quoteTermsText}
-    onChange={(e) => setQuoteTermsText(e.target.value)}
-    rows={4}
-    placeholder="Zahlungsziel 14 Tage netto..."
-  />
-</div>
-
-</div>
-
-        <div className="settings-section">
-  <h3>Zusatzpositionen</h3>
-  <p>Diese Positionen kann der Admin später im Angebot hinzufügen, z. B. Sondermüll, Endreinigung oder Anfahrt.</p>
-
-  {loadingAdditionalPositions && (
-    <p className="info-text">Zusatzpositionen werden geladen...</p>
-  )}
-
-  {additionalPositionsMessage && (
-    <p className="info-text">{additionalPositionsMessage}</p>
-  )}
-
-  <div className="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Bezeichnung</th>
-          <th>Einheit</th>
-          <th>Preis</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {additionalPositions.length === 0 ? (
-          <tr>
-            <td colSpan={4}>Noch keine Zusatzpositionen vorhanden.</td>
-          </tr>
-        ) : (
-          additionalPositions.map((position) => (
-            <tr key={position.id}>
-              <td>
-                <strong>{position.title}</strong>
-                {position.description && <div>{position.description}</div>}
-              </td>
-              <td>{position.unit}</td>
-              <td>
-  <input
-    type="number"
-    step="0.01"
-    min="0"
-    value={position.unit_price}
-    onChange={(e) =>
-      updateAdditionalPositionValue(
-        position.id,
-        "unit_price",
-        e.target.value
-      )
-    }
-  />{" "}
-  {currencySymbol}
-</td>
-
-<td>
-  <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-    <input
-      type="checkbox"
-      checked={position.is_active}
-      onChange={(e) =>
-        updateAdditionalPositionValue(
-          position.id,
-          "is_active",
-          e.target.checked
-        )
-      }
-    />
-    {position.is_active ? "Aktiv" : "Inaktiv"}
-  </label>
-</td>
-            </tr>
-          ))
         )}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div className="settings-actions" style={{ marginTop: "20px" }}>
-  <button
-    type="button"
-    className="btn btn-primary"
-    onClick={saveAdditionalPositions}
-    disabled={saving}
-  >
-    {saving ? "Speichert..." : "Zusatzpositionen speichern"}
-  </button>
-</div>
-
-        <DataExportSection tenantId={tenantId} country={country} currencySymbol={currencySymbol} />
-
-        <div className="settings-section">
-          <h3>Aktuelle Werte</h3>
-
-          <div className="settings-preview">
-            <p>
-              <strong>Währung:</strong> {currency}
-            </p>
-            <p>
-              <strong>Symbol:</strong> {currencySymbol}
-            </p>
-            <p>
-  <strong>Bisheriger Standard-Stundensatz:</strong> {defaultHourlyRate}
-</p>
-<p>
-  <strong>Interner Standard-Stundensatz:</strong> {defaultInternalHourlyRate}
-</p>
-<p>
-  <strong>Kunden-Stundensatz:</strong> {defaultCustomerHourlyRate}
-</p>
-<p>
-  <strong>Sonderleistungs-Stundensatz:</strong> {defaultSpecialHourlyRate}
-</p>
-<p>
-  <strong>Standard-MwSt:</strong> {taxRateDefault}%
-</p>
-            <p>
-              <strong>Tenant ID:</strong> {tenantId}
-            </p>
-            {settings?.updated_at && (
-              <p>
-                <strong>Zuletzt aktualisiert:</strong>{" "}
-                {new Date(settings.updated_at).toLocaleString("de-DE")}
-              </p>
-            )}
-          </div>
-        </div>
       </div>
     </section>
+  );
+}
+
+type SettingsTab = "firma" | "steuer" | "preise" | "texte" | "kalender" | "daten";
+
+const UNITS = ["pauschal", "Stk", "m²", "m", "lfm", "Std", "kg", "l"];
+const unitOptions = (current: string) => (UNITS.includes(current) || !current ? UNITS : [current, ...UNITS]);
+
+function Field({ id, label, hint, error, wide, children }: { id: string; label: string; hint?: string; error?: string | null; wide?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`gs-field${wide ? " gs-wide" : ""}`}>
+      <label htmlFor={id}>{label}</label>
+      {children}
+      {error ? <small className="gs-err">{error}</small> : hint ? <small>{hint}</small> : null}
+    </div>
   );
 }
