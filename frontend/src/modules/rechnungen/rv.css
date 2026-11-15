@@ -1,0 +1,54 @@
+/* Rechnungsliste */
+.rv-top-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.rv-top-actions .btn { width: auto; }
+.rv-kpis .bi2-kpi { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; min-width: 0; cursor: pointer; }
+.rv-kpis .bi2-kpi:hover { background: #f5f7ff; }
+.rv-kpis .bi2-kpi.red { background: #fef2f2; }
+.rv-kpis .bi2-kpi.yellow { background: #fffbeb; }
+.rv-kpis .bi2-kpi.green { background: #f0fdf4; }
+.rv-kpis .bi2-kpi.sel { box-shadow: inset 0 0 0 2px #818cf8 !important; }
+.rv-kpis .bi2-kpi:focus-visible { outline: 2px solid #818cf8; }
+.rv-count { display: inline-block; margin-left: 6px; font-size: 11.5px; font-weight: 800; background: #e0e7ff; color: #3730a3; border-radius: 99px; padding: 0 7px; }
+.rv-search { display: flex; align-items: center; gap: 6px; border: 1px solid #dbe3ee; border-radius: 10px; padding: 0 10px; background: #fff; margin-left: auto; color: #94a3b8; }
+.rv-search input { border: 0 !important; outline: 0; box-shadow: none !important; padding: 8px 0 !important; margin: 0; font: inherit; font-size: 14px; min-width: 220px; background: transparent !important; border-radius: 0; }
+.rv-search:focus-within { border-color: #818cf8; }
+.rv-table td { vertical-align: top; }
+.rv-table td small { display: block; }
+.rv-who b { display: block; font-weight: 600; color: #0f172a; }
+.rv-who small { color: #64748b; font-size: 12.5px; }
+.rv-late { color: #b91c1c !important; font-weight: 700; font-size: 12.5px !important; }
+.rv-ok { color: #15803d !important; font-size: 12.5px !important; }
+.rv-net, .rv-mail { color: #94a3b8; font-size: 12px !important; }
+.rv-status { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.rv-status.blue { background: #e0e7ff; color: #3730a3; }
+.rv-status.red { background: #fee2e2; color: #991b1b; }
+.rv-status.green { background: #dcfce7; color: #166534; }
+.rv-status.muted { background: #f1f5f9; color: #64748b; }
+.rv-chip-storno { background: #fee2e2 !important; color: #991b1b !important; }
+.rv-dim td { color: #94a3b8; }
+.rv-dim td b, .rv-dim .name { color: #64748b !important; }
+.rv-flash td { background: #fef9c3 !important; }
+.rv-actions { white-space: nowrap; text-align: right; }
+.rv-primary { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 700; padding: 7px 12px; border-radius: 10px; background: #eef2ff; color: #3730a3; white-space: nowrap; }
+.rv-primary:hover { background: #e0e7ff; }
+.rv-primary.warn { background: #fff7ed; color: #9a3412; }
+.rv-primary.warn:hover { background: #ffedd5; }
+.rv-primary:focus-visible { outline: 2px solid #818cf8; }
+.rv-more { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; }
+.rv-more-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 6px 9px; border-radius: 10px; color: #475569; font-size: 13.5px; font-weight: 600; }
+.rv-more-btn:hover, .rv-more-btn[aria-expanded="true"] { background: #f1f5f9; }
+.rv-more-btn:focus-visible { outline: 2px solid #818cf8; }
+.rv-menu { position: fixed; z-index: 1000; width: 260px; box-sizing: border-box; max-height: 360px; overflow-y: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16); padding: 6px; text-align: left; }
+.rv-menu hr { border: 0; border-top: 1px solid #eef2f7; margin: 4px 0; }
+.rv-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-size: 14px; color: #1e293b; white-space: nowrap; }
+.rv-menu button:hover, .rv-menu button:focus-visible { background: #eef2ff; }
+.rv-menu button.danger { color: #b91c1c; }
+.rv-menu button.danger:hover { background: #fef2f2; }
+@media (max-width: 700px) {
+  .rv-search { margin-left: 0; flex: 1 1 100%; }
+  .rv-search input { min-width: 0; width: 100%; }
+  .rv-table td[data-label="Datum"] { display: none; }
+  .rv-table td.rv-actions { grid-column: 1 / -1; text-align: left; border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .rv-table td.rv-actions::before { display: none; }
+  .rv-table td.rv-who { grid-column: 1 / -1; }
+}

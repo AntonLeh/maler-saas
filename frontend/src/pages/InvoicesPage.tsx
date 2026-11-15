@@ -5,6 +5,13 @@ import { generateReminderPdf } from "../lib/reminderPdf";
 import SendEmailDialog from "../modules/versand/SendEmailDialog";
 import { loadSentInfo, type SentInfo } from "../modules/versand/api";
 import { showAlert, showConfirm, showPrompt } from "../lib/dialogs";
+import { Receipt, Search } from "lucide-react";
+import MoreMenu from "../modules/rechnungen/MoreMenu";
+import type { MenuItem } from "../modules/rechnungen/MoreMenu";
+import { canRemind, isOpen, kpis, latestReminder, matches, nextStep, overdueDays, statusLabel, todayIso } from "../modules/rechnungen/logic";
+import type { Filter } from "../modules/rechnungen/logic";
+import "../modules/bi/bi.css";
+import "../modules/rechnungen/rv.css";
 
 type InvoiceReminder = {
   id: number;
@@ -75,6 +82,11 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
   const [loading, setLoading] = useState(true);
   const [sentInfo, setSentInfo] = useState<SentInfo[]>([]);
   const [mailFor, setMailFor] = useState<{ kind: "invoice" | "reminder"; invoice: Invoice; reminder?: InvoiceReminder } | null>(null);
+  const [customerNames, setCustomerNames] = useState<Map<number, string>>(new Map());
+  const [orderTitles, setOrderTitles] = useState<Map<number, string>>(new Map());
+  const [currency, setCurrency] = useState("EUR");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
 
   const loadInvoices = async () => {
   setLoading(true);
@@ -106,6 +118,23 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
   }
 
   setSentInfo(await loadSentInfo());
+  // Namen für die Liste (Kunde, Auftragstitel) und die Währung des Betriebs
+  const [cu, or, cs] = await Promise.all([
+    supabase.from("customers").select("id, company_name, first_name, last_name").eq("tenant_id", userProfile.tenant_id),
+    supabase.from("orders").select("id, title").eq("tenant_id", userProfile.tenant_id),
+    supabase.from("company_settings").select("currency").eq("tenant_id", userProfile.tenant_id).maybeSingle(),
+  ]);
+  setCustomerNames(
+    new Map(
+      ((cu.data ?? []) as { id: number; company_name: string | null; first_name: string | null; last_name: string | null }[]).map((c) => [
+        c.id,
+        (c.company_name || `${c.first_name ?? ""} ${c.last_name ?? ""}`).trim() || `Kunde #${c.id}`,
+      ]),
+    ),
+  );
+  setOrderTitles(new Map(((or.data ?? []) as { id: number; title: string | null }[]).map((o) => [o.id, o.title || `Auftrag #${o.id}`])));
+  const cur = (cs.data as { currency?: string } | null)?.currency;
+  if (cur) setCurrency(String(cur));
   setInvoices((data as Invoice[]) || []);
   setLoading(false);
 };
@@ -132,10 +161,11 @@ export default function InvoicesPage({ onBack, userProfile, onInvoicesChanged, h
   }, [flashId, loading, invoices]);
 
   const formatCurrency = (value: number | null | undefined) => {
-    return new Intl.NumberFormat("de-DE", {
-      style: "currency",
-      currency: "EUR",
-    }).format(Number(value || 0));
+    try {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: currency || "EUR" }).format(Number(value || 0));
+    } catch {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(Number(value || 0));
+    }
   };
 
   const formatDate = (value: string | null | undefined) => {
@@ -445,6 +475,64 @@ const getInvoiceReminders = (invoiceId: number) => {
     .sort((a, b) => a.reminder_level - b.reminder_level);
 };
 
+  const today = todayIso();
+  const stats = kpis(invoices, getInvoiceReminders, today);
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = invoices.filter((i) => {
+    if (!matches(i, filter, getInvoiceReminders, today) && i.id !== flashId) return false;
+    if (!words.length) return true;
+    const hay = `${i.invoice_number} ${customerNames.get(i.customer_id) ?? ""} ${orderTitles.get(i.order_id) ?? ""} ${i.order_id}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+  const FILTERS: { key: Filter; label: string; count?: number }[] = [
+    { key: "all", label: "Alle" },
+    { key: "open", label: "Offen", count: stats.open.count },
+    { key: "overdue", label: "Überfällig", count: stats.overdue.count },
+    { key: "paid", label: "Bezahlt" },
+    { key: "cancelled", label: "Storniert" },
+  ];
+  const showXHint = invoices.some((i) => i.snapshot && i.is_private_customer === false);
+
+  const downloadX = async (invoice: Invoice) => {
+    try {
+      const { downloadXRechnung } = await import("../lib/einvoiceFiles");
+      downloadXRechnung(invoice);
+    } catch (e) {
+      await showAlert(e instanceof Error ? e.message : "Die XRechnung konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
+    }
+  };
+
+  const rowActions = (invoice: Invoice) => {
+    const reminders = getInvoiceReminders(invoice.id);
+    const reminder = latestReminder(reminders) as InvoiceReminder | undefined;
+    const step = nextStep(invoice, reminders, today);
+    const remindAllowed = canRemind(invoice, reminders, today);
+    const nextLevel = reminder ? reminder.reminder_level + 1 : 1;
+
+    let primary: { label: string; onClick: () => void; tone?: string } | null = null;
+    if (step === "paid") primary = { label: "Als bezahlt markieren", onClick: () => handleMarkInvoicePaid(invoice) };
+    else if (step === "remind" && remindAllowed) primary = { label: `${nextLevel}. Mahnung erstellen`, onClick: () => handleCreateReminder(invoice), tone: "warn" };
+    else if (step === "remind") primary = { label: "Als bezahlt markieren", onClick: () => handleMarkInvoicePaid(invoice) };
+    else if (step === "sendReminder" && reminder)
+      primary = { label: `${reminder.reminder_level}. Mahnung senden`, onClick: () => setMailFor({ kind: "reminder", invoice, reminder }), tone: "warn" };
+    else primary = { label: "PDF", onClick: () => handleCreatePdf(invoice) };
+
+    const items: MenuItem[] = [];
+    if (primary.label !== "PDF") items.push({ label: "Rechnung als PDF", onClick: () => handleCreatePdf(invoice) });
+    items.push({ label: "Rechnung per E-Mail senden", onClick: () => setMailFor({ kind: "invoice", invoice }) });
+    if (invoice.snapshot && invoice.is_private_customer === false) items.push({ label: "XRechnung (XML) herunterladen", onClick: () => downloadX(invoice) });
+    if (isOpen(invoice) && !primary.label.startsWith("Als bezahlt")) items.push({ label: "Als bezahlt markieren", onClick: () => handleMarkInvoicePaid(invoice) });
+    if (remindAllowed && step !== "remind") items.push({ label: `${nextLevel}. Mahnung erstellen`, onClick: () => handleCreateReminder(invoice), separator: true });
+    if (reminder && isOpen(invoice)) {
+      items.push({ label: `${reminder.reminder_level}. Mahnung als PDF`, onClick: () => handleCreateReminderPdf(invoice, reminder), separator: !(remindAllowed && step !== "remind") });
+      if (step !== "sendReminder") items.push({ label: `${reminder.reminder_level}. Mahnung per E-Mail`, onClick: () => setMailFor({ kind: "reminder", invoice, reminder }) });
+      if (reminder.status === "created") items.push({ label: "Mahnung als versendet markieren", onClick: () => handleMarkReminderSent(reminder) });
+    }
+    if (invoice.document_type !== "cancellation" && (isOpen(invoice) || invoice.status === "paid"))
+      items.push({ label: "Rechnung stornieren …", onClick: () => handleCancelInvoice(invoice), danger: true, separator: true });
+    return { primary, items };
+  };
+
   return (
     <section className="single-page-section">
       {mailFor && (
@@ -461,326 +549,177 @@ const getInvoiceReminders = (invoiceId: number) => {
           }}
         />
       )}
-      <div className="card form-page-card">
-        <div className="page-topbar">
+      <div className="bi2">
+        <div className="bi2-top">
           <div>
-            <h2>Rechnungen</h2>
-            <p>Verwaltung aller Rechnungen.</p>
+            <h2>
+              <Receipt size={24} aria-hidden="true" /> Rechnungen
+            </h2>
+            <p>Offene Beträge im Blick, Mahnungen mit einem Klick. Neue Rechnungen erstellen Sie im jeweiligen Auftrag.</p>
           </div>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div className="rv-top-actions">
             {onBackToBuchhaltung && (
               <button type="button" className="btn btn-secondary" onClick={onBackToBuchhaltung}>
-                Zurück zur Buchhaltung
+                ← Buchhaltung
               </button>
             )}
             <button type="button" className="btn btn-secondary" onClick={onBack}>
-              Zurück zum Dashboard
+              ← Zurück
             </button>
           </div>
         </div>
 
-        {!loading && invoices.some((i) => i.snapshot && i.is_private_customer === false) && (
-          <p style={{ margin: "4px 0 12px", padding: "8px 12px", borderRadius: 8, background: "#f1f5f9", color: "#475569", fontSize: 13 }}>
-            Hinweis zur <strong>XRechnung</strong>: Ihr Browser fragt beim Herunterladen eventuell, ob Sie die Datei behalten möchten. Die
-            Datei enthält nur Ihre Rechnungsdaten und ist sicher – bitte „Beibehalten“ wählen.
-          </p>
-        )}
-
         {loading ? (
-          <p className="info-text">Rechnungen werden geladen...</p>
+          <p className="bi2-muted">Rechnungen werden geladen …</p>
         ) : invoices.length === 0 ? (
-          <div
-            style={{
-              marginTop: "24px",
-              padding: "30px",
-              borderRadius: "16px",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              textAlign: "center",
-              color: "#64748b",
-            }}
-          >
-            Noch keine Rechnungen vorhanden.
-          </div>
+          <section className="bi2-card">
+            <p className="bi2-muted">Noch keine Rechnungen vorhanden. Rechnungen erstellen Sie im Auftrag über „Rechnung erstellen“.</p>
+          </section>
         ) : (
-          <div className="table-wrapper" style={{ marginTop: "24px" }}>
-            <table className="orders-table orders-table-wide">
-              <thead>
-                <tr>
-                  <th>Rechnungsnummer</th>
-                  <th>Datum</th>
-                  <th>Fällig bis</th>
-                  <th>Betrag</th>
-                  <th>Status</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
+          <>
+            <section className="bi2-kpis four rv-kpis" aria-label="Überblick">
+              <button type="button" className={`bi2-kpi${filter === "open" ? " sel" : ""}`} onClick={() => setFilter("open")}>
+                <span>Offen</span>
+                <b>{formatCurrency(stats.open.sum)}</b>
+                <small>
+                  {stats.open.count} Rechnung{stats.open.count === 1 ? "" : "en"}
+                </small>
+              </button>
+              <button type="button" className={`bi2-kpi${stats.overdue.count > 0 ? " red" : ""}${filter === "overdue" ? " sel" : ""}`} onClick={() => setFilter("overdue")}>
+                <span>Überfällig</span>
+                <b>{formatCurrency(stats.overdue.sum)}</b>
+                <small>
+                  {stats.overdue.count} Rechnung{stats.overdue.count === 1 ? "" : "en"}
+                </small>
+              </button>
+              <button type="button" className={`bi2-kpi${stats.dunned.count > 0 ? " yellow" : ""}`} onClick={() => setFilter("overdue")}>
+                <span>Gemahnt</span>
+                <b>{formatCurrency(stats.dunned.sum)}</b>
+                <small>
+                  {stats.dunned.count} Rechnung{stats.dunned.count === 1 ? "" : "en"} mit Mahnung
+                </small>
+              </button>
+              <button type="button" className={`bi2-kpi green${filter === "paid" ? " sel" : ""}`} onClick={() => setFilter("paid")}>
+                <span>Bezahlt diesen Monat</span>
+                <b>{formatCurrency(stats.paidMonth.sum)}</b>
+                <small>
+                  {stats.paidMonth.count} Zahlung{stats.paidMonth.count === 1 ? "" : "en"}
+                </small>
+              </button>
+            </section>
 
-              <tbody>
-                {invoices.map((invoice) => (
-                  <tr key={invoice.id} id={`invoice-row-${invoice.id}`} className={flashId === invoice.id ? "invoice-row-highlight" : undefined}>
-                    <td>
-  <strong>{invoice.invoice_number}</strong>
+            <section className="bi2-card">
+              <div className="bi2-tablebar">
+                <div className="bi2-periods" role="tablist" aria-label="Filter">
+                  {FILTERS.map((f) => (
+                    <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+                      {f.label}
+                      {f.count ? <span className="rv-count">{f.count}</span> : null}
+                    </button>
+                  ))}
+                </div>
+                <label className="rv-search">
+                  <Search size={16} aria-hidden="true" />
+                  <input type="search" placeholder="Nummer, Kunde oder Auftrag …" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Rechnungen durchsuchen" />
+                </label>
+              </div>
 
-  {invoice.document_type === "cancellation" && (
-    <div>
-      <span className="invoice-partial-badge">
-        Stornorechnung
-        {invoices.find((i) => i.id === invoice.cancels_invoice_id)
-          ? ` zu ${invoices.find((i) => i.id === invoice.cancels_invoice_id)?.invoice_number}`
-          : ""}
-      </span>
-    </div>
-  )}
-
-  {invoice.invoice_type === "partial" && (
-  <div>
-    <span className="invoice-partial-badge">
-      Abschlagsrechnung
-      {invoice.partial_type === "percent" &&
-      invoice.partial_value != null
-        ? ` · ${Number(invoice.partial_value).toLocaleString("de-DE", {
-            maximumFractionDigits: 2,
-          })} %`
-        : ""}
-    </span>
-  </div>
-)}
-
-  <div className="table-subtitle">
-    Auftrag #{invoice.order_id}
-  </div>
-</td>
-
-                    <td>{formatDate(invoice.invoice_date)}</td>
-
-                    <td>
-  {formatDate(invoice.due_date)}
-
-  {getInvoiceReminders(invoice.id).map((reminder) => (
-    <div
-      key={reminder.id}
-      className="table-subtitle"
-    >
-      {reminder.reminder_level}. Mahnung
-      {reminder.status === "sent" && reminder.sent_at
-        ? ` · versendet ${formatDate(reminder.sent_at)}${(() => {
-            const m = sentInfo.find((x) => x.reminder_id === reminder.id);
-            return m ? ` per E-Mail an ${m.recipient}` : "";
-          })()}`
-        : reminder.status === "created"
-        ? " · erstellt"
-        : ""}
-      {reminder.new_due_date
-        ? ` · Frist ${formatDate(reminder.new_due_date)}`
-        : ""}
-    </div>
-  ))}
-</td>
-
-                    <td>
-                      <strong>{formatCurrency(invoice.total_amount)}</strong>
-                      <div className="table-subtitle">
-                        Netto {formatCurrency(invoice.subtotal)} · MwSt.{" "}
-                        {formatCurrency(invoice.tax_amount)}
-                      </div>
-                    </td>
-
-                    <td>
-  <span
-    className={`status-badge ${
-      invoice.status === "paid"
-        ? "status-paid"
-        : "status-geplant"
-    }`}
-  >
-    {invoice.status === "open"
-      ? "Offen"
-      : invoice.status === "paid"
-      ? "Bezahlt"
-      : invoice.status === "credited"
-      ? "In Schlussrechnung übernommen"
-      : invoice.status === "cancelled"
-      ? invoice.document_type === "cancellation"
-        ? "Storno"
-        : "Storniert"
-      : invoice.status}
-  </span>
-
-  {invoice.status === "paid" && invoice.paid_at && (
-    <div className="table-subtitle">
-      am {formatDate(invoice.paid_at)}
-    </div>
-  )}
-  {(() => {
-    const last = sentInfo.find((m) => m.invoice_id === invoice.id && m.kind === "invoice");
-    return last ? (
-      <div className="table-subtitle" title={last.recipient}>
-        ✉ versendet {formatDate(last.sent_at)} an {last.recipient}
-      </div>
-    ) : null;
-  })()}
-</td>
-
-                    <td>
-  <div
-    style={{
-      display: "flex",
-      gap: "8px",
-      flexWrap: "wrap",
-    }}
-  >
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={() => handleCreatePdf(invoice)}
-    >
-      PDF erstellen
-    </button>
-
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={() => setMailFor({ kind: "invoice", invoice })}
-    >
-      Per E-Mail senden
-    </button>
-
-    {invoice.snapshot && invoice.is_private_customer === false && (
-      <button
-        type="button"
-        className="btn btn-secondary"
-        title="E-Rechnung als XML-Datei, z. B. für Behörden oder Firmen, die eine XRechnung verlangen"
-        onClick={async () => {
-          try {
-            const { downloadXRechnung } = await import("../lib/einvoiceFiles");
-            downloadXRechnung(invoice);
-          } catch (e) {
-            await showAlert(e instanceof Error ? e.message : "Die XRechnung konnte nicht erstellt werden.", { tone: "error", title: "Das hat nicht geklappt" });
-          }
-        }}
-      >
-        XRechnung
-      </button>
-    )}
-
-   {invoice.status === "open" && (
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={() => handleMarkInvoicePaid(invoice)}
-  >
-    Als bezahlt markieren
-  </button>
-)} 
-
-   {invoice.document_type !== "cancellation" &&
-    (invoice.status === "open" || invoice.status === "paid") && (
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={() => handleCancelInvoice(invoice)}
-  >
-    Stornieren
-  </button>
-)}
-
-   {invoice.status === "open" && (() => {
-  const reminders = getInvoiceReminders(invoice.id);
-
-  const reminder =
-    reminders.length > 0
-      ? reminders[reminders.length - 1]
-      : undefined;
-
-  const today = new Date().toLocaleDateString("sv-SE");
-
-  if (!reminder) {
-    const isOverdue =
-      invoice.status === "open" &&
-      invoice.due_date &&
-      invoice.due_date < today;
-
-    if (!isOverdue) {
-      return null;
-    }
-
-    return (
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => handleCreateReminder(invoice)}
-      >
-        Mahnung erstellen
-      </button>
-    );
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => handleCreateReminderPdf(invoice, reminder)}
-      >
-        Mahnung PDF
-      </button>
-
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => setMailFor({ kind: "reminder", invoice, reminder })}
-      >
-        Mahnung per E-Mail
-      </button>
-
-      {reminder.status === "created" && (
-  <button
-    type="button"
-    className="btn btn-secondary"
-    onClick={() => handleMarkReminderSent(reminder)}
-  >
-    Als versendet markieren
-  </button>
-)}
-
-      {reminder.reminder_level >= 3 ? (
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled
-        >
-          3. Mahnstufe erreicht
-        </button>
-      ) : reminder.new_due_date &&
-        reminder.new_due_date >= today ? (
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled
-        >
-          {reminder.reminder_level}. Mahnung läuft
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => handleCreateReminder(invoice)}
-        >
-          {reminder.reminder_level + 1}. Mahnung erstellen
-        </button>
-      )}
-    </>
-  );
-})()}
-  </div>
-</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              {shown.length === 0 ? (
+                <p className="bi2-muted">{query ? "Keine Rechnung gefunden." : "In dieser Ansicht gibt es keine Rechnungen."}</p>
+              ) : (
+                <div className="bi2-table-wrap">
+                  <table className="bi2-table rv-table">
+                    <thead>
+                      <tr>
+                        <th>Rechnung</th>
+                        <th>Kunde / Auftrag</th>
+                        <th>Datum</th>
+                        <th>Fällig</th>
+                        <th className="num">Betrag</th>
+                        <th>Status</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((invoice) => {
+                        const reminders = getInvoiceReminders(invoice.id);
+                        const st = statusLabel(invoice, reminders);
+                        const late = overdueDays(invoice, reminders, today);
+                        const lastReminder = latestReminder(reminders) as InvoiceReminder | undefined;
+                        const lastMail = sentInfo.find((m) => m.invoice_id === invoice.id && m.kind === "invoice");
+                        const reminderMail = lastReminder ? sentInfo.find((x) => x.reminder_id === lastReminder.id) : undefined;
+                        const cancelled = invoices.find((i) => i.id === invoice.cancels_invoice_id);
+                        const { primary, items } = rowActions(invoice);
+                        return (
+                          <tr
+                            key={invoice.id}
+                            id={`invoice-row-${invoice.id}`}
+                            className={`${flashId === invoice.id ? "rv-flash" : ""}${["cancelled", "credited"].includes(invoice.status) || invoice.document_type === "cancellation" ? " rv-dim" : ""}`}
+                          >
+                            <td className="name" data-label="Rechnung">
+                              {invoice.invoice_number}
+                              <small className="sub">
+                                {invoice.document_type === "cancellation" ? (
+                                  <span className="bi2-chip rv-chip-storno">Storno{cancelled ? ` zu ${cancelled.invoice_number}` : ""}</span>
+                                ) : invoice.invoice_type === "partial" ? (
+                                  <span className="bi2-chip">
+                                    Abschlag
+                                    {invoice.partial_type === "percent" && invoice.partial_value != null
+                                      ? ` · ${Number(invoice.partial_value).toLocaleString("de-DE", { maximumFractionDigits: 2 })} %`
+                                      : ""}
+                                  </span>
+                                ) : (
+                                  <span className="bi2-chip done">Schlussrechnung</span>
+                                )}
+                              </small>
+                            </td>
+                            <td data-label="Kunde / Auftrag" className="rv-who">
+                              <b>{customerNames.get(invoice.customer_id) ?? "Kunde"}</b>
+                              <small>{orderTitles.get(invoice.order_id) ?? `Auftrag #${invoice.order_id}`}</small>
+                            </td>
+                            <td data-label="Datum">{formatDate(invoice.invoice_date)}</td>
+                            <td data-label="Fällig">
+                              {formatDate(lastReminder?.new_due_date || invoice.due_date)}
+                              {late > 0 && <small className="rv-late">seit {late} Tag{late === 1 ? "" : "en"} überfällig</small>}
+                              {invoice.status === "paid" && invoice.paid_at && <small className="rv-ok">bezahlt am {formatDate(invoice.paid_at)}</small>}
+                            </td>
+                            <td className="num" data-label="Betrag">
+                              <b>{formatCurrency(invoice.total_amount)}</b>
+                              <small className="rv-net">netto {formatCurrency(invoice.subtotal)}</small>
+                            </td>
+                            <td data-label="Status">
+                              <span className={`rv-status ${st.tone}`}>{st.text}</span>
+                              {lastReminder?.status === "sent" && lastReminder.sent_at && (
+                                <small className="rv-mail" title={reminderMail?.recipient}>
+                                  Mahnung versendet {formatDate(lastReminder.sent_at)}
+                                </small>
+                              )}
+                              {lastMail && (
+                                <small className="rv-mail" title={lastMail.recipient}>
+                                  ✉ Rechnung versendet {formatDate(lastMail.sent_at)}
+                                </small>
+                              )}
+                            </td>
+                            <td className="rv-actions">
+                              <button type="button" className={`rv-primary${primary.tone ? ` ${primary.tone}` : ""}`} onClick={primary.onClick}>
+                                {primary.label}
+                              </button>
+                              <MoreMenu items={items} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {showXHint && (
+                <p className="bi2-small">
+                  XRechnung: Ihr Browser fragt beim Herunterladen eventuell, ob Sie die Datei behalten möchten. Die Datei enthält nur Ihre Rechnungsdaten – bitte „Beibehalten“ wählen.
+                </p>
+              )}
+            </section>
+          </>
         )}
       </div>
     </section>
