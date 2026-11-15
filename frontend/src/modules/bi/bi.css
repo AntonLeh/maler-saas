@@ -193,3 +193,5 @@
 .bi2-review-emps small { color: #64748b; flex-basis: 100%; }
 .bi2-kpi.green b { font-size: 19px; }
 @media (max-width: 560px) { .bi2-kpis.four .bi2-kpi:last-child { grid-column: auto; } }
+.single-page-section:has(> .bi2) { width: 100%; box-sizing: border-box; }
+.bi2-msg { font-size: 14px; line-height: 1.45; }
