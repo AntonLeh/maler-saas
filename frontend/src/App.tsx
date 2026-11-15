@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Pencil } from "lucide-react";
 import ChefStart from "./modules/chef-start/ChefStart";
+import { countsAsRevenue as biCountsAsRevenue, isOpenInvoice as biIsOpenInvoice, netAmount as biNetAmount } from "./modules/bi/logic";
 import type { ChefNavKey } from "./modules/chef-start/ChefStart";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
@@ -343,6 +344,7 @@ const EmployeeDashboard = lazy(pageLoaders.EmployeeDashboard);
 const AssignOrder = lazy(pageLoaders.AssignOrder);
 const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
+const BiCockpit = lazy(() => import("./modules/bi/BiCockpit"));
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
@@ -1351,26 +1353,26 @@ const saveEmployeePerformance = async () => {
 
     const { data: invoiceData, error: invoiceError } = await supabase
       .from("invoices")
-      .select("id, customer_id, total_amount, status, invoice_date")
+      .select("id, customer_id, subtotal, tax_rate, tax_amount, total_amount, status, invoice_date, created_at, document_type")
       .eq("tenant_id", userProfile.tenant_id);
 
     if (invoiceError) throw invoiceError;
 
     const analysis =
       customerData?.map((customer: any) => {
+        // Umsatz netto, nur gültige Rechnungen; offene Beträge brutto inkl. gemahnter Rechnungen
         const customerInvoices =
           invoiceData?.filter(
-            (invoice: any) => invoice.customer_id === customer.id
+            (invoice: any) => invoice.customer_id === customer.id && biCountsAsRevenue(invoice)
           ) || [];
 
         const totalRevenue = customerInvoices.reduce(
-          (sum: number, invoice: any) =>
-            sum + Number(invoice.total_amount || 0),
+          (sum: number, invoice: any) => sum + biNetAmount(invoice),
           0
         );
 
         const openAmount = customerInvoices
-          .filter((invoice: any) => invoice.status === "open")
+          .filter((invoice: any) => biIsOpenInvoice(invoice))
           .reduce(
             (sum: number, invoice: any) =>
               sum + Number(invoice.total_amount || 0),
@@ -1394,7 +1396,7 @@ const saveEmployeePerformance = async () => {
 const monthlyMap = new Map<string, number>();
 
 invoiceData?.forEach((invoice: any) => {
-  if (!invoice.invoice_date) return;
+  if (!invoice.invoice_date || !biCountsAsRevenue(invoice)) return;
 
   const date = new Date(invoice.invoice_date);
   const monthKey = date.toLocaleDateString("de-DE", {
@@ -1404,7 +1406,7 @@ invoiceData?.forEach((invoice: any) => {
 
   monthlyMap.set(
     monthKey,
-    (monthlyMap.get(monthKey) || 0) + Number(invoice.total_amount || 0)
+    (monthlyMap.get(monthKey) || 0) + biNetAmount(invoice)
   );
 });
 
@@ -1416,7 +1418,7 @@ const monthlyData = Array.from(monthlyMap.entries()).map(
 );
 const openInvoices =
   invoiceData?.filter(
-    (invoice: any) => invoice.status === "open"
+    (invoice: any) => biIsOpenInvoice(invoice)
   ).length || 0;
 
 setCustomerAnalysis(analysis);
@@ -1438,7 +1440,7 @@ const loadOrderAnalysis = async () => {
   try {
     const { data: invoicesData, error: invoicesError } = await supabase
       .from("invoices")
-      .select("order_id, total_amount")
+      .select("order_id, subtotal, tax_rate, tax_amount, total_amount, status, document_type")
       .eq("tenant_id", userProfile.tenant_id);
 
     if (invoicesError) throw invoicesError;
@@ -1470,11 +1472,12 @@ const loadOrderAnalysis = async () => {
 
     const analysis =
       ordersData?.map((order: any) => {
+        // Umsatz netto, ohne stornierte/verrechnete Rechnungen und Storno-Belege
         const orderInvoices =
-          invoicesData?.filter((invoice: any) => invoice.order_id === order.id) || [];
+          invoicesData?.filter((invoice: any) => invoice.order_id === order.id && biCountsAsRevenue(invoice)) || [];
 
         const revenue = orderInvoices.reduce(
-          (sum: number, invoice: any) => sum + Number(invoice.total_amount || 0),
+          (sum: number, invoice: any) => sum + biNetAmount(invoice),
           0
         );
 
@@ -6538,7 +6541,6 @@ onReloadOrders={async () => {
         case "books": return setCurrentPage("belege");
         case "reports":
           if (!hasFeature("advancedReports")) return setCurrentPage("business-intelligence-locked");
-          await Promise.all([loadCustomerAnalysis(), loadOrderAnalysis()]);
           return setCurrentPage("business-intelligence");
         case "ai-phone": return setCurrentPage("ki-telefon");
         case "website": return setCurrentPage("website");
@@ -6820,21 +6822,11 @@ onReloadOrders={async () => {
   ).length
 }
   openInvoices={
-  invoices.filter(
-    (invoice) =>
-      invoice.status === "offen" ||
-      invoice.status === "open" ||
-      invoice.status === "unpaid"
-  ).length
+  invoices.filter((invoice) => biIsOpenInvoice(invoice)).length
 }
   openReceivables={
   invoices
-    .filter(
-      (invoice) =>
-        invoice.status === "offen" ||
-        invoice.status === "open" ||
-        invoice.status === "unpaid"
-    )
+    .filter((invoice) => biIsOpenInvoice(invoice))
     .reduce(
       (sum, invoice) => sum + Number(invoice.total_amount || 0),
       0
@@ -7827,249 +7819,29 @@ onReloadOrders={async () => {
                 <TimeEvaluation tenantId={userProfile.tenant_id} currencySymbol={currencySymbol} onBack={() => setCurrentPage("business-intelligence")} />
               )}
 
-              {currentPage === "business-intelligence" && isAdmin && (() => {
-  const biTotalRevenue = orderAnalysis.reduce(
-    (sum: number, order: any) => sum + Number(order.revenue || 0),
-    0
-  );
-
-  const biLaborCost = orderAnalysis.reduce(
-    (sum: number, order: any) => sum + Number(order.laborCost || 0),
-    0
-  );
-
-  const biMaterialCost = materialAnalysis.reduce(
-    (sum: number, material: any) => sum + Number(material.materialCost || 0),
-    0
-  );
-
-  const biContributionMargin = biTotalRevenue - biLaborCost - biMaterialCost;
-
-  const biOpenAmount = customerAnalysis.reduce(
-    (sum: number, customer: any) => sum + Number(customer.openAmount || 0),
-    0
-  );
-
-  const generateBusinessInsights = () => {
-  const insights: string[] = [];
-
-  const revenue = Number(biTotalRevenue || 0);
-  const labor = Number(biLaborCost || 0);
-  const material = Number(biMaterialCost || 0);
-  const margin = Number(biContributionMargin || 0);
-  const open = Number(biOpenAmount || 0);
-
-  const laborRatio = revenue > 0 ? (labor / revenue) * 100 : 0;
-  const materialRatio = revenue > 0 ? (material / revenue) * 100 : 0;
-  const marginRatio = revenue > 0 ? (margin / revenue) * 100 : 0;
-
-  if (revenue <= 0) {
-    insights.push("ℹ️ Noch keine belastbaren Umsatzdaten vorhanden.");
-  } else {
-    insights.push(
-      `📈 Gesamtumsatz aktuell: ${revenue.toLocaleString("de-DE", {
-        minimumFractionDigits: 2,
-      })} ${currencySymbol}.`
-    );
-  }
-
-  if (open > 10000) {
-    insights.push(
-      `⚠️ Offene Forderungen sind hoch: ${open.toLocaleString("de-DE", {
-        minimumFractionDigits: 2,
-      })} ${currencySymbol}.`
-    );
-  } else if (open > 0) {
-    insights.push("📂 Es gibt offene Forderungen, aber aktuell im überschaubaren Bereich.");
-  }
-
-  if (materialRatio > 30) {
-    insights.push(`⚠️ Materialkosten liegen bei ${materialRatio.toFixed(1)} % vom Umsatz.`);
-  } else if (materialRatio > 0) {
-    insights.push(`📦 Materialkosten liegen bei ${materialRatio.toFixed(1)} % vom Umsatz.`);
-  }
-
-  if (laborRatio > 45) {
-    insights.push(`⚠️ Lohnkosten liegen bei ${laborRatio.toFixed(1)} % vom Umsatz.`);
-  } else if (laborRatio > 0) {
-    insights.push(`👷 Lohnkosten liegen bei ${laborRatio.toFixed(1)} % vom Umsatz.`);
-  }
-
-  if (marginRatio < 20 && revenue > 0) {
-    insights.push(`🔴 Deckungsbeitrag liegt nur bei ${marginRatio.toFixed(1)} %. Nachkalkulation prüfen.`);
-  } else if (revenue > 0) {
-    insights.push(`✅ Deckungsbeitrag liegt bei ${marginRatio.toFixed(1)} %.`);
-  }
-
-let companyLevel: "green" | "yellow" | "red" = "green";
-let companyStatus = "🟢 Gesund";
-
-if (
-  open > 10000 ||
-  materialRatio > 30 ||
-  laborRatio > 45 ||
-  marginRatio < 20
-) {
-  companyLevel = "yellow";
-  companyStatus = "🟡 Aufmerksamkeit empfohlen";
-}
-
-if (
-  open > 25000 ||
-  marginRatio < 10
-) {
-  companyLevel = "red";
-  companyStatus = "🔴 Handlungsbedarf";
-}
-
-  return {
-  level: companyLevel,
-  status: companyStatus,
-  insights,
-};
-};
-
-const businessAdvisor = generateBusinessInsights();
-
-  return (
-    <section className="single-page-section">
-      <div className="bi-cockpit">
-        <div className="page-topbar">
-          <div>
-            <h2>📊 Business Intelligence</h2>
-            <p>Unternehmer-Cockpit für Umsatz, Kosten und Rentabilität.</p>
-          </div>
-
-          <button type="button" className="btn btn-secondary" onClick={openDashboard}>
-            Zurück zum Dashboard
-          </button>
-        </div>
-
-        <div className="bi-hero-grid">
-          <div className="bi-hero-card">
-            <span>💰 Gesamtumsatz</span>
-            <strong>{biTotalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-          </div>
-
-          <div className="bi-hero-card">
-            <span>💸 Lohnkosten</span>
-            <strong>{biLaborCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-          </div>
-
-          <div className="bi-hero-card">
-            <span>📦 Materialkosten</span>
-            <strong>{biMaterialCost.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-          </div>
-
-          <div
-  className={`bi-hero-card ${
-    biContributionMargin < 0
-      ? "bi-profit-card-negative"
-      : biContributionMargin < biTotalRevenue * 0.2
-      ? "bi-profit-card-warning"
-      : "bi-profit-card"
-  }`}
->
-            <span>📈 Deckungsbeitrag</span>
-            <strong>{biContributionMargin.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-          </div>
-
-          <div className="bi-hero-card">
-            <span>📂 Außenstände</span>
-            <strong>{biOpenAmount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-          </div>
-        </div>
-
-        <div className="bi-advisor-card">
-  <div className="bi-advisor-header">
-    <span style={{ fontSize: "30px" }}>🤖</span>
-
-    <div>
-      <h3 style={{ margin: 0 }}>
-       KI-Assistent für ihr Unternehmen
-      </h3>
-
-      <div
-  className={`company-status-card ${businessAdvisor.level}`}
->
-
-  <div className="company-status-label">
-    Unternehmensstatus
-  </div>
-
-  <div className="company-status-value">
-    {businessAdvisor.status}
-  </div>
-
-</div>
-
-      <p
-        style={{
-          margin: "4px 0 0",
-          color: "#64748b",
-        }}
-      >
-        Automatische Auswertung Ihrer Unternehmenskennzahlen.
-      </p>
-    </div>
-  </div>
-
-  <div className="bi-advisor-list">
-    {businessAdvisor.insights.map((insight, index) => (
-      <div
-        key={index}
-        className="bi-advisor-item"
-      >
-        {insight}
-      </div>
-    ))}
-  </div>
-</div>
-
-        <h3 className="bi-section-title">Analysen</h3>
-
-        <div className="bi-module-grid">
-          <div className="bi-module-card" onClick={() => {
-            loadCustomerAnalysis();
-            setCurrentPage("customer-analysis");
-          }}>
-            <h3>📊 Kundenanalyse</h3>
-            <p>Umsatz, Top-Kunden, Forderungen und A/B/C-Kunden.</p>
-          </div>
-
-          <div className="bi-module-card" onClick={() => {
-            loadOrderAnalysis();
-            setCurrentPage("order-analysis");
-          }}>
-            <h3>📈 Auftragsanalyse</h3>
-            <p>Umsatz, Lohnkosten und Deckungsbeiträge pro Auftrag.</p>
-          </div>
-
-          <div className="bi-module-card" onClick={() => setCurrentPage("time-evaluation")}>
-            <h3>⏱ Arbeitsstunden</h3>
-            <p>Stunden, Lohnkosten und Mitarbeiterauswertung.</p>
-          </div>
-
-          <div className="bi-module-card" onClick={() => {
-            loadMaterialAnalysis();
-            setCurrentPage("material-analysis");
-          }}>
-            <h3>📦 Materialanalyse</h3>
-            <p>Verbrauch, Materialkosten und Wirtschaftlichkeit.</p>
-          </div>
-
-          <div className="bi-module-card" onClick={() => setCurrentPage("performance-management")}
->
-          <h3>🏆 Leistungsmanagement</h3>
-            <p>
-            Punkte, Sterne, Mitarbeiterentwicklung und Bonusgrundlagen.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-})()}
+              {currentPage === "business-intelligence" && isAdmin && userProfile && (
+                <Suspense fallback={<p style={{ padding: 20 }}>Lädt …</p>}>
+                  <BiCockpit
+                    tenantId={userProfile.tenant_id}
+                    currency={currencyCode}
+                    onBack={openDashboard}
+                    onOpen={(t) => {
+                      if (t === "customers") {
+                        void loadCustomerAnalysis();
+                        setCurrentPage("customer-analysis");
+                      } else if (t === "orders") {
+                        void loadOrderAnalysis();
+                        setCurrentPage("order-analysis");
+                      } else if (t === "time") {
+                        setCurrentPage("time-evaluation");
+                      } else {
+                        void loadMaterialAnalysis();
+                        setCurrentPage("material-analysis");
+                      }
+                    }}
+                  />
+                </Suspense>
+              )}
 
               {currentPage === "performance-management" && (
   <section className="single-page-section">
