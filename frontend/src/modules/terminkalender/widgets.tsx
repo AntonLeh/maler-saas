@@ -34,7 +34,7 @@ export function TermineStatCard({ tenantId, onOpen }: { tenantId: number; onOpen
 
   return (
     <button type="button" className="stat-card stat-card-clickable" onClick={onOpen}>
-      <span className="stat-label">Termine (7 Tage)</span>
+      <span className="stat-label">📅 Termine (7 Tage)</span>
       <strong className="stat-value">{count ?? "–"}</strong>
     </button>
   );

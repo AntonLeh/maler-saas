@@ -43,7 +43,8 @@ export function KiTelefonButton({
       ) : (
         <Lock size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
       )}
-      KI-Telefon{hasAccess && open > 0 ? ` (${open} neu)` : ""}
+      KI-Telefon
+      {hasAccess && open > 0 && <span className="cs-badge" title={`${open} neu`}>{open}</span>}
     </button>
   );
 }

@@ -8,7 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { Pencil, BarChart3 } from "lucide-react";
+import { Pencil, BarChart3, UserPlus, UserRoundPlus, ClipboardPlus, FileText, Receipt, MessageSquare, Package, Settings, Tag, CreditCard } from "lucide-react";
+import "./modules/chef-start/chef-start.css";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import "./App.css";
@@ -6683,13 +6684,13 @@ onReloadOrders={async () => {
               {currentPage === "dashboard" && isAdmin && userProfile?.role_id !== 1 && (
                 <>
                   <CountryHint tenantId={userProfile?.tenant_id} onOpenSettings={() => setCurrentPage("settings")} />
-                  <section className="stats-grid stats-grid-5">
+                  <section className="stats-grid stats-grid-5 cs-stats">
                     <button
                       type="button"
                       className="stat-card stat-card-clickable"
                       onClick={openCustomersListPage}
                     >
-                      <span className="stat-label">Kunden gesamt</span>
+                      <span className="stat-label">👥 Kunden gesamt</span>
                       <strong className="stat-value">{stats.totalCustomers}</strong>
                     </button>
 
@@ -6698,7 +6699,7 @@ onReloadOrders={async () => {
   className="stat-card stat-card-clickable"
   onClick={() => openOrdersListPage("new")}
 >
-  <span className="stat-label">Aufträge</span>
+  <span className="stat-label">📋 Aufträge</span>
   <strong className="stat-value">{stats.totalOrders}</strong>
 </button>
 
@@ -6707,7 +6708,7 @@ onReloadOrders={async () => {
                       className="stat-card stat-card-clickable"
                       onClick={openEmployeesListPage}
                     >
-                      <span className="stat-label">Mitarbeiter</span>
+                      <span className="stat-label">👷 Mitarbeiter</span>
                       <strong className="stat-value">{stats.totalEmployees}</strong>
                     </button>
 
@@ -6719,7 +6720,7 @@ onReloadOrders={async () => {
                         setCurrentPage("invoices-list");
                       }}
                     >
-                      <span className="stat-label">Rechnungen</span>
+                      <span className="stat-label">🧾 Rechnungen</span>
                       <strong className="stat-value">{stats.totalInvoices}</strong>
                     </button>
 
@@ -6743,6 +6744,117 @@ onReloadOrders={async () => {
                   {userProfile.role_id === ADMIN_ROLE_ID && (
                     <AbsenceBar tenantId={userProfile.tenant_id} people={employees} onOpen={() => setCurrentPage("urlaub")} />
                   )}
+
+                  <section className="cs-nav" aria-label="Bereiche">
+                    <div className="cs-quick">
+                      {canCreateCustomers && (
+                        <button type="button" className="btn btn-success" onClick={openCreateCustomerPage}>
+                          <UserPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Kunde anlegen
+                        </button>
+                      )}
+                      <button type="button" className="btn btn-success" onClick={() => setCurrentPage("create-site-visit")}>
+                        <ClipboardPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                        Besichtigung anlegen
+                      </button>
+                      {isAdmin && (
+                        <button type="button" className="btn btn-success" onClick={openCreateEmployeePage}>
+                          <UserRoundPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Mitarbeiter anlegen
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="cs-group">
+                      <h3>Tagesgeschäft</h3>
+                      <div className="cs-tiles">
+                        <button type="button" className="btn" onClick={() => setCurrentPage("quotes-list")}>
+                          <FileText size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Angebote
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => {
+                            setInvoicesFromBuchhaltung(false);
+                            setCurrentPage("invoices-list");
+                          }}
+                        >
+                          <Receipt size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Rechnungen
+                        </button>
+                        <button type="button" className="btn" onClick={openMessagesPage}>
+                          <MessageSquare size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Nachrichten
+                          {unreadMessages > 0 && <span className="cs-badge">{unreadMessages}</span>}
+                        </button>
+                        <button type="button" className="btn" onClick={() => setCurrentPage("materials")}>
+                          <Package size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Materialverwaltung
+                        </button>
+                        {isAdmin && <BelegeButton onOpen={() => setCurrentPage("belege")} />}
+                      </div>
+                    </div>
+
+                    <div className="cs-group">
+                      <h3>Wachstum &amp; Extras</h3>
+                      <div className="cs-tiles">
+                        <button
+                          type="button"
+                          className="btn"
+  onClick={async () => {
+    if (!hasFeature("advancedReports")) {
+      setCurrentPage("business-intelligence-locked");
+      return;
+    }
+
+    await Promise.all([
+      loadCustomerAnalysis(),
+      loadOrderAnalysis(),
+    ]);
+
+    setCurrentPage("business-intelligence");
+  }}
+                        >
+                          <BarChart3 size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Business Intelligence
+                        </button>
+                        <KiTelefonButton
+                          tenantId={userProfile.tenant_id}
+                          hasAccess={hasAiPhoneAccess(subscription?.plan)}
+                          onOpen={() => setCurrentPage("ki-telefon")}
+                        />
+                        <WebsiteButton
+                          tenantId={userProfile.tenant_id}
+                          hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
+                          onOpen={() => setCurrentPage("website")}
+                        />
+                        <FachkraefteButton
+                          hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
+                          onOpen={() => setCurrentPage("fachkraefte")}
+                        />
+                        <CommunityTile onOpen={() => setCurrentPage("community")} />
+                      </div>
+                    </div>
+
+                    <div className="cs-group">
+                      <h3>Verwaltung</h3>
+                      <div className="cs-tiles">
+                        <button type="button" className="btn" onClick={() => setCurrentPage("settings")}>
+                          <Settings size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Einstellungen
+                        </button>
+                        <button type="button" className="btn" onClick={() => setCurrentPage("pricing-rules")}>
+                          <Tag size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Preisregeln
+                        </button>
+                        <button type="button" className="btn" onClick={() => setCurrentPage("billing")}>
+                          <CreditCard size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+                          Abrechnung &amp; Abo
+                        </button>
+                      </div>
+                    </div>
+                  </section>
 
                   <BusinessCockpit
                   businessEvents={[
@@ -6959,137 +7071,7 @@ onReloadOrders={async () => {
   </div>
 )}
 
-                  <section className="action-bar">
-  {canCreateCustomers && (
-    <button
-      type="button"
-      className="btn btn-success"
-      onClick={openCreateCustomerPage}
-    >
-      + Kunde anlegen
-    </button>
-  )}
 
-  {isAdmin && (
-    <button
-      type="button"
-      className="btn btn-success"
-      onClick={openCreateEmployeePage}
-    >
-      + Mitarbeiter anlegen
-    </button>
-  )}
-
-  <button
-    type="button"
-    className="btn btn-success"
-    onClick={() => setCurrentPage("create-site-visit")}
-  >
-    + Besichtigung anlegen
-  </button>
-
-  <button
-    type="button"
-    className="btn btn-primary"
-    onClick={() => setCurrentPage("quotes-list")}
-  >
-    Angebote
-  </button>
-
-  <button
-    type="button"
-    className="btn btn-primary"
-    onClick={() => {
-                        setInvoicesFromBuchhaltung(false);
-                        setCurrentPage("invoices-list");
-                      }}
-  >
-    Rechnungen
-  </button>
-
-  <button
-  type="button"
-  className="btn btn-primary"
-  onClick={() => setCurrentPage("materials")}
->
-  Materialverwaltung
-</button>
-
-  <button
-    type="button"
-    className="btn btn-primary"
-    onClick={openMessagesPage}
-  >
-    Nachrichten {unreadMessages > 0 ? `(${unreadMessages})` : ""}
-  </button>
-
-  <button
-  type="button"
-  className="btn btn-warning"
-  onClick={() => setCurrentPage("billing")}
->
-  Abrechnung & Abo
-</button>
-
-  <button
-    type="button"
-    className="btn btn-warning"
-    onClick={() => setCurrentPage("settings")}
-  >
-    Einstellungen
-  </button>
-
-  <button
-    type="button"
-    className="btn btn-warning"
-    onClick={() => setCurrentPage("pricing-rules")}
-  >
-    Preisregeln
-  </button>
-
-  
-
-<button
-  type="button"
-  className="btn btn-analysis"
-  onClick={async () => {
-    if (!hasFeature("advancedReports")) {
-      setCurrentPage("business-intelligence-locked");
-      return;
-    }
-
-    await Promise.all([
-      loadCustomerAnalysis(),
-      loadOrderAnalysis(),
-    ]);
-
-    setCurrentPage("business-intelligence");
-  }}
->
-  <BarChart3 size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-  Business Intelligence
-</button>
-
-<KiTelefonButton
-  tenantId={userProfile.tenant_id}
-  hasAccess={hasAiPhoneAccess(subscription?.plan)}
-  onOpen={() => setCurrentPage("ki-telefon")}
-/>
-
-<WebsiteButton
-  tenantId={userProfile.tenant_id}
-  hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
-  onOpen={() => setCurrentPage("website")}
-/>
-
-<FachkraefteButton
-  hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
-  onOpen={() => setCurrentPage("fachkraefte")}
-/>
-{isAdmin && <BelegeButton onOpen={() => setCurrentPage("belege")} />}
-<CommunityTile onOpen={() => setCurrentPage("community")} />
-
-</section>
                 </>
               )}
 
