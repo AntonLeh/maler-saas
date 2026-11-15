@@ -345,6 +345,7 @@ const AssignOrder = lazy(pageLoaders.AssignOrder);
 const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
 const BiCockpit = lazy(() => import("./modules/bi/BiCockpit"));
+const CustomerAnalysis = lazy(() => import("./modules/bi/CustomerAnalysis"));
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
@@ -7827,7 +7828,6 @@ onReloadOrders={async () => {
                     onBack={openDashboard}
                     onOpen={(t) => {
                       if (t === "customers") {
-                        void loadCustomerAnalysis();
                         setCurrentPage("customer-analysis");
                       } else if (t === "orders") {
                         void loadOrderAnalysis();
@@ -8806,182 +8806,11 @@ onReloadOrders={async () => {
   </section>
 )}
 
-              {currentPage === "customer-analysis" && isAdmin && (() => {
-  const totalRevenue = customerAnalysis.reduce(
-    (sum, customer) => sum + customer.totalRevenue,
-    0
-  );
-
-  const totalOpen = customerAnalysis.reduce(
-    (sum, customer) => sum + customer.openAmount,
-    0
-  );
-
-  const totalCustomers = customerAnalysis.length;
-
-  const topCustomer =
-    customerAnalysis.length > 0 ? customerAnalysis[0].customerName : "-";
-
-    const topCustomerRevenue =
-  customerAnalysis.length > 0 ? customerAnalysis[0].totalRevenue : 0;
-
-  return (
-    <section className="single-page-section">
-      <div className="card">
-        <div className="page-topbar">
-          <div>
-            <h2>📊 Kundenanalyse</h2>
-            <p>Umsatz- und Rechnungsübersicht Ihrer Kunden.</p>
-          </div>
-
-          <button type="button" className="btn btn-secondary" onClick={openDashboard}>
-            Zurück zum Dashboard
-          </button>
-        </div>
-
-        {loadingCustomerAnalysis ? (
-          <p>Daten werden geladen...</p>
-        ) : (
-          <>
-            <div className="kpi-grid">
-              <div className="kpi-card">
-                <span>💰 Gesamtumsatz</span>
-                <strong>{totalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-              </div>
-
-              <div className="kpi-card">
-                <span>📂 Offen</span>
-                <strong>{totalOpen.toLocaleString("de-DE", { minimumFractionDigits: 2 })} {currencySymbol}</strong>
-              </div>
-
-              <div className="kpi-card">
-              <span>📄 Offene Rechnungen</span>
-              <strong>{openInvoiceCount}</strong>
-              </div>
-
-              <div className="kpi-card">
-                <span>👥 Kunden</span>
-                <strong>{totalCustomers}</strong>
-              </div>
-
-              <div className="kpi-card">
-  <span>🏆 Top Kunde</span>
-  <strong>{topCustomer}</strong>
-  <small>
-    {topCustomerRevenue.toLocaleString("de-DE", {
-      minimumFractionDigits: 2,
-    })}{" "}
-    {currencySymbol}
-  </small>
-</div>
-            </div>
-
-            <div className="analysis-section">
-  <h3>🏆 Top 10 Kunden</h3>
-
-  <div className="top-customers-list">
-    {customerAnalysis.slice(0, 10).map((customer, index) => (
-      <div key={customer.id} className="top-customer-item">
-        <div>
-          <strong>
-            #{index + 1} {customer.customerName}
-          </strong>
-        </div>
-
-        <div>
-          {customer.totalRevenue.toLocaleString("de-DE", {
-            minimumFractionDigits: 2,
-          })}{" "}
-          {currencySymbol}
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
-
-            <div className="analysis-section">
-  <h3>📈 Umsatz pro Monat</h3>
-
-  {monthlyRevenue.length === 0 ? (
-    <p>Keine Monatsdaten vorhanden.</p>
-  ) : (
-    <div className="monthly-revenue-list">
-      {monthlyRevenue.map((month) => (
-        <div key={month.month} className="monthly-revenue-item">
-          <span>{month.month}</span>
-          <strong>
-            {month.revenue.toLocaleString("de-DE", {
-              minimumFractionDigits: 2,
-            })}{" "}
-            {currencySymbol}
-          </strong>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Kunde</th>
-                    <th>Rechnungen</th>
-                    <th>Umsatz</th>
-                    <th>Offen</th>
-                    <th>Kundenwert</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-  {customerAnalysis.map((customer) => {
-    const customerValue =
-      customer.totalRevenue >= 20000
-        ? "A-Kunde"
-        : customer.totalRevenue >= 5000
-        ? "B-Kunde"
-        : "C-Kunde";
-
-    const customerValueClass =
-      customer.totalRevenue >= 20000
-        ? "customer-value-a"
-        : customer.totalRevenue >= 5000
-        ? "customer-value-b"
-        : "customer-value-c";
-
-    return (
-      <tr key={customer.id}>
-                      <td>{customer.customerName}</td>
-                      <td>{customer.invoiceCount}</td>
-                      <td>
-                        {customer.totalRevenue.toLocaleString("de-DE", {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {currencySymbol}
-                      </td>
-                      <td>
-                        {customer.openAmount.toLocaleString("de-DE", {
-                          minimumFractionDigits: 2,
-                        })}{" "}
-                        {currencySymbol}
-                      </td>
-                      <td>
-                      <span className={`customer-value-badge ${customerValueClass}`}>
-                      {customerValue}
-                    </span>
-                      </td>
-                    </tr>
-                      );
-                  })}
-              </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-})()}
+              {currentPage === "customer-analysis" && isAdmin && userProfile && (
+                <Suspense fallback={<p style={{ padding: 20 }}>Lädt …</p>}>
+                  <CustomerAnalysis tenantId={userProfile.tenant_id} currency={currencyCode} onBack={() => setCurrentPage("business-intelligence")} />
+                </Suspense>
+              )}
 
 {currentPage === "order-analysis" && isAdmin && (() => {
   const totalOrderRevenue = orderAnalysis.reduce(

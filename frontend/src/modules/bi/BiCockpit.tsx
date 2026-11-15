@@ -3,27 +3,20 @@ import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Clock, Package, Trophy, TrendingUp, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { PERIODS, pct1, assessment, change, figures, monthlyRevenue, periodRanges, receivables } from "./logic";
-import type { ExternalRow, InvoiceRow, MaterialLog, PeriodKey, TimeRow } from "./logic";
+import { pct1, assessment, change, figures, monthlyRevenue, periodRanges, receivables } from "./logic";
+import type { ExternalRow, InvoiceRow, MaterialLog, TimeRow } from "./logic";
+import { PeriodTabs } from "./shared";
+import { moneyFormatter, usePeriod } from "./period";
 import "./bi.css";
 
 export type BiTarget = "customers" | "orders" | "time" | "material" | "performance";
 
 type Data = { invoices: InvoiceRow[]; time: TimeRow[]; external: ExternalRow[]; material: MaterialLog[]; prices: Map<number, number> };
 
-const STORE = "bi-zeitraum";
-
 export default function BiCockpit({ tenantId, currency, onBack, onOpen }: { tenantId: number; currency: string; onBack: () => void; onOpen: (t: BiTarget) => void }) {
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [period, setPeriod] = useState<PeriodKey>(() => {
-    try {
-      const v = localStorage.getItem(STORE) as PeriodKey | null;
-      return v && PERIODS.some((p) => p.key === v) ? v : "year";
-    } catch {
-      return "year";
-    }
-  });
+  const [period, choose] = usePeriod();
 
   useEffect(() => {
     let cancel = false;
@@ -54,22 +47,7 @@ export default function BiCockpit({ tenantId, currency, onBack, onOpen }: { tena
     };
   }, [tenantId]);
 
-  const choose = (p: PeriodKey) => {
-    setPeriod(p);
-    try {
-      localStorage.setItem(STORE, p);
-    } catch {
-      /* egal */
-    }
-  };
-
-  const money = (n: number, digits = 0) => {
-    try {
-      return n.toLocaleString("de-DE", { style: "currency", currency: currency || "EUR", minimumFractionDigits: digits, maximumFractionDigits: digits });
-    } catch {
-      return `${n.toLocaleString("de-DE", { maximumFractionDigits: digits })} €`;
-    }
-  };
+  const money = moneyFormatter(currency);
 
   const calc = useMemo(() => {
     if (!data) return null;
@@ -101,13 +79,7 @@ export default function BiCockpit({ tenantId, currency, onBack, onOpen }: { tena
           </button>
         </div>
 
-        <div className="bi2-periods" role="tablist" aria-label="Zeitraum">
-          {PERIODS.map((p) => (
-            <button key={p.key} type="button" role="tab" aria-selected={period === p.key} className={period === p.key ? "on" : ""} onClick={() => choose(p.key)}>
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <PeriodTabs value={period} onChange={choose} />
 
         {err && <p className="bi2-msg">{err}</p>}
         {!calc && !err && <p className="bi2-muted">Zahlen werden geladen …</p>}
