@@ -1,5 +1,5 @@
 // MalerTreff-Community (Stufe 1): Beitritt mit Regeln, Feed, Benachrichtigungen, Profil, Chef-Freigabe, Moderation, Owner-Einstellungen
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import * as api from "./api";
 import { ModerationPanel, OwnerSettings, StaffPanel, VerifyPanel } from "./Admin";
 import { MalerSaaSHint, ProofCard } from "./External";
@@ -9,7 +9,10 @@ import { COMMUNITY_NAME, needsJoin } from "./logic";
 import type { Access } from "./logic";
 import "./cm.css";
 
-type Tab = "feed" | "notices" | "profile" | "staff" | "mod" | "verify" | "owner" | "rules";
+// nur für den Owner – eigener Teil, damit Mitglieder ihn nicht laden
+const RedaktionPanel = lazy(() => import("./Redaktion").then((m) => ({ default: m.RedaktionPanel })));
+
+type Tab = "feed" | "notices" | "profile" | "staff" | "mod" | "verify" | "redaktion" | "owner" | "rules";
 type Props = { onBack?: () => void; isChef?: boolean; onAccountDeleted?: () => void };
 
 export default function CommunityPage({ onBack, isChef = false, onAccountDeleted }: Props) {
@@ -108,6 +111,11 @@ export default function CommunityPage({ onBack, isChef = false, onAccountDeleted
                 </button>
               )}
               {access.is_owner && (
+                <button type="button" className={tab === "redaktion" ? "on" : ""} onClick={() => go("redaktion")}>
+                  Redaktion
+                </button>
+              )}
+              {access.is_owner && (
                 <button type="button" className={tab === "owner" ? "on" : ""} onClick={() => go("owner")}>
                   Einstellungen
                 </button>
@@ -136,6 +144,10 @@ export default function CommunityPage({ onBack, isChef = false, onAccountDeleted
               <ModerationPanel onChanged={refresh} />
             ) : tab === "verify" ? (
               <VerifyPanel onChanged={refresh} />
+            ) : tab === "redaktion" ? (
+              <Suspense fallback={<p className="cm-muted">Lädt …</p>}>
+                <RedaktionPanel me={me} />
+              </Suspense>
             ) : tab === "owner" ? (
               <OwnerSettings onChanged={refresh} />
             ) : (

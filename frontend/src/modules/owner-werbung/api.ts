@@ -377,3 +377,46 @@ export async function readGscExport(file: File): Promise<{ query: string; impres
   if (!list.length) throw new Error("In der Datei wurden keine Suchanfragen gefunden.");
   return list;
 }
+
+// ---------- MalerTreff-Redaktion ----------
+export type CommunityDraft = {
+  kind: "tipp" | "frage";
+  topic: string;
+  product: boolean;
+  feature: string | null;
+  body: string;
+  keyword: string;
+  image_hint: string;
+  image_path: string | null;
+};
+
+/** Starter-Beiträge für den MalerTreff vorschlagen (4 Fachbeiträge : 1 MalerSaaS-Tipp) */
+export async function communityDrafts(count: number, existing: string[]): Promise<CommunityDraft[]> {
+  const r = await callFn<{ items?: CommunityDraft[] }>({ action: "community_drafts", count, existing }, "Es konnten keine Vorschläge erstellt werden.");
+  if (!r.items) throw new Error(OLD_FN);
+  return r.items;
+}
+
+/** Bild aus der Bildbibliothek herunterladen (zum Weiterverwenden im MalerTreff) */
+export async function downloadLibraryImage(path: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error || !data) throw new Error("Bild konnte nicht geladen werden.");
+  return data;
+}
+
+/** Ratgeber-Entwurf aus einem Suchbegriff schreiben und speichern (eindeutiger Slug, notfalls ohne Bildfelder) */
+export async function articleDraftFromKeyword(keyword: string, reason: string): Promise<Article> {
+  const d = await writeArticle(keyword, "");
+  const taken = new Set(((await loadArticles()) ?? []).map((a) => a.slug));
+  let slug = d.slug;
+  for (let i = 2; taken.has(slug); i++) slug = `${d.slug}-${i}`;
+  try {
+    return await saveArticle(null, { ...d, slug, status: "entwurf", reason });
+  } catch {
+    const { image_path: _p, image_alt: _a, image_ai_label: _l, ...rest } = d;
+    void _p;
+    void _a;
+    void _l;
+    return await saveArticle(null, { ...rest, slug, status: "entwurf", reason });
+  }
+}

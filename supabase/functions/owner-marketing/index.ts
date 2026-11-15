@@ -25,6 +25,7 @@ import { KNOWLEDGE_WITH_PRICES } from "../help-chat/prompt.ts";
 import { encodeBase64, mediaTypeFor } from "../receipt-ai/logic.ts";
 import * as A from "./agent.ts";
 import * as S from "./seo.ts";
+import * as C from "./community.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const HEADERS = {
@@ -299,6 +300,31 @@ serve(async (req) => {
       if (!items.length) return json({ ok: false, error: "Es konnten keine Vorschläge erstellt werden. Bitte noch einmal versuchen." }, 422);
       return json({ ok: true, items });
     }
+    // ---------- MalerTreff-Redaktion: Starter-Beiträge ----------
+    if (body.action === "community_drafts") {
+      const n = Math.min(10, Math.max(1, Number(body.count) || 5));
+      const existing = (Array.isArray(body.existing) ? body.existing : []).map((t: unknown) => String(t)).slice(0, 60);
+      const month = new Date().toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+      const data = await callClaude({
+        max_tokens: 6000,
+        system: C.COMMUNITY_SYSTEM,
+        tools: [C.COMMUNITY_TOOL],
+        tool_choice: { type: "tool", name: "beitraege" },
+        messages: [{ role: "user", content: C.communityUserText(n, existing, month) }],
+      });
+      const drafts = C.cleanCommunityDrafts((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, n);
+      if (!drafts.length) return json({ ok: false, error: "Es konnten keine Vorschläge erstellt werden. Bitte noch einmal versuchen." }, 422);
+      // passendes Bild aus der Bildbibliothek (nicht jedes Mal dasselbe)
+      const { data: lib } = await db.from("owner_marketing_images").select("id, path, description, tags, last_used_at, realistic").limit(500);
+      const used = new Set<string>();
+      const items = drafts.map((d) => {
+        const img = lib?.length ? A.pickImage(lib, `${d.topic} ${d.image_hint} ${d.keyword} ${d.body.slice(0, 200)}`, d.product ? "funktion" : "tipp", null, used) : null;
+        if (img) used.add(img.path);
+        return { ...d, image_path: img?.path ?? null };
+      });
+      return json({ ok: true, items });
+    }
+
     if (body.action === "seo_article") {
       const keyword = String(body.keyword ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
       if (!keyword) return json({ ok: false, error: "Bitte einen Suchbegriff angeben." }, 400);
