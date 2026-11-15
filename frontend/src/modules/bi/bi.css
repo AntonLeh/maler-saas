@@ -1,5 +1,5 @@
 /* Business Intelligence – im Stil der Chef-Startseite */
-.bi2 { text-align: left; display: flex; flex-direction: column; gap: 16px; }
+.bi2 { text-align: left; display: flex; flex-direction: column; gap: 16px; width: 100%; box-sizing: border-box; }
 .bi2-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .bi2-top h2 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 24px; }
 .bi2-top h2 svg { color: #4f46e5; }
@@ -177,3 +177,19 @@
   .bi2-select { flex: 1 1 100%; }
   .bi2-table.mats td[data-label="Bestand"] { white-space: normal; }
 }
+
+/* ---------- Leistungsmanagement ---------- */
+.bi2-stars { color: #f59e0b; letter-spacing: 1px; white-space: nowrap; }
+.bi2-stars span { color: #e2e8f0; }
+.bi2-reviews { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bi2-reviews > li { border: 1px solid #e8edf4; border-radius: 14px; padding: 12px 14px; }
+.bi2-review-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.bi2-review-head small { display: block; color: #94a3b8; font-size: 12.5px; }
+.bi2-review-parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bi2-review-parts span { font-size: 12.5px; background: #f1f5f9; color: #475569; border-radius: 99px; padding: 2px 9px; }
+.bi2-review-text { margin: 8px 0 0; font-size: 14px; color: #334155; font-style: italic; }
+.bi2-review-emps { list-style: none; margin: 10px 0 0; padding: 8px 0 0; border-top: 1px dashed #e2e8f0; display: flex; flex-direction: column; gap: 4px; }
+.bi2-review-emps li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 13.5px; }
+.bi2-review-emps small { color: #64748b; flex-basis: 100%; }
+.bi2-kpi.green b { font-size: 19px; }
+@media (max-width: 560px) { .bi2-kpis.four .bi2-kpi:last-child { grid-column: auto; } }

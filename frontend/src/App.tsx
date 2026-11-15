@@ -348,6 +348,7 @@ const BiCockpit = lazy(() => import("./modules/bi/BiCockpit"));
 const CustomerAnalysis = lazy(() => import("./modules/bi/CustomerAnalysis"));
 const OrderAnalysis = lazy(() => import("./modules/bi/OrderAnalysis"));
 const MaterialAnalysis = lazy(() => import("./modules/bi/MaterialAnalysis"));
+const Performance = lazy(() => import("./modules/bi/Performance"));
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
@@ -7845,114 +7846,28 @@ onReloadOrders={async () => {
                 </Suspense>
               )}
 
-              {currentPage === "performance-management" && (
-  <section className="single-page-section">
-    <div className="card">
-      <div className="page-topbar">
-        <div>
-          <h2>🏆 Leistungsmanagement</h2>
-          <p>
-            Mitarbeiterleistung, Punkte, Sterne und Anerkennungssystem.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => setCurrentPage("business-intelligence")}
-        >
-          Zurück
-        </button>
-      </div>
-
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <span>🏆 Mitarbeiter des Monats</span>
-          <strong>Noch keine Daten</strong>
-        </div>
-
-        <div className="kpi-card">
-          <span>⭐ Durchschnitt</span>
-          <strong>-</strong>
-        </div>
-
-        <div className="kpi-card">
-          <span>👥 Bewertete Mitarbeiter</span>
-          <strong>0</strong>
-        </div>
-
-        <div className="kpi-card">
-          <span>💰 Bonusgrundlage</span>
-          <strong>In Vorbereitung</strong>
-        </div>
-      </div>
-
-      <div className="bi-module-grid">
-        <div
-  className="bi-module-card"
-  onClick={() => {
-    loadEmployeeRanking();
-    setCurrentPage("employee-ranking");
-  }}
->
-  <h3>⭐ Mitarbeiter-Ranking</h3>
-  <p>
-    Punkte, Sterne und Entwicklung aller Mitarbeiter.
-  </p>
-</div>
-
-        <div
-  className="bi-module-card"
-  onClick={() => {
-  loadPerformanceCriteria();
-  loadPerformanceRewards();
-  setCurrentPage("performance-criteria");
-}}
->
-  <h3>⚙ Leistungsregeln</h3>
-  <p>Kriterien wie Pünktlichkeit, Qualität, Dokumentation und Kundenlob.</p>
-</div>
-
-        <div
-  className="bi-module-card"
-  onClick={() => {
-    loadPerformanceCriteria();
-    loadPerformanceRewards();
-    setCurrentPage("performance-criteria");
-    // direkt zum Abschnitt „Bonusregeln“ springen, sobald die Seite da ist
-    window.setTimeout(() => document.getElementById("bonusregeln")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
-  }}
->
-          <h3>💰 Bonusregeln</h3>
-          <p>Belohnungen, Prämien oder Anerkennungen nach Punktestand.</p>
-        </div>
-
-        <div
-  className="bi-module-card"
-  onClick={() => {
-    loadPerformanceCriteria();
-    loadEmployeeRanking();
-    loadOrdersForPerformance();
-
-    setCurrentPage("employee-performance-entry");
-}}
->
-  <h3>📝 Bewertung erfassen</h3>
-  <p>
-    Manuelle Leistungsbewertung eines Mitarbeiters.
-  </p>
-</div>
-
-        <div className="bi-module-card">
-          <h3>⭐ Kundenbewertungen</h3>
-          <p>Bewertungen durch Kunden als Bestandteil der Leistungsbewertung.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-)}
-
-{currentPage === "performance-criteria" && (
+              {currentPage === "performance-management" && isAdmin && userProfile && (
+                <Suspense fallback={<p style={{ padding: 20 }}>Lädt …</p>}>
+                  <Performance
+                    tenantId={userProfile.tenant_id}
+                    onBack={() => setCurrentPage("business-intelligence")}
+                    onOpen={(t) => {
+                      if (t === "entry") {
+                        loadPerformanceCriteria();
+                        loadEmployeeRanking();
+                        loadOrdersForPerformance();
+                        setCurrentPage("employee-performance-entry");
+                        return;
+                      }
+                      loadPerformanceCriteria();
+                      loadPerformanceRewards();
+                      setCurrentPage("performance-criteria");
+                      if (t === "bonus") window.setTimeout(() => document.getElementById("bonusregeln")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+                    }}
+                  />
+                </Suspense>
+              )}
+{currentPage === "performance-criteria" && isAdmin && (
   <section className="single-page-section">
     <div className="card">
       <div className="page-topbar">
@@ -7988,7 +7903,7 @@ onReloadOrders={async () => {
     className="btn btn-secondary"
     onClick={() => setCurrentPage("performance-management")}
   >
-    Zurück
+    ← Zurück
   </button>
 </div>
       </div>
@@ -8471,7 +8386,7 @@ onReloadOrders={async () => {
   </section>
 )}
 
-{currentPage === "employee-ranking" && (
+{currentPage === "employee-ranking" && isAdmin && (
   <section className="single-page-section">
     <div className="card">
       <div className="page-topbar">
@@ -8487,7 +8402,7 @@ onReloadOrders={async () => {
           className="btn btn-secondary"
           onClick={() => setCurrentPage("performance-management")}
         >
-          Zurück
+          ← Zurück
         </button>
       </div>
 
@@ -8689,7 +8604,7 @@ onReloadOrders={async () => {
     );
   })()}
 
-                {currentPage === "employee-performance-entry" && (
+                {currentPage === "employee-performance-entry" && isAdmin && (
   <section className="single-page-section">
     <div className="card">
       <div className="page-topbar">
@@ -8703,7 +8618,7 @@ onReloadOrders={async () => {
           className="btn btn-secondary"
           onClick={() => setCurrentPage("performance-management")}
         >
-          Zurück
+          ← Zurück
         </button>
       </div>
 
