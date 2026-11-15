@@ -192,7 +192,24 @@
 .cm-draft .cm-tags select { padding: 3px 8px; font-size: 12.5px; border-radius: 999px; }
 .cm-draft.done { opacity: 0.8; }
 .cm-draft-img { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
-.cm-draft-img img, .cm-draft-img .cm-photo-wait { width: 160px; height: 110px; object-fit: cover; border-radius: 10px; display: block; }
+.cm-draft-img img, .cm-draft-img .cm-photo-wait { width: 160px; height: 110px; object-fit: cover; border-radius: 10px; display: block; flex-shrink: 0; }
+.cm-draft-img > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cm-draft-img .cm-check.small { font-size: 13px; margin: 0; }
+.cm-draft-img-btns { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.cm-draft-img-btns .cm-link.danger { color: #b91c1c; }
+.cm-draft-img-btns .cm-link.off, .cm-draft-img-btns .cm-link:disabled { opacity: 0.5; pointer-events: none; }
+.cm-draft-noimg { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 8px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; }
+.cm-picker { max-width: 720px; }
+.cm-picker input[type="search"] { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid #dbe3ee; border-radius: 10px; font: inherit; margin: 6px 0 10px; }
+.cm-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.cm-picker-item { all: unset; position: relative; cursor: pointer; border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; outline: 3px solid transparent; }
+.cm-picker-item img, .cm-picker-item .cm-photo-wait { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cm-picker-item:hover, .cm-picker-item:focus-visible { outline-color: #93c5fd; }
+.cm-picker-item.on { outline-color: #4f46e5; }
+.cm-picker-tag { position: absolute; left: 6px; bottom: 6px; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; color: #fff; }
+.cm-picker-tag.ki { background: rgba(79, 70, 229, 0.9); }
+.cm-picker-tag.foto { background: rgba(5, 150, 105, 0.9); }
+@media (max-width: 560px) { .cm-draft-img { flex-direction: column; align-items: flex-start; } }
 
 /* Verwaltung (Chef, Moderation, Owner) */
 .cm-admin-tabs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: #f1f5f9; border-radius: 12px; padding: 4px 6px; margin: 0 0 14px; }
