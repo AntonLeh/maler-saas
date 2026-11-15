@@ -28,16 +28,16 @@ export type Reward = {
   is_active?: boolean | null;
 };
 
-/** Messwerte der automatischen Bewertung; „ja/nein“-Werte werden als 1/0 verglichen */
-export const METRICS: Record<string, { label: string; kind: "bool" | "number"; hint?: string }> = {
-  order_completed: { label: "Auftrag fertiggestellt", kind: "bool" },
-  photo_documentation: { label: "Fotodokumentation vorhanden", kind: "bool" },
-  no_complaints: { label: "Keine Reklamation", kind: "bool" },
-  on_time_completion: { label: "Termingerecht abgeschlossen", kind: "bool" },
-  safety_compliance: { label: "Sicherheitsvorschriften eingehalten", kind: "bool" },
-  customer_rating: { label: "Kundenbewertung (Sterne)", kind: "number", hint: "1 bis 5" },
-  material_usage: { label: "Materialverbrauch", kind: "number" },
-  punctuality: { label: "Pünktlichkeit", kind: "number" },
+/** Messwerte der automatischen Bewertung (Namen wie in der Datenbank-Prüfregel).
+ *  ready = wird von der Datenbank bereits berechnet; alle anderen liefern dort derzeit immer 0. */
+export const METRICS: Record<string, { label: string; kind: "bool" | "number"; hint?: string; ready: boolean }> = {
+  order_completed: { label: "Auftrag fertiggestellt", kind: "bool", ready: true },
+  photos_uploaded: { label: "Fotos hochgeladen", kind: "number", hint: "Anzahl", ready: false },
+  work_time: { label: "Arbeitszeit (Stunden)", kind: "number", ready: false },
+  punctuality: { label: "Pünktlichkeit", kind: "number", ready: false },
+  customer_rating: { label: "Kundenbewertung (Sterne)", kind: "number", hint: "1 bis 5", ready: false },
+  complaints: { label: "Reklamationen", kind: "number", hint: "Anzahl", ready: false },
+  material_consumption: { label: "Materialverbrauch", kind: "number", ready: false },
 };
 export const OPERATORS: Record<string, string> = { "=": "gleich", "!=": "ungleich", ">": "größer als", ">=": "mindestens", "<": "kleiner als", "<=": "höchstens" };
 
@@ -64,7 +64,7 @@ export const signed = (n: number | null | undefined) => (n == null ? "–" : n >
 export function ruleText(c: Criterion) {
   if (!isAutomatic(c)) return "Wird von Ihnen von Hand vergeben";
   const m = METRICS[c.evaluation_key ?? ""];
-  if (!m) return "Automatisch (Messwert fehlt – bitte bearbeiten)";
+  if (!m) return "Kein Messwert festgelegt – bitte bearbeiten";
   const v = Number(c.evaluation_value);
   if (m.kind === "bool") {
     const yes = (c.evaluation_operator === "!=" ? v !== 1 : v === 1);
@@ -72,6 +72,9 @@ export function ruleText(c: Criterion) {
   }
   return `${m.label} ${OPERATORS[c.evaluation_operator ?? ""] ?? c.evaluation_operator ?? ""} ${Number.isFinite(v) ? fmtNum(v) : "?"}`;
 }
+
+/** Automatische Regel, die derzeit nicht wirklich ausgewertet wird (kein oder noch nicht berechneter Messwert) */
+export const notEvaluated = (c: Criterion) => isAutomatic(c) && !METRICS[c.evaluation_key ?? ""]?.ready;
 
 export function pointsText(c: Criterion) {
   if (!isAutomatic(c)) return signed(c.default_points ?? 0);

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Gift, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { showAlert, showConfirm } from "../../lib/dialogs";
-import { METRICS, OPERATORS, REWARD_TYPES, isAutomatic, overlaps, pointsText, rangeText, rewardName, rewardText, ruleText } from "./logic";
+import { METRICS, OPERATORS, REWARD_TYPES, isAutomatic, notEvaluated, overlaps, pointsText, rangeText, rewardName, rewardText, ruleText } from "./logic";
 import type { Criterion, Reward } from "./logic";
 import "../bi/bi.css";
 import "./lt.css";
@@ -215,12 +215,14 @@ export default function RulesPage({ tenantId, currency, initialTab = "rules", on
                         >
                           <option value="">Bitte auswählen …</option>
                           {Object.entries(METRICS).map(([k, m]) => (
-                            <option key={k} value={k}>
+                            <option key={k} value={k} disabled={!m.ready && cForm.key !== k}>
                               {m.label}
+                              {m.ready ? "" : " (folgt)"}
                             </option>
                           ))}
                         </select>
                       </label>
+                      {metric && !metric.ready && <p className="bi2-msg warn lt-wide">Dieser Messwert wird noch nicht automatisch berechnet – die Regel würde immer mit 0 gewertet. Bitte einen anderen wählen.</p>}
                       {metric?.kind === "bool" ? (
                         <label>
                           <span>Erfüllt, wenn</span>
@@ -302,6 +304,7 @@ export default function RulesPage({ tenantId, currency, initialTab = "rules", on
                         </td>
                         <td data-label="Regel">
                           {ruleText(c)}
+                          {notEvaluated(c) && c.is_active !== false && <small className="lt-warn">Wird derzeit nicht ausgewertet</small>}
                           {c.description && <small className="lt-desc">{c.description}</small>}
                         </td>
                         <td className="num strong" data-label="Punkte" title={isAutomatic(c) ? "bei Erfolg / sonst" : undefined}>
@@ -331,7 +334,10 @@ export default function RulesPage({ tenantId, currency, initialTab = "rules", on
                 </table>
               </div>
             )}
-            <p className="bi2-small">Automatische Regeln werden je Auftrag berechnet. „+10 / 0“ heißt: 10 Punkte, wenn die Regel erfüllt ist, sonst 0.</p>
+            <p className="bi2-small">
+              Automatische Regeln werden je Auftrag berechnet. „+10 / 0“ heißt: 10 Punkte, wenn die Regel erfüllt ist, sonst 0. Derzeit wird als Messwert nur „Auftrag fertiggestellt“ wirklich
+              berechnet – weitere Messwerte folgen.
+            </p>
           </section>
         )}
 

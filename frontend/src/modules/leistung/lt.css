@@ -50,3 +50,5 @@
   .lt-table td.name { padding-right: 70px; }
   .lt-table td[data-label="Regel"] { grid-column: 1 / -1; }
 }
+.lt-warn { display: block; color: #b45309; font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+.lt-grid .lt-wide { grid-column: 1 / -1; margin: 0; }

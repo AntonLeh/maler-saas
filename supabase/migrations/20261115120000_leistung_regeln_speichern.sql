@@ -36,8 +36,9 @@ begin
     raise exception 'Unbekannter Regeltyp.';
   end if;
   if v_auto then
-    if p_evaluation_key not in ('order_completed', 'photo_documentation', 'customer_rating', 'material_usage',
-                                'no_complaints', 'on_time_completion', 'safety_compliance', 'punctuality') then
+    -- dieselben Namen wie in der Prüfregel performance_criteria_evaluation_key_check
+    if p_evaluation_key not in ('order_completed', 'photos_uploaded', 'material_consumption', 'work_time',
+                                'punctuality', 'customer_rating', 'complaints') then
       raise exception 'Bitte einen Messwert auswählen.';
     end if;
     if p_operator not in ('=', '!=', '>', '>=', '<', '<=') or p_value is null then
