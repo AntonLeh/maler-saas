@@ -50,7 +50,9 @@
   }
 }
 
-#root {
+/* #ssr = vorab gerenderte Produktseite (für Google), sieht genauso aus wie die App */
+#root,
+#ssr {
   width: 1126px;
   max-width: 100%;
   margin: 0 auto;

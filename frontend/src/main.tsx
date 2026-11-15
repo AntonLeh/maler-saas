@@ -26,7 +26,25 @@ inject({
   },
 })
 
-createRoot(document.getElementById('root')!).render(
+// Vorab gerenderte Produktseite (#ssr, nur für Google und den ersten Augenblick):
+// die App baut sich unsichtbar auf und tauscht dann ohne Flackern aus
+const rootEl = document.getElementById('root')!
+const ssrEl = document.getElementById('ssr')
+if (ssrEl && rootEl.dataset.ssr) {
+  const swap = () => {
+    if (!ssrEl.isConnected) return
+    ssrEl.remove()
+    rootEl.style.display = ''
+    observer.disconnect()
+  }
+  const observer = new MutationObserver(() => {
+    if (rootEl.childElementCount > 0 && !rootEl.querySelector('.page-loading')) requestAnimationFrame(swap)
+  })
+  observer.observe(rootEl, { childList: true, subtree: true })
+  window.setTimeout(swap, 8000) // spätestens dann die App zeigen
+}
+
+createRoot(rootEl).render(
   <StrictMode>
     <Suspense fallback={<div className="page-loading" role="status" aria-label="Wird geladen"><span /></div>}>
       <App />

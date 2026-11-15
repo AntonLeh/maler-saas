@@ -9,7 +9,7 @@
 // Die Weiterleitungen dazu stehen in vercel.json. Schlägt etwas fehl, bricht der Build ab –
 // dann bleibt die bisherige Version online.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { SEO_PAGES } from "./src/seo/seoPages";
@@ -45,6 +45,18 @@ export function pageHtml(base: string, p: { path: string; title: string; descrip
   return h;
 }
 
+/** Volle Seite statt Kurztext: vorab gerendertes HTML sichtbar in #ssr, die App startet unsichtbar in #root
+ *  und blendet #ssr aus, sobald sie fertig ist (siehe src/main.tsx). Ohne JavaScript bleibt #ssr stehen. */
+export function withFullPage(html: string, body: string, cssFiles: string[]): string {
+  let h = html.replace(
+    /<div id="root">[\s\S]*?<\/main><\/div>/,
+    () => `<div id="ssr">${body}</div><div id="root" data-ssr="1" style="display:none"></div>`,
+  );
+  if (!h.includes('<div id="ssr">')) throw new Error("seoPrerender: Platz für die volle Seite nicht gefunden");
+  if (cssFiles.length) h = h.replace("</head>", () => `${cssFiles.map((f) => `<link rel="stylesheet" href="/${f}" />`).join("")}</head>`);
+  return h;
+}
+
 export function appHtml(base: string): string {
   return replaceOnce(base, /\s*<link rel="canonical" href="[^"]*" \/>/, "", "canonical");
 }
@@ -57,8 +69,34 @@ export default function seoPrerender(): Plugin {
     configResolved(c) {
       outDir = c.build.outDir;
     },
-    closeBundle() {
+    async closeBundle() {
       const base = readFileSync(join(outDir, "index.html"), "utf8");
+      // CSS-Dateien der einzelnen Seiten aus dem Build-Verzeichnis (manifest)
+      const manifestPath = join(outDir, ".vite", "manifest.json");
+      const manifest: Record<string, { css?: string[]; imports?: string[] }> = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+      const cssOf = (src: string | null) => {
+        if (!src || !manifest[src]) return [];
+        const out = new Set<string>();
+        const walk = (k: string, depth: number) => {
+          const e = manifest[k];
+          if (!e || depth > 4) return;
+          (e.css ?? []).forEach((c) => out.add(c));
+          (e.imports ?? []).forEach((i) => walk(i, depth + 1));
+        };
+        walk(src, 0);
+        return [...out].filter((c) => !base.includes(c)); // schon in index.html eingebunden
+      };
+      // Seiten-Komponenten im Build-Prozess laden (Vite übersetzt TSX/CSS-Importe)
+      const ssr: { render: ((path: string) => { html: string; source: string | null } | null) | null } = { render: null };
+      let server: { ssrLoadModule: (id: string) => Promise<Record<string, unknown>>; close: () => Promise<void> } | null = null;
+      try {
+        const { createServer } = await import("vite");
+        const react = (await import("@vitejs/plugin-react")).default;
+        server = await createServer({ configFile: false, plugins: [react()], root: process.cwd(), logLevel: "error", appType: "custom", server: { middlewareMode: true, hmr: false } });
+        ssr.render = (await server.ssrLoadModule("/src/seo/ssrPages.tsx")).renderPage as typeof ssr.render;
+      } catch (e) {
+        console.warn("seoPrerender: volle Seiten nicht möglich, nur Überschrift + Kurztext:", e);
+      }
       writeFileSync(join(outDir, "app.html"), appHtml(base));
       const seen = new Set<string>();
       for (const p of SEO_PAGES) {
@@ -67,8 +105,17 @@ export default function seoPrerender(): Plugin {
         seen.add(slug);
         const dir = join(outDir, "seo", slug);
         mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, "index.html"), pageHtml(base, p));
+        let html = pageHtml(base, p);
+        try {
+          const full = ssr.render?.(p.path);
+          if (full && full.html.length > 500) html = withFullPage(html, full.html, cssOf(full.source));
+        } catch (e) {
+          console.warn(`seoPrerender: ${p.path} nur mit Kurztext:`, e);
+        }
+        writeFileSync(join(dir, "index.html"), html);
       }
+      await server?.close();
+      rmSync(join(outDir, ".vite"), { recursive: true, force: true }); // Manifest nicht veröffentlichen
     },
   };
 }
