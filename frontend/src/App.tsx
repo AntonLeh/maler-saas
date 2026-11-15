@@ -7834,6 +7834,8 @@ onReloadOrders={async () => {
                         setCurrentPage("order-analysis");
                       } else if (t === "time") {
                         setCurrentPage("time-evaluation");
+                      } else if (t === "performance") {
+                        setCurrentPage("performance-management");
                       } else {
                         void loadMaterialAnalysis();
                         setCurrentPage("material-analysis");
@@ -7911,7 +7913,16 @@ onReloadOrders={async () => {
   <p>Kriterien wie Pünktlichkeit, Qualität, Dokumentation und Kundenlob.</p>
 </div>
 
-        <div className="bi-module-card">
+        <div
+  className="bi-module-card"
+  onClick={() => {
+    loadPerformanceCriteria();
+    loadPerformanceRewards();
+    setCurrentPage("performance-criteria");
+    // direkt zum Abschnitt „Bonusregeln“ springen, sobald die Seite da ist
+    window.setTimeout(() => document.getElementById("bonusregeln")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+  }}
+>
           <h3>💰 Bonusregeln</h3>
           <p>Belohnungen, Prämien oder Anerkennungen nach Punktestand.</p>
         </div>
@@ -8253,7 +8264,7 @@ onReloadOrders={async () => {
         </div>
       )}
 
-<div className="card" style={{ marginTop: 30 }}>
+<div className="card" id="bonusregeln" style={{ marginTop: 30, scrollMarginTop: 16 }}>
   <div className="page-topbar">
     <div>
       <h3>🎁 Bonusregeln</h3>

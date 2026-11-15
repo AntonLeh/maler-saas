@@ -1,13 +1,13 @@
 // Business Intelligence: Unternehmer-Cockpit mit Zeitraum, Vergleich, Umsatzverlauf und automatischer Einschätzung
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Clock, Package, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Clock, Package, Trophy, TrendingUp, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { PERIODS, pct1, assessment, change, figures, monthlyRevenue, periodRanges, receivables } from "./logic";
 import type { ExternalRow, InvoiceRow, MaterialLog, PeriodKey, TimeRow } from "./logic";
 import "./bi.css";
 
-export type BiTarget = "customers" | "orders" | "time" | "material";
+export type BiTarget = "customers" | "orders" | "time" | "material" | "performance";
 
 type Data = { invoices: InvoiceRow[]; time: TimeRow[]; external: ExternalRow[]; material: MaterialLog[]; prices: Map<number, number> };
 
@@ -173,6 +173,7 @@ export default function BiCockpit({ tenantId, currency, onBack, onOpen }: { tena
               <Tile icon={TrendingUp} title="Auftragsanalyse" text="Umsatz, Kosten und Deckungsbeitrag je Auftrag" onClick={() => onOpen("orders")} />
               <Tile icon={Clock} title="Arbeitsstunden" text="Stunden und Lohnkosten je Mitarbeiter und Auftrag" onClick={() => onOpen("time")} />
               <Tile icon={Package} title="Materialanalyse" text="Verbrauch und Materialkosten" onClick={() => onOpen("material")} />
+              <Tile icon={Trophy} title="Leistungsmanagement" text="Mitarbeiter-Ranking, Bewertungen, Leistungs- und Bonusregeln" onClick={() => onOpen("performance")} />
             </div>
           </>
         )}

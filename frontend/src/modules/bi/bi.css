@@ -58,7 +58,7 @@
 .bi2-advice li.red { border-left-color: #ef4444; background: #fef2f2; }
 
 .bi2-h { margin: 4px 0 -4px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
-.bi2-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.bi2-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
 .bi2-tile { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #fff; border: 1px solid #e8edf4; border-radius: 14px; }
 .bi2-tile svg { color: #4f46e5; flex: none; margin-top: 2px; }
 .bi2-tile b { display: block; font-size: 15px; color: #0f172a; }
@@ -70,7 +70,6 @@
   .bi2-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .bi2-kpi:nth-child(4) { box-shadow: none; }
   .bi2-two { grid-template-columns: 1fr; }
-  .bi2-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
   .bi2-top { flex-direction: column-reverse; }
