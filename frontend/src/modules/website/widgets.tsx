@@ -22,8 +22,7 @@ export function WebsiteButton({ tenantId, hasAccess, onOpen }: { tenantId: numbe
       ) : (
         <Lock size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
       )}
-      Website
-      {hasAccess && count > 0 && <span className="cs-badge" title={`${count} neue Anfrage${count > 1 ? "n" : ""}`}>{count}</span>}
+      Website{hasAccess && count > 0 ? ` (${count} Anfrage${count > 1 ? "n" : ""})` : ""}
     </button>
   );
 }

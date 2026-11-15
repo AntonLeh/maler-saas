@@ -65,7 +65,13 @@ export default function BusinessCockpit({
         </p>
       </div>
 
-      <div className="cs-cockpit-grid">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "14px",
+        }}
+      >
         <CockpitItem
           icon="📸"
           label="Neue Fortschrittsbilder"
@@ -205,13 +211,6 @@ export default function BusinessCockpit({
             gap: "10px",
           }}
         >
-          {businessEvents.length === 0 && (
-            <div className="cs-news-empty">
-              {selectedDate === new Date().toLocaleDateString("sv-SE")
-                ? "Heute noch keine Ereignisse."
-                : `Am ${formattedSelectedDate} gab es keine Ereignisse.`}
-            </div>
-          )}
           {[...businessEvents]
   .sort(
     (a, b) =>

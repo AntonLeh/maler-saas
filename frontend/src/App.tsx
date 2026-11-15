@@ -8,8 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Pencil, BarChart3, UserPlus, UserRoundPlus, ClipboardPlus, FileText, Receipt, MessageSquare, Package, Settings, Tag, CreditCard } from "lucide-react";
-import "./modules/chef-start/chef-start.css";
+import { Pencil } from "lucide-react";
+import ChefStart from "./modules/chef-start/ChefStart";
+import type { ChefNavKey } from "./modules/chef-start/ChefStart";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import "./App.css";
@@ -22,12 +23,8 @@ import LandingPage from "./pages/LandingPage";
 import FeatureLandingPage from "./pages/feature/FeatureLandingPage";
 import { featurePageFor } from "./pages/feature/featurePages";
 import CustomerTaxFields from "./components/CustomerTaxFields";
-import { BelegeButton } from "./modules/belege/widgets";
 import { einvoiceCustomerFields, isBusinessFromKind, kindFromCustomer, type CustomerKind } from "./lib/customerKind";
-import { TermineStatCard } from "./modules/terminkalender/widgets";
-import { KiTelefonButton } from "./modules/ki-telefon/widgets";
 import { hasAiPhoneAccess } from "./modules/ki-telefon/types";
-import { WebsiteButton } from "./modules/website/widgets";
 import { EmploymentBadges, EmploymentFilter, ExitControl } from "./modules/mitarbeiter-arten/widgets";
 import { filterPeople } from "./modules/mitarbeiter-arten/logic";
 import { tabFromMode } from "./modules/auftraege/listLogic";
@@ -39,10 +36,8 @@ import { landOf } from "./modules/nachweise/logic";
 import type { PartnerDoc } from "./modules/nachweise/logic";
 import { loadDocs as loadPartnerDocs } from "./modules/nachweise/api";
 import { AbsenceAssignWarning, AbsenceBar, TeamAbsenceCard } from "./modules/urlaub/widgets";
-import { CommunityTile } from "./modules/community/widgets";
 import { CountryHint } from "./modules/land/CountryHint";
 import { hasWebsiteAccess } from "./modules/website/types";
-import { FachkraefteButton } from "./modules/fachkraefte/widgets";
 import { showAlert, showConfirm, showPrompt } from "./lib/dialogs";
 import { OrderHistory, OrderReviewBox } from "./modules/auftraege/OrderReviewPanels";
 import { diffAssignments, formSnapshot, orderErrorText, validateOrderForm } from "./modules/auftraege/logic";
@@ -321,7 +316,6 @@ const pageLoaders = {
   MalerSoftwarePage: () => import("./pages/MalerSoftwarePage"),
   AufmassAngebotePage: () => import("./pages/AufmassAngebotePage"),
   PerformanceSimulator: () => import("./components/PerformanceSimulator"),
-  BusinessCockpit: () => import("./components/BusinessCockpit"),
   BusinessFeedPage: () => import("./pages/BusinessFeedPage"),
   ApprovalCenterPage: () => import("./pages/ApprovalCenterPage"),
   AuftragsverwaltungPage: () => import("./pages/AuftragsverwaltungPage"),
@@ -370,7 +364,6 @@ const BillingPage = lazy(pageLoaders.BillingPage);
 const MalerSoftwarePage = lazy(pageLoaders.MalerSoftwarePage);
 const AufmassAngebotePage = lazy(pageLoaders.AufmassAngebotePage);
 const PerformanceSimulator = lazy(pageLoaders.PerformanceSimulator);
-const BusinessCockpit = lazy(pageLoaders.BusinessCockpit);
 const BusinessFeedPage = lazy(pageLoaders.BusinessFeedPage);
 const ApprovalCenterPage = lazy(pageLoaders.ApprovalCenterPage);
 const AuftragsverwaltungPage = lazy(pageLoaders.AuftragsverwaltungPage);
@@ -6527,6 +6520,40 @@ onReloadOrders={async () => {
     }
 
     const currencyCode = companySettings?.currency || "EUR";
+
+    /** Menü und Knöpfe der Chef-Startseite – führt zu denselben Seiten wie die bisherigen Knöpfe */
+    const openChefArea = async (key: ChefNavKey) => {
+      switch (key) {
+        case "customers": return openCustomersListPage();
+        case "quotes": return setCurrentPage("quotes-list");
+        case "orders": return openOrdersListPage("new");
+        case "invoices":
+          setInvoicesFromBuchhaltung(false);
+          return setCurrentPage("invoices-list");
+        case "calendar": return setCurrentPage("terminkalender");
+        case "employees": return openEmployeesListPage();
+        case "absences": return setCurrentPage("urlaub");
+        case "messages": return openMessagesPage();
+        case "materials": return setCurrentPage("materials");
+        case "books": return setCurrentPage("belege");
+        case "reports":
+          if (!hasFeature("advancedReports")) return setCurrentPage("business-intelligence-locked");
+          await Promise.all([loadCustomerAnalysis(), loadOrderAnalysis()]);
+          return setCurrentPage("business-intelligence");
+        case "ai-phone": return setCurrentPage("ki-telefon");
+        case "website": return setCurrentPage("website");
+        case "workers": return setCurrentPage("fachkraefte");
+        case "community": return setCurrentPage("community");
+        case "settings": return setCurrentPage("settings");
+        case "pricing-rules": return setCurrentPage("pricing-rules");
+        case "billing": return setCurrentPage("billing");
+        case "new-customer": return openCreateCustomerPage();
+        case "new-site-visit": return setCurrentPage("create-site-visit");
+        case "new-employee": return openCreateEmployeePage();
+        case "images": return setCurrentPage("business-images");
+        case "approvals": return setCurrentPage("approval-center");
+      }
+    };
     const currencySymbol = companySettings?.currency_symbol || "€";
 
     const defaultInternalHourlyRate =
@@ -6684,53 +6711,23 @@ onReloadOrders={async () => {
               {currentPage === "dashboard" && isAdmin && userProfile?.role_id !== 1 && (
                 <>
                   <CountryHint tenantId={userProfile?.tenant_id} onOpenSettings={() => setCurrentPage("settings")} />
-                  <section className="stats-grid stats-grid-5 cs-stats">
-                    <button
-                      type="button"
-                      className="stat-card stat-card-clickable"
-                      onClick={openCustomersListPage}
-                    >
-                      <span className="stat-label">👥 Kunden gesamt</span>
-                      <strong className="stat-value">{stats.totalCustomers}</strong>
-                    </button>
-
-                    <button
-  type="button"
-  className="stat-card stat-card-clickable"
-  onClick={() => openOrdersListPage("new")}
->
-  <span className="stat-label">📋 Aufträge</span>
-  <strong className="stat-value">{stats.totalOrders}</strong>
-</button>
-
-                    <button
-                      type="button"
-                      className="stat-card stat-card-clickable"
-                      onClick={openEmployeesListPage}
-                    >
-                      <span className="stat-label">👷 Mitarbeiter</span>
-                      <strong className="stat-value">{stats.totalEmployees}</strong>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="stat-card stat-card-clickable"
-                      onClick={() => {
-                        setInvoicesFromBuchhaltung(false);
-                        setCurrentPage("invoices-list");
-                      }}
-                    >
-                      <span className="stat-label">🧾 Rechnungen</span>
-                      <strong className="stat-value">{stats.totalInvoices}</strong>
-                    </button>
-
-                    <TermineStatCard
-                      tenantId={userProfile.tenant_id}
-                      onOpen={() => setCurrentPage("terminkalender")}
-                    />
-
-                  </section>
-
+                  <ChefStart
+                  tenantId={userProfile.tenant_id}
+                  firstName={userProfile.first_name}
+                  lastName={userProfile.last_name}
+                  currency={currencyCode}
+                  counts={{ customers: stats.totalCustomers, orders: stats.totalOrders, invoices: stats.totalInvoices, employees: stats.totalEmployees }}
+                  unreadMessages={unreadMessages}
+                  can={{
+                    createCustomers: canCreateCustomers,
+                    admin: isAdmin,
+                    aiPhone: hasAiPhoneAccess(subscription?.plan),
+                    website: hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial),
+                    reports: hasFeature("advancedReports"),
+                  }}
+                  open={openChefArea}
+                  attention={
+                    <>
                   <DocsReminder
                     people={employees}
                     docs={partnerDocs}
@@ -6744,119 +6741,8 @@ onReloadOrders={async () => {
                   {userProfile.role_id === ADMIN_ROLE_ID && (
                     <AbsenceBar tenantId={userProfile.tenant_id} people={employees} onOpen={() => setCurrentPage("urlaub")} />
                   )}
-
-                  <section className="cs-nav" aria-label="Bereiche">
-                    <div className="cs-quick">
-                      {canCreateCustomers && (
-                        <button type="button" className="btn btn-success" onClick={openCreateCustomerPage}>
-                          <UserPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Kunde anlegen
-                        </button>
-                      )}
-                      <button type="button" className="btn btn-success" onClick={() => setCurrentPage("create-site-visit")}>
-                        <ClipboardPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                        Besichtigung anlegen
-                      </button>
-                      {isAdmin && (
-                        <button type="button" className="btn btn-success" onClick={openCreateEmployeePage}>
-                          <UserRoundPlus size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Mitarbeiter anlegen
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="cs-group">
-                      <h3>Tagesgeschäft</h3>
-                      <div className="cs-tiles">
-                        <button type="button" className="btn" onClick={() => setCurrentPage("quotes-list")}>
-                          <FileText size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Angebote
-                        </button>
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={() => {
-                            setInvoicesFromBuchhaltung(false);
-                            setCurrentPage("invoices-list");
-                          }}
-                        >
-                          <Receipt size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Rechnungen
-                        </button>
-                        <button type="button" className="btn" onClick={openMessagesPage}>
-                          <MessageSquare size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Nachrichten
-                          {unreadMessages > 0 && <span className="cs-badge">{unreadMessages}</span>}
-                        </button>
-                        <button type="button" className="btn" onClick={() => setCurrentPage("materials")}>
-                          <Package size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Materialverwaltung
-                        </button>
-                        {isAdmin && <BelegeButton onOpen={() => setCurrentPage("belege")} />}
-                      </div>
-                    </div>
-
-                    <div className="cs-group">
-                      <h3>Wachstum &amp; Extras</h3>
-                      <div className="cs-tiles">
-                        <button
-                          type="button"
-                          className="btn"
-  onClick={async () => {
-    if (!hasFeature("advancedReports")) {
-      setCurrentPage("business-intelligence-locked");
-      return;
-    }
-
-    await Promise.all([
-      loadCustomerAnalysis(),
-      loadOrderAnalysis(),
-    ]);
-
-    setCurrentPage("business-intelligence");
-  }}
-                        >
-                          <BarChart3 size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Business Intelligence
-                        </button>
-                        <KiTelefonButton
-                          tenantId={userProfile.tenant_id}
-                          hasAccess={hasAiPhoneAccess(subscription?.plan)}
-                          onOpen={() => setCurrentPage("ki-telefon")}
-                        />
-                        <WebsiteButton
-                          tenantId={userProfile.tenant_id}
-                          hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
-                          onOpen={() => setCurrentPage("website")}
-                        />
-                        <FachkraefteButton
-                          hasAccess={hasWebsiteAccess(subscription?.plan, subscription?.status, subscription?.is_trial)}
-                          onOpen={() => setCurrentPage("fachkraefte")}
-                        />
-                        <CommunityTile onOpen={() => setCurrentPage("community")} />
-                      </div>
-                    </div>
-
-                    <div className="cs-group">
-                      <h3>Verwaltung</h3>
-                      <div className="cs-tiles">
-                        <button type="button" className="btn" onClick={() => setCurrentPage("settings")}>
-                          <Settings size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Einstellungen
-                        </button>
-                        <button type="button" className="btn" onClick={() => setCurrentPage("pricing-rules")}>
-                          <Tag size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Preisregeln
-                        </button>
-                        <button type="button" className="btn" onClick={() => setCurrentPage("billing")}>
-                          <CreditCard size={18} strokeWidth={2.25} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
-                          Abrechnung &amp; Abo
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-
-                  <BusinessCockpit
+                    </>
+                  }
                   businessEvents={[
   ...businessEvents,
   ...siteVisitFeedEntries.flatMap(
@@ -6988,8 +6874,6 @@ onReloadOrders={async () => {
   ).length
 }
   
-  onOpenImages={() => setCurrentPage("business-images")}
-  onOpenApprovals={() => setCurrentPage("approval-center")}
 />
 
 {showBusinessImages && (

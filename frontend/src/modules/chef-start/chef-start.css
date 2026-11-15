@@ -1,50 +1,96 @@
-/* Startseite des Chefs: Kennzahlen, Schnellzugriff, sortierte Bereichs-Kacheln, Cockpit-Raster */
+/* Startseite des Chefs: Menü links, „heute wichtig“ rechts */
+.cs-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; align-items: start; text-align: left; }
 
-/* Kennzahlen etwas kompakter – 5 in einer Reihe, solange Platz ist */
-@media (min-width: 900px) { .cs-stats.stats-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-.cs-stats { gap: 14px; margin-bottom: 18px; }
-.cs-stats .stat-card { min-height: 0; padding: 16px 18px; gap: 6px; border-radius: 16px; }
-.cs-stats .stat-value { font-size: 30px; }
-@media (max-width: 760px) {
-  .cs-stats.stats-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cs-stats .stat-value { font-size: 26px; }
+/* ---------- Menü ---------- */
+.cs-menu { background: #fff; border-radius: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); padding: 10px; position: sticky; top: 12px; }
+.cs-menu-group + .cs-menu-group { margin-top: 6px; }
+.cs-menu h4 { margin: 10px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; text-align: left; }
+.cs-menu-item {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px;
+  font-size: 14.5px; font-weight: 600; color: #1e293b;
 }
-
-/* Bereiche */
-.cs-nav { background: #fff; border-radius: 20px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08); padding: 18px 20px; margin: 18px 0 0; display: flex; flex-direction: column; gap: 14px; }
-.cs-quick { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #eef2f7; }
-.cs-quick .btn { width: auto; }
-.cs-group { display: grid; grid-template-columns: 170px 1fr; gap: 10px 16px; align-items: start; }
-.cs-group h3 { text-align: left; margin: 12px 0 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b; }
-.cs-tiles { display: flex; flex-wrap: wrap; gap: 8px; }
-
-/* einheitliche, ruhige Kacheln – auch für die Knöpfe aus den Modulen */
-.cs-tiles .btn {
-  width: auto; min-height: 44px; padding: 0 14px; gap: 8px;
-  background: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 12px;
-  box-shadow: none; font-size: 14.5px; font-weight: 600;
-}
-.cs-tiles .btn svg { color: #4f46e5; margin-right: 0 !important; flex: none; }
-.cs-tiles .btn { min-width: 0; overflow-wrap: anywhere; }
-.cs-tiles .btn:hover { background: #eef2ff; border-color: #c7d2fe; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12); }
-.cs-tiles .btn:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
-.cs-tiles .btn .cm-tile-badge { margin-left: 0; }
+.cs-menu-item svg { color: #4f46e5; flex: none; }
+.cs-menu-item span { flex: 1; min-width: 0; }
+.cs-menu-item em { font-style: normal; font-size: 12.5px; font-weight: 600; color: #64748b; }
+.cs-menu-item:hover { background: #eef2ff; }
+.cs-menu-item:focus-visible { outline: 2px solid #818cf8; }
+.cs-menu-item.locked { color: #94a3b8; }
+.cs-menu-item.locked svg { color: #94a3b8; }
 
 .cs-badge { background: #dc2626; color: #fff; border-radius: 999px; font-size: 11.5px; font-weight: 800; padding: 1px 7px; line-height: 1.5; }
 
-@media (max-width: 760px) {
-  .cs-nav { padding: 16px; }
-  .cs-group { grid-template-columns: 1fr; gap: 8px; }
-  .cs-group h3 { margin: 4px 0 0; }
-  .cs-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cs-tiles .btn { justify-content: flex-start; text-align: left; padding: 10px 12px; line-height: 1.25; }
-  .cs-quick .btn { flex: 1 1 100%; justify-content: center; }
+/* ---------- rechte Spalte ---------- */
+.cs-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cs-card { background: #fff; border-radius: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); padding: 16px 18px; }
+.cs-card h3 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: center; gap: 8px; text-align: left; }
+.cs-card h3 svg { color: #4f46e5; }
+
+.cs-hello { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cs-hello h2 { margin: 0; font-size: 22px; }
+.cs-hello p { margin: 2px 0 0; color: #64748b; font-size: 14px; }
+.cs-hello-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cs-hello-actions .btn { width: auto; min-height: 40px; padding: 0 14px; font-size: 14px; }
+
+.cs-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #fff; border-radius: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); padding: 6px; }
+.cs-kpi { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; min-width: 0; }
+.cs-kpi + .cs-kpi { box-shadow: -1px 0 0 #eef2f7; }
+button.cs-kpi { cursor: pointer; }
+button.cs-kpi:hover { background: #f5f7ff; }
+button.cs-kpi:focus-visible { outline: 2px solid #818cf8; }
+.cs-kpi span { color: #64748b; font-size: 13px; }
+.cs-kpi b { font-size: 26px; line-height: 1.2; color: #0f172a; }
+.cs-kpi small { color: #64748b; font-size: 12px; overflow-wrap: anywhere; }
+
+/* Braucht Ihre Aufmerksamkeit – eigene Zeilen und die Hinweise aus den Modulen im selben Stil */
+.cs-attn-list { display: flex; flex-direction: column; gap: 8px; }
+.cs-attn-list:empty::after { content: "✓ Alles erledigt – im Moment ist nichts offen."; color: #15803d; font-weight: 600; font-size: 14px; padding: 6px 2px; }
+.cs-attn-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid #e8edf4; font-size: 14px; color: #1e293b; }
+.cs-attn-row.warn { background: #fff7ed; border-color: #fed7aa; }
+.cs-attn-ic { font-size: 18px; flex: none; }
+.cs-attn-text { flex: 1; min-width: 0; }
+.cs-attn-go { all: unset; cursor: pointer; color: #4f46e5; font-weight: 700; white-space: nowrap; }
+.cs-attn-go:hover { text-decoration: underline; }
+.cs-attn-list .nw-reminder, .cs-attn-list .ur-bar { margin: 0; border-radius: 12px; padding: 10px 12px; box-shadow: none; }
+.cs-attn-list .nw-reminder strong, .cs-attn-list .ur-bar strong { font-size: 14px; }
+
+/* Neuigkeiten */
+.cs-news-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cs-news-head h3 { margin: 0; }
+.cs-news-date { position: relative; }
+.cs-news-date button { all: unset; cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 9px; padding: 5px 10px; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.cs-news-date input { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cs-news-empty { padding: 14px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 12px; font-size: 14px; }
+.cs-news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cs-news-list li { display: grid; grid-template-columns: 48px 24px 1fr; gap: 8px; align-items: center; padding: 9px 12px; border: 1px solid #e8edf4; border-radius: 12px; font-size: 14px; }
+.cs-news-list li.warn { background: #fff7ed; border-color: #fed7aa; }
+.cs-news-list time { color: #64748b; font-size: 13px; }
+
+/* ---------- schmaler Bildschirm ---------- */
+@media (max-width: 1100px) {
+  .cs-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cs-kpi:nth-child(4) { box-shadow: none; }
+}
+@media (max-width: 860px) {
+  .cs-layout { grid-template-columns: 1fr; }
+  .cs-main { order: 1; }
+  .cs-menu { order: 2; position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+  .cs-menu-group { margin: 0 !important; }
+  .cs-menu-group:nth-child(odd):last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .cs-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cs-kpi { box-shadow: none !important; border-bottom: 1px solid #f1f5f9; }
+  .cs-hello-actions { width: 100%; }
+  .cs-hello-actions .btn { flex: 1; justify-content: center; padding: 0 8px; }
+  .cs-menu { grid-template-columns: 1fr; }
+  .cs-attn-row { flex-wrap: wrap; }
+  .cs-attn-go { margin-left: 30px; }
 }
 
-/* Cockpit: 3 + 3 statt 4 + 2 */
-.cs-cockpit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-@media (max-width: 760px) {
-  .cs-cockpit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cs-cockpit-grid strong { font-size: 22px !important; }
-}
-.cs-news-empty { padding: 16px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 12px; }
+/* „Öffnen“ der Urlaubsleiste wie die anderen Zeilen als Link */
+.cs-attn-list .ur-bar .btn { all: unset; cursor: pointer; color: #4f46e5; font-weight: 700; white-space: nowrap; font-size: 14px; }
+.cs-attn-list .ur-bar .btn::after { content: " →"; }
+.cs-attn-list .ur-bar .btn:hover { text-decoration: underline; }
+.cs-hello-actions .btn { white-space: nowrap; }
+@media (max-width: 560px) { .cs-hello-actions .btn { font-size: 13px; } .cs-attn-list .ur-bar { flex-wrap: wrap; } }
