@@ -222,7 +222,8 @@ export default function RulesPage({ tenantId, currency, initialTab = "rules", on
                           ))}
                         </select>
                       </label>
-                      {metric && !metric.ready && <p className="bi2-msg warn lt-wide">Dieser Messwert wird noch nicht automatisch berechnet – die Regel würde immer mit 0 gewertet. Bitte einen anderen wählen.</p>}
+                      {metric && !metric.ready && <p className="bi2-msg warn lt-wide">Dieser Messwert wird noch nicht berechnet – die Regel würde übersprungen. Bitte einen anderen wählen.</p>}
+                      {metric?.ready && <p className="lt-explain lt-wide">{metric.explain}</p>}
                       {metric?.kind === "bool" ? (
                         <label>
                           <span>Erfüllt, wenn</span>
@@ -335,8 +336,8 @@ export default function RulesPage({ tenantId, currency, initialTab = "rules", on
               </div>
             )}
             <p className="bi2-small">
-              Automatische Regeln werden je Auftrag berechnet. „+10 / 0“ heißt: 10 Punkte, wenn die Regel erfüllt ist, sonst 0. Derzeit wird als Messwert nur „Auftrag fertiggestellt“ wirklich
-              berechnet – weitere Messwerte folgen.
+              Automatische Regeln werden je Auftrag berechnet, sobald er auf „Fertig“ gesetzt wird – und noch einmal, wenn der Kunde bewertet. „+10 / 0“ heißt: 10 Punkte, wenn die Regel
+              erfüllt ist, sonst 0. Ist ein Messwert nicht messbar (z. B. noch keine Kundenbewertung), wird die Regel übersprungen.
             </p>
           </section>
         )}

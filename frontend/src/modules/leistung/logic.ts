@@ -29,15 +29,21 @@ export type Reward = {
 };
 
 /** Messwerte der automatischen Bewertung (Namen wie in der Datenbank-Prüfregel).
- *  ready = wird von der Datenbank bereits berechnet; alle anderen liefern dort derzeit immer 0. */
-export const METRICS: Record<string, { label: string; kind: "bool" | "number"; hint?: string; ready: boolean }> = {
-  order_completed: { label: "Auftrag fertiggestellt", kind: "bool", ready: true },
-  photos_uploaded: { label: "Fotos hochgeladen", kind: "number", hint: "Anzahl", ready: false },
-  work_time: { label: "Arbeitszeit (Stunden)", kind: "number", ready: false },
-  punctuality: { label: "Pünktlichkeit", kind: "number", ready: false },
-  customer_rating: { label: "Kundenbewertung (Sterne)", kind: "number", hint: "1 bis 5", ready: false },
-  complaints: { label: "Reklamationen", kind: "number", hint: "Anzahl", ready: false },
-  material_consumption: { label: "Materialverbrauch", kind: "number", ready: false },
+ *  ready = wird von der Datenbank berechnet. Nicht messbare Werte (z. B. noch keine Kundenbewertung) werden übersprungen. */
+export const METRICS: Record<string, { label: string; kind: "bool" | "number"; hint?: string; explain: string; ready: boolean }> = {
+  order_completed: { label: "Auftrag fertiggestellt", kind: "bool", ready: true, explain: "Ja, sobald der Auftrag auf „Fertig“ oder „Abgerechnet“ steht." },
+  punctuality: { label: "Pünktlich fertig", kind: "bool", ready: true, explain: "Ja, wenn der Auftrag am oder vor dem geplanten Enddatum fertig wurde. Ohne Enddatum wird die Regel übersprungen." },
+  photos_uploaded: { label: "Fotos hochgeladen", kind: "number", hint: "Anzahl", ready: true, explain: "Anzahl der Fortschrittsfotos, die der Mitarbeiter zu diesem Auftrag hochgeladen hat." },
+  customer_rating: {
+    label: "Kundenbewertung (Sterne)",
+    kind: "number",
+    hint: "1 bis 5",
+    ready: true,
+    explain: "Seine Sterne vom Kunden im Kundenportal – sonst die Gesamtnote. Solange keine Bewertung da ist, wird die Regel übersprungen und nach der Bewertung nachberechnet.",
+  },
+  work_time: { label: "Arbeitszeit (Stunden)", kind: "number", hint: "Stunden", ready: true, explain: "Seine gestempelten Netto-Stunden an diesem Auftrag (ohne Pausen)." },
+  complaints: { label: "Reklamationen", kind: "number", hint: "Anzahl", ready: false, explain: "Reklamationen werden in MalerSaaS noch nicht erfasst." },
+  material_consumption: { label: "Materialverbrauch", kind: "number", ready: false, explain: "Kein sinnvoller fester Vergleichswert möglich." },
 };
 export const OPERATORS: Record<string, string> = { "=": "gleich", "!=": "ungleich", ">": "größer als", ">=": "mindestens", "<": "kleiner als", "<=": "höchstens" };
 
