@@ -347,6 +347,7 @@ const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
 const BiCockpit = lazy(() => import("./modules/bi/BiCockpit"));
 const CustomerAnalysis = lazy(() => import("./modules/bi/CustomerAnalysis"));
 const OrderAnalysis = lazy(() => import("./modules/bi/OrderAnalysis"));
+const MaterialAnalysis = lazy(() => import("./modules/bi/MaterialAnalysis"));
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
@@ -7837,7 +7838,6 @@ onReloadOrders={async () => {
                       } else if (t === "performance") {
                         setCurrentPage("performance-management");
                       } else {
-                        void loadMaterialAnalysis();
                         setCurrentPage("material-analysis");
                       }
                     }}
@@ -8817,150 +8817,11 @@ onReloadOrders={async () => {
                   <OrderAnalysis tenantId={userProfile.tenant_id} currency={currencyCode} onBack={() => setCurrentPage("business-intelligence")} />
                 </Suspense>
               )}
-{currentPage === "material-analysis" && isAdmin && (() => {
-
-  const totalMaterialCost = materialAnalysis.reduce(
-    (sum: number, material: any) =>
-      sum + material.materialCost,
-    0
-  );
-
-  const totalQuantity = materialAnalysis.reduce(
-    (sum: number, material: any) =>
-      sum + material.quantity,
-    0
-  );
-
-  const topMaterial =
-    materialAnalysis.length > 0
-      ? materialAnalysis[0]
-      : null;
-
-  return (
-    <section className="single-page-section">
-      <div className="card">
-
-        <div className="page-topbar">
-          <div>
-            <h2>📦 Materialanalyse</h2>
-
-            <p>
-              Materialverbrauch und Materialkosten.
-            </p>
-          </div>
-
-          <button
-            className="btn btn-secondary"
-            onClick={() =>
-              setCurrentPage("business-intelligence")
-            }
-          >
-            Zurück
-          </button>
-        </div>
-
-        <div className="kpi-grid">
-
-          <div className="kpi-card">
-            <span>💰 Materialkosten</span>
-
-            <strong>
-              {totalMaterialCost.toLocaleString("de-DE", {
-                minimumFractionDigits: 2,
-              })}{" "}
-              {currencySymbol}
-            </strong>
-          </div>
-
-          <div className="kpi-card">
-            <span>📦 Gesamtverbrauch</span>
-
-            <strong>
-              {totalQuantity.toLocaleString("de-DE")}
-            </strong>
-          </div>
-
-          <div className="kpi-card">
-            <span>🏆 Top Material</span>
-
-            <strong>
-              {topMaterial
-                ? topMaterial.name
-                : "-"}
-            </strong>
-          </div>
-
-        </div>
-
-        <div className="table-wrapper">
-
-          <table>
-
-            <thead>
-
-              <tr>
-
-                <th>Material</th>
-
-                <th>Verbrauch</th>
-
-                <th>Einkauf</th>
-
-                <th>Materialkosten</th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {materialAnalysis.map((material: any) => (
-
-                <tr key={material.id}>
-
-                  <td>{material.name}</td>
-
-                  <td>{material.quantity}</td>
-
-                  <td>
-                    {material.purchasePrice.toLocaleString(
-                      "de-DE",
-                      {
-                        minimumFractionDigits: 2,
-                      }
-                    )}{" "}
-                    {currencySymbol}
-                  </td>
-
-                  <td>
-
-                    {material.materialCost.toLocaleString(
-                      "de-DE",
-                      {
-                        minimumFractionDigits: 2,
-                      }
-                    )}{" "}
-                    {currencySymbol}
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-    </section>
-
-  );
-
-})()}
+{currentPage === "material-analysis" && isAdmin && userProfile && (
+                <Suspense fallback={<p style={{ padding: 20 }}>Lädt …</p>}>
+                  <MaterialAnalysis tenantId={userProfile.tenant_id} currency={currencyCode} onBack={() => setCurrentPage("business-intelligence")} />
+                </Suspense>
+              )}
 
               {currentPage === "settings" && userProfile?.tenant_id && (
                 <GlobalSettings
