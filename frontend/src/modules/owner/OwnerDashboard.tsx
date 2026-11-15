@@ -447,6 +447,11 @@ export default function OwnerDashboard({ onBack }: Props) {
             <h2>Plattform-Übersicht</h2>
             <p>Stand {new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>
           </div>
+          <button type="button" className="btn btn-secondary ow-back" onClick={onBack}>
+            ← Zurück
+          </button>
+        </div>
+        <div className="ow-nav">
           <div className="ow-top-actions">
             <button type="button" className="btn btn-primary" onClick={() => setView("books")}>
               📒 Buchhaltung
@@ -464,14 +469,14 @@ export default function OwnerDashboard({ onBack }: Props) {
               💬 MalerTreff
               <CommunityModBadge />
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => void load()}>
+          </div>
+          <div className="ow-tools">
+            <button type="button" onClick={() => void load()}>
               ↻ Aktualisieren
             </button>
-            <button type="button" className="btn btn-secondary" onClick={exportCsv} disabled={!list.length}>
-              CSV-Export
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={onBack}>
-              Zurück
+            <span aria-hidden="true">·</span>
+            <button type="button" onClick={exportCsv} disabled={!list.length}>
+              ⤓ CSV-Export
             </button>
           </div>
         </div>

@@ -1,10 +1,17 @@
 /* Owner-Dashboard */
 .ow-root { --ow-border: #e2e8f0; --ow-muted: #64748b; --ow-ink: #0f172a; --ow-soft: #f8fafc; }
 .ow-root .form-page-card { max-width: 1240px; }
-.ow-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.ow-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: nowrap; margin-bottom: 18px; }
 .ow-top h2 { margin: 0; }
 .ow-top p { margin: 4px 0 0; color: var(--ow-muted); }
 .ow-top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ow-top .ow-back { width: auto; flex: none; }
+.ow-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: -4px 0 18px; }
+.ow-tools { display: flex; align-items: center; gap: 6px; color: var(--ow-muted); font-size: 14px; }
+.ow-tools button { all: unset; cursor: pointer; padding: 4px 6px; border-radius: 6px; color: #475569; font-weight: 600; }
+.ow-tools button:hover { background: #f1f5f9; color: #1e293b; }
+.ow-tools button:focus-visible { outline: 2px solid #93c5fd; }
+.ow-tools button:disabled { opacity: 0.45; cursor: default; background: none; }
 .ow-error { padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-weight: 600; }
 .ow-muted { color: var(--ow-muted); }
 
