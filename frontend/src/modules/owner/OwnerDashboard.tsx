@@ -9,7 +9,8 @@ import { PLAN_LABEL, PLAN_ORDER, planPrice, daysUntil, fmtDate, fmtMoney, kpis, 
 import type { StateKey } from "./logic";
 import "./owner.css";
 
-type Props = { onBack: () => void };
+/** onBack wird nicht mehr genutzt – die Übersicht ist die Startseite des Owners */
+type Props = { onBack?: () => void };
 
 const FILTERS: { key: "all" | StateKey | "trial_any"; label: string }[] = [
   { key: "all", label: "Alle" },
@@ -316,7 +317,7 @@ const UpcomingAppointments = lazy(() => import("../owner-termine/UpcomingAppoint
 const TodayPosts = lazy(() => import("../owner-werbung/TodayPosts"));
 const OriginSummary = lazy(() => import("../owner-werbung/OriginSummary"));
 
-export default function OwnerDashboard({ onBack }: Props) {
+export default function OwnerDashboard(_props: Props) {
   const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar" | "community">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
@@ -447,9 +448,6 @@ export default function OwnerDashboard({ onBack }: Props) {
             <h2>Plattform-Übersicht</h2>
             <p>Stand {new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>
           </div>
-          <button type="button" className="btn btn-secondary ow-back" onClick={onBack}>
-            ← Zurück
-          </button>
         </div>
         <div className="ow-nav">
           <div className="ow-top-actions">

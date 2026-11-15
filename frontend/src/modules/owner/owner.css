@@ -5,7 +5,6 @@
 .ow-top h2 { margin: 0; }
 .ow-top p { margin: 4px 0 0; color: var(--ow-muted); }
 .ow-top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.ow-top .ow-back { width: auto; flex: none; }
 .ow-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: -4px 0 18px; }
 .ow-tools { display: flex; align-items: center; gap: 6px; color: var(--ow-muted); font-size: 14px; }
 .ow-tools button { all: unset; cursor: pointer; padding: 4px 6px; border-radius: 6px; color: #475569; font-weight: 600; }
