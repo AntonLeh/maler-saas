@@ -315,12 +315,13 @@ serve(async (req) => {
       const drafts = C.cleanCommunityDrafts((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, n);
       if (!drafts.length) return json({ ok: false, error: "Es konnten keine Vorschläge erstellt werden. Bitte noch einmal versuchen." }, 422);
       // passendes Bild aus der Bildbibliothek (nicht jedes Mal dasselbe)
-      const { data: lib } = await db.from("owner_marketing_images").select("id, path, description, tags, last_used_at, realistic").limit(500);
+      const { data: lib } = await db.from("owner_marketing_images").select("id, path, description, tags, last_used_at, realistic, ai_generated").limit(500);
       const used = new Set<string>();
       const items = drafts.map((d) => {
         const img = lib?.length ? A.pickImage(lib, `${d.topic} ${d.image_hint} ${d.keyword} ${d.body.slice(0, 200)}`, d.product ? "funktion" : "tipp", null, used) : null;
         if (img) used.add(img.path);
-        return { ...d, image_path: img?.path ?? null };
+        // KI-Bilder werden im Beitrag als „Symbolbild (KI-generiert)“ gekennzeichnet (KI-Verordnung Art. 50, Transparenz)
+        return { ...d, image_path: img?.path ?? null, image_ai: img ? (img as any).ai_generated !== false : false };
       });
       return json({ ok: true, items });
     }

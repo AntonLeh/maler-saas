@@ -388,6 +388,8 @@ export type CommunityDraft = {
   keyword: string;
   image_hint: string;
   image_path: string | null;
+  /** Bild ist mit KI erstellt -> Kennzeichnung im Beitrag */
+  image_ai?: boolean;
 };
 
 /** Starter-Beiträge für den MalerTreff vorschlagen (4 Fachbeiträge : 1 MalerSaaS-Tipp) */

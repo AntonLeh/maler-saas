@@ -9,6 +9,7 @@ import type { Member } from "./logic";
 
 type Draft = CommunityDraft & { key: string; busy?: string; done?: string; error?: string };
 const STORE = "malertreff-redaktion-entwuerfe";
+const AI_LABEL = "Symbolbild (KI-generiert)";
 
 function loadStored(): Draft[] {
   try {
@@ -67,7 +68,8 @@ export function RedaktionPanel({ me }: { me: Member }) {
         const blob = await ow.downloadLibraryImage(d.image_path);
         paths = await api.uploadImages([new File([blob], "bild.jpg", { type: blob.type || "image/jpeg" })]);
       }
-      const id = await api.createPost(d.kind, d.topic, d.body.trim(), paths, true);
+      const label = paths.length && d.image_ai !== false && !d.body.includes(AI_LABEL) ? `\n\n🖼️ ${AI_LABEL}` : "";
+      const id = await api.createPost(d.kind, d.topic, `${d.body.trim()}${label}`, paths, true);
       const status = await api.aiCheck("post", id).catch(() => "unveraendert");
       update(d.key, {
         busy: undefined,
@@ -134,7 +136,7 @@ export function RedaktionPanel({ me }: { me: Member }) {
           ) : (
             <textarea rows={8} value={d.body} maxLength={5000} onChange={(e) => update(d.key, { body: e.target.value })} aria-label="Text" />
           )}
-          {d.image_path && !d.done && <DraftImage path={d.image_path} onRemove={() => update(d.key, { image_path: null })} />}
+          {d.image_path && !d.done && <DraftImage path={d.image_path} ai={d.image_ai !== false} onRemove={() => update(d.key, { image_path: null })} />}
           {d.keyword && <p className="cm-small">Suchbegriff für Google: „{d.keyword}“{d.image_hint.startsWith("Ratgeber-Entwurf") ? ` – ${d.image_hint}` : ""}</p>}
           {d.error && <p className="cm-msg err">{d.error}</p>}
           <div className="cm-actions left">
@@ -158,7 +160,7 @@ export function RedaktionPanel({ me }: { me: Member }) {
   );
 }
 
-function DraftImage({ path, onRemove }: { path: string; onRemove: () => void }) {
+function DraftImage({ path, ai, onRemove }: { path: string; ai: boolean; onRemove: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let cancel = false;
@@ -173,9 +175,12 @@ function DraftImage({ path, onRemove }: { path: string; onRemove: () => void }) 
   return (
     <div className="cm-draft-img">
       {url ? <img src={url} alt="" /> : <span className="cm-photo-wait" />}
-      <button type="button" className="cm-link" onClick={onRemove}>
-        Ohne Bild veröffentlichen
-      </button>
+      <div>
+        {ai && <p className="cm-small">Wird im Beitrag gekennzeichnet: „🖼️ {AI_LABEL}“</p>}
+        <button type="button" className="cm-link" onClick={onRemove}>
+          Ohne Bild veröffentlichen
+        </button>
+      </div>
     </div>
   );
 }
