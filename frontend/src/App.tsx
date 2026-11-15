@@ -346,6 +346,7 @@ const ProjectManagerDashboard = lazy(pageLoaders.ProjectManagerDashboard);
 const PlatformOwnerDashboard = lazy(pageLoaders.PlatformOwnerDashboard);
 const BiCockpit = lazy(() => import("./modules/bi/BiCockpit"));
 const CustomerAnalysis = lazy(() => import("./modules/bi/CustomerAnalysis"));
+const OrderAnalysis = lazy(() => import("./modules/bi/OrderAnalysis"));
 const EmployeeEditor = lazy(pageLoaders.EmployeeEditor);
 const OrderCostsSection = lazy(pageLoaders.OrderCostsSection);
 const ManualTimeDialog = lazy(pageLoaders.ManualTimeDialog);
@@ -7830,7 +7831,6 @@ onReloadOrders={async () => {
                       if (t === "customers") {
                         setCurrentPage("customer-analysis");
                       } else if (t === "orders") {
-                        void loadOrderAnalysis();
                         setCurrentPage("order-analysis");
                       } else if (t === "time") {
                         setCurrentPage("time-evaluation");
@@ -8812,144 +8812,11 @@ onReloadOrders={async () => {
                 </Suspense>
               )}
 
-{currentPage === "order-analysis" && isAdmin && (() => {
-  const totalOrderRevenue = orderAnalysis.reduce(
-    (sum: number, order: any) => sum + Number(order.revenue || 0),
-    0
-  );
-
-  const totalOrderInvoices = orderAnalysis.reduce(
-    (sum: number, order: any) => sum + Number(order.invoiceCount || 0),
-    0
-  );
-
-  const averageOrderRevenue =
-    orderAnalysis.length > 0 ? totalOrderRevenue / orderAnalysis.length : 0;
-
-  const topOrder = orderAnalysis.length > 0 ? orderAnalysis[0] : null;
-
-  return (
-
-  <section className="single-page-section">
-    <div className="card">
-      <div className="page-topbar">
-        <div>
-          <h2>📈 Auftragsanalyse</h2>
-          <p>
-            Umsatz-, Kosten- und Gewinnanalyse pro Auftrag.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={openDashboard}
-        >
-          Zurück zum Dashboard
-        </button>
-      </div>
-
-      <div className="card">
-  {loadingOrderAnalysis ? (
-    <p>Daten werden geladen...</p>
-  ) : (
-    <>
-    <div className="kpi-grid">
-  <div className="kpi-card">
-    <span>💰 Gesamtumsatz</span>
-    <strong>
-      {totalOrderRevenue.toLocaleString("de-DE", {
-        minimumFractionDigits: 2,
-      })}{" "}
-      {currencySymbol}
-    </strong>
-  </div>
-
-  <div className="kpi-card">
-    <span>📄 Rechnungen</span>
-    <strong>{totalOrderInvoices}</strong>
-  </div>
-
-  <div className="kpi-card">
-    <span>📈 Ø Umsatz/Auftrag</span>
-    <strong>
-      {averageOrderRevenue.toLocaleString("de-DE", {
-        minimumFractionDigits: 2,
-      })}{" "}
-      {currencySymbol}
-    </strong>
-  </div>
-
-  <div className="kpi-card">
-    <span>🏆 Top Auftrag</span>
-    <strong>{topOrder ? topOrder.title : "-"}</strong>
-    {topOrder && (
-      <small>
-        {topOrder.revenue.toLocaleString("de-DE", {
-          minimumFractionDigits: 2,
-        })}{" "}
-        {currencySymbol}
-      </small>
-    )}
-  </div>
-</div>
-
-    <div className="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-  <th>Auftrag</th>
-  <th>Status</th>
-  <th>Rechnungen</th>
-  <th>Umsatz</th>
-  <th>Lohnkosten</th>
-  <th>Rohgewinn</th>
-</tr>
-        </thead>
-
-        <tbody>
-          {orderAnalysis.map((order: any) => (
-            <tr key={order.id}>
-              <td>{order.title}</td>
-
-              <td>{order.status}</td>
-
-              <td>{order.invoiceCount}</td>
-
-              <td>
-                {order.revenue.toLocaleString("de-DE", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                {currencySymbol}
-              </td>
-
-                <td>
-  {order.laborCost.toLocaleString("de-DE", {
-    minimumFractionDigits: 2,
-  })}{" "}
-  {currencySymbol}
-</td>
-
-<td>
-  {order.grossProfit.toLocaleString("de-DE", {
-    minimumFractionDigits: 2,
-  })}{" "}
-  {currencySymbol}
-</td>
-
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    </>
-  )}
-</div>
-    </div>
-  </section>
-  );
-})()}
-
+{currentPage === "order-analysis" && isAdmin && userProfile && (
+                <Suspense fallback={<p style={{ padding: 20 }}>Lädt …</p>}>
+                  <OrderAnalysis tenantId={userProfile.tenant_id} currency={currencyCode} onBack={() => setCurrentPage("business-intelligence")} />
+                </Suspense>
+              )}
 {currentPage === "material-analysis" && isAdmin && (() => {
 
   const totalMaterialCost = materialAnalysis.reduce(
