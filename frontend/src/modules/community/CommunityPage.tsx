@@ -95,35 +95,40 @@ export default function CommunityPage({ onBack, isChef = false, onAccountDeleted
               <button type="button" className={tab === "profile" ? "on" : ""} onClick={() => go("profile")}>
                 Mein Profil
               </button>
-              {isChef && (
-                <button type="button" className={tab === "staff" ? "on" : ""} onClick={() => go("staff")}>
-                  Mitarbeiter{access.staff_pending > 0 && <span className="cm-dot">{access.staff_pending}</span>}
-                </button>
-              )}
-              {access.is_mod && (
-                <button type="button" className={tab === "mod" ? "on" : ""} onClick={() => go("mod")}>
-                  Moderation{(access.mod_pending ?? 0) > 0 && <span className="cm-dot">{access.mod_pending}</span>}
-                </button>
-              )}
-              {access.is_mod && (
-                <button type="button" className={tab === "verify" ? "on" : ""} onClick={() => go("verify")}>
-                  Freigaben{(access.verify_pending ?? 0) > 0 && <span className="cm-dot">{access.verify_pending}</span>}
-                </button>
-              )}
-              {access.is_owner && (
-                <button type="button" className={tab === "redaktion" ? "on" : ""} onClick={() => go("redaktion")}>
-                  Redaktion
-                </button>
-              )}
-              {access.is_owner && (
-                <button type="button" className={tab === "owner" ? "on" : ""} onClick={() => go("owner")}>
-                  Einstellungen
-                </button>
-              )}
               <button type="button" className={tab === "rules" ? "on" : ""} onClick={() => go("rules")}>
                 Regeln
               </button>
             </nav>
+            {(isChef || access.is_mod || access.is_owner) && (
+              <nav className="cm-admin-tabs" aria-label="Verwaltung">
+                <span>Verwaltung:</span>
+                {isChef && (
+                  <button type="button" className={tab === "staff" ? "on" : ""} onClick={() => go("staff")}>
+                    Mitarbeiter{access.staff_pending > 0 && <span className="cm-dot">{access.staff_pending}</span>}
+                  </button>
+                )}
+                {access.is_mod && (
+                  <button type="button" className={tab === "mod" ? "on" : ""} onClick={() => go("mod")}>
+                    Moderation{(access.mod_pending ?? 0) > 0 && <span className="cm-dot">{access.mod_pending}</span>}
+                  </button>
+                )}
+                {access.is_mod && (
+                  <button type="button" className={tab === "verify" ? "on" : ""} onClick={() => go("verify")}>
+                    Freigaben{(access.verify_pending ?? 0) > 0 && <span className="cm-dot">{access.verify_pending}</span>}
+                  </button>
+                )}
+                {access.is_owner && (
+                  <button type="button" className={tab === "redaktion" ? "on" : ""} onClick={() => go("redaktion")}>
+                    Redaktion
+                  </button>
+                )}
+                {access.is_owner && (
+                  <button type="button" className={tab === "owner" ? "on" : ""} onClick={() => go("owner")}>
+                    Einstellungen
+                  </button>
+                )}
+              </nav>
+            )}
 
             {profileId != null ? (
               <ProfileView id={profileId} me={me} onBack={() => setProfileId(null)} onOpenPost={openPost} />

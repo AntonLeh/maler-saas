@@ -25,7 +25,7 @@
 .danger { color: #b91c1c !important; }
 
 /* Reiter */
-.cm-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e2e8f0; margin: 6px 0 14px; overflow-x: auto; scrollbar-width: none; }
+.cm-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #e2e8f0; margin: 6px 0 10px; }
 .cm-tabs button { all: unset; cursor: pointer; padding: 10px 12px; font-weight: 700; font-size: 14px; color: #64748b; border-bottom: 3px solid transparent; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .cm-tabs button.on { color: #1d4ed8; border-bottom-color: #1d4ed8; }
 .cm-dot { background: #dc2626; color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; line-height: 16px; }
@@ -193,3 +193,11 @@
 .cm-draft.done { opacity: 0.8; }
 .cm-draft-img { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
 .cm-draft-img img, .cm-draft-img .cm-photo-wait { width: 160px; height: 110px; object-fit: cover; border-radius: 10px; display: block; }
+
+/* Verwaltung (Chef, Moderation, Owner) */
+.cm-admin-tabs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: #f1f5f9; border-radius: 12px; padding: 4px 6px; margin: 0 0 14px; }
+.cm-admin-tabs > span { font-size: 12px; font-weight: 700; color: #64748b; padding: 0 6px; }
+.cm-admin-tabs button { all: unset; cursor: pointer; padding: 6px 10px; border-radius: 9px; font-weight: 700; font-size: 13px; color: #475569; display: inline-flex; align-items: center; gap: 6px; }
+.cm-admin-tabs button:hover { background: #e2e8f0; }
+.cm-admin-tabs button.on { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+@media (max-width: 640px) { .cm-tabs button { padding: 9px 9px; font-size: 13.5px; } }
