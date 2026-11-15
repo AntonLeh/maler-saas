@@ -32,7 +32,7 @@ import CorrectionDialog from "./CorrectionDialog";
 import "./st.css";
 
 type View = "people" | "orders" | "entries";
-type Preset = "week" | "lastweek" | "month" | "lastmonth" | "year";
+type Preset = "week" | "lastweek" | "month" | "lastmonth" | "year" | "lastyear";
 type Props = { tenantId: number; currencySymbol: string; onBack: () => void };
 
 const PRESETS: [Preset, string][] = [
@@ -41,8 +41,16 @@ const PRESETS: [Preset, string][] = [
   ["month", "Dieser Monat"],
   ["lastmonth", "Letzter Monat"],
   ["year", "Dieses Jahr"],
+  ["lastyear", "Letztes Jahr"],
 ];
-const rangeOf = (p: Preset) => (p === "year" ? yearRange() : presetRange(p));
+const rangeOf = (p: Preset) => {
+  if (p === "year") return yearRange();
+  if (p === "lastyear") {
+    const y = new Date().getFullYear() - 1;
+    return { from: `${y}-01-01`, to: `${y}-12-31` };
+  }
+  return presetRange(p);
+};
 
 export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }: Props) {
   const [preset, setPreset] = useState<Preset | "">("month");
@@ -196,7 +204,7 @@ export default function TimeEvaluation({ tenantId, currencySymbol: cur, onBack }
               CSV (Excel)
             </button>
             <button type="button" className="btn btn-secondary" onClick={onBack}>
-              Zurück
+              ← Zurück
             </button>
           </div>
         </div>
