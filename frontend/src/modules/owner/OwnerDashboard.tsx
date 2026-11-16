@@ -308,17 +308,19 @@ function Detail({
 }
 
 const OwnerBooks = lazy(() => import("../owner-buchhaltung/OwnerBooks"));
+import { OwnerTasksBadge } from "../owner-aufgaben/widgets";
 import { CommunityModBadge } from "../community/widgets";
 const CommunityPage = lazy(() => import("../community/CommunityPage"));
 const OwnerMarketing = lazy(() => import("../owner-werbung/OwnerMarketing"));
 const OwnerContacts = lazy(() => import("../owner-kontakte/OwnerContacts"));
 const OwnerCalendar = lazy(() => import("../owner-termine/OwnerCalendar"));
+const OwnerTasks = lazy(() => import("../owner-aufgaben/OwnerTasks"));
 const UpcomingAppointments = lazy(() => import("../owner-termine/UpcomingAppointments"));
 const TodayPosts = lazy(() => import("../owner-werbung/TodayPosts"));
 const OriginSummary = lazy(() => import("../owner-werbung/OriginSummary"));
 
 export default function OwnerDashboard(_props: Props) {
-  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar" | "community">("overview");
+  const [view, setView] = useState<"overview" | "books" | "marketing" | "contacts" | "calendar" | "community" | "tasks">("overview");
   const [tenants, setTenants] = useState<OwnerTenant[] | null>(null);
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [error, setError] = useState("");
@@ -408,6 +410,14 @@ export default function OwnerDashboard(_props: Props) {
     );
   }
 
+  if (view === "tasks") {
+    return (
+      <Suspense fallback={<div className="page-loading" />}>
+        <OwnerTasks onBack={() => setView("overview")} />
+      </Suspense>
+    );
+  }
+
   if (view === "calendar") {
     return (
       <Suspense fallback={<div className="page-loading" />}>
@@ -462,6 +472,10 @@ export default function OwnerDashboard(_props: Props) {
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setView("calendar")}>
               📅 Termine
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setView("tasks")}>
+              ✅ Aufgaben
+              <OwnerTasksBadge />
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setView("community")}>
               💬 MalerTreff

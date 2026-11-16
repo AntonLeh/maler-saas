@@ -195,3 +195,5 @@
 @media (max-width: 560px) { .bi2-kpis.four .bi2-kpi:last-child { grid-column: auto; } }
 .single-page-section:has(> .bi2) { width: 100%; box-sizing: border-box; }
 .bi2-msg { font-size: 14px; line-height: 1.45; }
+/* volle Breite für alle Seiten im neuen Stil (Flex-Eltern würden sonst auf Inhaltsbreite schrumpfen) */
+.dashboard-container:has(.bi2) { width: 100%; }
