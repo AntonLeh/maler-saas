@@ -478,6 +478,9 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
               <a className="lp-more" href="/werbung-mit-ki">
                 So funktioniert die Werbung mit KI →
               </a>
+              <a className="lp-more" href="/ki-funktionen">
+                Alle 7 KI-Funktionen im Überblick →
+              </a>
             </div>
             <div className="lp-social-visual">
               <div className="lp-stack">

@@ -54,6 +54,7 @@ const FAQ: { q: string; a: string }[] = [
 ];
 
 const MORE: { href: string; title: string; text: string }[] = [
+  { href: "/ki-funktionen", title: "KI-Funktionen", text: "Aufmaß per Sprache, Lieferscheine und Belege per Foto, KI-Telefon und Werbung – die 7 KI-Helfer im Überblick." },
   { href: "/buchhaltung", title: "Buchhaltung & Steuerberater", text: "Belege fotografieren, Umsatzsteuer im Blick, Paket für den Steuerberater inklusive DATEV-Export." },
   { href: "/ki-telefon", title: "KI-Telefon", text: "Nimmt Anrufe an, wenn Sie auf der Baustelle sind, und schreibt Ihnen auf, wer was wollte." },
   { href: "/firmen-website", title: "Firmen-Website", text: "Eine eigene Website für Ihren Malerbetrieb – mit Referenzen und Anfrageformular." },

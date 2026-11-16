@@ -116,6 +116,7 @@ SEITEN ZUM NACHLESEN (öffentlich, ohne Anmeldung)
 - KI-Telefonassistent: maler-saas.com/ki-telefon
 - Firmen-Website, Terminbuchung, Stellenanzeigen: maler-saas.com/firmen-website
 - Werbung mit KI (Beiträge für Website, Instagram, Facebook, Google-Profil, WhatsApp): maler-saas.com/werbung-mit-ki
+- Alle KI-Funktionen im Überblick (Aufmaß per Sprache, Lieferschein einlesen, Belegerkennung, KI-Telefon, Werbung mit KI, KI-Schreibhilfe für die Website, KI-Chat) mit Tarifen: maler-saas.com/ki-funktionen
 - Fachkräfte-Pool für Betriebe (Maler und Subunternehmer finden): maler-saas.com/fachkraefte-finden
 - Auswertungen, Kennzahlen, Deckungsbeitrag: maler-saas.com/auswertungen
 - Für Fachkräfte, die sich eintragen möchten: maler-saas.com/fachkraefte

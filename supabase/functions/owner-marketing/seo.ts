@@ -17,6 +17,7 @@ export const FEATURE_PAGES: Record<string, string> = {
   "firmen-website": "Firmen-Website",
   auswertungen: "Auswertungen",
   "werbung-mit-ki": "Werbung mit KI",
+  "ki-funktionen": "Alle KI-Funktionen im Überblick",
 };
 
 const RULES = `Regeln (UWG und Seriosität):
@@ -36,13 +37,16 @@ export const PAGE_KEYWORDS: RegExp[] = [
   /software\s+(f(ü|ue)r\s+)?maler/i,
   /malerbetrieb\s*software/i,
   /handwerker\s*-?\s*software/i,
+  /software\s+mit\s+ki\b/i,
+  /ki\s*-?\s*software\s+(f(ü|ue)r\s+)?maler/i,
+  /ki\s+f(ü|ue)r\s+maler/i,
   /maler\s*-?\s*(app|programm)\b/i,
   /^(zeiterfassung|materialverwaltung|auftragsverwaltung|kundenportal)\s+(app|software|programm)\b/i,
 ];
 export const isPageKeyword = (k: string) => PAGE_KEYWORDS.some((r) => r.test(String(k ?? "").trim()));
 const PAGE_KEYWORD_RULE = `- Keine Artikel zu Begriffen, für die es eine eigene Seite gibt: „Malersoftware“, „Maler Software“, „Software für Maler/Malerbetriebe“,
-  „Handwerkersoftware“, „Maler App/Programm“ und „<Funktion> App/Software“ (z. B. „Zeiterfassung App“). Diese Begriffe gehören den Seiten
-  /maler-software und den Funktionsseiten. Verwende sie auch nicht im Titel eines Artikels.`;
+  „Handwerkersoftware“, „Malersoftware mit KI“, „KI für Malerbetriebe“, „Maler App/Programm“ und „<Funktion> App/Software“ (z. B. „Zeiterfassung App“). Diese Begriffe gehören den Seiten
+  /maler-software, /ki-funktionen und den Funktionsseiten. Verwende sie auch nicht im Titel eines Artikels.`;
 
 /** Geprüfte Rechtsfakten – nur diese Stichtage/Zahlen darf der Agent nennen. Bei Gesetzesänderungen hier pflegen. */
 export const LEGAL_FACTS_CHECKED = "16.11.2026";

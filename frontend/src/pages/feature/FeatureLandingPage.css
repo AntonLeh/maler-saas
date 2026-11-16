@@ -56,6 +56,8 @@
 }
 .fp-grid h3 { margin: 0 0 8px; font-size: 20px; }
 .fp-grid p { margin: 0; color: #475569; line-height: 1.65; }
+.fp-tile-plan { display: inline-block; margin-bottom: 10px; font-size: 12.5px; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; padding: 3px 10px; }
+.fp-tile-link { display: inline-block; margin-top: 12px; }
 .fp-steps { grid-template-columns: repeat(4, 1fr); }
 .fp-cta-box { display: grid; gap: 12px; justify-items: start; }
 .fp-cta-box p { color: #e2e8f0 !important; font-size: 17px; }

@@ -324,6 +324,7 @@ export const FEATURE_PAGES: Record<string, string> = {
   "firmen-website": "Firmen-Website",
   auswertungen: "Auswertungen",
   "werbung-mit-ki": "Werbung mit KI",
+  "ki-funktionen": "KI-Funktionen",
 };
 export const slugify = (s: string) =>
   s

@@ -14,7 +14,8 @@ export type FeaturePageData = {
   /** statt der Übersichtsbox die Vorher/Nachher-Fotos zeigen */
   beforeAfter?: boolean;
   highlightsTitle: string;
-  highlights: { title: string; text: string }[];
+  /** optional je Kachel: Tarif-Hinweis und Link zur passenden Funktionsseite */
+  highlights: { title: string; text: string; plan?: string; href?: string; linkLabel?: string }[];
   stepsTitle?: string;
   steps?: { title: string; text: string }[];
   benefitsTitle: string;
@@ -449,6 +450,119 @@ export const FEATURE_PAGES: FeaturePageData[] = [
     related: [
       { href: "/zeiterfassung", label: "Zeiterfassung" },
       { href: "/leistungsbewertung", label: "Leistungsbewertung" },
+    ],
+  },
+  {
+    path: "/ki-funktionen",
+    seoTitle: "Malersoftware mit KI – 7 KI-Funktionen für Malerbetriebe | MalerSaaS",
+    seoDescription:
+      "Aufmaß per Sprache, Lieferscheine und Belege per Foto, KI-Telefon, Werbung und Website-Texte: die KI-Funktionen von MalerSaaS für Malerbetriebe.",
+    badge: "Künstliche Intelligenz",
+    h1: "Malersoftware mit KI – 7 Aufgaben, die MalerSaaS für Sie übernimmt.",
+    intro: [
+      "Abtippen, Nachtragen, Zurückrufen: Im Malerbetrieb bleibt viel Arbeit liegen, die mit dem eigentlichen Handwerk nichts zu tun hat. Genau dort hilft die KI in MalerSaaS – beim Aufmaß, bei Lieferscheinen und Belegen, am Telefon, bei der Werbung und bei Texten für Ihre Website.",
+      "Dabei gilt immer: Die KI macht Vorschläge, Sie prüfen und entscheiden. Gespeichert oder veröffentlicht wird erst, was Sie freigegeben haben.",
+    ],
+    plan: "Aufmaß per Sprache und der KI-Hilfe-Chat sind in allen Tarifen enthalten, weitere KI-Funktionen ab Business bzw. Enterprise. In der 14-tägigen Testphase können Sie alle ausprobieren.",
+    visual: {
+      title: "KI-Vorschlag: Lieferschein",
+      rows: [
+        { label: "Lieferant", value: "Farbengroßhandel" },
+        { label: "Positionen erkannt", value: "6" },
+        { label: "Dispersionsfarbe 3 × 12,5 l", value: "37,5 l" },
+      ],
+      chips: ["Sie prüfen", "Sie speichern"],
+    },
+    highlightsTitle: "Die 7 KI-Funktionen von MalerSaaS",
+    highlights: [
+      {
+        title: "🎤 Aufmaß per Sprache",
+        text: "Raum für Raum ansagen statt tippen: „Wohnzimmer fünf mal vier, Höhe zwei fünfzig, zwei Fenster …“ – die KI legt Räume, Maße, Fenster, Türen, Heizkörper und Anstriche an. Hände frei auf der Baustelle.",
+        plan: "Alle Tarife",
+        href: "/aufmass-angebote",
+        linkLabel: "Aufmaß & Angebote",
+      },
+      {
+        title: "📷 Lieferscheine einlesen",
+        text: "Lieferschein fotografieren oder als PDF hochladen: Die KI liest Lieferant, Datum und alle Positionen, ordnet sie Ihren Materialien zu und rechnet Mengen um – ins Lager oder direkt auf einen Auftrag.",
+        plan: "Ab Business",
+        href: "/materialverwaltung",
+        linkLabel: "Materialverwaltung",
+      },
+      {
+        title: "🧾 Belege automatisch erfassen",
+        text: "Quittung oder Eingangsrechnung fotografieren: Die KI liest Lieferant, Datum, Betrag, Steuersatz und Währung aus. Doppelt erfasste Belege werden erkannt.",
+        plan: "Ab Business",
+        href: "/buchhaltung",
+        linkLabel: "Buchhaltung",
+      },
+      {
+        title: "📞 KI-Telefonassistent",
+        text: "Nimmt Anrufe an, wenn niemand abhebt: beantwortet Fragen zu Ihrem Betrieb, trägt Besichtigungstermine in den Kalender ein und notiert Rückrufwünsche. Ihre Firmennummer bleibt.",
+        plan: "Ab Business · Minuten zubuchbar",
+        href: "/ki-telefon",
+        linkLabel: "KI-Telefon",
+      },
+      {
+        title: "✨ Werbung aus Baustellenfotos",
+        text: "Die KI wählt die besten Fotos eines Auftrags, erkennt Vorher/Nachher und schreibt Beiträge für Website, Instagram, Facebook, Google-Profil und WhatsApp. Sie weist auf Gesichter, Kennzeichen und Hausnummern hin.",
+        plan: "Enterprise",
+        href: "/werbung-mit-ki",
+        linkLabel: "Werbung mit KI",
+      },
+      {
+        title: "✍️ Texte für Ihre Website",
+        text: "Die KI-Schreibhilfe macht aus Stichworten Textvorschläge für Ihre Firmen-Website – über den Betrieb, Ihre Leistungen oder offene Stellen. Sie passen an und übernehmen.",
+        plan: "Enterprise",
+        href: "/firmen-website",
+        linkLabel: "Firmen-Website",
+      },
+      {
+        title: "💬 Fragen beantworten – rund um die Uhr",
+        text: "Der KI-Hilfe-Chat erklärt die Bedienung direkt in der Software. Auf Ihrer Firmen-Website beantwortet ein KI-Chatassistent Fragen von Besuchern zu Ihrem Betrieb.",
+        plan: "Hilfe-Chat: alle Tarife · Website-Chat: Enterprise",
+      },
+    ],
+    stepsTitle: "So arbeitet die KI mit Ihnen",
+    steps: [
+      { title: "Ansagen oder fotografieren", text: "Aufmaß diktieren, Lieferschein oder Beleg fotografieren, Baustellenfotos auswählen." },
+      { title: "KI macht einen Vorschlag", text: "Räume, Positionen, Beträge oder Texte sind in Sekunden ausgefüllt." },
+      { title: "Sie prüfen", text: "Jede Angabe lässt sich ändern oder verwerfen – die KI kann sich irren." },
+      { title: "Sie speichern", text: "Erst jetzt wird übernommen, gebucht oder veröffentlicht." },
+    ],
+    benefitsTitle: "KI mit Kontrolle",
+    benefits: [
+      "Die KI macht Vorschläge – übernommen wird nur, was Sie geprüft haben.",
+      "Werbebeiträge und Website-Texte werden erst veröffentlicht, wenn Sie sie freigeben.",
+      "Ihre Firmendaten liegen auf Servern in der EU (Irland).",
+      "Feste Monatskontingente und vorab gekaufte Telefonminuten – keine Überraschungen auf der Rechnung.",
+    ],
+    faqs: [
+      {
+        q: "Macht die KI Fehler?",
+        a: "Ja, gelegentlich – zum Beispiel bei undeutlicher Handschrift auf einem Lieferschein oder einer genuschelten Kommazahl beim Aufmaß. Deshalb zeigt MalerSaaS jeden Vorschlag zuerst an, und Sie prüfen ihn, bevor er gespeichert wird.",
+      },
+      {
+        q: "Kostet die KI extra?",
+        a: "Die KI-Funktionen sind im jeweiligen Tarif enthalten. Für Belege und Lieferscheine gilt ein gemeinsames Kontingent von 300 pro Monat (Enterprise 500). Nur beim KI-Telefon kommen Telefonminuten dazu: Die Einrichtung kostet einmalig 49 € netto inklusive 300 Minuten, weitere Minuten können Sie nachkaufen.",
+      },
+      {
+        q: "Wo werden meine Daten verarbeitet?",
+        a: "Ihre Firmendaten speichert MalerSaaS auf Servern in der EU (Irland). Für eine KI-Funktion werden nur die dafür nötigen Inhalte – etwa die Sprachaufnahme beim Aufmaß oder das Foto eines Belegs – an die eingesetzten KI-Anbieter übermittelt, die ihren Sitz in den USA haben. Die Einzelheiten und die Rechtsgrundlage stehen in unserer Datenschutzerklärung.",
+      },
+      {
+        q: "Brauche ich technische Kenntnisse?",
+        a: "Nein. Die KI-Funktionen stecken hinter normalen Knöpfen wie „Aufmaß diktieren“ oder „Lieferschein einlesen“. Es gibt nichts einzurichten – außer beim KI-Telefon die Rufumleitung, durch die Sie Schritt für Schritt geführt werden.",
+      },
+      {
+        q: "Kann ich die KI vorher ausprobieren?",
+        a: "Ja. In der kostenlosen 14-tägigen Testphase sind alle Funktionen aller Tarife freigeschaltet, auch alle KI-Funktionen. Die Testphase endet automatisch.",
+      },
+    ],
+    related: [
+      { href: "/ratgeber/ki-im-malerbetrieb", label: "Ratgeber: KI im Handwerk" },
+      { href: "/ki-telefon", label: "KI-Telefon" },
+      { href: "/werbung-mit-ki", label: "Werbung mit KI" },
     ],
   },
 ];

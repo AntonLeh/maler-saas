@@ -32,11 +32,11 @@
       "destination": "/api/ratgeber?slug=:slug"
     },
     {
-      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen|werbung-mit-ki)",
+      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen|werbung-mit-ki|ki-funktionen)",
       "destination": "/seo/:page/index.html"
     },
     {
-      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen|werbung-mit-ki)/",
+      "source": "/:page(maler-software|aufmass-angebote|auftragsverwaltung|zeiterfassung|materialverwaltung|rechnungen|kundenportal|leistungsbewertung|fachkraefte|buchhaltung|ki-telefon|firmen-website|fachkraefte-finden|auswertungen|werbung-mit-ki|ki-funktionen)/",
       "destination": "/seo/:page/index.html"
     },
     {

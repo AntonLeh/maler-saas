@@ -169,8 +169,14 @@ export default function FeatureLandingPage({
             <div className="fp-grid">
               {page.highlights.map((h) => (
                 <article key={h.title}>
+                  {h.plan && <span className="fp-tile-plan">{h.plan}</span>}
                   <h3>{h.title}</h3>
                   <p>{h.text}</p>
+                  {h.href && (
+                    <a className="lp-more fp-tile-link" href={h.href}>
+                      {h.linkLabel ?? "Mehr erfahren"} →
+                    </a>
+                  )}
                 </article>
               ))}
             </div>
@@ -261,6 +267,8 @@ export default function FeatureLandingPage({
           </div>
           <div className="landing-footer-links">
             <a href="/">Startseite</a>
+            <a href="/maler-software">Funktionen</a>
+            <a href="/ki-funktionen">KI-Funktionen</a>
             <button type="button" onClick={onOpenImpressum}>
               Impressum
             </button>

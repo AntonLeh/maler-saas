@@ -49,6 +49,7 @@ const PAGES: Record<string, string> = {
   "firmen-website": "Firmen-Website",
   auswertungen: "Auswertungen",
   "werbung-mit-ki": "Werbung mit KI",
+  "ki-funktionen": "KI-Funktionen",
 };
 
 export function esc(v: unknown): string {
