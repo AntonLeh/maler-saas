@@ -223,7 +223,7 @@ ${mdToHtml(a.body ?? "")}
 <div class="box"><h2>MalerSaaS 14 Tage kostenlos testen</h2><p>Aufmaß, Angebote, Aufträge, Zeiterfassung und Rechnungen an einem Ort – die <a href="/maler-software">Malersoftware für Malerbetriebe</a>. Die Testphase endet automatisch.</p><a class="btn" href="${cta(a.slug)}">Jetzt kostenlos testen</a></div>
 ${faq.length ? `<section class="faq"><h2>Häufige Fragen</h2>${faq.map((f) => `<details><summary>${esc(f.q)}</summary><p>${inline(f.a ?? "")}</p></details>`).join("")}</section>` : ""}
 ${related.length ? `<h2>Passende Funktionen</h2><div class="related">${related.map((p) => `<a href="/${p}">${esc(PAGES[p])}</a>`).join("")}</div>` : ""}
-<p class="note">Hinweis: Dieser Ratgeber gibt allgemeine Informationen und ersetzt keine Rechts- oder Steuerberatung im Einzelfall.</p>
+<p class="note"><strong>Hinweis:</strong> Dieser Ratgeber wurde mit größter Sorgfalt erstellt. Gesetze und Fristen können sich jedoch ändern, und trotz Sorgfalt können Fehler nicht ausgeschlossen werden. Alle Angaben ohne Gewähr. Dieser Artikel ersetzt keine Rechts- oder Steuerberatung. Für Ihren Einzelfall wenden Sie sich bitte an Ihren Steuerberater, Rechtsanwalt oder Ihre Innung.${a.updated_at || a.published_at ? `<br><em>Stand: ${esc(deDate(String(a.updated_at || a.published_at)))}</em>` : ""}</p>
 </article>`;
   return page({ title: `${a.meta_title || a.title} | MalerSaaS`, description: a.meta_description || a.intro || a.title, canonical: url, body, ld, image: img });
 }
