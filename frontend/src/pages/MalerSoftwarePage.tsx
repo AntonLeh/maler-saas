@@ -31,6 +31,46 @@ const FAQ: { q: string; a: string }[] = [
     q: "Was kostet die Software?",
     a: "Die Tarife finden Sie auf der Startseite. Sie können MalerSaaS 14 Tage kostenlos testen; die Testphase endet automatisch, ein Abo ist dafür nicht nötig.",
   },
+  {
+    q: "Was ist der Unterschied zwischen einer Malersoftware und einer allgemeinen Handwerkersoftware?",
+    a: "Eine allgemeine Handwerkersoftware muss für viele Gewerke passen und bleibt deshalb oft allgemein. Eine Malersoftware ist auf die Abläufe im Maler- und Lackiererhandwerk zugeschnitten – zum Beispiel Aufmaß nach Flächen, Leistungen und Preise für Malerarbeiten, Material wie Farben und Tapeten, Fortschrittsfotos von der Baustelle und ein Kundenportal für Ihre Auftraggeber.",
+  },
+  {
+    q: "Kann ich mit MalerSaaS E-Rechnungen (XRechnung und ZUGFeRD) erstellen?",
+    a: "Ja. Rechnungen erzeugen Sie als PDF mit eingebetteten E-Rechnungsdaten (ZUGFeRD) und bei Bedarf zusätzlich als XRechnung. Damit sind Sie für die E-Rechnungspflicht im deutschen B2B-Geschäft vorbereitet.",
+  },
+  {
+    q: "Funktioniert die Malersoftware auch in Österreich und der Schweiz?",
+    a: "Ja. MalerSaaS ist für Deutschland, Österreich und die Schweiz gemacht. Bei der Registrierung wählen Sie Ihr Land; Währung (EUR oder CHF) und Mehrwertsteuersatz werden passend voreingestellt und lassen sich jederzeit anpassen.",
+  },
+  {
+    q: "Wo werden meine Daten gespeichert?",
+    a: "Ihre Betriebsdaten liegen auf Servern in der EU (Irland). Den Auftragsverarbeitungsvertrag (AVV) nach DSGVO finden Sie direkt auf unserer Website.",
+  },
+  {
+    q: "Wie lange dauert die Einführung des Malerprogramms?",
+    a: "Die Registrierung dauert wenige Minuten. Danach hinterlegen Sie Ihre Firmendaten und Preise, legen Mitarbeiter an und können sofort mit dem ersten Aufmaß oder Auftrag starten – ohne Installation und ohne Schulungstermin. Bei Fragen hilft der Hilfe-Chat direkt in der Software.",
+  },
+];
+
+const MORE: { href: string; title: string; text: string }[] = [
+  { href: "/buchhaltung", title: "Buchhaltung & Steuerberater", text: "Belege fotografieren, Umsatzsteuer im Blick, Paket für den Steuerberater inklusive DATEV-Export." },
+  { href: "/ki-telefon", title: "KI-Telefon", text: "Nimmt Anrufe an, wenn Sie auf der Baustelle sind, und schreibt Ihnen auf, wer was wollte." },
+  { href: "/firmen-website", title: "Firmen-Website", text: "Eine eigene Website für Ihren Malerbetrieb – mit Referenzen und Anfrageformular." },
+  { href: "/fachkraefte-finden", title: "Fachkräfte-Pool", text: "Maler und Lackierer in Ihrer Region finden, wenn es auf den Baustellen eng wird." },
+  { href: "/auswertungen", title: "Auswertungen", text: "Umsatz, Deckungsbeitrag und Nachkalkulation je Auftrag – auf einen Blick." },
+  { href: "/malertreff", title: "MalerTreff-Community", text: "Fachfragen stellen und Erfahrungen mit Kollegen aus dem Maler- und Lackiererhandwerk teilen." },
+];
+
+const CHECKLIST: { title: string; text: string }[] = [
+  { title: "Aufmaß direkt auf der Baustelle", text: "Maße am Handy oder Tablet erfassen und ohne Abtippen ins Angebot übernehmen." },
+  { title: "Durchgängiger Ablauf", text: "Vom Angebot über den Auftrag bis zur Rechnung – ohne Daten doppelt einzugeben." },
+  { title: "E-Rechnung", text: "XRechnung und ZUGFeRD gehören in Deutschland ab 2027/2028 zum Pflichtprogramm." },
+  { title: "Zeiterfassung nach Gesetz", text: "Arbeitszeiten projektbezogen erfassen, Pausen und Höchstarbeitszeiten im Blick behalten." },
+  { title: "Für Handy und Tablet gemacht", text: "Ihre Mitarbeiter arbeiten auf der Baustelle – die Software muss dort einfach bedienbar sein." },
+  { title: "Datenschutz", text: "Server in der EU und ein Auftragsverarbeitungsvertrag (AVV) nach DSGVO." },
+  { title: "Schnittstelle zum Steuerberater", text: "Belege und Rechnungen als Paket bzw. DATEV-Export, statt Ordner voller Papier." },
+  { title: "Faire Testphase", text: "Mit echten Aufträgen ausprobieren, ohne Kündigungsfristen und ohne automatische Verlängerung." },
 ];
 
 const FAQ_LD = JSON.stringify({
@@ -157,6 +197,7 @@ export default function MalerSoftwarePage({
       <span>✓ Für Malerbetriebe entwickelt</span>
       <span>✓ Mobile Nutzung</span>
       <span>✓ Alles in einer Plattform</span>
+      <span>✓ Server in der EU</span>
     </div>
   </div>
 
@@ -171,7 +212,7 @@ export default function MalerSoftwarePage({
 
     <section className="maler-software-intro">
        <div className="maler-software-section-inner">
-  <h2>Eine Software für den gesamten Malerbetrieb</h2>
+  <h2>Eine Software für Malerbetriebe – vom Büro bis zur Baustelle</h2>
 
   <p>
     In vielen Malerbetrieben verteilen sich Kundendaten, Aufmaße,
@@ -205,11 +246,11 @@ export default function MalerSoftwarePage({
   className="maler-software-features"
 >
   <div className="maler-software-section-inner">
-  <h2>Funktionen für Malerbetriebe</h2>
+  <h2>Malerprogramm: alle Funktionen für Ihren Malerbetrieb</h2>
 
   <p>
-    MalerSaaS verbindet die wichtigsten kaufmännischen und operativen
-    Abläufe eines Malerbetriebs in einer zentralen Software.
+    Als Malerprogramm verbindet MalerSaaS die wichtigsten kaufmännischen und
+    operativen Abläufe eines Malerbetriebs in einer zentralen Software.
   </p>
 
   <div className="maler-software-feature-grid">
@@ -334,6 +375,27 @@ export default function MalerSoftwarePage({
   </div>
 </section>
 
+<section className="maler-software-more">
+  <div className="maler-software-section-inner">
+    <h2>Mehr als ein Malerprogramm</h2>
+    <p>
+      Neben Aufmaß, Aufträgen und Rechnungen bringt MalerSaaS Werkzeuge mit,
+      die sonst eigene Programme bräuchten.
+    </p>
+    <div className="maler-software-feature-grid">
+      {MORE.map((m) => (
+        <article key={m.href}>
+          <h3>{m.title}</h3>
+          <p>{m.text}</p>
+          <a href={m.href} className="maler-software-feature-link">
+            Mehr erfahren →
+          </a>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
 <section className="maler-software-material-visual">
   <div className="maler-software-section-inner">
     <div className="maler-software-material-image-wrap">
@@ -349,7 +411,7 @@ export default function MalerSoftwarePage({
 
 <section className="maler-software-benefits">
   <div className="maler-software-section-inner">
-    <h2>Vorteile einer digitalen Software für Malerbetriebe</h2>
+    <h2>Branchensoftware für Maler und Lackierer: was bringt sie?</h2>
 
     <div className="maler-software-benefit-list">
       <article>
@@ -407,6 +469,60 @@ export default function MalerSoftwarePage({
         </p>
       </article>
     </div>
+  </div>
+</section>
+
+<section className="maler-software-checklist">
+  <div className="maler-software-section-inner">
+    <h2>Checkliste: Worauf Malerbetriebe bei einer Software achten sollten</h2>
+    <p>
+      Ob MalerSaaS oder ein anderes Programm – diese acht Punkte sollte eine
+      gute Software für Malerbetriebe heute erfüllen.
+    </p>
+    <ol className="maler-software-checklist-list">
+      {CHECKLIST.map((c) => (
+        <li key={c.title}>
+          <h3>{c.title}</h3>
+          <p>{c.text}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<section className="maler-software-target maler-software-dach">
+  <div className="maler-software-section-inner">
+    <h2>Rechtssicher in Deutschland, Österreich und der Schweiz</h2>
+    <div className="maler-software-target-grid">
+      <article>
+        <h3>🇩🇪 Deutschland</h3>
+        <p>
+          E-Rechnungen als ZUGFeRD und XRechnung: Empfangen müssen alle Betriebe
+          sie schon seit 2025, ausstellen ab 2027 (über 800.000 € Vorjahresumsatz)
+          bzw. ab 2028 alle. Dazu GoBD-gerechte Rechnungsnummern, Storno statt
+          Löschen und der DATEV-Export für den Steuerberater.
+        </p>
+      </article>
+      <article>
+        <h3>🇦🇹 Österreich</h3>
+        <p>
+          Euro und 20 % Umsatzsteuer voreingestellt, Rechnungen mit allen
+          Pflichtangaben und ein Belegpaket, das Steuerberater mit BMD, RZL oder
+          DATEV Österreich weiterverarbeiten können.
+        </p>
+      </article>
+      <article>
+        <h3>🇨🇭 Schweiz</h3>
+        <p>
+          Rechnungen in Schweizer Franken mit 8,1 % Mehrwertsteuer – Währung und
+          Steuersatz werden bei der Registrierung passend eingestellt.
+        </p>
+      </article>
+    </div>
+    <p className="maler-software-dach-note">
+      Ihre Daten liegen auf Servern in der EU (Irland); den Auftragsverarbeitungsvertrag nach DSGVO finden Sie unter{" "}
+      <a href="/avv">AVV</a>. Stand: November 2026 – allgemeine Informationen, keine Rechts- oder Steuerberatung.
+    </p>
   </div>
 </section>
 

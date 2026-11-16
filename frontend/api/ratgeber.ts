@@ -124,7 +124,7 @@ main{padding:28px 0 40px}.crumbs{font-size:13px;color:#64748b;margin-bottom:10px
 h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:0 0 10px}.meta{color:#64748b;font-size:14px;margin-bottom:18px}
 .intro{font-size:19px;color:#334155;margin:0 0 24px}article{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:clamp(18px,4vw,36px)}
 article h2{font-size:24px;line-height:1.3;margin:32px 0 10px}article h3{font-size:19px;margin:22px 0 8px}article p{margin:0 0 14px}article ul{margin:0 0 16px;padding-left:22px}article li{margin:4px 0}
-.box{background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#fff;border-radius:18px;padding:22px 24px;margin:30px 0}.box h2{color:#fff;margin:0 0 6px;font-size:22px}.box p{color:#dbeafe;margin:0 0 14px}
+.box{background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#fff;border-radius:18px;padding:22px 24px;margin:30px 0}.box h2{color:#fff;margin:0 0 6px;font-size:22px}.box p{color:#dbeafe;margin:0 0 14px}.box p a{color:#fff;text-decoration:underline}
 .box .btn{background:#facc15;color:#0f172a!important}.faq details{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin:8px 0;background:#fff}.faq summary{font-weight:700;cursor:pointer}
 .related{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.related a{border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:6px 12px;text-decoration:none;font-weight:600;font-size:14px}
 .list{display:grid;gap:12px}.card{display:block;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px 20px;text-decoration:none;color:inherit}.card:hover{border-color:#93c5fd}
@@ -220,7 +220,7 @@ export function renderArticle(a: Article): string {
 ${img ? `<figure class="hero"><img src="${esc(img)}" alt="${esc(a.image_alt || a.title)}" width="1600" height="900" fetchpriority="high">${a.image_ai_label ? "<figcaption>Symbolbild (KI-generiert)</figcaption>" : ""}</figure>` : ""}
 ${a.intro ? `<p class="intro">${inline(a.intro)}</p>` : ""}
 ${mdToHtml(a.body ?? "")}
-<div class="box"><h2>MalerSaaS 14 Tage kostenlos testen</h2><p>Aufmaß, Angebote, Aufträge, Zeiterfassung und Rechnungen an einem Ort – speziell für Malerbetriebe. Die Testphase endet automatisch.</p><a class="btn" href="${cta(a.slug)}">Jetzt kostenlos testen</a></div>
+<div class="box"><h2>MalerSaaS 14 Tage kostenlos testen</h2><p>Aufmaß, Angebote, Aufträge, Zeiterfassung und Rechnungen an einem Ort – die <a href="/maler-software">Malersoftware für Malerbetriebe</a>. Die Testphase endet automatisch.</p><a class="btn" href="${cta(a.slug)}">Jetzt kostenlos testen</a></div>
 ${faq.length ? `<section class="faq"><h2>Häufige Fragen</h2>${faq.map((f) => `<details><summary>${esc(f.q)}</summary><p>${inline(f.a ?? "")}</p></details>`).join("")}</section>` : ""}
 ${related.length ? `<h2>Passende Funktionen</h2><div class="related">${related.map((p) => `<a href="/${p}">${esc(PAGES[p])}</a>`).join("")}</div>` : ""}
 <p class="note">Hinweis: Dieser Ratgeber gibt allgemeine Informationen und ersetzt keine Rechts- oder Steuerberatung im Einzelfall.</p>
