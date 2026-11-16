@@ -329,12 +329,14 @@ serve(async (req) => {
     if (body.action === "seo_article") {
       const keyword = String(body.keyword ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
       if (!keyword) return json({ ok: false, error: "Bitte einen Suchbegriff angeben." }, 400);
+      if (S.isPageKeyword(keyword))
+        return json({ ok: false, error: "Für diesen Suchbegriff gibt es schon eine eigene Seite (z. B. /maler-software). Ein Artikel würde mit ihr bei Google konkurrieren – bitte einen anderen Begriff wählen." }, 400);
       const data = await callClaude({
         max_tokens: 8000,
         system: S.ARTICLE_SYSTEM,
         tools: [S.ARTICLE_TOOL],
         tool_choice: { type: "tool", name: "artikel" },
-        messages: [{ role: "user", content: `Suchbegriff: ${keyword}\nArbeitstitel: ${String(body.title ?? "").slice(0, 90) || "(frei)"}\n\nSchreibe den Artikel.` }],
+        messages: [{ role: "user", content: S.articleUserText(keyword, String(body.title ?? "").slice(0, 90), new Date().toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin" })) }],
       });
       const article = S.cleanArticle((data.content ?? []).find((c: any) => c.type === "tool_use")?.input, keyword);
       if (!article) return json({ ok: false, error: "Der Artikel konnte nicht erstellt werden. Bitte noch einmal versuchen." }, 422);

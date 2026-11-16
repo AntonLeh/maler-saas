@@ -338,6 +338,12 @@ export const slugify = (s: string) =>
     .replace(/-+$/g, "");
 export const wordCount = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
+/** Prüf-Platzhalter „[PRÜFEN: …]“ des SEO-Agenten – solange welche im Artikel stehen, darf er nicht veröffentlicht werden */
+export function findChecks(a: { title?: string; meta_title?: string; meta_description?: string; intro?: string; body?: string; faq?: { q?: string; a?: string }[] }): string[] {
+  const text = [a.title, a.meta_title, a.meta_description, a.intro, a.body, ...(a.faq ?? []).flatMap((f) => [f.q, f.a])].join("\n");
+  return [...text.matchAll(/\[PR(?:Ü|UE)FEN[^\]]*\]/gi)].map((m) => m[0]);
+}
+
 /** Markdown-Blöcke für die Vorschau (gleiche Regeln wie die Ratgeber-Seite) */
 export type MdBlock = { t: "h2" | "h3" | "p"; text: string } | { t: "ul"; items: string[] };
 export function mdBlocks(md: string): MdBlock[] {

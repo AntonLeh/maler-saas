@@ -11,6 +11,8 @@
 .ow2-msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; }
 .ow2-msg.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 .ow2-msg.err { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.ow2-checks ul { margin: 6px 0 0; padding-left: 20px; font-weight: 500; }
+.ow2-checks li { overflow-wrap: anywhere; }
 .ow2-empty { padding: 18px; border: 1px dashed #cbd5e1; border-radius: 14px; color: #64748b; font-size: 14px; background: #fff; }
 .ow2-note { margin: 14px 0 0; color: #64748b; font-size: 13px; }
 .ow2-small { margin: 0; color: #64748b; font-size: 12px; word-break: break-all; }

@@ -176,6 +176,7 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
   const set = (patch: Partial<Article>) => setA((x) => ({ ...x, ...patch }));
   const dirty = JSON.stringify(a) !== JSON.stringify(article);
   const words = L.wordCount(a.body);
+  const checks = L.findChecks(a);
   const url = `${SITE}/ratgeber/${a.slug}`;
 
   const save = async (extra: Partial<Article> = {}) => {
@@ -250,7 +251,13 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
           <button type="button" className="btn btn-secondary" onClick={close}>
             Schließen
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => save()} disabled={!!busy}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => save()}
+            disabled={!!busy || (a.status === "veroeffentlicht" && checks.length > 0)}
+            title={a.status === "veroeffentlicht" && checks.length > 0 ? "Erst alle „[PRÜFEN: …]“-Stellen klären – der Artikel ist öffentlich." : undefined}
+          >
             {busy === "save" ? "Speichert …" : dirty ? "Speichern •" : "Speichern"}
           </button>
           {a.status === "veroeffentlicht" ? (
@@ -258,13 +265,30 @@ function Editor({ article, onSaved, onClose, onDeleted }: { article: Article; on
               Zurückziehen
             </button>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={publish} disabled={!!busy || words < 300}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={publish}
+              disabled={!!busy || words < 300 || checks.length > 0}
+              title={checks.length ? "Erst alle „[PRÜFEN: …]“-Stellen klären" : undefined}
+            >
               ✅ Geprüft – veröffentlichen
             </button>
           )}
         </div>
       </div>
       {msg && <p className={`ow2-msg ${msg.ok ? "ok" : "err"}`}>{msg.text}</p>}
+      {checks.length > 0 && (
+        <div className="ow2-msg err ow2-checks" role="alert">
+          ⚠️ {checks.length === 1 ? "1 Stelle muss" : `${checks.length} Stellen müssen`} noch geprüft werden, bevor der Artikel online gehen kann. Der Agent war sich hier nicht sicher – bitte
+          die richtige Angabe eintragen und den Platzhalter löschen (Strg + F „PRÜFEN“):
+          <ul>
+            {checks.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {a.status === "veroeffentlicht" && (
         <p className="ow2-small">
           Öffentlich unter{" "}
