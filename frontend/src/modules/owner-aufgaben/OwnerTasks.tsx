@@ -6,7 +6,7 @@ import * as api from "./api";
 import { NOTE_COLORS, categoriesOf, dueText, isDueToday, isOverdue, matchNote, sortNotes, sortTodos, todayIso } from "./logic";
 import type { Note, NoteColor, Todo } from "./logic";
 import "../bi/bi.css";
-import "./ot.css";
+import "./oa.css";
 
 type Tab = "todos" | "notes";
 const COLOR_LABEL: Record<NoteColor, string> = { gelb: "Gelb", gruen: "Grün", blau: "Blau", rosa: "Rosa" };
@@ -64,10 +64,10 @@ export default function OwnerTasks({ onBack }: { onBack: () => void }) {
 
         <div className="bi2-periods" role="tablist" aria-label="Bereich">
           <button type="button" role="tab" aria-selected={tab === "todos"} className={tab === "todos" ? "on" : ""} onClick={() => choose("todos")}>
-            To-dos{openCount > 0 && <span className="ot-count">{openCount}</span>}
+            To-dos{openCount > 0 && <span className="oa-count">{openCount}</span>}
           </button>
           <button type="button" role="tab" aria-selected={tab === "notes"} className={tab === "notes" ? "on" : ""} onClick={() => choose("notes")}>
-            Notizzettel{notes && notes.length > 0 && <span className="ot-count">{notes.length}</span>}
+            Notizzettel{notes && notes.length > 0 && <span className="oa-count">{notes.length}</span>}
           </button>
         </div>
 
@@ -132,40 +132,40 @@ function Todos({ todos, setTodos, onError }: { todos: Todo[]; setTodos: (f: (t: 
   return (
     <section className="bi2-card">
       <form
-        className="ot-add"
+        className="oa-add"
         onSubmit={(e) => {
           e.preventDefault();
           void add();
         }}
       >
-        <input className="ot-add-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Neue Aufgabe … (Enter)" aria-label="Neue Aufgabe" maxLength={300} />
-        <input className="ot-add-cat" list="ot-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Kategorie" aria-label="Kategorie" maxLength={40} />
-        <datalist id="ot-cats">
+        <input className="oa-add-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Neue Aufgabe … (Enter)" aria-label="Neue Aufgabe" maxLength={300} />
+        <input className="oa-add-cat" list="oa-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Kategorie" aria-label="Kategorie" maxLength={40} />
+        <datalist id="oa-cats">
           {cats.map((c) => (
             <option key={c} value={c} />
           ))}
         </datalist>
-        <input className="ot-add-date" type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Fällig am" />
-        <button type="submit" className="btn btn-primary ot-add-btn" disabled={!title.trim() || busy}>
+        <input className="oa-add-date" type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Fällig am" />
+        <button type="submit" className="btn btn-primary oa-add-btn" disabled={!title.trim() || busy}>
           <Plus size={16} aria-hidden="true" /> Hinzufügen
         </button>
       </form>
 
-      <div className="ot-filters">
-        <button type="button" className={`ot-chip${filter === "" ? " on" : ""}`} onClick={() => setFilter("")}>
+      <div className="oa-filters">
+        <button type="button" className={`oa-chip${filter === "" ? " on" : ""}`} onClick={() => setFilter("")}>
           Alle
         </button>
         {cats.map((c) => (
-          <button key={c} type="button" className={`ot-chip${filter === c ? " on" : ""}`} onClick={() => setFilter(filter === c ? "" : c)}>
+          <button key={c} type="button" className={`oa-chip${filter === c ? " on" : ""}`} onClick={() => setFilter(filter === c ? "" : c)}>
             {c} <small>{todos.filter((t) => t.category === c && !t.done).length}</small>
           </button>
         ))}
-        <span className="ot-filters-right">
+        <span className="oa-filters-right">
           <label className="bi2-check">
             <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Erledigte zeigen ({doneCount})
           </label>
           {showDone && doneCount > 0 && (
-            <button type="button" className="ot-link danger" onClick={clearDone}>
+            <button type="button" className="oa-link danger" onClick={clearDone}>
               Erledigte löschen
             </button>
           )}
@@ -173,25 +173,25 @@ function Todos({ todos, setTodos, onError }: { todos: Todo[]; setTodos: (f: (t: 
       </div>
 
       {shown.length === 0 ? (
-        <p className="bi2-muted ot-empty">{todos.some((t) => !t.done) ? "In dieser Kategorie ist nichts offen." : "✓ Alles erledigt – oder tragen Sie oben eine neue Aufgabe ein."}</p>
+        <p className="bi2-muted oa-empty">{todos.some((t) => !t.done) ? "In dieser Kategorie ist nichts offen." : "✓ Alles erledigt – oder tragen Sie oben eine neue Aufgabe ein."}</p>
       ) : (
-        <ul className="ot-list">
+        <ul className="oa-list">
           {shown.map((t) => (
             <li key={t.id} className={`${t.done ? "done" : ""}${isOverdue(t, today) ? " late" : ""}`}>
-              <input type="checkbox" className="ot-check" checked={t.done} onChange={(e) => patch(t.id, { done: e.target.checked })} aria-label={`${t.title} erledigt`} />
-              <div className="ot-main">
+              <input type="checkbox" className="oa-check" checked={t.done} onChange={(e) => patch(t.id, { done: e.target.checked })} aria-label={`${t.title} erledigt`} />
+              <div className="oa-main">
                 {editing === t.id ? (
                   <EditTodo todo={t} cats={cats} onCancel={() => setEditing(null)} onSave={(p) => (setEditing(null), patch(t.id, p))} />
                 ) : (
-                  <button type="button" className="ot-title" onClick={() => !t.done && setEditing(t.id)} title={t.done ? undefined : "Zum Bearbeiten klicken"}>
+                  <button type="button" className="oa-title" onClick={() => !t.done && setEditing(t.id)} title={t.done ? undefined : "Zum Bearbeiten klicken"}>
                     {t.title}
                   </button>
                 )}
                 {editing !== t.id && (t.category || t.due_date) && (
-                  <span className="ot-meta">
-                    {t.category && <span className="ot-tag">{t.category}</span>}
+                  <span className="oa-meta">
+                    {t.category && <span className="oa-tag">{t.category}</span>}
                     {t.due_date && (
-                      <span className={`ot-due${isOverdue(t, today) ? " late" : isDueToday(t, today) ? " today" : ""}`}>
+                      <span className={`oa-due${isOverdue(t, today) ? " late" : isDueToday(t, today) ? " today" : ""}`}>
                         {isOverdue(t, today) ? "überfällig · " : "fällig "}
                         {dueText(t.due_date, today)}
                       </span>
@@ -199,7 +199,7 @@ function Todos({ todos, setTodos, onError }: { todos: Todo[]; setTodos: (f: (t: 
                   </span>
                 )}
               </div>
-              <button type="button" className="ot-icon" aria-label="Löschen" title="Löschen" onClick={() => remove(t)}>
+              <button type="button" className="oa-icon" aria-label="Löschen" title="Löschen" onClick={() => remove(t)}>
                 <Trash2 size={16} />
               </button>
             </li>
@@ -217,7 +217,7 @@ function EditTodo({ todo, cats, onSave, onCancel }: { todo: Todo; cats: string[]
   const save = () => title.trim() && onSave({ title: title.trim(), category: cat.trim() || null, due_date: due || null });
   return (
     <form
-      className="ot-edit"
+      className="oa-edit"
       onSubmit={(e) => {
         e.preventDefault();
         save();
@@ -225,8 +225,8 @@ function EditTodo({ todo, cats, onSave, onCancel }: { todo: Todo; cats: string[]
       onKeyDown={(e) => e.key === "Escape" && onCancel()}
     >
       <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Aufgabe" maxLength={300} />
-      <input list="ot-cats-edit" value={cat} onChange={(e) => setCat(e.target.value)} placeholder="Kategorie" aria-label="Kategorie" maxLength={40} />
-      <datalist id="ot-cats-edit">
+      <input list="oa-cats-edit" value={cat} onChange={(e) => setCat(e.target.value)} placeholder="Kategorie" aria-label="Kategorie" maxLength={40} />
+      <datalist id="oa-cats-edit">
         {cats.map((c) => (
           <option key={c} value={c} />
         ))}
@@ -262,15 +262,15 @@ function Notes({ notes, setNotes, onError }: { notes: Note[]; setNotes: (f: (n: 
   return (
     <section className="bi2-card">
       <div className="bi2-tablebar">
-        <button type="button" className="btn btn-primary ot-add-btn" onClick={add}>
+        <button type="button" className="btn btn-primary oa-add-btn" onClick={add}>
           <Plus size={16} aria-hidden="true" /> Neuer Zettel
         </button>
-        <input type="search" className="ot-search" placeholder="Notizen durchsuchen …" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Notizen durchsuchen" />
+        <input type="search" className="oa-search" placeholder="Notizen durchsuchen …" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Notizen durchsuchen" />
       </div>
       {shown.length === 0 ? (
-        <p className="bi2-muted ot-empty">{q ? "Keine Notiz gefunden." : "Noch keine Notizen. Mit „Neuer Zettel“ legen Sie die erste an."}</p>
+        <p className="bi2-muted oa-empty">{q ? "Keine Notiz gefunden." : "Noch keine Notizen. Mit „Neuer Zettel“ legen Sie die erste an."}</p>
       ) : (
-        <div className="ot-notes">
+        <div className="oa-notes">
           {shown.map((n) => (
             <NoteCard
               key={n.id}
@@ -329,22 +329,22 @@ function NoteCard({ note, autoFocus, onChange, onDelete, onError }: { note: Note
   };
 
   return (
-    <article className={`ot-note ${note.color}${note.pinned ? " pinned" : ""}`}>
-      <div className="ot-note-top">
-        <input className="ot-note-title" value={title} onChange={(e) => type(e.target.value, body)} placeholder="Titel" aria-label="Titel" maxLength={200} autoFocus={autoFocus} />
-        <button type="button" className={`ot-icon${note.pinned ? " on" : ""}`} aria-pressed={note.pinned} aria-label={note.pinned ? "Nicht mehr anheften" : "Anheften"} title={note.pinned ? "Nicht mehr anheften" : "Anheften"} onClick={() => save({ pinned: !note.pinned })}>
+    <article className={`oa-note ${note.color}${note.pinned ? " pinned" : ""}`}>
+      <div className="oa-note-top">
+        <input className="oa-note-title" value={title} onChange={(e) => type(e.target.value, body)} placeholder="Titel" aria-label="Titel" maxLength={200} autoFocus={autoFocus} />
+        <button type="button" className={`oa-icon${note.pinned ? " on" : ""}`} aria-pressed={note.pinned} aria-label={note.pinned ? "Nicht mehr anheften" : "Anheften"} title={note.pinned ? "Nicht mehr anheften" : "Anheften"} onClick={() => save({ pinned: !note.pinned })}>
           <Pin size={16} />
         </button>
       </div>
-      <textarea className="ot-note-body" value={body} onChange={(e) => type(title, e.target.value)} placeholder="Notiz …" aria-label="Notiz" rows={6} maxLength={20000} />
-      <div className="ot-note-foot">
-        <span className="ot-colors" role="radiogroup" aria-label="Farbe">
+      <textarea className="oa-note-body" value={body} onChange={(e) => type(title, e.target.value)} placeholder="Notiz …" aria-label="Notiz" rows={6} maxLength={20000} />
+      <div className="oa-note-foot">
+        <span className="oa-colors" role="radiogroup" aria-label="Farbe">
           {NOTE_COLORS.map((c) => (
-            <button key={c} type="button" role="radio" aria-checked={note.color === c} aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} className={`ot-dot ${c}${note.color === c ? " on" : ""}`} onClick={() => save({ color: c })} />
+            <button key={c} type="button" role="radio" aria-checked={note.color === c} aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} className={`oa-dot ${c}${note.color === c ? " on" : ""}`} onClick={() => save({ color: c })} />
           ))}
         </span>
-        <span className="ot-note-state">{state === "saving" ? "speichert …" : state === "saved" ? "gespeichert" : new Date(note.updated_at).toLocaleDateString("de-DE")}</span>
-        <button type="button" className="ot-icon" aria-label="Zettel löschen" title="Zettel löschen" onClick={remove}>
+        <span className="oa-note-state">{state === "saving" ? "speichert …" : state === "saved" ? "gespeichert" : new Date(note.updated_at).toLocaleDateString("de-DE")}</span>
+        <button type="button" className="oa-icon" aria-label="Zettel löschen" title="Zettel löschen" onClick={remove}>
           <Trash2 size={16} />
         </button>
       </div>
