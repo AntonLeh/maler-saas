@@ -136,6 +136,13 @@ serve(async (req) => {
         throw subscriptionUpdateError;
       }
 
+      // Abrechnungsart (monatlich/jährlich) – eigenes Update, damit ein fehlendes Feld nichts blockiert
+      {
+        const iv = stripeSubscription.items.data[0]?.price?.recurring?.interval === "year" ? "year" : "month";
+        const { error: ivErr } = await supabase.from("subscriptions").update({ billing_interval: iv }).eq("tenant_id", tenantId);
+        if (ivErr) console.error("billing_interval:", ivErr.message);
+      }
+
       const { error: billingEventError } =
         await supabase
           .from("billing_events")
@@ -265,15 +272,30 @@ serve(async (req) => {
           .eq("stripe_subscription_id", subscription.id)
           .maybeSingle();
         if (row) {
-          for (const p of ["starter", "professional", "business", "enterprise"]) {
-            const { data: pid } = await supabase.rpc("get_stripe_price_id_for_plan", { p_plan: p });
-            if (pid === newPriceId) {
-              if (row.plan !== p) {
-                const { error: actErr } = await supabase.rpc("activate_subscription_plan", { p_tenant_id: row.tenant_id, p_plan: p });
-                if (actErr) throw actErr;
+          // Monats- und Jahrespreise erkennen (ohne SQL-Update nur Monatspreise wie bisher)
+          let found: { plan: string; billing_interval: string } | null = null;
+          const { data: hit, error: hitErr } = await supabase.rpc("get_plan_for_stripe_price", { p_price_id: newPriceId });
+          if (!hitErr && Array.isArray(hit) && hit[0]) {
+            found = hit[0];
+          } else {
+            for (const p of ["starter", "professional", "business", "enterprise"]) {
+              const { data: pid } = await supabase.rpc("get_stripe_price_id_for_plan", { p_plan: p });
+              if (pid === newPriceId) {
+                found = { plan: p, billing_interval: "month" };
+                break;
               }
-              break;
             }
+          }
+          if (found) {
+            if (row.plan !== found.plan) {
+              const { error: actErr } = await supabase.rpc("activate_subscription_plan", { p_tenant_id: row.tenant_id, p_plan: found.plan });
+              if (actErr) throw actErr;
+            }
+            const { error: ivErr } = await supabase
+              .from("subscriptions")
+              .update({ billing_interval: found.billing_interval })
+              .eq("stripe_subscription_id", subscription.id);
+            if (ivErr) console.error("billing_interval:", ivErr.message);
           }
         }
       }

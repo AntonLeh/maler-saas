@@ -1689,3 +1689,11 @@
 
 /* Seitenränder neben der Startseite und den Funktionsseiten im selben warmen Ton */
 body:has(.landing-page) { background: #fbf8f3; }
+
+/* Umschalter monatlich / jährlich */
+.lp2-interval { display: inline-flex; gap: 4px; padding: 5px; margin-top: 22px; border-radius: 999px; background: #fff; border: 1px solid #e7dccb; box-shadow: 0 6px 18px rgba(120, 90, 50, 0.08); }
+.lp2-interval button { border: 0; background: transparent; padding: 10px 20px; border-radius: 999px; font-weight: 800; font-size: 15px; color: #475569; cursor: pointer; }
+.lp2-interval button.on { background: #0f172a; color: #fff; }
+.lp2-interval small { margin-left: 6px; font-size: 12px; font-weight: 800; color: #16a34a; }
+.lp2-interval button.on small { color: #86efac; }
+.lp2-plan-save { margin: -8px 0 14px; font-size: 13px; color: #16a34a; font-weight: 700; min-height: 18px; }

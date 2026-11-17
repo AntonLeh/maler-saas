@@ -14,6 +14,7 @@ import { countsAsRevenue as biCountsAsRevenue, isOpenInvoice as biIsOpenInvoice,
 import type { ChefNavKey } from "./modules/chef-start/ChefStart";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
+import { yearlyPrice } from "./lib/prices";
 import "./App.css";
 import { toNum } from "./modules/aufmass/calc";
 import { clearSiteVisitDraft } from "./modules/aufmass/draft";
@@ -770,6 +771,7 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
 
   const [showBusinessImages, setShowBusinessImages] = useState(false);
   const [tenantBlocked, setTenantBlocked] = useState(false);
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
 
   const loadSubscription = async (_tenantId: number, roleId?: number) => {
   // Firma vom Plattform-Inhaber gesperrt? (Funktion my_tenant_status; fehlt sie noch, gilt „nicht gesperrt“)
@@ -788,6 +790,8 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
   const subscriptionData = data as Subscription;
 
   setSubscription(subscriptionData);
+  // Abrechnungsart (monatlich/jährlich); ohne Datenbank-Update gilt „monatlich“
+  supabase.rpc("my_billing_interval").then(({ data: iv, error: ivErr }) => setBillingInterval(!ivErr && iv === "year" ? "year" : "month"));
   // Nur Admins/Inhaber landen bei gesperrtem Abo auf der Tarif-Seite.
   // Projektleiter und Mitarbeiter haben eine Übergangszeit (lib/staffAccess.ts).
   if (subscriptionData?.status === "blocked" && (roleId === ADMIN_ROLE_ID || roleId === PLATFORM_OWNER_ROLE_ID)) {
@@ -6627,7 +6631,9 @@ onReloadOrders={async () => {
     {" • "}
     {subscription.status === "trialing" && subscription.trial_ends_at
       ? `Kostenlose Testphase bis ${new Date(subscription.trial_ends_at).toLocaleDateString("de-DE")}`
-      : `${({ starter: 79, professional: 149, business: 399, enterprise: 799 } as Record<string, number>)[subscription.plan] ?? subscription.monthly_price} € / Monat (netto)`}
+      : billingInterval === "year"
+        ? `${yearlyPrice(subscription.plan).toLocaleString("de-DE")} € / Jahr (netto)`
+        : `${({ starter: 79, professional: 149, business: 399, enterprise: 799 } as Record<string, number>)[subscription.plan] ?? subscription.monthly_price} € / Monat (netto)`}
     {" • "}
     {({ starter: "bis 3", professional: "bis 8", business: "bis 20" } as Record<string, string>)[subscription.plan] ?? "Beliebig viele"} Mitarbeiter
   </>
@@ -9158,8 +9164,9 @@ onReloadOrders={async () => {
   currentPlan={subscription?.plan}
   isTrial={subscription?.is_trial}
   subscriptionStatus={subscription?.status}
+  currentInterval={billingInterval}
   onBack={openDashboard}
-  onUpgrade={async (plan) => {
+  onUpgrade={async (plan, interval) => {
     // Anmeldung auffrischen: nach langer Pause (z. B. Tab über Nacht offen) ist das Zugangs-Token sonst abgelaufen
     const { data: fresh } = await supabase.auth.refreshSession();
     const accessToken = fresh.session?.access_token ?? (await supabase.auth.getSession()).data.session?.access_token;
@@ -9172,6 +9179,7 @@ onReloadOrders={async () => {
       {
         body: {
           plan,
+          interval,
         },
         headers: { Authorization: `Bearer ${accessToken}` },
       }

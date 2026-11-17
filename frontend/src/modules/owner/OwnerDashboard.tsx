@@ -174,7 +174,7 @@ function Detail({
               <dt>Tarif</dt>
               <dd>{s ? PLAN_LABEL[s.plan] ?? s.plan : "–"}</dd>
               <dt>Preis</dt>
-              <dd>{s ? `${fmtMoney(planPrice(s.plan, s.monthly_price))} / Monat (netto)` : "–"}</dd>
+              <dd>{s ? (s.billing_interval === "year" ? `${fmtMoney(planPrice(s.plan, s.monthly_price) * 10)} / Jahr (netto)` : `${fmtMoney(planPrice(s.plan, s.monthly_price))} / Monat (netto)`) : "–"}</dd>
               <dt>Stripe</dt>
               <dd>{s?.has_stripe ? "verbunden" : "kein Stripe-Abo"}</dd>
               {s?.trial_ends_at && (
@@ -666,7 +666,7 @@ export default function OwnerDashboard(_props: Props) {
                       {t.subscription ? (
                         <>
                           {PLAN_LABEL[t.subscription.plan] ?? t.subscription.plan}
-                          <small>{fmtMoney(planPrice(t.subscription.plan, t.subscription.monthly_price))} / Monat</small>
+                          <small>{t.subscription.billing_interval === "year" ? `${fmtMoney(planPrice(t.subscription.plan, t.subscription.monthly_price) * 10)} / Jahr` : `${fmtMoney(planPrice(t.subscription.plan, t.subscription.monthly_price))} / Monat`}</small>
                         </>
                       ) : (
                         "–"

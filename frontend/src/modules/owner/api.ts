@@ -7,6 +7,8 @@ export type OwnerSub = {
   plan: string;
   status: string;
   monthly_price: number | null;
+  /** monatlich oder jährlich (fehlt bei älteren Daten = monatlich) */
+  billing_interval?: string | null;
   currency: string | null;
   trial_ends_at: string | null;
   expires_at: string | null;

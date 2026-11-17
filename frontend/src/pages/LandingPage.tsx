@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
+import { euro, yearlyPrice } from "../lib/prices";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -206,7 +207,7 @@ const audiences = [
 const faqs = [
   {
     q: "Was kostet MalerSaaS?",
-    a: "Es gibt vier Tarife, jeweils pro Monat zzgl. MwSt.: Starter 79 € (bis 3 Mitarbeiter), Professional 149 € (bis 8), Business 399 € (bis 20) und Enterprise 799 € (ab 21 Mitarbeitern ohne Obergrenze). Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
+    a: "Es gibt vier Tarife, jeweils pro Monat zzgl. MwSt.: Starter 79 € (bis 3 Mitarbeiter), Professional 149 € (bis 8), Business 399 € (bis 20) und Enterprise 799 € (ab 21 Mitarbeitern ohne Obergrenze). Monatlich gezahlt können Sie zum Ende jedes Monats kündigen. Bei jährlicher Zahlung bekommen Sie 2 Monate geschenkt (zum Beispiel Starter 790 € statt 948 € im Jahr) bei 12 Monaten Laufzeit.",
   },
   {
     q: "Zählen Leiharbeiter und Subunternehmer zur Mitarbeiterzahl?",
@@ -299,6 +300,7 @@ function useScrollToHash() {
 export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOpenDatenschutz, onOpenAgb }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [yearly, setYearly] = useState(false);
   useFaqSchema();
   useScrollToHash();
   const close = () => setMobileMenuOpen(false);
@@ -695,8 +697,19 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
         {/* ---------- Preise ---------- */}
         <section id="preise" className="landing-section lp2-pricing">
           <p className="landing-section-label">Preise</p>
-          <h2>Ein Preis pro Monat – passend zur Betriebsgröße.</h2>
-          <p className="lp2-lead">Alle Preise netto zzgl. MwSt., monatlich kündbar. 14 Tage kostenlos testen – mit allen Funktionen, ohne Kreditkarte.</p>
+          <h2>Klare Preise – passend zur Betriebsgröße.</h2>
+          <p className="lp2-lead">
+            Alle Preise netto zzgl. MwSt. Monatlich kündbar – oder jährlich zahlen und 2 Monate sparen. 14 Tage kostenlos testen, mit allen
+            Funktionen, ohne Kreditkarte.
+          </p>
+          <div className="lp2-interval" role="radiogroup" aria-label="Abrechnung">
+            <button type="button" role="radio" aria-checked={!yearly} className={!yearly ? "on" : ""} onClick={() => setYearly(false)}>
+              Monatlich
+            </button>
+            <button type="button" role="radio" aria-checked={yearly} className={yearly ? "on" : ""} onClick={() => setYearly(true)}>
+              Jährlich <small>2 Monate geschenkt</small>
+            </button>
+          </div>
           <div className="lp2-plans">
             {plans.map((pl) => (
               <article key={pl.name} className={`lp2-plan ${pl.top ? "is-top" : ""}`}>
@@ -704,8 +717,9 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                 <h3>{pl.name}</h3>
                 <p className="lp2-plan-who">{pl.who}</p>
                 <p className="lp2-plan-price">
-                  <b>{pl.price} €</b> <span>/ Monat</span>
+                  <b>{yearly ? euro(yearlyPrice(pl.name.toLowerCase())) : `${pl.price} €`}</b> <span>{yearly ? "/ Jahr" : "/ Monat"}</span>
                 </p>
+                <p className="lp2-plan-save">{yearly ? `statt ${euro(pl.price * 12)} – Sie sparen ${euro(pl.price * 2)}` : "monatlich kündbar"}</p>
                 <ul>
                   {pl.points.map((pt) => (
                     <li key={pt}>{pt}</li>

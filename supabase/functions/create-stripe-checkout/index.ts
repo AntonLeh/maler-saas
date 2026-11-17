@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.25.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { changeError, normInterval } from "./rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const plan = body.plan;
+    const interval = normInterval(body.interval);
 
     if (!plan) {
       throw new Error("Kein Plan übergeben.");
@@ -86,9 +88,10 @@ serve(async (req) => {
     }
 
     const { data: priceId, error: priceError } = await supabase.rpc(
-      "get_stripe_price_id_for_plan",
+      "get_stripe_price_id_for_plan_interval",
       {
         p_plan: plan,
+        p_interval: interval,
       }
     );
 
@@ -120,13 +123,14 @@ serve(async (req) => {
       if (stripeSub && ["active", "trialing", "past_due"].includes(stripeSub.status)) {
         const item = stripeSub.items?.data?.[0];
         if (!item) throw new Error("Das bestehende Abo hat keine Position.");
-        if (item.price?.id === priceId && currentSub.plan === plan) {
-          throw new Error("Das ist bereits Ihr aktueller Tarif.");
-        }
+        const curInterval = item.price?.recurring?.interval === "year" ? "year" : "month";
+        const err = changeError({ plan: String(currentSub.plan), interval: curInterval }, { plan, interval });
+        if (err) throw new Error(err);
         await stripe.subscriptions.update(stripeSub.id, {
           items: [{ id: item.id, price: priceId }],
-          proration_behavior: "create_prorations",
-          metadata: { tenant_id: String(appUser.tenant_id), plan },
+          // Wechsel ins Jahresabo bzw. Upgrade im Jahresabo: Differenz sofort abrechnen (nicht erst in einem Jahr)
+          proration_behavior: interval === "year" ? "always_invoice" : "create_prorations",
+          metadata: { tenant_id: String(appUser.tenant_id), plan, interval },
         });
         const { error: activateError } = await supabase.rpc("activate_subscription_plan", {
           p_tenant_id: appUser.tenant_id,
@@ -134,6 +138,8 @@ serve(async (req) => {
         });
         if (activateError) throw activateError;
         await supabase.from("subscriptions").update({ stripe_price_id: priceId }).eq("tenant_id", appUser.tenant_id);
+        // eigenes Update: funktioniert auch, falls die Spalte noch fehlt (SQL noch nicht ausgeführt)
+        await supabase.from("subscriptions").update({ billing_interval: interval }).eq("tenant_id", appUser.tenant_id);
         return new Response(JSON.stringify({ url: `${origin}/?stripe=success&changed=1`, changed: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -168,12 +174,14 @@ serve(async (req) => {
       metadata: {
         tenant_id: String(appUser.tenant_id),
         plan,
+        interval,
       },
 
       subscription_data: {
         metadata: {
           tenant_id: String(appUser.tenant_id),
           plan,
+          interval,
         },
       },
     });
@@ -198,6 +206,8 @@ serve(async (req) => {
       "Kein Plan übergeben.": "Bitte einen Tarif auswählen.",
       "Ungültiger Plan.": "Dieser Tarif ist nicht verfügbar.",
       "Das ist bereits Ihr aktueller Tarif.": "Das ist bereits Ihr aktueller Tarif.",
+      JAHRESABO_WECHSEL:
+        "Während eines Jahresabos ist nur ein Wechsel in einen größeren Tarif möglich. Ein kleinerer Tarif oder die monatliche Abrechnung gilt ab dem Ende der Laufzeit – schreiben Sie uns dafür an info@maler-saas.com.",
     };
     const msg = SAFE[String(error?.message ?? "")] ?? "Bitte versuchen Sie es später noch einmal oder wenden Sie sich an info@maler-saas.com.";
 

@@ -7,6 +7,9 @@ export const PLAN_ORDER = ["starter", "professional", "business", "enterprise"];
 /** Listenpreise netto pro Monat – maßgeblich für Anzeige und MRR (gespeicherte Preise können veraltet sein) */
 export const PLAN_PRICE: Record<string, number> = { starter: 79, professional: 149, business: 399, enterprise: 799 };
 export const planPrice = (plan: string | null | undefined, stored?: number | null) => PLAN_PRICE[plan ?? ""] ?? Number(stored || 0);
+/** Umsatz pro Monat: Jahresabos („2 Monate geschenkt“) zählen mit einem Zwölftel des Jahresbetrags */
+export const monthlyRevenue = (plan: string | null | undefined, stored?: number | null, interval?: string | null) =>
+  interval === "year" ? Math.round(((planPrice(plan, stored) * 10) / 12) * 100) / 100 : planPrice(plan, stored);
 
 export type StateKey = "platform" | "blocked" | "payment" | "cancelling" | "paying" | "free" | "trial" | "trial_over" | "ended" | "none";
 export type State = { key: StateKey; label: string; tone: "green" | "blue" | "amber" | "red" | "gray" | "purple" };
@@ -51,7 +54,7 @@ export function kpis(tenants: OwnerTenant[], now = Date.now()) {
   const list = tenants.filter((t) => !t.is_platform);
   const states = list.map((t) => ({ t, s: stateOf(t, now) }));
   const paying = states.filter((x) => ["paying", "cancelling", "payment"].includes(x.s.key));
-  const mrr = paying.reduce((sum, x) => sum + planPrice(x.t.subscription?.plan, x.t.subscription?.monthly_price), 0);
+  const mrr = paying.reduce((sum, x) => sum + monthlyRevenue(x.t.subscription?.plan, x.t.subscription?.monthly_price, x.t.subscription?.billing_interval), 0);
   const trials = states.filter((x) => x.s.key === "trial").length;
   // Umwandlung: zahlend (auch gekündigt/Zahlung offen) im Verhältnis zu allen, deren Testphase vorbei ist
   const decided = states.filter((x) => !["trial", "none", "free"].includes(x.s.key)).length;

@@ -705,9 +705,20 @@ export default function AgbPage({
           </p>
 
           <p>
-            Bei einer jährlichen oder anderen Vertragslaufzeit gelten
-            die im Bestellprozess angezeigte Laufzeit und
-            Verlängerungsregel.
+            Bei jährlicher Abrechnung beträgt die Laufzeit 12 Monate;
+            der Jahresbetrag ist im Voraus fällig. Der Vertrag
+            verlängert sich um jeweils weitere 12 Monate, wenn er nicht
+            bis zum Ende der Laufzeit gekündigt wird. Eine anteilige
+            Erstattung bei vorzeitiger Kündigung erfolgt nicht. Ein
+            Wechsel in einen höheren Tarif ist jederzeit möglich und
+            wird anteilig verrechnet; ein Wechsel in einen niedrigeren
+            Tarif oder zur monatlichen Abrechnung wird zum Ende der
+            Laufzeit wirksam.
+          </p>
+
+          <p>
+            Bei einer anderen Vertragslaufzeit gelten die im
+            Bestellprozess angezeigte Laufzeit und Verlängerungsregel.
           </p>
 
           <p>
