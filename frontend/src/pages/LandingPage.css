@@ -4,9 +4,10 @@
 
 .landing-page {
   min-height: 100vh;
+  /* Warmes Sandweiß – erinnert an Putz und Kalkfarbe */
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 32%),
-    linear-gradient(180deg, #f8fafc 0%, #eef4ff 45%, #ffffff 100%);
+    radial-gradient(circle at top left, rgba(214, 170, 110, 0.22), transparent 34%),
+    linear-gradient(180deg, #fbf8f3 0%, #f5ede2 45%, #fffdf9 100%);
   color: #0f172a;
 }
 
@@ -1685,3 +1686,6 @@
 @media (max-width: 700px) {
   .lp2-about > div { text-align: center; }
 }
+
+/* Seitenränder neben der Startseite und den Funktionsseiten im selben warmen Ton */
+body:has(.landing-page) { background: #fbf8f3; }
