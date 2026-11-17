@@ -113,6 +113,78 @@ const features: { title: string; text: string; href?: string }[] = [
   },
 ];
 
+/** Schaufenster: die wichtigsten Bereiche mit echten Ansichten aus der App (Beispieldaten) */
+const showcase: { label: string; title: string; text: string; points: string[]; img: string; w: number; h: number; alt: string; href: string; phone?: boolean }[] = [
+  {
+    label: "Aufmaß & Angebot",
+    title: "Aufmessen beim Kunden – das Angebot entsteht direkt daraus.",
+    text: "Räume, Fenster, Türen und Heizkörper am Handy oder Tablet erfassen – oder einfach ansagen. Wand- und Deckenflächen rechnet MalerSaaS sofort aus, das Angebot kommt mit Ihren Preisen.",
+    points: ["Aufmaß per Sprache in allen Tarifen", "Flächen nach VOB/C, 1–3 Anstriche je Raum", "Angebot online vom Kunden bestätigen lassen"],
+    img: "/images/app/aufmass.webp", w: 1400, h: 1075,
+    alt: "Aufmaß erfassen in MalerSaaS mit Wand- und Deckenflächen je Raum",
+    href: "/aufmass-angebote",
+  },
+  {
+    label: "Für Ihre Mitarbeiter",
+    title: "Stechuhr, Auftrag und Fotos – alles auf dem Handy.",
+    text: "Ihre Mitarbeiter sehen nur ihre eigenen Aufträge mit Adresse und Route. Arbeitsbeginn, Pause und Feierabend mit einem Tipp – die Zeit landet automatisch beim richtigen Auftrag.",
+    points: ["Zeiterfassung direkt am Auftrag", "Baufortschritt mit Fotos dokumentieren", "Material ausgeben und zurückbuchen"],
+    img: "/images/app/mitarbeiter-handy.webp", w: 700, h: 1526,
+    alt: "Mitarbeiter-Ansicht am Handy: laufende Arbeitszeit und Aufträge",
+    href: "/zeiterfassung",
+    phone: true,
+  },
+  {
+    label: "Rechnungen & E-Rechnung",
+    title: "Offene Beträge immer im Blick.",
+    text: "Abschlags- und Schlussrechnungen mit einem Klick, als E-Rechnung im ZUGFeRD-Format und mit GiroCode. Überfälliges ist sofort markiert – die Mahnung ist einen Klick entfernt.",
+    points: ["ZUGFeRD und XRechnung", "Offen, überfällig, gemahnt, bezahlt auf einen Blick", "Versand per E-Mail direkt aus der App"],
+    img: "/images/app/rechnungen.webp", w: 1400, h: 872,
+    alt: "Rechnungsübersicht in MalerSaaS mit offenen und überfälligen Beträgen",
+    href: "/rechnungen",
+  },
+  {
+    label: "Material",
+    title: "Wissen, was im Lager ist – und was fehlt.",
+    text: "Bestände, Mindestmengen und Lagerwert auf einen Blick. Lieferscheine liest die KI per Foto ein, Verbrauch und Rückgaben werden dem Auftrag zugeordnet.",
+    points: ["Warnung bei Mindestbestand", "Lieferschein per Foto einlesen (ab Business)", "Verbrauch je Auftrag für die Nachkalkulation"],
+    img: "/images/app/material.webp", w: 1400, h: 787,
+    alt: "Materialverwaltung mit Beständen, Mindestbestand und Lagerwert",
+    href: "/materialverwaltung",
+  },
+  {
+    label: "Auswertungen",
+    title: "Sehen, was am Ende übrig bleibt.",
+    text: "Umsatz, Lohn- und Materialkosten und Deckungsbeitrag – für den Monat, das Jahr oder einzelne Aufträge. Dazu offene Rechnungen und eine verständliche Einschätzung.",
+    points: ["Nachkalkulation je Auftrag", "Kundenanalyse und Materialanalyse", "Alle Beträge netto, ohne Steuer-Durcheinander"],
+    img: "/images/app/auswertungen.webp", w: 1400, h: 692,
+    alt: "Business Intelligence in MalerSaaS mit Umsatz, Kosten und Deckungsbeitrag",
+    href: "/auswertungen",
+  },
+];
+
+/** Die 7 KI-Funktionen (siehe /ki-funktionen) */
+const aiTasks: { icon: string; title: string; text: string; plan: string }[] = [
+  { icon: "🎤", title: "Aufmaß per Sprache", text: "Räume und Maße ansagen statt tippen.", plan: "Alle Tarife" },
+  { icon: "📷", title: "Lieferscheine einlesen", text: "Foto genügt – Positionen landen im Lager.", plan: "Ab Business" },
+  { icon: "🧾", title: "Belege erfassen", text: "Betrag, Datum und Steuersatz automatisch.", plan: "Ab Business" },
+  { icon: "📞", title: "KI-Telefon", text: "Nimmt Anrufe an, wenn niemand abhebt.", plan: "Ab Business" },
+  { icon: "✨", title: "Werbung aus Fotos", text: "Beiträge für Website, Instagram & Co.", plan: "Enterprise" },
+  { icon: "✍️", title: "Website-Texte", text: "Aus Stichworten werden Textvorschläge.", plan: "Enterprise" },
+  { icon: "💬", title: "Fragen beantworten", text: "Hilfe-Chat in der App, rund um die Uhr.", plan: "Alle Tarife" },
+];
+
+/** Tarife – Preise netto pro Monat */
+const plans: { name: string; price: number; who: string; points: string[]; top?: boolean }[] = [
+  { name: "Starter", price: 79, who: "bis 3 Mitarbeiter", points: ["Aufmaß (auch per Sprache), Angebote, Aufträge", "Rechnungen & E-Rechnung", "Zeiterfassung am Handy", "Buchhaltung: Belege, Umsatzsteuer, offene Posten"] },
+  { name: "Professional", price: 149, who: "bis 8 Mitarbeiter", top: true, points: ["Alles aus Starter", "Kundenportal", "Materialverwaltung", "Projektleiter und Baudokumentation mit Fotos"] },
+  { name: "Business", price: 399, who: "bis 20 Mitarbeiter", points: ["Alles aus Professional", "KI-Telefonassistent (Minuten zubuchbar)", "KI liest Belege und Lieferscheine", "Abschlagsrechnungen, Auswertungen, Leistungsbewertung"] },
+  { name: "Enterprise", price: 799, who: "ab 21 Mitarbeitern, ohne Obergrenze", points: ["Alles aus Business", "Eigene Firmen-Website mit Terminbuchung", "Werbung mit KI", "Fachkräfte-Pool und persönlicher Support"] },
+];
+
+/** Weitere Funktionen als kompakte Liste (die großen Bereiche stehen oben im Schaufenster) */
+const SHOWCASE_HREFS = new Set(["/materialverwaltung", "/rechnungen", "/zeiterfassung", "/auswertungen"]);
+
 const audiences = [
   {
     title: "Kleiner Betrieb",
@@ -134,7 +206,7 @@ const audiences = [
 const faqs = [
   {
     q: "Was kostet MalerSaaS?",
-    a: "Die Tarife beginnen bei 79 € im Monat zzgl. MwSt. (bis 3 Mitarbeiter). Je nach Betriebsgröße gibt es vier Tarife: bis 3, bis 8 und bis 20 Mitarbeiter sowie Enterprise ab 21 Mitarbeitern ohne Obergrenze. Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
+    a: "Es gibt vier Tarife, jeweils pro Monat zzgl. MwSt.: Starter 79 € (bis 3 Mitarbeiter), Professional 149 € (bis 8), Business 399 € (bis 20) und Enterprise 799 € (ab 21 Mitarbeitern ohne Obergrenze). Die Abrechnung erfolgt monatlich, Sie können zum Ende jedes Monats kündigen.",
   },
   {
     q: "Zählen Leiharbeiter und Subunternehmer zur Mitarbeiterzahl?",
@@ -313,41 +385,26 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             </div>
           </div>
 
-          <div className="landing-hero-visual">
-            <div className="hero-orbit-card hero-card-main">
-              <div className="mockup-topbar">
-                <span></span>
-                <span></span>
-                <span></span>
+          <div className="landing-hero-visual lp2-hero-visual">
+            <figure className="lp2-browser">
+              <div className="lp2-browser-bar" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <span>maler-saas.com</span>
               </div>
+              <img
+                src="/images/app/chef-startseite.webp"
+                alt="Startseite für den Chef in MalerSaaS: offene Aufträge, Rechnungen, Termine und Neuigkeiten"
+                width="1600"
+                height="1264"
+                fetchPriority="high"
+              />
+            </figure>
 
-              <div className="mockup-title-row">
-                <div>
-                  <strong>Ihr Betrieb auf einen Blick</strong>
-                  <small>Live-Übersicht</small>
-                </div>
-                <span className="mockup-pill">Cockpit</span>
-              </div>
-
-              <div className="mockup-stats">
-                <div>
-                  <strong>32</strong>
-                  <span>Aufträge</span>
-                </div>
-                <div>
-                  <strong>84 T€</strong>
-                  <span>Angebote</span>
-                </div>
-                <div>
-                  <strong>91 %</strong>
-                  <span>Auslastung</span>
-                </div>
-              </div>
-
-              <div className="landing-dashboard-collage">
-                <img src="/images/maler-saas-landing-collage.webp" alt="Ansichten der MalerSaaS-App" className="landing-dashboard-collage-image" />
-              </div>
-            </div>
+            <figure className="lp2-phone lp2-hero-phone">
+              <img src="/images/app/mitarbeiter-handy.webp" alt="Mitarbeiter-App am Handy mit laufender Arbeitszeit" width="700" height="1526" />
+            </figure>
 
             <div className="hero-floating-card card-material">
               <strong>E-Rechnung</strong>
@@ -355,27 +412,8 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             </div>
 
             <div className="hero-floating-card card-ai">
-              <strong>KI-Assistent</strong>
-              <span>Belege, Telefon, Texte</span>
-            </div>
-
-            <div className="hero-phone-mockup lp-phone" aria-label="Zeiterfassung auf dem Handy">
-              <div className="lp-phone-screen">
-                <small>Auftrag</small>
-                <b>Wohnung Müller</b>
-                <em>Wohnzimmer streichen</em>
-                <div className="lp-phone-timer">
-                  <i aria-hidden="true" />
-                  <span>Läuft</span>
-                  <strong>2:15 h</strong>
-                </div>
-                <div className="lp-phone-btn lp-phone-btn-light">Pause</div>
-                <div className="lp-phone-btn">Feierabend</div>
-                <div className="lp-phone-photos">📷 3 Fotos</div>
-              </div>
-              <p className="lp-phone-caption">
-                <strong>Auf dem Handy</strong> direkt auf der Baustelle
-              </p>
+              <strong>Mit KI</strong>
+              <span>Aufmaß, Belege, Telefon</span>
             </div>
           </div>
         </section>
@@ -389,6 +427,32 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <span>E-Rechnung</span>
           <span>Buchhaltung</span>
           <span>Kundenportal</span>
+        </section>
+
+        {/* ---------- KI ---------- */}
+        <section className="landing-section lp2-ai" aria-labelledby="lp2-ai-title">
+          <div className="lp2-ai-box">
+            <div className="lp2-ai-head">
+              <p className="landing-section-label lp-label-light">Künstliche Intelligenz</p>
+              <h2 id="lp2-ai-title">7 Aufgaben, die die KI für Sie übernimmt.</h2>
+              <p>Die KI macht Vorschläge – Sie prüfen und entscheiden. Gespeichert oder veröffentlicht wird nur, was Sie freigeben.</p>
+            </div>
+            <ul className="lp2-ai-grid">
+              {aiTasks.map((t) => (
+                <li key={t.title}>
+                  <span className="lp2-ai-icon" aria-hidden="true">
+                    {t.icon}
+                  </span>
+                  <b>{t.title}</b>
+                  <span>{t.text}</span>
+                  <small>{t.plan}</small>
+                </li>
+              ))}
+            </ul>
+            <a className="lp2-ai-link" href="/ki-funktionen">
+              Alle KI-Funktionen im Überblick →
+            </a>
+          </div>
         </section>
 
         {/* ---------- Kennen Sie das? ---------- */}
@@ -427,30 +491,51 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           </div>
         </section>
 
-        {/* ---------- Funktionen ---------- */}
+        {/* ---------- Funktionen: Schaufenster mit echten Ansichten ---------- */}
         <section id="funktionen" className="landing-section">
           <p className="landing-section-label">Eine App statt vieler Insellösungen</p>
           <h2>Alles, was Ihr Malerbetrieb täglich braucht.</h2>
 
-          <div className="landing-feature-grid premium-grid">
-            {features.map((feature, index) => (
-              <article key={feature.title}>
-                <div className="feature-icon">{index + 1}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.text}</p>
-                {feature.href && (
-                  <a className="lp-more" href={feature.href}>
+          <div className="lp2-show">
+            {showcase.map((f, i) => (
+              <article key={f.title} className={`lp2-show-row ${i % 2 ? "is-flip" : ""}`}>
+                <div className="lp2-show-text">
+                  <p className="lp2-kicker">{f.label}</p>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                  <ul className="lp2-points">
+                    {f.points.map((pt) => (
+                      <li key={pt}>{pt}</li>
+                    ))}
+                  </ul>
+                  <a className="lp-more" href={f.href}>
                     Mehr erfahren →
                   </a>
-                )}
+                </div>
+                <figure className={f.phone ? "lp2-phone" : "lp2-shot"}>
+                  <img src={f.img} alt={f.alt} width={f.w} height={f.h} loading="lazy" decoding="async" />
+                </figure>
               </article>
             ))}
+          </div>
+
+          <h3 className="lp2-more-title">Außerdem dabei</h3>
+          <div className="lp2-more-grid">
+            {features
+              .filter((f) => !SHOWCASE_HREFS.has(f.href ?? "") && f.title !== "Aufmaß per Sprache" && f.title !== "Aufmaß & Angebote")
+              .map((f) => (
+                <a key={f.title} href={f.href} className="lp2-more-item">
+                  <b>{f.title}</b>
+                  <span>{f.text}</span>
+                </a>
+              ))}
           </div>
           <p className="lp-center">
             <a className="lp-more" href="/maler-software">
               Alle Funktionen der Maler-Software im Überblick →
             </a>
           </p>
+          <p className="lp2-note">Ansichten mit Beispieldaten eines erfundenen Betriebs.</p>
         </section>
 
         {/* ---------- Schwerpunkt Werbung mit KI ---------- */}
@@ -573,11 +658,6 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           </div>
         </section>
 
-        {/* ---------- Schwerpunkt Material ---------- */}
-        <section className="landing-section landing-image-section">
-          <img src="/images/materialkontrolle.webp" loading="lazy" alt="Materialkontrolle in MalerSaaS: Lager, Projektleiter, Mitarbeiter, Auftrag" className="landing-full-image" />
-        </section>
-
         {/* ---------- Schwerpunkt Kundenportal ---------- */}
         <section className="landing-section landing-visual-section">
           <div>
@@ -592,9 +672,9 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             </a>
           </div>
 
-          <div className="customer-portal-image-frame">
-            <img src="/images/kundenportal-projektfortschritt.webp" loading="lazy" alt="Kundenportal mit Projektfortschritt in MalerSaaS" className="customer-portal-image" />
-          </div>
+          <figure className="lp2-phone lp2-portal-phone">
+            <img src="/images/app/kundenportal-handy.webp" loading="lazy" decoding="async" width="700" height="1515" alt="Kundenportal am Handy: Projektstand und Fotos vom Baufortschritt" />
+          </figure>
         </section>
 
         {/* ---------- Für wen ---------- */}
@@ -613,43 +693,38 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
         </section>
 
         {/* ---------- Preise ---------- */}
-        <section id="preise" className="landing-section">
-          <div className="lp-price">
-            <div>
-              <p className="landing-section-label">Preise</p>
-              <h2>
-                Ab 79 € im Monat <small>zzgl. MwSt.</small>
-              </h2>
-              <p>Für Betriebe jeder Größe – vom Ein-Mann-Betrieb bis zum Unternehmen mit 50 oder mehr Mitarbeitern:</p>
-              <ul className="lp-tiers">
-                <li>
-                  <b>Starter</b> bis 3 Mitarbeiter
-                </li>
-                <li>
-                  <b>Professional</b> bis 8 Mitarbeiter
-                </li>
-                <li>
-                  <b>Business</b> bis 20 Mitarbeiter
-                </li>
-                <li>
-                  <b>Enterprise</b> ab 21 Mitarbeitern – ohne Obergrenze, mit Website und Werbung mit KI
-                </li>
-              </ul>
-              <p>Monatlich kündbar. Alle Preise und Funktionen sehen Sie nach der Registrierung unter „Tarife“.</p>
-            </div>
-            <div className="lp-price-cta">
-              <button type="button" className="landing-primary-btn" onClick={onRegister}>
-                14 Tage kostenlos testen
-              </button>
-              <span>Keine Kreditkarte nötig · endet automatisch</span>
-            </div>
+        <section id="preise" className="landing-section lp2-pricing">
+          <p className="landing-section-label">Preise</p>
+          <h2>Ein Preis pro Monat – passend zur Betriebsgröße.</h2>
+          <p className="lp2-lead">Alle Preise netto zzgl. MwSt., monatlich kündbar. 14 Tage kostenlos testen – mit allen Funktionen, ohne Kreditkarte.</p>
+          <div className="lp2-plans">
+            {plans.map((pl) => (
+              <article key={pl.name} className={`lp2-plan ${pl.top ? "is-top" : ""}`}>
+                {pl.top && <span className="lp2-plan-badge">Beliebt</span>}
+                <h3>{pl.name}</h3>
+                <p className="lp2-plan-who">{pl.who}</p>
+                <p className="lp2-plan-price">
+                  <b>{pl.price} €</b> <span>/ Monat</span>
+                </p>
+                <ul>
+                  {pl.points.map((pt) => (
+                    <li key={pt}>{pt}</li>
+                  ))}
+                </ul>
+                <button type="button" className={pl.top ? "landing-primary-btn" : "landing-secondary-btn"} onClick={onRegister}>
+                  14 Tage kostenlos testen
+                </button>
+              </article>
+            ))}
           </div>
+          <p className="lp2-note">KI-Telefon: Einrichtung einmalig 49 € netto inklusive 300 Minuten, weitere Minuten nach Bedarf.</p>
         </section>
 
         {/* ---------- Fragen ---------- */}
         <section id="fragen" className="landing-section lp-faq">
           <p className="landing-section-label">Häufige Fragen</p>
           <h2>Gut zu wissen.</h2>
+          <div className="lp2-faq-wrap">
           <div className="lp-faq-list">
             {faqs.map((f, i) => (
               <div key={f.q} className={`lp-faq-item ${openFaq === i ? "is-open" : ""}`}>
@@ -660,6 +735,34 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                 {openFaq === i && <p>{f.a}</p>}
               </div>
             ))}
+          </div>
+          <aside className="lp2-faq-aside">
+            <b>Ihre Frage ist nicht dabei?</b>
+            <p>Schreiben Sie uns – wir antworten persönlich und auf Deutsch.</p>
+            <a href="#kontakt" className="landing-secondary-btn">
+              Frage stellen
+            </a>
+            <a href="mailto:info@maler-saas.com">info@maler-saas.com</a>
+          </aside>
+          </div>
+        </section>
+
+        {/* ---------- Wer steckt dahinter ---------- */}
+        <section className="landing-section lp2-about" aria-labelledby="lp2-about-title">
+          <img src="/images/anton-lehmann.webp" alt="Anton Lehmann, Gründer von MalerSaaS" width="520" height="624" loading="lazy" decoding="async" />
+          <div>
+            <p className="landing-section-label">Wer steckt dahinter?</p>
+            <h2 id="lp2-about-title">Gebaut für das Malerhandwerk.</h2>
+            <p>
+              MalerSaaS ist aus einem konkreten Kundenwunsch entstanden: Ein Malerbetrieb suchte eine Software, die wirklich zu seinem Alltag
+              passt – vom Aufmaß beim Kunden bis zur bezahlten Rechnung. Daraus ist eine Software geworden, die von Anfang an nur für das
+              Malergewerbe gedacht ist.
+            </p>
+            <p>Rückmeldungen aus den Betrieben fließen direkt in die Weiterentwicklung ein. Sie haben eine Idee oder eine Frage? Schreiben Sie mir.</p>
+            <p className="lp2-sign">
+              <b>Anton Lehmann</b>
+              <span>Gründer von MalerSaaS</span>
+            </p>
           </div>
         </section>
 

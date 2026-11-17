@@ -1528,3 +1528,160 @@
   .landing-feature-grid article:nth-last-child(2):nth-child(3n + 1),
   .landing-feature-grid article:last-child:nth-child(3n + 2) { transform: translateX(calc(50% + 9px)); }
 }
+
+/* =========================================================
+   Neue Startseite (lp2-): echte App-Ansichten, KI, Tarife, Über uns
+   ========================================================= */
+
+/* ---------- Hero: Browser + Handy ---------- */
+.lp2-hero-visual { min-height: 0; padding: 10px 0 40px; }
+.lp2-browser {
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  box-shadow: 0 40px 90px rgba(15, 23, 42, 0.22);
+}
+.lp2-browser-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+.lp2-browser-bar i { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
+.lp2-browser-bar i:nth-child(1) { background: #f87171; }
+.lp2-browser-bar i:nth-child(2) { background: #fbbf24; }
+.lp2-browser-bar i:nth-child(3) { background: #34d399; }
+.lp2-browser-bar span { margin-left: 10px; flex: 1; max-width: 240px; font-size: 12px; color: #64748b; background: #fff; border-radius: 999px; padding: 4px 12px; }
+.lp2-browser img { display: block; width: 100%; height: auto; }
+
+.lp2-phone {
+  margin: 0;
+  background: #0f172a;
+  padding: 8px;
+  border-radius: 34px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+}
+.lp2-phone img { display: block; width: 100%; height: auto; border-radius: 27px; }
+.lp2-hero-phone { position: absolute; z-index: 4; right: -26px; bottom: 0; width: 34%; max-width: 190px; aspect-ratio: 700 / 1060; overflow: hidden; }
+.lp2-hero-phone img { height: 100%; object-fit: cover; object-position: top; }
+.lp2-hero-visual .card-material { left: -30px; bottom: 70px; }
+.lp2-hero-visual .card-ai { right: auto; left: -24px; top: 36px; }
+
+/* ---------- KI ---------- */
+.lp2-ai { padding-top: 34px; padding-bottom: 34px; }
+.lp2-ai-box {
+  border-radius: 32px;
+  padding: 42px;
+  color: #e2e8f0;
+  background: radial-gradient(circle at 85% 0%, rgba(99, 102, 241, 0.45), transparent 45%), linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
+}
+.lp2-ai-head { max-width: 760px; }
+.lp2-ai-head h2 { color: #fff; margin: 10px 0 10px; }
+.lp2-ai-head p { color: #cbd5e1; line-height: 1.65; margin: 0; }
+.lp2-ai-grid { list-style: none; margin: 28px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.lp2-ai-grid li {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.lp2-ai-icon { font-size: 26px; line-height: 1; margin-bottom: 6px; }
+.lp2-ai-grid b { color: #fff; font-size: 16px; }
+.lp2-ai-grid span { color: #cbd5e1; font-size: 14px; line-height: 1.5; }
+.lp2-ai-grid small { margin-top: 6px; justify-self: start; font-size: 12px; font-weight: 700; color: #bfdbfe; background: rgba(59, 130, 246, 0.2); border-radius: 999px; padding: 3px 10px; }
+.lp2-ai-link { display: inline-block; margin-top: 22px; color: #fff; font-weight: 800; text-decoration: none; border-bottom: 2px solid rgba(255, 255, 255, 0.4); }
+.lp2-ai-link:hover { border-color: #fff; }
+
+/* ---------- Schaufenster ---------- */
+.lp2-show { display: grid; gap: 64px; margin-top: 40px; }
+.lp2-show-row { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 48px; align-items: center; }
+.lp2-show-row.is-flip { grid-template-columns: 1.15fr 0.85fr; }
+.lp2-show-row.is-flip .lp2-show-text { order: 2; }
+.lp2-kicker { margin: 0 0 8px; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #2563eb; }
+.lp2-show-text h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.2; margin: 0 0 12px; color: #0f172a; letter-spacing: -0.02em; }
+.lp2-show-text > p { color: #475569; line-height: 1.7; margin: 0 0 14px; }
+.lp2-points { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; }
+.lp2-points li { position: relative; padding-left: 28px; color: #1e293b; font-weight: 600; }
+.lp2-points li::before { content: "✓"; position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: #fff; background: #16a34a; }
+.lp2-shot { margin: 0; border-radius: 20px; overflow: hidden; border: 1px solid #dbe3ef; background: #f8fafc; box-shadow: 0 28px 70px rgba(15, 23, 42, 0.14); }
+.lp2-shot img { display: block; width: 100%; height: auto; }
+.lp2-show-row .lp2-phone { justify-self: center; width: min(300px, 80%); max-height: 560px; overflow: hidden; }
+.lp2-show-row .lp2-phone img { object-fit: cover; object-position: top; max-height: 544px; }
+
+.lp2-more-title { margin: 72px 0 16px; font-size: 22px; color: #0f172a; text-align: center; }
+.lp2-more-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.lp2-more-item { display: grid; gap: 6px; align-content: start; padding: 16px 18px; border-radius: 18px; background: #fff; border: 1px solid #e2e8f0; text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.15s; }
+.lp2-more-item:hover { border-color: #93c5fd; transform: translateY(-2px); }
+.lp2-more-item b { color: #0f172a; }
+.lp2-more-item span { color: #64748b; font-size: 14px; line-height: 1.5; }
+.lp2-note { margin: 14px 0 0; text-align: center; font-size: 13px; color: #94a3b8; }
+
+/* ---------- Kundenportal am Handy ---------- */
+.lp2-portal-phone { justify-self: center; width: min(300px, 80%); max-height: 600px; overflow: hidden; }
+.lp2-portal-phone img { object-fit: cover; object-position: top; max-height: 584px; }
+
+/* ---------- Tarife ---------- */
+.lp2-pricing { text-align: center; }
+.lp2-lead { color: #475569; line-height: 1.65; max-width: 720px; margin: 0 auto; }
+.lp2-plans { margin-top: 32px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: left; }
+.lp2-plan { position: relative; display: flex; flex-direction: column; padding: 26px 22px; border-radius: 24px; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06); }
+.lp2-plan.is-top { border: 2px solid #2563eb; box-shadow: 0 24px 60px rgba(37, 99, 235, 0.18); }
+.lp2-plan-badge { position: absolute; top: -12px; left: 22px; background: #2563eb; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; }
+.lp2-plan h3 { margin: 0; font-size: 20px; color: #0f172a; }
+.lp2-plan-who { margin: 4px 0 0; color: #64748b; font-size: 14px; }
+.lp2-plan-price { margin: 16px 0 14px; color: #64748b; }
+.lp2-plan-price b { font-size: 38px; color: #0f172a; letter-spacing: -0.02em; }
+.lp2-plan ul { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 9px; flex: 1; }
+.lp2-plan li { position: relative; padding-left: 24px; color: #334155; font-size: 14.5px; line-height: 1.45; }
+.lp2-plan li::before { content: "✓"; position: absolute; left: 0; color: #16a34a; font-weight: 800; }
+.lp2-plan button { width: 100%; justify-content: center; }
+
+/* ---------- FAQ mit Hinweis rechts ---------- */
+.lp2-faq-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.lp2-faq-wrap .lp-faq-list { max-width: none; }
+.lp2-faq-aside { position: sticky; top: 100px; margin-top: 24px; display: grid; gap: 10px; padding: 24px; border-radius: 22px; background: linear-gradient(160deg, #eff6ff, #fff); border: 1px solid #bfdbfe; }
+.lp2-faq-aside b { font-size: 18px; color: #0f172a; }
+.lp2-faq-aside p { margin: 0; color: #475569; line-height: 1.6; }
+.lp2-faq-aside .landing-secondary-btn { text-decoration: none; text-align: center; justify-content: center; }
+.lp2-faq-aside a:last-child { color: #1d4ed8; font-weight: 700; font-size: 14px; }
+
+/* ---------- Wer steckt dahinter ---------- */
+.lp2-about { display: grid; grid-template-columns: 300px 1fr; gap: 48px; align-items: center; }
+.lp2-about img { width: 100%; height: auto; border-radius: 28px; box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22); }
+.lp2-about h2 { margin-top: 10px; }
+.lp2-about p { color: #475569; line-height: 1.75; }
+.lp2-sign { display: grid; gap: 2px; margin-top: 18px; }
+.lp2-sign b { color: #0f172a; font-size: 18px; }
+.lp2-sign span { color: #64748b; font-size: 14px; }
+
+/* ---------- Kleinere Bildschirme ---------- */
+@media (max-width: 1000px) {
+  .lp2-ai-grid, .lp2-more-grid, .lp2-plans { grid-template-columns: repeat(2, 1fr); }
+  .lp2-show-row, .lp2-show-row.is-flip { grid-template-columns: 1fr; gap: 26px; }
+  .lp2-show-row.is-flip .lp2-show-text { order: 0; }
+  .lp2-faq-wrap { grid-template-columns: 1fr; }
+  .lp2-faq-aside { position: static; margin-top: 0; }
+}
+@media (max-width: 700px) {
+  .lp2-hero-visual { padding-bottom: 0; }
+  .lp2-hero-phone { display: none; }
+  .lp2-hero-visual .hero-floating-card { display: none; }
+  .lp2-ai-box { padding: 28px 20px; border-radius: 24px; }
+  .lp2-ai-grid, .lp2-more-grid, .lp2-plans { grid-template-columns: 1fr; }
+  .lp2-ai-grid li { grid-template-columns: auto 1fr; column-gap: 12px; }
+  .lp2-ai-grid li .lp2-ai-icon { grid-row: span 3; margin: 0; }
+  .lp2-show { gap: 48px; }
+  .lp2-about { grid-template-columns: 1fr; gap: 24px; text-align: center; }
+  .lp2-about img { width: 200px; margin: 0 auto; }
+}
+/* Ausrichtung: Text in den neuen Bereichen linksbündig */
+.lp2-show-text, .lp2-ai-box, .lp2-more-item, .lp2-about > div, .lp2-faq-aside { text-align: left; }
+.lp2-ai-head { margin: 0; }
+.lp2-hero-visual .card-ai { left: auto; right: -18px; top: -26px; }
+.lp2-hero-visual .card-material { left: -30px; bottom: 6px; }
+@media (max-width: 700px) {
+  .lp2-about > div { text-align: center; }
+}
