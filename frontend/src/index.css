@@ -121,3 +121,13 @@ code {
 body:has(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page, .fk-page, .mt-page, .legal-page) {
   background: #fbf8f3;
 }
+
+/* Öffentliche Produktseiten: Karten auf Sandweiß deutlich sichtbar */
+:is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-grid"] > article,
+:is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-steps"] > article,
+:is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-points"] > article,
+:is(.maler-software-page) .maler-software-benefit-list > article {
+  background: #ffffff;
+  border: 1px solid #e7dccb;
+  box-shadow: 0 10px 30px rgba(120, 90, 50, 0.1);
+}
