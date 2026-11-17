@@ -1,6 +1,6 @@
 .maler-software-page {
   min-height: 100vh;
-  background: #f7faf8;
+  background: #fbf8f3;
   color: #17211b;
 }
 
@@ -14,8 +14,8 @@
   margin: 0 auto;
   padding: 96px max(24px, calc((100% - 1180px) / 2)) 56px;
   background:
-    radial-gradient(circle at 85% 15%, rgba(54, 179, 126, 0.14), transparent 32%),
-    linear-gradient(135deg, #f8fbf9 0%, #eef7f2 100%);
+    radial-gradient(circle at 85% 15%, rgba(214, 170, 110, 0.22), transparent 32%),
+    linear-gradient(135deg, #fbf8f3 0%, #f5ede2 100%);
 }
 
 .maler-software-hero-visual {
@@ -136,7 +136,7 @@
 
 .maler-software-intro {
   padding: 88px 24px;
-  background: #ffffff;
+  background: transparent;
 }
 
 .maler-software-section-inner {
@@ -190,7 +190,7 @@
 
 .maler-software-features {
   padding: 88px 24px;
-  background: #f3f8f5;
+  background: #f7f1e8;
 }
 
 .maler-software-features h2 {
@@ -218,7 +218,7 @@
 
 .maler-software-feature-grid article {
   padding: 30px;
-  border: 1px solid #dce8e1;
+  border: 1px solid #eadfce;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(25, 60, 43, 0.05);
@@ -263,7 +263,7 @@
 
 .maler-software-benefits {
   padding: 88px 24px;
-  background: #ffffff;
+  background: transparent;
 }
 
 .maler-software-benefits h2 {
@@ -297,7 +297,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #e6f4ed;
+  background: #f3e8d8;
   color: #23875d;
   font-size: 16px;
   font-weight: 800;
@@ -338,7 +338,7 @@
 
 .maler-software-target {
   padding: 88px 24px;
-  background: #f3f8f5;
+  background: #f7f1e8;
 }
 
 .maler-software-target h2 {
@@ -366,7 +366,7 @@
 
 .maler-software-target-grid article {
   padding: 30px;
-  border: 1px solid #dce8e1;
+  border: 1px solid #eadfce;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(25, 60, 43, 0.05);
@@ -413,7 +413,7 @@
 
 .maler-software-cta {
   padding: 88px 24px;
-  background: #ffffff;
+  background: transparent;
 }
 
 .maler-software-cta-inner {
@@ -589,7 +589,7 @@
 
 .maler-software-login-btn:hover {
   border-color: #23875d;
-  background: #f3f8f5;
+  background: #f7f1e8;
 }
 
 .maler-software-menu-toggle {
@@ -636,7 +636,7 @@
     padding: 8px;
 
     background: #ffffff;
-    border: 1px solid #dce8e1;
+    border: 1px solid #eadfce;
     border-radius: 18px;
     box-shadow: 0 18px 45px rgba(25, 60, 43, 0.16);
   }
@@ -701,7 +701,7 @@
   padding: 18px;
   border: 1px solid rgba(31, 71, 52, 0.1);
   border-radius: 24px;
-  background: #f7faf8;
+  background: #fbf8f3;
   box-shadow: 0 18px 48px rgba(25, 60, 43, 0.1);
 }
 
@@ -819,7 +819,7 @@
 /* ---------- Mehr als ein Malerprogramm ---------- */
 .maler-software-more {
   padding: 88px 24px;
-  background: #ffffff;
+  background: transparent;
 }
 .maler-software-more h2,
 .maler-software-checklist h2 {
@@ -842,7 +842,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .maler-software-more .maler-software-feature-grid article {
-  background: #f8fbf9;
+  background: #fbf8f3;
 }
 .maler-software-more .maler-software-feature-grid h3 {
   font-size: 19px;
@@ -851,7 +851,7 @@
 /* ---------- Checkliste ---------- */
 .maler-software-checklist {
   padding: 88px 24px;
-  background: #f3f8f5;
+  background: #f7f1e8;
 }
 .maler-software-checklist-list {
   list-style: none;
@@ -868,7 +868,7 @@
   position: relative;
   padding: 22px 24px 22px 74px;
   background: #ffffff;
-  border: 1px solid #dce8e1;
+  border: 1px solid #eadfce;
   border-radius: 18px;
 }
 .maler-software-checklist-list li::before {
@@ -899,7 +899,7 @@
 
 /* ---------- DACH ---------- */
 .maler-software-dach {
-  background: #ffffff;
+  background: transparent;
 }
 .maler-software-dach-note {
   max-width: 760px;

@@ -7,7 +7,7 @@
   --fk-ink: #1c2430;
   --fk-muted: #5b6573;
   --fk-line: #e3e6ea;
-  --fk-soft: #f4f6f9;
+  --fk-soft: #faf6ef;
   min-height: 100vh;
   background: var(--fk-soft);
   color: var(--fk-ink);

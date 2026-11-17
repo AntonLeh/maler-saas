@@ -1,6 +1,6 @@
 .materialverwaltung-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: radial-gradient(circle at top left, rgba(214, 170, 110, 0.2), transparent 34%), linear-gradient(180deg, #fbf8f3 0%, #f5ede2 45%, #fffdf9 100%);
   color: #0f172a;
 }
 
@@ -270,7 +270,7 @@
   padding: 26px;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
-  background: #f8fafc;
+  background: #f7f1e8;
 }
 
 .materialverwaltung-overview-grid h3 {
@@ -301,7 +301,7 @@
 }
 
 .materialverwaltung-organisation {
-  background: #f8fafc;
+  background: #f7f1e8;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -439,7 +439,7 @@
 }
 
 .materialverwaltung-benefits {
-  background: #f8fafc;
+  background: #f7f1e8;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -564,7 +564,7 @@
 }
 
 .materialverwaltung-footer {
-  background: #ffffff;
+  background: transparent;
   border-top: 1px solid #e2e8f0;
 }
 

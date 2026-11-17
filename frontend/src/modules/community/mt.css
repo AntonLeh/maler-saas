@@ -1,5 +1,5 @@
 /* MalerTreff: öffentliche Seite /malertreff */
-.mt-page { min-height: 100vh; background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 360px); color: #0f172a; text-align: left; padding: 0 16px 40px; box-sizing: border-box; }
+.mt-page { min-height: 100vh; background: linear-gradient(180deg, #f5ede2 0%, #fbf8f3 360px); color: #0f172a; text-align: left; padding: 0 16px 40px; box-sizing: border-box; }
 .mt-head { max-width: 980px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; gap: 12px; }
 .mt-head .btn { width: auto; }
 .mt-logo { font-size: 22px; font-weight: 900; color: #1e3a8a; text-decoration: none; letter-spacing: -0.01em; }

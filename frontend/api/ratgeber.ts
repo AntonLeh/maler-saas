@@ -116,7 +116,7 @@ const jsonLd = (o: unknown) => `<script type="application/ld+json">${JSON.string
 const cta = (slug: string) => `/?utm_source=ratgeber&utm_medium=seo&utm_campaign=${encodeURIComponent(slug || "ratgeber")}`;
 
 const CSS = `
-*{box-sizing:border-box}body{margin:0;font-family:"Inter","Segoe UI",system-ui,-apple-system,Arial,sans-serif;color:#0f172a;background:#f8fafc;line-height:1.65}
+*{box-sizing:border-box}body{margin:0;font-family:"Inter","Segoe UI",system-ui,-apple-system,Arial,sans-serif;color:#0f172a;background:#fbf8f3;line-height:1.65}
 a{color:#1d4ed8}header{background:#0f172a;color:#fff}.wrap{max-width:820px;margin:0 auto;padding:0 18px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;font-size:20px}
 .brand img{width:34px;height:34px;border-radius:8px;background:#fff;padding:3px}.top nav{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
