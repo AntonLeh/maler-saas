@@ -229,9 +229,9 @@ const canActivateCurrentTrialPlan =
                   <span className="pricing-was">{euro(planPriceFor(plan.id, "month"))}</span>
                 </div>
                 <div className="pricing-offer">
-                  <strong>1. Jahr: {euro(firstYearPrice(plan.id))}</strong> netto für 12 Monate, im Voraus.
+                  <strong>1. Jahr: {euro(firstYearPrice(plan.id))}</strong> statt {euro(planPriceFor(plan.id, "month") * 12)} – netto für 12 Monate, im Voraus.
                   <br />
-                  Ab dem 2. Jahr {euro(price)}/Jahr (2 Monate geschenkt).
+                  Ab dem 2. Jahr: {euro(price)}/Jahr – umgerechnet {euro(monthlyEquivalent(plan.id, "year"))} im Monat (2 Monate geschenkt).
                 </div>
               </>
             ) : (

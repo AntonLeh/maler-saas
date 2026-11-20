@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
-import { euro, firstYearMonthly, firstYearPrice, SEAT_MONTHLY, yearlyPrice } from "../lib/prices";
+import { euro, firstYearMonthly, firstYearPrice, monthlyEquivalent, SEAT_MONTHLY, yearlyPrice } from "../lib/prices";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -718,12 +718,17 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                 <p className="lp2-plan-who">{pl.who}</p>
                 <p className="lp2-plan-price">
                   <b>{yearly ? euro(firstYearMonthly(pl.name.toLowerCase())) : `${pl.price} €`}</b> <span>/ Monat</span>
-                  {yearly && <s className="lp2-plan-was">{pl.price} €</s>}
                 </p>
                 <p className="lp2-plan-save">
-                  {yearly
-                    ? `1. Jahr ${euro(firstYearPrice(pl.name.toLowerCase()))}, danach ${euro(yearlyPrice(pl.name.toLowerCase()))} im Jahr`
-                    : "monatlich kündbar"}
+                  {yearly ? (
+                    <>
+                      1. Jahr: {euro(firstYearPrice(pl.name.toLowerCase()))} statt {euro(pl.price * 12)}
+                      <br />
+                      ab 2. Jahr: {euro(yearlyPrice(pl.name.toLowerCase()))} – umgerechnet {euro(monthlyEquivalent(pl.name.toLowerCase(), "year"))} im Monat
+                    </>
+                  ) : (
+                    "monatlich kündbar"
+                  )}
                 </p>
                 <ul>
                   {pl.points.map((pt) => (
