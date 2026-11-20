@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowRight, Calendar, Check, FileText, Layers, Package, Smartphone, Sparkles, Users } from "lucide-react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
@@ -116,13 +117,13 @@ const features: { title: string; text: string; href?: string }[] = [
 
 /** Schaufenster: die wichtigsten Bereiche mit echten Ansichten aus der App (Beispieldaten) */
 // Kacheln unter dem Titel – jede führt zur passenden Funktionsseite
-const bento: { title: string; href: string; img: string; phone?: boolean }[] = [
-  { title: "Aufmaß & Angebote", href: "/aufmass-angebote", img: "/images/app/aufmass.webp" },
-  { title: "Aufträge & Planung", href: "/auftragsverwaltung", img: "/images/app/chef-startseite.webp" },
-  { title: "Materialverwaltung", href: "/materialverwaltung", img: "/images/app/material.webp" },
-  { title: "Mobil auf der Baustelle", href: "/zeiterfassung", img: "/images/app/mitarbeiter-handy.webp", phone: true },
-  { title: "Kundenportal", href: "/kundenportal", img: "/images/app/kundenportal-handy.webp", phone: true },
-  { title: "Rechnungen & E-Rechnung", href: "/rechnungen", img: "/images/app/rechnungen.webp" },
+const bento = [
+  { title: "Aufmaß & Angebote", cat: "Kalkulation", icon: Layers, art: "aufmass", href: "/aufmass-angebote" },
+  { title: "Aufträge & Planung", cat: "Plantafel", icon: Calendar, art: "planung", href: "/auftragsverwaltung" },
+  { title: "Materialverwaltung", cat: "Lager & Objekt", icon: Package, art: "material", href: "/materialverwaltung" },
+  { title: "Mobil auf der Baustelle", cat: "App", icon: Smartphone, art: "mobil", href: "/zeiterfassung" },
+  { title: "Kundenportal", cat: "Transparenz", icon: Users, art: "portal", href: "/kundenportal" },
+  { title: "Rechnungen & E-Rechnung", cat: "Abrechnung", icon: FileText, art: "rechnung", href: "/rechnungen" },
 ];
 
 const showcase: { label: string; title: string; text: string; points: string[]; img: string; w: number; h: number; alt: string; href: string; phone?: boolean }[] = [
@@ -317,7 +318,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
 
   return (
     <div className="landing-page">
-      <header className="landing-header">
+      <header className="landing-header lp3-header">
         <a href="/" className="landing-logo" style={{ textDecoration: "none", color: "inherit" }}>
           <img src="/images/logo.webp" alt="MalerSaaS Logo" className="landing-logo-image" width="56" height="56" />
           <div className="landing-logo-text">
@@ -364,6 +365,16 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           >
             Login
           </button>
+          <button
+            type="button"
+            className="lp3-nav-cta"
+            onClick={() => {
+              close();
+              onRegister();
+            }}
+          >
+            14 Tage kostenlos testen
+          </button>
         </nav>
       </header>
 
@@ -374,7 +385,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             <p className="landing-badge">Für Malerbetriebe in Deutschland, Österreich und der Schweiz</p>
 
             <h1>
-              Die Software für Malerbetriebe – <span className="lp3-serif">vom Aufmaß bis zur E‑Rechnung.</span>
+              Die Software für Malerbetriebe – vom Aufmaß bis zur E‑Rechnung.
             </h1>
 
             <p className="landing-hero-text">
@@ -383,68 +394,75 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             </p>
 
             <div className="landing-hero-actions">
-              <button type="button" className="landing-primary-btn" onClick={onRegister}>
-                14 Tage kostenlos testen
+              <button type="button" className="landing-primary-btn lp3-arrow-btn" onClick={onRegister}>
+                14 Tage kostenlos testen <ArrowRight size={18} aria-hidden="true" />
               </button>
               <a href="#funktionen" className="landing-secondary-btn" style={{ textDecoration: "none" }}>
                 Funktionen ansehen
               </a>
             </div>
 
-            <div className="landing-trust-row">
-              <span>✓ Ab 39,50 € / Monat</span>
-              <span>✓ Keine Kreditkarte nötig</span>
-              <span>✓ Endet automatisch</span>
-              <span>✓ E-Rechnung-fertig für 2027</span>
-              <span>✓ Server in der EU</span>
-            </div>
+            <ul className="landing-trust-row lp3-trust">
+              {["Ab 39,50 € / Monat", "Keine Kreditkarte nötig", "Endet automatisch", "E-Rechnung-fertig für 2027", "Server in der EU"].map((t) => (
+                <li key={t}>
+                  <Check size={16} aria-hidden="true" /> {t}
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div className="landing-hero-visual lp2-hero-visual lp3-visual">
-            {/* Bemaßungslinien wie beim Aufmaß – nur Dekoration */}
-            <svg className="lp3-blueprint" viewBox="0 0 600 520" aria-hidden="true" focusable="false">
-              <g fill="none" stroke="currentColor" strokeWidth="1">
-                <path d="M60 70 H540" />
-                <path d="M60 62 V78 M540 62 V78" />
-                <path d="M572 110 V430" />
-                <path d="M564 110 H580 M564 430 H580" />
-                <path d="M90 470 L250 400 L470 400 L540 440" strokeDasharray="4 6" />
-                <path d="M30 140 V360" strokeDasharray="2 6" />
-              </g>
-              <g fill="currentColor" fontSize="12" fontFamily="ui-monospace, monospace">
-                <text x="282" y="60">5,20 m</text>
-                <text x="582" y="275" transform="rotate(90 582 275)">4,10 m</text>
-                <text x="300" y="392">2,55 m</text>
-              </g>
-            </svg>
-            <figure className="lp2-browser lp3-tilt">
-              <div className="lp2-browser-bar" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-                <span>maler-saas.com</span>
-              </div>
-              <img
-                src="/images/app/chef-startseite.webp"
-                alt="Startseite für den Chef in MalerSaaS: offene Aufträge, Rechnungen, Termine und Neuigkeiten"
-                width="1600"
-                height="1264"
-                fetchPriority="high"
-              />
-            </figure>
-
-            <figure className="lp2-phone lp2-hero-phone">
-              <img src="/images/app/mitarbeiter-handy.webp" alt="Mitarbeiter-App am Handy mit laufender Arbeitszeit" width="700" height="1526" />
-            </figure>
-
-            <div className="hero-floating-card card-material">
-              <strong>E-Rechnung</strong>
-              <span>ZUGFeRD · XRechnung</span>
+          <div className="landing-hero-visual lp3-visual">
+            {/* Bemaßungslinie wie beim Aufmaß – nur Dekoration */}
+            <div className="lp3-dim" aria-hidden="true">
+              <span>|←</span>
+              <i />
+              <span>5,20 m</span>
+              <i />
+              <span>→|</span>
             </div>
 
-            <div className="hero-floating-card card-ai">
-              <strong>Mit KI</strong>
-              <span>Aufmaß, Belege, Telefon</span>
+            <div className="lp3-visual-grid">
+              {/* echte App-Ansicht im Glasrahmen */}
+              <figure className="lp3-glass">
+                <div className="lp3-glass-bar" aria-hidden="true">
+                  <span className="lp3-glass-logo">M</span>
+                  <b>maler-saas.com</b>
+                  <em>Live</em>
+                </div>
+                <img
+                  src="/images/app/chef-startseite.webp"
+                  alt="Startseite für den Chef in MalerSaaS: offene Aufträge, Rechnungen, Termine und Neuigkeiten"
+                  width="1600"
+                  height="1264"
+                  fetchPriority="high"
+                />
+                <div className="lp3-glass-badge">
+                  <span>
+                    <small>E-Rechnung</small>
+                    ZUGFeRD · XRechnung
+                  </span>
+                  <em>2027-fertig</em>
+                </div>
+              </figure>
+
+              <div className="lp3-side">
+                <figure className="lp3-photo">
+                  <img src="/images/app/mitarbeiter-handy.webp" alt="Mitarbeiter-App am Handy mit laufender Arbeitszeit" width="700" height="1526" />
+                  <figcaption>
+                    <small>Mobil auf der Baustelle</small>
+                    Arbeitszeit, Fotos, Material
+                  </figcaption>
+                </figure>
+                <div className="lp3-chip">
+                  <span className="lp3-chip-icon">
+                    <Sparkles size={16} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <b>Mit KI</b>
+                    <small>Aufmaß, Belege, Telefon</small>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -456,11 +474,52 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           </h2>
           <div className="lp3-bento-grid">
             {bento.map((b) => (
-              <a key={b.title} href={b.href} className={`lp3-tile ${b.phone ? "is-phone" : ""}`}>
-                <span className="lp3-tile-img">
-                  <img src={b.img} alt="" loading="lazy" decoding="async" />
+              <a key={b.title} href={b.href} className="lp3-tile">
+                <span className={`lp3-art lp3-art-${b.art}`} aria-hidden="true">
+                  {b.art === "aufmass" && (
+                    <>
+                      <span className="lp3-room">48,5 m²</span>
+                      <small>4,10 × 5,20 m</small>
+                    </>
+                  )}
+                  {b.art === "planung" && (
+                    <>
+                      <i />
+                      <i />
+                      <i />
+                    </>
+                  )}
+                  {b.art === "material" && (
+                    <>
+                      <i />
+                      <i />
+                      <i />
+                    </>
+                  )}
+                  {b.art === "mobil" && <img src="/images/app/mitarbeiter-handy.webp" alt="" loading="lazy" decoding="async" />}
+                  {b.art === "portal" && (
+                    <>
+                      <span>
+                        Projektfortschritt: <b>75 %</b>
+                      </span>
+                      <i>
+                        <i />
+                      </i>
+                    </>
+                  )}
+                  {b.art === "rechnung" && (
+                    <span className="lp3-sheet">
+                      <i />
+                      <i />
+                      <i />
+                      <em>E-Rechnung</em>
+                    </span>
+                  )}
                 </span>
-                <b>{b.title}</b>
+                <span className="lp3-tile-cat">
+                  <b.icon size={14} aria-hidden="true" /> {b.cat}
+                </span>
+                <b className="lp3-tile-title">{b.title}</b>
               </a>
             ))}
           </div>
