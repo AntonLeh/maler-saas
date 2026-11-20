@@ -22,4 +22,4 @@ export const planPriceFor = (plan: string, interval: BillingInterval) => (interv
 /** umgerechnet auf einen Monat (für Umsatz pro Monat) */
 export const monthlyEquivalent = (plan: string, interval: BillingInterval) =>
   interval === "year" ? Math.round((yearlyPrice(plan) / 12) * 100) / 100 : MONTHLY[plan] ?? 0;
-export const euro = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }) + " €";
+export const euro = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }) + "\u00a0€";

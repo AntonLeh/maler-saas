@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
-import { euro, firstYearMonthly, firstYearPrice, monthlyEquivalent, SEAT_MONTHLY, yearlyPrice } from "../lib/prices";
+import { euro, firstYearMonthly, monthlyEquivalent, SEAT_MONTHLY } from "../lib/prices";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -380,6 +380,7 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             </div>
 
             <div className="landing-trust-row">
+              <span>✓ Ab 39,50 € / Monat</span>
               <span>✓ Keine Kreditkarte nötig</span>
               <span>✓ Endet automatisch</span>
               <span>✓ E-Rechnung-fertig für 2027</span>
@@ -699,8 +700,8 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <p className="landing-section-label">Preise</p>
           <h2>Klare Preise – passend zur Betriebsgröße.</h2>
           <p className="lp2-lead">
-            Alle Preise netto zzgl. MwSt. Jährlich zahlen und im ersten Jahr 50 % sparen – oder monatlich kündbar. Jeder weitere Mitarbeiter mit
-            App-Zugang {SEAT_MONTHLY} € im Monat. 14 Tage kostenlos testen, mit allen Funktionen, ohne Kreditkarte.
+            Ab 39,50 € im Monat. Alle Preise netto zzgl. MwSt. Jeder weitere Mitarbeiter mit App-Zugang {SEAT_MONTHLY} € im Monat. 14 Tage
+            kostenlos testen, mit allen Funktionen, ohne Kreditkarte.
           </p>
           <div className="lp2-interval" role="radiogroup" aria-label="Abrechnung">
             <button type="button" role="radio" aria-checked={!yearly} className={!yearly ? "on" : ""} onClick={() => setYearly(false)}>
@@ -720,16 +721,9 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                   <b>{yearly ? euro(firstYearMonthly(pl.name.toLowerCase())) : `${pl.price} €`}</b> <span>/ Monat</span>
                 </p>
                 <p className="lp2-plan-save">
-                  {yearly ? (
-                    <>
-                      1. Jahr: {euro(firstYearPrice(pl.name.toLowerCase()))} statt {euro(pl.price * 12)}
-                      <br />
-                      ab 2. Jahr: {euro(yearlyPrice(pl.name.toLowerCase()))} – umgerechnet {euro(monthlyEquivalent(pl.name.toLowerCase(), "year"))} im Monat
-                    </>
-                  ) : (
-                    "monatlich kündbar"
-                  )}
+                  {yearly ? `im 1. Jahr, danach ${euro(monthlyEquivalent(pl.name.toLowerCase(), "year"))}\u00a0/\u00a0Monat` : "monatlich kündbar"}
                 </p>
+                <p className="lp2-plan-terms">{yearly ? "jährliche Zahlung, netto" : "monatliche Zahlung, netto"}</p>
                 <ul>
                   {pl.points.map((pt) => (
                     <li key={pt}>{pt}</li>

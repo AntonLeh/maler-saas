@@ -101,7 +101,8 @@ export default function PricingPage({
   tenantId,
   onChanged,
 }: PricingPageProps) {
-  const [interval, setInterval] = useState<BillingInterval>(currentInterval);
+  // Jahrespreise zuerst zeigen; Monatspreise per Umschalter
+  const [interval, setInterval] = useState<BillingInterval>("year");
   const order = ["starter", "professional", "business", "enterprise"];
   // Rückmeldung nach dem Klick, bis die Stripe-Seite geladen ist (dauert einige Sekunden)
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
@@ -156,7 +157,7 @@ export default function PricingPage({
       .pricing-interval button.on { background: #fff; color: #0f172a; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12); }
       .pricing-interval small { margin-left: 6px; font-size: 12px; font-weight: 800; color: #15803d; }
       .pricing-locked { margin: 8px 0 0; font-size: 13px; color: #64748b; line-height: 1.5; }
-      .pricing-offer { margin: -2px 0 10px; padding: 8px 10px; border-radius: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.85rem; line-height: 1.45; }
+      .pricing-offer { margin: 0 0 8px; font-size: 0.9rem; font-weight: 700; color: #15803d; }
       .pricing-offer strong { color: #047857; }
       .pricing-was { text-decoration: line-through; color: #94a3b8; font-size: 1rem; font-weight: 600; margin-left: 8px; }
       .pricing-seats { margin-top: 22px; display: grid; gap: 12px; grid-template-columns: 1fr auto; align-items: center; }
@@ -221,32 +222,16 @@ const canActivateCurrentTrialPlan =
 
             <h2>{plan.name}</h2>
 
-            {interval === "year" && showOffer ? (
-              <>
-                <div className="pricing-price" style={{ color: plan.color }}>
-                  {euro(firstYearMonthly(plan.id))}
-                  <span>/Monat</span>
-                  <span className="pricing-was">{euro(planPriceFor(plan.id, "month"))}</span>
-                </div>
-                <div className="pricing-offer">
-                  <strong>1. Jahr: {euro(firstYearPrice(plan.id))}</strong> statt {euro(planPriceFor(plan.id, "month") * 12)} – netto für 12 Monate, im Voraus.
-                  <br />
-                  Ab dem 2. Jahr: {euro(price)}/Jahr – umgerechnet {euro(monthlyEquivalent(plan.id, "year"))} im Monat (2 Monate geschenkt).
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="pricing-price" style={{ color: plan.color }}>
-                  {euro(price)}
-                  <span>{interval === "year" ? "/Jahr" : "/Monat"}</span>
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "-4px", marginBottom: "8px" }}>
-                  {interval === "year"
-                    ? `netto, zzgl. MwSt. · entspricht ${euro(monthlyEquivalent(plan.id, "year"))} im Monat`
-                    : "netto, zzgl. MwSt."}
-                </div>
-              </>
+            <div className="pricing-price" style={{ color: plan.color }}>
+              {euro(interval === "year" ? (showOffer ? firstYearMonthly(plan.id) : monthlyEquivalent(plan.id, "year")) : price)}
+              <span>/Monat</span>
+            </div>
+            {interval === "year" && showOffer && (
+              <div className="pricing-offer">im 1. Jahr, danach {euro(monthlyEquivalent(plan.id, "year"))}{"\u00a0/\u00a0Monat"}</div>
             )}
+            <div style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "-4px", marginBottom: "8px" }}>
+              {interval === "year" ? "jährliche Zahlung, netto" : "monatlich kündbar, netto"}
+            </div>
 
             <div className="pricing-features">
               {plan.features.map((feature) => (
