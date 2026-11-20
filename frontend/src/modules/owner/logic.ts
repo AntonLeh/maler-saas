@@ -5,7 +5,7 @@ import type { BillingEvent, OwnerTenant } from "./api";
 export const PLAN_LABEL: Record<string, string> = { starter: "Starter", professional: "Professional", business: "Business", enterprise: "Enterprise" };
 export const PLAN_ORDER = ["starter", "professional", "business", "enterprise"];
 /** Listenpreise netto pro Monat – maßgeblich für Anzeige und MRR (gespeicherte Preise können veraltet sein) */
-export const PLAN_PRICE: Record<string, number> = { starter: 79, professional: 149, business: 399, enterprise: 799 };
+export const PLAN_PRICE: Record<string, number> = { starter: 79, professional: 149, business: 220, enterprise: 349 };
 export const planPrice = (plan: string | null | undefined, stored?: number | null) => PLAN_PRICE[plan ?? ""] ?? Number(stored || 0);
 /** Umsatz pro Monat: Jahresabos („2 Monate geschenkt“) zählen mit einem Zwölftel des Jahresbetrags */
 export const monthlyRevenue = (plan: string | null | undefined, stored?: number | null, interval?: string | null) =>

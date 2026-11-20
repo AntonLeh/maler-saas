@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
-import { euro, yearlyPrice } from "../lib/prices";
+import { euro, firstYearMonthly, firstYearPrice, SEAT_MONTHLY, yearlyPrice } from "../lib/prices";
 
 type LandingPageProps = {
   onLogin: () => void;
@@ -177,10 +177,10 @@ const aiTasks: { icon: string; title: string; text: string; plan: string }[] = [
 
 /** Tarife – Preise netto pro Monat */
 const plans: { name: string; price: number; who: string; points: string[]; top?: boolean }[] = [
-  { name: "Starter", price: 79, who: "bis 3 Mitarbeiter", points: ["Aufmaß (auch per Sprache), Angebote, Aufträge", "Rechnungen & E-Rechnung", "Zeiterfassung am Handy", "Buchhaltung: Belege, Umsatzsteuer, offene Posten"] },
-  { name: "Professional", price: 149, who: "bis 8 Mitarbeiter", top: true, points: ["Alles aus Starter", "Kundenportal", "Materialverwaltung", "Projektleiter und Baudokumentation mit Fotos"] },
-  { name: "Business", price: 399, who: "bis 20 Mitarbeiter", points: ["Alles aus Professional", "KI-Telefonassistent (Minuten zubuchbar)", "KI liest Belege und Lieferscheine", "Abschlagsrechnungen, Auswertungen, Leistungsbewertung"] },
-  { name: "Enterprise", price: 799, who: "ab 21 Mitarbeitern, ohne Obergrenze", points: ["Alles aus Business", "Eigene Firmen-Website mit Terminbuchung", "Werbung mit KI", "Fachkräfte-Pool und persönlicher Support"] },
+  { name: "Starter", price: 79, who: "3 Mitarbeiter inklusive", points: ["Aufmaß (auch per Sprache), Angebote, Aufträge", "Rechnungen & E-Rechnung", "Zeiterfassung am Handy", "Buchhaltung: Belege, Umsatzsteuer, offene Posten"] },
+  { name: "Professional", price: 149, who: "6 Mitarbeiter inklusive", top: true, points: ["Alles aus Starter", "Kundenportal", "Materialverwaltung", "Projektleiter und Baudokumentation mit Fotos"] },
+  { name: "Business", price: 220, who: "9 Mitarbeiter inklusive", points: ["Alles aus Professional", "KI-Telefonassistent (Minuten zubuchbar)", "KI liest Belege und Lieferscheine", "Abschlagsrechnungen, Auswertungen, Leistungsbewertung"] },
+  { name: "Enterprise", price: 349, who: "12 Mitarbeiter inklusive", points: ["Alles aus Business", "Eigene Firmen-Website mit Terminbuchung", "Werbung mit KI", "Fachkräfte-Pool und persönlicher Support"] },
 ];
 
 /** Weitere Funktionen als kompakte Liste (die großen Bereiche stehen oben im Schaufenster) */
@@ -194,12 +194,12 @@ const audiences = [
   },
   {
     title: "Wachsender Betrieb",
-    sub: "bis 8 bzw. 20 Mitarbeiter",
+    sub: "bis 6 bzw. 9 Mitarbeiter",
     text: "Mehrere Baustellen gleichzeitig steuern: Projektleiter, Material, Kundenportal, Abschlagsrechnungen, KI-Telefon und Auswertungen.",
   },
   {
     title: "Betrieb mit Büro und Außenauftritt",
-    sub: "ab 21 Mitarbeitern – ohne Obergrenze",
+    sub: "ab 12 Mitarbeitern – weitere je 19 €",
     text: "Alles aus einer Hand – inklusive eigener Website mit Terminbuchung und Stellenanzeigen, Werbung mit KI sowie dem Fachkräfte-Pool.",
   },
 ];
@@ -207,7 +207,7 @@ const audiences = [
 const faqs = [
   {
     q: "Was kostet MalerSaaS?",
-    a: "Es gibt vier Tarife, jeweils pro Monat zzgl. MwSt.: Starter 79 € (bis 3 Mitarbeiter), Professional 149 € (bis 8), Business 399 € (bis 20) und Enterprise 799 € (ab 21 Mitarbeitern ohne Obergrenze). Monatlich gezahlt können Sie zum Ende jedes Monats kündigen. Bei jährlicher Zahlung bekommen Sie 2 Monate geschenkt (zum Beispiel Starter 790 € statt 948 € im Jahr) bei 12 Monaten Laufzeit.",
+    a: "Es gibt vier Tarife, jeweils pro Monat zzgl. MwSt.: Starter 79 € (3 Mitarbeiter mit App-Zugang inklusive), Professional 149 € (6), Business 220 € (9) und Enterprise 349 € (12). Jeder weitere Mitarbeiter mit App-Zugang kostet 19 € im Monat; Sie als Inhaber zählen nicht mit. Monatlich gezahlt können Sie zum Ende jedes Monats kündigen. Bei jährlicher Zahlung (12 Monate Laufzeit) zahlen Sie im ersten Jahr nur die Hälfte des Monatspreises – zum Beispiel Starter 474 € (39,50 € im Monat) – und ab dem zweiten Jahr 10 statt 12 Monatspreise (Starter 790 € im Jahr).",
   },
   {
     q: "Zählen Leiharbeiter und Subunternehmer zur Mitarbeiterzahl?",
@@ -300,7 +300,7 @@ function useScrollToHash() {
 export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOpenDatenschutz, onOpenAgb }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [yearly, setYearly] = useState(false);
+  const [yearly, setYearly] = useState(true);
   useFaqSchema();
   useScrollToHash();
   const close = () => setMobileMenuOpen(false);
@@ -699,15 +699,15 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <p className="landing-section-label">Preise</p>
           <h2>Klare Preise – passend zur Betriebsgröße.</h2>
           <p className="lp2-lead">
-            Alle Preise netto zzgl. MwSt. Monatlich kündbar – oder jährlich zahlen und 2 Monate sparen. 14 Tage kostenlos testen, mit allen
-            Funktionen, ohne Kreditkarte.
+            Alle Preise netto zzgl. MwSt. Jährlich zahlen und im ersten Jahr 50 % sparen – oder monatlich kündbar. Jeder weitere Mitarbeiter mit
+            App-Zugang {SEAT_MONTHLY} € im Monat. 14 Tage kostenlos testen, mit allen Funktionen, ohne Kreditkarte.
           </p>
           <div className="lp2-interval" role="radiogroup" aria-label="Abrechnung">
             <button type="button" role="radio" aria-checked={!yearly} className={!yearly ? "on" : ""} onClick={() => setYearly(false)}>
               Monatlich
             </button>
             <button type="button" role="radio" aria-checked={yearly} className={yearly ? "on" : ""} onClick={() => setYearly(true)}>
-              Jährlich <small>2 Monate geschenkt</small>
+              Jährlich <small>1. Jahr 50 % günstiger</small>
             </button>
           </div>
           <div className="lp2-plans">
@@ -717,9 +717,14 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                 <h3>{pl.name}</h3>
                 <p className="lp2-plan-who">{pl.who}</p>
                 <p className="lp2-plan-price">
-                  <b>{yearly ? euro(yearlyPrice(pl.name.toLowerCase())) : `${pl.price} €`}</b> <span>{yearly ? "/ Jahr" : "/ Monat"}</span>
+                  <b>{yearly ? euro(firstYearMonthly(pl.name.toLowerCase())) : `${pl.price} €`}</b> <span>/ Monat</span>
+                  {yearly && <s className="lp2-plan-was">{pl.price} €</s>}
                 </p>
-                <p className="lp2-plan-save">{yearly ? `statt ${euro(pl.price * 12)} – Sie sparen ${euro(pl.price * 2)}` : "monatlich kündbar"}</p>
+                <p className="lp2-plan-save">
+                  {yearly
+                    ? `1. Jahr ${euro(firstYearPrice(pl.name.toLowerCase()))}, danach ${euro(yearlyPrice(pl.name.toLowerCase()))} im Jahr`
+                    : "monatlich kündbar"}
+                </p>
                 <ul>
                   {pl.points.map((pt) => (
                     <li key={pt}>{pt}</li>

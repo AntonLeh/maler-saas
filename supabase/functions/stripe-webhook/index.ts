@@ -13,6 +13,12 @@ const stripe = new Stripe(
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
+// Zusatzmitarbeiter (19 € monatlich / 190 € jährlich) – eigene Abo-Position neben dem Tarif
+const SEAT_PRICE_IDS = ["price_1Udqx52QOB8iolrWn7FkS322", "price_1UdqzZ2QOB8iolrWYIWhMqvq"];
+const isSeat = (it: any) => SEAT_PRICE_IDS.includes(it?.price?.id);
+const planItemOf = (sub: any) => (sub?.items?.data ?? []).find((it: any) => !isSeat(it)) ?? sub?.items?.data?.[0];
+const seatCountOf = (sub: any) => (sub?.items?.data ?? []).filter(isSeat).reduce((n: number, it: any) => n + Number(it.quantity || 0), 0);
+
 serve(async (req) => {
   try {
     const body = await req.text();
@@ -123,8 +129,7 @@ serve(async (req) => {
               session.subscription.toString(),
 
             stripe_price_id:
-              stripeSubscription.items.data[0]
-                ?.price.id || null,
+              planItemOf(stripeSubscription)?.price?.id || null,
 
             expires_at: new Date(
               currentPeriodEnd * 1000
@@ -138,9 +143,12 @@ serve(async (req) => {
 
       // Abrechnungsart (monatlich/jährlich) – eigenes Update, damit ein fehlendes Feld nichts blockiert
       {
-        const iv = stripeSubscription.items.data[0]?.price?.recurring?.interval === "year" ? "year" : "month";
+        const iv = planItemOf(stripeSubscription)?.price?.recurring?.interval === "year" ? "year" : "month";
         const { error: ivErr } = await supabase.from("subscriptions").update({ billing_interval: iv }).eq("tenant_id", tenantId);
         if (ivErr) console.error("billing_interval:", ivErr.message);
+        // Zusatzmitarbeiter übernehmen
+        const { error: seatErr } = await supabase.rpc("set_extra_seats", { p_tenant_id: tenantId, p_seats: seatCountOf(stripeSubscription) });
+        if (seatErr) console.error("set_extra_seats:", seatErr.message);
       }
 
       const { error: billingEventError } =
@@ -232,8 +240,7 @@ serve(async (req) => {
           .from("subscriptions")
           .update({
             stripe_price_id:
-              subscription.items.data[0]
-                ?.price.id ?? null,
+              planItemOf(subscription)?.price?.id ?? null,
 
             status: subscription.status,
 
@@ -264,7 +271,7 @@ serve(async (req) => {
       }
 
       // Tarif nachziehen, falls der Preis in Stripe geändert wurde (z. B. über das Kundenportal)
-      const newPriceId = subscription.items.data[0]?.price.id ?? null;
+      const newPriceId = planItemOf(subscription)?.price?.id ?? null;
       if (newPriceId && ["active", "trialing", "past_due"].includes(subscription.status)) {
         const { data: row } = await supabase
           .from("subscriptions")
@@ -297,6 +304,9 @@ serve(async (req) => {
               .eq("stripe_subscription_id", subscription.id);
             if (ivErr) console.error("billing_interval:", ivErr.message);
           }
+          // Zusatzmitarbeiter nachziehen (z. B. geändert über Stripe)
+          const { error: seatErr } = await supabase.rpc("set_extra_seats", { p_tenant_id: row.tenant_id, p_seats: seatCountOf(subscription) });
+          if (seatErr) console.error("set_extra_seats:", seatErr.message);
         }
       }
     }

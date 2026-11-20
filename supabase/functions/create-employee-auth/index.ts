@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
       if (Number(res.count || 0) >= maxUsers) {
         return json(
           {
-            error: `Mitarbeiter-Limit erreicht: Ihr Tarif erlaubt höchstens ${maxUsers} Mitarbeiter mit App-Zugang. Legen Sie die Person ohne App-Zugang an oder wechseln Sie den Tarif.`,
+            error: `Mitarbeiter-Limit erreicht: Ihr Tarif enthält ${maxUsers} Mitarbeiter mit App-Zugang. Buchen Sie unter „Preise & Pläne“ einen zusätzlichen Mitarbeiter (19 € im Monat) oder legen Sie die Person ohne App-Zugang an.`,
+            code: "LIMIT",
           },
           403
         );

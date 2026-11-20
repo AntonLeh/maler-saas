@@ -270,6 +270,17 @@ export default function AgbPage({
           </p>
 
           <p>
+            Jeder Tarif enthält die in der Tarifbeschreibung genannte
+            Anzahl an Mitarbeitern mit App-Zugang. Weitere Mitarbeiter
+            mit App-Zugang kann der Kunde gegen das angezeigte Entgelt
+            hinzubuchen. Zusätzliche Mitarbeiter werden für die
+            laufende Abrechnungsperiode anteilig berechnet, gelten für
+            dieselbe Abrechnungsperiode und Laufzeit wie der Tarif und
+            verlängern sich mit ihm. Bei einer Verringerung erfolgt
+            eine anteilige Gutschrift auf künftige Rechnungen.
+          </p>
+
+          <p>
             Bei Überschreitung einer Nutzungsgrenze kann MalerSaaS
             einen Tarifwechsel oder die Buchung einer Zusatzleistung
             verlangen.
@@ -300,6 +311,14 @@ export default function AgbPage({
           <p>
             Wiederkehrende Entgelte werden für die vereinbarte
             Abrechnungsperiode im Voraus fällig.
+          </p>
+
+          <p>
+            Wird für das erste Jahr einer jährlichen Abrechnung ein
+            Einführungsrabatt gewährt, gilt dieser nur für die ersten
+            12 Monate. Ab der ersten Verlängerung gilt der reguläre
+            Jahrespreis, der im Bestellprozess neben dem rabattierten
+            Preis angezeigt wird.
           </p>
 
           <p>

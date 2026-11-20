@@ -1,7 +1,7 @@
 // Stand der Rechtstexte – wird auf den Seiten angezeigt und bei der Registrierung als Nachweis gespeichert.
 // Bei einer Änderung des Textes hier das Datum anpassen (Format TT.MM.JJJJ wird auf den Seiten ausgeschrieben).
 export const LEGAL_VERSIONS = {
-  agb: "2026-11-17",
+  agb: "2026-11-20",
   avv: "2026-11-08",
   datenschutz: "2026-11-13",
 } as const;

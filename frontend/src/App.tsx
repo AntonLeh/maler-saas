@@ -6633,9 +6633,9 @@ onReloadOrders={async () => {
       ? `Kostenlose Testphase bis ${new Date(subscription.trial_ends_at).toLocaleDateString("de-DE")}`
       : billingInterval === "year"
         ? `${yearlyPrice(subscription.plan).toLocaleString("de-DE")} € / Jahr (netto)`
-        : `${({ starter: 79, professional: 149, business: 399, enterprise: 799 } as Record<string, number>)[subscription.plan] ?? subscription.monthly_price} € / Monat (netto)`}
+        : `${({ starter: 79, professional: 149, business: 220, enterprise: 349 } as Record<string, number>)[subscription.plan] ?? subscription.monthly_price} € / Monat (netto)`}
     {" • "}
-    {({ starter: "bis 3", professional: "bis 8", business: "bis 20" } as Record<string, string>)[subscription.plan] ?? "Beliebig viele"} Mitarbeiter
+    {subscription.max_users > 0 && subscription.max_users < 9999 ? `${subscription.max_users} Mitarbeiter mit App-Zugang` : "Beliebig viele Mitarbeiter"}
   </>
 ) : (
   "Admin-Dashboard für Kunden, Aufträge und Mitarbeiter"
@@ -9165,6 +9165,8 @@ onReloadOrders={async () => {
   isTrial={subscription?.is_trial}
   subscriptionStatus={subscription?.status}
   currentInterval={billingInterval}
+  tenantId={userProfile?.tenant_id ?? null}
+  onChanged={() => { if (userProfile?.tenant_id) void loadSubscription(userProfile.tenant_id, userProfile.role_id); }}
   onBack={openDashboard}
   onUpgrade={async (plan, interval) => {
     // Anmeldung auffrischen: nach langer Pause (z. B. Tab über Nacht offen) ist das Zugangs-Token sonst abgelaufen
