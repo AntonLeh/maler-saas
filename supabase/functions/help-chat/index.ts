@@ -213,7 +213,7 @@ serve(async (req) => {
     // Besucher: Preise nur, wenn der Besucher selbst einen genannt hat – sonst sicherer Ersatztext
     if (mode === "public" && reply && leaksPrice(reply, history.filter((m: any) => m.role === "user").map((m: any) => String(m.text ?? "")))) {
       console.warn("help-chat: Preis ohne Nachfrage entfernt");
-      reply = "Die Preise sehen Sie nach der kostenlosen Registrierung in der App unter „Preise & Pläne“. Sie können MalerSaaS vorher 14 Tage kostenlos und unverbindlich testen. Gern sage ich Ihnen, welcher Tarif zu Ihrem Betrieb passt.";
+      reply = "Die Preise starten bei 39,50 € im Monat (netto, bei jährlicher Zahlung im ersten Jahr) und sind je nach Betriebsgröße gestaffelt. Welcher Tarif am besten zu Ihrem Betrieb passt, können Sie ganz in Ruhe nach der kostenlosen 14-tägigen Testphase entscheiden. Alle Preise finden Sie auch auf maler-saas.com/#preise.";
     }
     if (!reply) reply = sent ? "Vielen Dank! Ihre Anfrage ist bei unserem Team angekommen – wir melden uns per E-Mail." : FALLBACK;
     reply = reply.slice(0, 2500);
