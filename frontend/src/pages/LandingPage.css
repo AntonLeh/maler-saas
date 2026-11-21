@@ -2023,3 +2023,21 @@ body:has(.landing-page) { background: #ecece5; }
 }
 .landing-page .lp-social-steps li::before { background: var(--lp3-steel); }
 .landing-page .lp-social-note { color: var(--lp3-steel) !important; }
+
+/* Dunkle Kästen in Stahlblau wie die Fläche oben (21.11.2026) */
+.landing-page .lp-einvoice,
+.landing-page .lp-final,
+.landing-page .landing-split-dark {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.22), transparent 45%),
+    linear-gradient(225deg, #162b40 0%, #1e3a54 55%, #2c4e6e 100%);
+  box-shadow: 0 24px 60px rgba(15, 32, 50, 0.25);
+}
+.landing-page .lp-einvoice > div:first-child { text-align: left; }
+.landing-page .lp-einvoice .landing-section-label { margin-left: 0; }
+.landing-page .lp-einvoice p,
+.landing-page .lp-final p { color: #d5e0ea; }
+.landing-page .lp-label-light { background: rgba(255, 255, 255, 0.12); color: #e2e8f0; border-color: rgba(255, 255, 255, 0.22); }
+.landing-page .lp-checks li::before { color: #6ee7b7; }
+.landing-page .lp-final-btn { background: #fff; color: var(--lp3-ink); box-shadow: 0 14px 30px rgba(2, 6, 23, 0.3); }
+.landing-page .lp-final-btn:hover { background: #eef2f6; }
