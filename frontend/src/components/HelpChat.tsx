@@ -13,8 +13,8 @@ const EMPLOYEE_ROLE_ID = 4;
 const HIDDEN_PATHS = /^\/(customer-view|fachkraefte)(\/|$)/;
 
 const GREETING: Record<Mode, string> = {
-  public: "Hallo! Ich bin der KI-Assistent von MalerSaaS. Fragen Sie mich gern zu Funktionen, Tarifen und der kostenlosen Testphase.",
-  app: "Hallo! Ich bin der KI-Hilfe-Assistent von MalerSaaS. Ich erkläre Ihnen gern Funktionen der App, helfe bei Problemen oder leite Ihre Frage an unser Team weiter.",
+  public: "Hallo! Ich bin Lara, die KI-Assistentin von MalerSaaS. Fragen Sie mich gern zu Funktionen, Tarifen und der kostenlosen Testphase.",
+  app: "Hallo! Ich bin Lara, die KI-Assistentin von MalerSaaS. Ich erkläre Ihnen gern Funktionen der App, helfe bei Problemen oder leite Ihre Frage an unser Team weiter.",
 };
 const SUGGESTIONS: Record<Mode, string[]> = {
   public: ["Welcher Tarif passt zu mir?", "Wie funktioniert die Testphase?", "Was kann der KI-Telefonassistent?"],
@@ -130,12 +130,16 @@ async function callHelpChat(body: Record<string, unknown>, forceRefresh: boolean
   });
 }
 
-const ChatIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z" />
-    <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
-  </svg>
-);
+
+/** Laras Bild (KI-Assistentin); fehlt das Bild, erscheint ein „L“ */
+function LaraAva({ className }: { className: string }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <span className={`hc-lara ${className}`} aria-hidden="true">
+      {broken ? <b>L</b> : <img src="/images/lara.webp" alt="" width="64" height="64" onError={() => setBroken(true)} />}
+    </span>
+  );
+}
 
 export default function HelpChat() {
   const [path, setPath] = useState(() => window.location.pathname);
@@ -179,7 +183,7 @@ export default function HelpChat() {
   return <ChatBox key={mode} mode={mode} />;
 }
 
-function ChatBox({ mode }: { mode: Mode }) {
+export function ChatBox({ mode }: { mode: Mode }) {
   const [open, setOpen] = useState(false);
   const key = `helpchat:${mode}`;
   const [state, setState] = useState<State>(() => load(key));
@@ -257,14 +261,12 @@ function ChatBox({ mode }: { mode: Mode }) {
   return (
     <div className={`hc${open ? " is-open" : ""}`}>
       {open && (
-        <div className="hc-panel" id="hc-panel" role="dialog" aria-label="Hilfe-Chat mit dem KI-Assistenten">
+        <div className="hc-panel" id="hc-panel" role="dialog" aria-label="Hilfe-Chat mit Lara, der KI-Assistentin">
           <div className="hc-head">
-            <span className="hc-ava" aria-hidden="true">
-              <ChatIcon />
-            </span>
+            <LaraAva className="hc-ava" />
             <div>
-              <strong>MalerSaaS Hilfe</strong>
-              <small>KI-Assistent</small>
+              <strong>Lara</strong>
+              <small>KI-Assistentin · MalerSaaS</small>
             </div>
             <button type="button" className="hc-new" title="Neuen Chat beginnen" aria-label="Neuen Chat beginnen" onClick={reset}>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
@@ -285,13 +287,30 @@ function ChatBox({ mode }: { mode: Mode }) {
             </button>
           </div>
           <div className="hc-log" ref={logRef} aria-live="polite">
-            <div className="hc-msg bot">{GREETING[mode]}</div>
-            {state.m.map((x, i) => (
-              <div key={i} className={`hc-msg ${x.r === "u" ? "me" : "bot"}`}>
-                <Linkified text={x.t} onLocalJump={() => setOpen(false)} />
+            <div className="hc-row">
+              <LaraAva className="hc-ava-sm" />
+              <div className="hc-msg bot">{GREETING[mode]}</div>
+            </div>
+            {state.m.map((x, i) =>
+              x.r === "u" ? (
+                <div key={i} className="hc-msg me">
+                  <Linkified text={x.t} onLocalJump={() => setOpen(false)} />
+                </div>
+              ) : (
+                <div key={i} className="hc-row">
+                  <LaraAva className="hc-ava-sm" />
+                  <div className="hc-msg bot">
+                    <Linkified text={x.t} onLocalJump={() => setOpen(false)} />
+                  </div>
+                </div>
+              ),
+            )}
+            {busy && (
+              <div className="hc-row">
+                <LaraAva className="hc-ava-sm" />
+                <div className="hc-msg bot typing">…</div>
               </div>
-            ))}
-            {busy && <div className="hc-msg bot typing">…</div>}
+            )}
           </div>
           {state.m.length === 0 && (
             <div className="hc-sug">
@@ -343,7 +362,7 @@ function ChatBox({ mode }: { mode: Mode }) {
         </div>
       )}
       <button ref={btnRef} type="button" className="hc-open" aria-expanded={open} aria-controls="hc-panel" onClick={() => setOpen((o) => !o)}>
-        <ChatIcon />
+        <LaraAva className="hc-open-ava" />
         <span>Hilfe</span>
       </button>
     </div>
