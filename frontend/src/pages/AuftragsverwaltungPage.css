@@ -616,3 +616,6 @@
     gap: 12px 20px;
   }
 }
+/* Karten mit abgerundeten Ecken und Abstand wie überall (21.11.2026) */
+.auftragsverwaltung-progress-points { gap: 14px; }
+.auftragsverwaltung-page .auftragsverwaltung-progress-points article { border-radius: 16px; border-left: 4px solid #234361; text-align: left; }

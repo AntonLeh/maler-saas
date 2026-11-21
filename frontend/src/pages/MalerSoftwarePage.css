@@ -933,3 +933,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Vorteile als eigenständige Karten (21.11.2026) */
+.maler-software-benefits h2 { text-align: left; }
+.maler-software-benefit-list { gap: 18px; }
+.maler-software-page .maler-software-benefit-list article {
+  padding: 24px 26px 24px 78px;
+  border-radius: 20px;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.maler-software-page .maler-software-benefit-list article:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(15, 32, 50, 0.14); }
+.maler-software-benefit-check {
+  top: 24px;
+  left: 24px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #234361;
+  color: #fff;
+  font-size: 18px;
+  box-shadow: 0 8px 18px rgba(35, 67, 97, 0.25);
+}
+.maler-software-benefit-list h3 { font-size: 19px; color: #142333; }
+.maler-software-benefit-list p { font-size: 15px; }
+@media (max-width: 700px) {
+  .maler-software-page .maler-software-benefit-list article { padding: 20px 18px 20px 68px; }
+  .maler-software-benefit-check { left: 18px; top: 20px; }
+}
