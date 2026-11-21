@@ -27,7 +27,7 @@ export default function KundenportalPage({
       />
 
       <div className="kundenportal-page">
-        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
 
         <main>
           <section className="kundenportal-hero">
@@ -288,7 +288,7 @@ export default function KundenportalPage({
         </main>
         <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}

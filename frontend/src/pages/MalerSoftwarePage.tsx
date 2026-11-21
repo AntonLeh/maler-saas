@@ -104,7 +104,7 @@ export default function MalerSoftwarePage({
   <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_LD }} />
 
   <div className="maler-software-page">
-    <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+    <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
 
     <main>
     <section className="maler-software-hero">
@@ -558,7 +558,7 @@ export default function MalerSoftwarePage({
 
 <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}

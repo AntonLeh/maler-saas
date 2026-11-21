@@ -1,5 +1,6 @@
 // Gemeinsame Fußzeile aller öffentlichen Seiten – Links hier ändern, dann gilt es überall.
 // Der Ratgeber (frontend/api/ratgeber.ts) hat eine Kopie davon, die dort mitgepflegt werden muss.
+import type React from "react";
 import { ArrowRight } from "lucide-react";
 import "./site.css";
 
@@ -11,6 +12,8 @@ type Props = {
   onOpenAgb?: () => void;
   /** auf der Startseite springen Preise/Fragen/Kontakt innerhalb der Seite */
   home?: boolean;
+  /** zusätzlicher Hinweis in der unteren Zeile (z. B. Kartenquelle) */
+  note?: React.ReactNode;
 };
 
 export const FOOTER_COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
@@ -41,7 +44,7 @@ export const FOOTER_COLUMNS: { title: string; links: { href: string; label: stri
   },
 ];
 
-export default function SiteFooter({ onRegister, onLogin, onOpenImpressum, onOpenDatenschutz, onOpenAgb, home = false }: Props) {
+export default function SiteFooter({ onRegister, onLogin, onOpenImpressum, onOpenDatenschutz, onOpenAgb, home = false, note }: Props) {
   const anchor = (h: string) => (home ? h : `/${h}`);
   // ohne Öffner (z. B. Seiten außerhalb der App-Navigation) auf die eigenen Adressen verlinken
   const legal = (label: string, href: string, fn?: () => void) =>
@@ -97,7 +100,9 @@ export default function SiteFooter({ onRegister, onLogin, onOpenImpressum, onOpe
       </div>
 
       <div className="site-footer-bottom">
-        <span>© {new Date().getFullYear()} MalerSaaS · Server in der EU</span>
+        <span>
+          © {new Date().getFullYear()} MalerSaaS · Server in der EU{note ? <> · {note}</> : null}
+        </span>
         <div className="site-footer-legal">
           {legal("Impressum", "/impressum", onOpenImpressum)}
           {legal("Datenschutz", "/datenschutz", onOpenDatenschutz)}

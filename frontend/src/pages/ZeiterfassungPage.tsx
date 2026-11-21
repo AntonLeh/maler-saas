@@ -27,7 +27,7 @@ export default function ZeiterfassungPage({
       />
 
       <div className="zeiterfassung-page">
-        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
 
         <main>
           <section className="zeiterfassung-hero">
@@ -297,7 +297,7 @@ export default function ZeiterfassungPage({
 
 <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}

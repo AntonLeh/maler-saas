@@ -27,7 +27,7 @@ export default function LeistungsbewertungPage({
       />
 
       <div className="leistungsbewertung-page">
-        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
 
         <main>
           <section className="leistungsbewertung-hero">
@@ -286,7 +286,7 @@ export default function LeistungsbewertungPage({
         </main>
         <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}

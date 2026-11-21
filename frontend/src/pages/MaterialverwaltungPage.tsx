@@ -27,7 +27,7 @@ export default function MaterialverwaltungPage({
       />
 
       <div className="materialverwaltung-page">
-        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
 
         <main>
           <section className="materialverwaltung-hero">
@@ -301,7 +301,7 @@ export default function MaterialverwaltungPage({
 
     <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import SiteFooter from "../../components/site/SiteFooter";
 import SeoMeta from "../../components/SeoMeta";
 import DatenschutzPage from "../../pages/DatenschutzPage";
 import ImpressumPage from "../../pages/ImpressumPage";
@@ -54,20 +55,13 @@ export default function PublicPoolPage() {
           <SignupView onPrivacy={() => setLegal("datenschutz")} />
         )}
       </main>
-      <footer className="fk-foot">
-        <button type="button" onClick={() => setLegal("impressum")}>
-          Impressum
-        </button>
-        <button type="button" onClick={() => setLegal("datenschutz")}>
-          Datenschutz
-        </button>
-        <span>Ortsdaten © OpenStreetMap-Mitwirkende</span>
-        {path === "/fachkraefte" && (
-          <a href="/maler-software" className="fk-foot-biz">
-            Sie sind ein Malerbetrieb? Mehr über MalerSaaS
-          </a>
-        )}
-      </footer>
+      <SiteFooter
+        onRegister={() => (window.location.href = "/?testen")}
+        onLogin={() => (window.location.href = "/?login")}
+        onOpenImpressum={() => setLegal("impressum")}
+        onOpenDatenschutz={() => setLegal("datenschutz")}
+        note="Ortsdaten © OpenStreetMap-Mitwirkende"
+      />
     </div>
   );
 }

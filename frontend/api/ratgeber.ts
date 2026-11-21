@@ -116,28 +116,63 @@ const jsonLd = (o: unknown) => `<script type="application/ld+json">${JSON.string
 const cta = (slug: string) => `/?utm_source=ratgeber&utm_medium=seo&utm_campaign=${encodeURIComponent(slug || "ratgeber")}`;
 
 const CSS = `
-*{box-sizing:border-box}body{margin:0;font-family:"Inter","Segoe UI",system-ui,-apple-system,Arial,sans-serif;color:#0f172a;background:#fbf8f3;line-height:1.65}
-a{color:#1d4ed8}header{background:#0f172a;color:#fff}.wrap{max-width:820px;margin:0 auto;padding:0 18px}
+*{box-sizing:border-box}body{margin:0;font-family:"Inter","Segoe UI",system-ui,-apple-system,Arial,sans-serif;color:#0f172a;background:#ecece5;line-height:1.65}
+a{color:#2f5f8a}.wrap{max-width:820px;margin:0 auto;padding:0 18px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;font-size:20px}
 .brand img{width:34px;height:34px;border-radius:8px;background:#fff;padding:3px}.top nav{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.top nav a{color:#cbd5e1;text-decoration:none;font-weight:600;font-size:15px}.btn{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:800;border-radius:12px;padding:11px 18px}
+.top nav a{color:#cbd5e1;text-decoration:none;font-weight:600;font-size:15px}.btn{display:inline-block;background:#234361;color:#fff!important;text-decoration:none;font-weight:800;border-radius:12px;padding:11px 18px}
 main{padding:28px 0 40px}.crumbs{font-size:13px;color:#64748b;margin-bottom:10px}.crumbs a{color:#64748b}
 h1{font-size:clamp(28px,5vw,40px);line-height:1.2;margin:0 0 10px}.meta{color:#64748b;font-size:14px;margin-bottom:18px}
-.intro{font-size:19px;color:#334155;margin:0 0 24px}article{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:clamp(18px,4vw,36px)}
+.intro{font-size:19px;color:#334155;margin:0 0 24px}article{background:#fff;border:1px solid #dcdfd5;box-shadow:0 14px 34px rgba(15,32,50,.1),0 2px 4px rgba(15,32,50,.05);border-radius:18px;padding:clamp(18px,4vw,36px)}
 article h2{font-size:24px;line-height:1.3;margin:32px 0 10px}article h3{font-size:19px;margin:22px 0 8px}article p{margin:0 0 14px}article ul{margin:0 0 16px;padding-left:22px}article li{margin:4px 0}
-.box{background:linear-gradient(135deg,#1d4ed8,#0f172a);color:#fff;border-radius:18px;padding:22px 24px;margin:30px 0}.box h2{color:#fff;margin:0 0 6px;font-size:22px}.box p{color:#dbeafe;margin:0 0 14px}.box p a{color:#fff;text-decoration:underline}
-.box .btn{background:#facc15;color:#0f172a!important}.faq details{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin:8px 0;background:#fff}.faq summary{font-weight:700;cursor:pointer}
-.related{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.related a{border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:6px 12px;text-decoration:none;font-weight:600;font-size:14px}
-.list{display:grid;gap:12px}.card{display:block;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px 20px;text-decoration:none;color:inherit}.card:hover{border-color:#93c5fd}
+.box{background:radial-gradient(circle at 85% 10%,rgba(56,189,248,.22),transparent 45%),linear-gradient(225deg,#162b40 0%,#1e3a54 55%,#2c4e6e 100%);color:#fff;border-radius:18px;padding:22px 24px;margin:30px 0}.box h2{color:#fff;margin:0 0 6px;font-size:22px}.box p{color:#d5e0ea;margin:0 0 14px}.box p a{color:#fff;text-decoration:underline}
+.box .btn{background:#fff;color:#142333!important}.faq details{border:1px solid #dcdfd5;border-radius:12px;padding:12px 14px;margin:8px 0;background:#fff}.faq summary{font-weight:700;cursor:pointer}
+.related{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.related a{border:1px solid rgba(35,67,97,.18);background:rgba(35,67,97,.08);color:#234361;border-radius:999px;padding:6px 12px;text-decoration:none;font-weight:600;font-size:14px}
+.list{display:grid;gap:12px}.card{display:block;background:#fff;border:1px solid #dcdfd5;box-shadow:0 14px 34px rgba(15,32,50,.1),0 2px 4px rgba(15,32,50,.05);border-radius:16px;padding:18px 20px;text-decoration:none;color:inherit}.card:hover{border-color:#9fb6cc}
 .card h2{font-size:20px;margin:0 0 6px;color:#0f172a}.card p{margin:0;color:#475569}.card small{color:#64748b}
-footer{border-top:1px solid #e2e8f0;padding:22px 0 30px;color:#64748b;font-size:14px}footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}footer a{color:#64748b}
 .note{font-size:13px;color:#64748b;margin-top:22px}
 figure.hero{margin:0 0 22px}figure.hero img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:14px;display:block;background:#e2e8f0}
 figure.hero figcaption{font-size:12px;color:#94a3b8;margin-top:6px}
 .card{display:grid;grid-template-columns:1fr;gap:14px}.card.has-img{grid-template-columns:180px 1fr;align-items:start}
 .card img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block;background:#e2e8f0}
 @media(max-width:560px){.card.has-img{grid-template-columns:1fr}}
+/* Kopf- und Fußzeile wie auf allen Seiten (Kopie von src/components/site, Stand 21.11.2026) */
+.sh{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px max(18px,calc((100% - 1180px)/2));background:rgba(236,236,229,.88);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-bottom:1px solid rgba(203,213,225,.7)}
+.sh-logo{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:#142333}.sh-logo img{width:44px;height:44px;border-radius:12px;background:#fff;padding:4px;box-shadow:0 6px 16px rgba(15,32,50,.12)}
+.sh-logo strong{display:block;font-size:19px;letter-spacing:-.02em}.sh-logo small{display:block;font-size:12px;font-weight:600;color:#64748b}
+.sh nav{display:flex;align-items:center;gap:20px}.sh nav a{color:#2a3d50;font-weight:600;font-size:15px;text-decoration:none}.sh nav a:hover{text-decoration:underline;text-underline-offset:4px}
+.sh nav a.sh-login{background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:700}.sh nav a.btn{border-radius:999px;font-size:14px;padding:10px 18px}
+@media(max-width:900px){.sh nav a:not(.btn):not(.sh-login){display:none}.sh nav{gap:8px}.sh-logo small{display:none}}
+@media(max-width:480px){.sh nav a.sh-login{display:none}.sh nav a.btn{padding:9px 12px;font-size:13px}}
+.sf{margin-top:60px;padding:56px max(18px,calc((100% - 1180px)/2)) 0;background:radial-gradient(circle at 90% 0%,rgba(56,189,248,.14),transparent 40%),linear-gradient(225deg,#162b40 0%,#1e3a54 60%,#2c4e6e 100%);color:#cbd5e1;font-size:14px}
+.sf-in{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px;padding-bottom:40px}.sf-logo{display:inline-flex;align-items:center;gap:12px;text-decoration:none}.sf-logo img{width:44px;height:44px;border-radius:12px;background:#fff;padding:4px}
+.sf-logo strong{display:block;color:#fff;font-size:18px}.sf-logo small{display:block;color:#9fb3c8;font-size:12px;font-weight:600}.sf p{margin:16px 0 12px;line-height:1.65;color:#b6c4d3;max-width:340px}
+.sf-mail{color:#fff!important;font-weight:700;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.35)}.sf-cta{display:inline-block;margin-top:18px;border-radius:999px;padding:11px 20px;background:#fff;color:#142333!important;font-weight:800;text-decoration:none}
+.sf-col{display:grid;align-content:start;gap:10px}.sf-col b{color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}.sf-col a,.sf-legal a{color:#b6c4d3;text-decoration:none}
+.sf-col a:hover,.sf-legal a:hover{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.sf-bot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:18px 0 22px;border-top:1px solid rgba(255,255,255,.12);font-size:13px;color:#9fb3c8}.sf-legal{display:flex;flex-wrap:wrap;gap:18px}
+@media(max-width:900px){.sf-in{grid-template-columns:1fr 1fr;gap:30px}.sf-brand{grid-column:1/-1}}
 `;
+
+// Fußzeilen-Links – Kopie von FOOTER_COLUMNS in src/components/site/SiteFooter.tsx (bei Änderungen beide anpassen)
+const FOOTER_COLUMNS: { title: string; links: [string, string][] }[] = [
+  { title: "Funktionen", links: [["/maler-software", "Maler-Software"], ["/aufmass-angebote", "Aufmaß &amp; Angebote"], ["/auftragsverwaltung", "Auftragsverwaltung"], ["/zeiterfassung", "Zeiterfassung"], ["/rechnungen", "Rechnungen &amp; E&#8209;Rechnung"], ["/materialverwaltung", "Materialverwaltung"], ["/kundenportal", "Kundenportal"], ["/buchhaltung", "Buchhaltung"]] },
+  { title: "Mehr", links: [["/ki-funktionen", "KI-Funktionen"], ["/ki-telefon", "KI-Telefon"], ["/werbung-mit-ki", "Werbung mit KI"], ["/firmen-website", "Firmen-Website"], ["/auswertungen", "Auswertungen"], ["/leistungsbewertung", "Leistungsbewertung"], ["/fachkraefte-finden", "Fachkräfte finden"]] },
+  { title: "Service", links: [["/ratgeber", "Ratgeber"], ["/#preise", "Preise"], ["/#fragen", "Häufige Fragen"], ["/#kontakt", "Kontakt"], ["/?login", "Login"], ["/fachkraefte", "Arbeit gesucht? Fachkräfte-Pool"]] },
+];
+
+function siteHeader(): string {
+  return `<header class="sh"><a class="sh-logo" href="/"><img src="/images/logo.webp" alt="MalerSaaS Logo" width="44" height="44"><span><strong>MalerSaaS</strong><small>Software für Malerbetriebe</small></span></a>
+<nav aria-label="Hauptmenü"><a href="/#funktionen">Funktionen</a><a href="/ratgeber">Ratgeber</a><a href="/#preise">Preise</a><a href="/#kontakt">Kontakt</a><a class="sh-login" href="/?login">Login</a><a class="btn" href="${cta("kopf")}">14 Tage kostenlos testen</a></nav></header>`;
+}
+
+function siteFooter(): string {
+  const cols = FOOTER_COLUMNS.map((c) => `<nav class="sf-col" aria-label="${c.title}"><b>${c.title}</b>${c.links.map(([h, l]) => `<a href="${h}">${l}</a>`).join("")}</nav>`).join("");
+  return `<footer class="sf"><div class="sf-in"><div class="sf-brand"><a class="sf-logo" href="/"><img src="/images/logo.webp" alt="" width="44" height="44" loading="lazy"><span><strong>MalerSaaS</strong><small>Software für Malerbetriebe</small></span></a>
+<p>Aufmaß, Angebote, Aufträge, Zeiterfassung, Rechnungen und Buchhaltung in einer App – für Malerbetriebe in Deutschland, Österreich und der Schweiz.</p>
+<a class="sf-mail" href="mailto:info@maler-saas.com">info@maler-saas.com</a><br><a class="sf-cta" href="${cta("fusszeile")}">14 Tage kostenlos testen →</a></div>${cols}</div>
+<div class="sf-bot"><span>© ${new Date().getFullYear()} MalerSaaS · Server in der EU</span><div class="sf-legal"><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB</a><a href="/avv">AVV</a></div></div></footer>`;
+}
 
 function page(o: { title: string; description: string; canonical: string; body: string; ld?: string; noindex?: boolean; image?: string }): string {
   return `<!doctype html>
@@ -159,15 +194,11 @@ ${o.noindex ? '<meta name="robots" content="noindex">' : ""}
 ${o.ld ?? ""}
 </head>
 <body>
-<header><div class="wrap top">
-<a class="brand" href="/"><img src="/images/logo.png" alt="" width="34" height="34">MalerSaaS</a>
-<nav><a href="/ratgeber">Ratgeber</a><a href="/maler-software">Funktionen</a><a class="btn" href="${cta("kopf")}">14 Tage kostenlos testen</a></nav>
-</div></header>
+${siteHeader()}
 <main><div class="wrap">
 ${o.body}
 </div></main>
-<footer><div class="wrap"><span>© ${new Date().getFullYear()} MalerSaaS – Software für Malerbetriebe</span>
-<span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a></span></div></footer>
+${siteFooter()}
 </body>
 </html>`;
 }

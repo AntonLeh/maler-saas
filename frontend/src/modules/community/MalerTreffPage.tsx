@@ -1,5 +1,6 @@
 // MalerTreff: öffentliche Seite maler-saas.com/malertreff – Vorstellung, Anmelden, Konto erstellen, danach die Community
 import { useEffect, useState } from "react";
+import SiteFooter from "../../components/site/SiteFooter";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 import { passwordProblem, signupErrorText } from "../auth/messages";
@@ -43,9 +44,7 @@ export default function MalerTreffPage() {
         )}
       </header>
       {session ? <SignedIn session={session} /> : <SignedOut info={info} />}
-      <footer className="mt-foot">
-        <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/">MalerSaaS</a>
-      </footer>
+      <SiteFooter onRegister={() => (window.location.href = "/?testen")} onLogin={() => (window.location.href = "/?login")} />
     </div>
   );
 }

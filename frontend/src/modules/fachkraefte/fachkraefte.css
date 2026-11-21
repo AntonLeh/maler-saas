@@ -2,12 +2,12 @@
 
 /* ---------- öffentliche Seiten ---------- */
 .fk-page {
-  --fk-accent: #1d4e89;
-  --fk-accent-dark: #163b68;
+  --fk-accent: #234361;
+  --fk-accent-dark: #183047;
   --fk-ink: #1c2430;
   --fk-muted: #5b6573;
-  --fk-line: #e3e6ea;
-  --fk-soft: #faf6ef;
+  --fk-line: #dcdfd5;
+  --fk-soft: #ecece5;
   min-height: 100vh;
   background: var(--fk-soft);
   color: var(--fk-ink);
@@ -639,3 +639,8 @@
 .fk-foot a {
   color: inherit;
 }
+
+/* Kopfzeile wie die übrigen Seiten (21.11.2026) */
+.fk-page .fk-top { background: rgba(236, 236, 229, 0.85); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+/* gemeinsame Fußzeile: volle Breite */
+.fk-page > .site-footer { margin-top: 50px; }

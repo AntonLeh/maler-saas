@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { Pencil } from "lucide-react";
+import SiteFooter from "./components/site/SiteFooter";
 import ChefStart from "./modules/chef-start/ChefStart";
 import { countsAsRevenue as biCountsAsRevenue, isOpenInvoice as biIsOpenInvoice, netAmount as biNetAmount } from "./modules/bi/logic";
 import type { ChefNavKey } from "./modules/chef-start/ChefStart";
@@ -643,7 +644,8 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [currentPage, setCurrentPage] = useState<CurrentPage>("dashboard");
   // Impressum/Datenschutz: wohin „Zurück“ führt (z. B. Mitarbeiter-Dashboard)
   const legalBackPageRef = useRef<CurrentPage | null>(null);
-  const [showCompanyRegister, setShowCompanyRegister] = useState(false);
+  // /?testen bzw. /?login (z. B. Links aus Fachkräfte-Pool oder MalerTreff) öffnen direkt Registrierung bzw. Anmeldung
+  const [showCompanyRegister, setShowCompanyRegister] = useState(() => new URLSearchParams(window.location.search).has("testen"));
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [orderProgress, setOrderProgress] = useState<OrderProgress[]>([]);
@@ -733,7 +735,7 @@ const [expandedProgressOrderIds, setExpandedProgressOrderIds] = useState<Set<str
   const [depositType, setDepositType] = useState<"percent" | "fixed">("percent");
   const [depositValue, setDepositValue] = useState("");
 
-  const [showLoginPage, setShowLoginPage] = useState(false);
+  const [showLoginPage, setShowLoginPage] = useState(() => new URLSearchParams(window.location.search).has("login"));
   const [performanceRewards, setPerformanceRewards] = useState<any[]>([]);
   const [loadingPerformanceRewards, setLoadingPerformanceRewards] = useState(false);
   const [editingRewardId, setEditingRewardId] = useState<number | null>(null);
@@ -844,10 +846,16 @@ const [selectedProgressImagePreview, setSelectedProgressImagePreview] = useState
     const home = () => {
       window.location.href = "/";
     };
-    if (legal === "/agb") return <AgbPage onBack={home} />;
-    if (legal === "/avv") return <AvvPage onBack={home} />;
-    if (legal === "/datenschutz") return <DatenschutzPage onBack={home} />;
-    if (legal === "/impressum") return <ImpressumPage onBack={home} />;
+    const withFooter = (el: React.ReactElement) => (
+      <>
+        {el}
+        <SiteFooter onRegister={() => (window.location.href = "/?testen")} onLogin={() => (window.location.href = "/?login")} />
+      </>
+    );
+    if (legal === "/agb") return withFooter(<AgbPage onBack={home} />);
+    if (legal === "/avv") return withFooter(<AvvPage onBack={home} />);
+    if (legal === "/datenschutz") return withFooter(<DatenschutzPage onBack={home} />);
+    if (legal === "/impressum") return withFooter(<ImpressumPage onBack={home} />);
   }
 
   // Fachkräfte-Pool: öffentliche Seiten (Anmeldung, eigenes Profil, Kontaktanfrage beantworten)

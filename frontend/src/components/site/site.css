@@ -145,3 +145,6 @@
 
 /* Öffentliche Seiten über die volle Fensterbreite (die App selbst bleibt in ihrer Spalte) */
 #root:has(> * > .site-header) { width: 100%; max-width: none; border-inline: 0; }
+#root:has(> .fk-page), #root:has(> .mt-page) { width: 100%; max-width: none; border-inline: 0; }
+#root:has(> .site-footer) { width: 100%; max-width: none; border-inline: 0; }
+.legal-page + .site-footer { margin-top: 0; }

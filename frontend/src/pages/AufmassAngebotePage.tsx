@@ -25,7 +25,7 @@ export default function AufmassAngebotePage({
       />
 
       <div className="aufmass-angebote-page">
-        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/?login"))} onRegister={onRegister} />
         <main>
           <section className="aufmass-angebote-hero">
   <div className="aufmass-angebote-hero-content">
@@ -278,7 +278,7 @@ export default function AufmassAngebotePage({
 
 <SiteFooter
         onRegister={onRegister}
-        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onLogin={onLogin ?? (() => (window.location.href = "/?login"))}
         onOpenImpressum={onOpenImpressum}
         onOpenDatenschutz={onOpenDatenschutz}
         onOpenAgb={onOpenAgb}
