@@ -385,11 +385,11 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
             <p className="landing-badge">Für Malerbetriebe in Deutschland, Österreich und der Schweiz</p>
 
             <h1>
-              Die Software für Malerbetriebe – vom Aufmaß bis zur E‑Rechnung.
+              Die Software für Malerbetriebe.
             </h1>
 
             <p className="landing-hero-text">
-              Aufmaß, Angebote, Aufträge, Zeiterfassung, Material, Rechnungen und Buchhaltung in einer App. Weniger Büro am Abend, mehr
+              Vom Aufmaß bis zur E‑Rechnung: Angebote, Aufträge, Zeiterfassung, Material, Rechnungen und Buchhaltung in einer App. Weniger Büro am Abend, mehr
               Überblick auf der Baustelle – im Browser, auf dem Handy und dem Tablet.
             </p>
 
