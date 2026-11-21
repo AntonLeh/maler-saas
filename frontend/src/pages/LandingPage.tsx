@@ -412,18 +412,23 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           </div>
 
           <div className="landing-hero-visual lp3-visual">
-            {/* Bemaßungslinie wie beim Aufmaß – nur Dekoration */}
-            <div className="lp3-dim" aria-hidden="true">
-              <span>|←</span>
-              <i />
-              <span>5,20 m</span>
-              <i />
-              <span>→|</span>
-            </div>
+            <div className="lp3-stage">
+              {/* Bemaßungslinien – nur Dekoration */}
+              <svg className="lp3-lines" viewBox="0 0 600 520" aria-hidden="true" focusable="false">
+                <g fill="none" stroke="currentColor" strokeWidth="1">
+                  <path d="M40 470 L230 380 L520 420" strokeDasharray="4 6" />
+                  <path d="M560 60 V300" />
+                  <path d="M552 60 H568 M552 300 H568" />
+                  <path d="M120 40 L300 20" strokeDasharray="2 5" />
+                </g>
+                <g fill="currentColor" fontSize="11" fontFamily="ui-monospace, monospace">
+                  <text x="572" y="185" transform="rotate(90 572 185)">2,55 m</text>
+                  <text x="250" y="372">4,10 m</text>
+                </g>
+              </svg>
 
-            <div className="lp3-visual-grid">
-              {/* echte App-Ansicht im Glasrahmen */}
-              <figure className="lp3-glass">
+              {/* echte App-Ansicht, schwebend im Glasrahmen */}
+              <figure className="lp3-glass lp3-float">
                 <div className="lp3-glass-bar" aria-hidden="true">
                   <span className="lp3-glass-logo">M</span>
                   <b>maler-saas.com</b>
@@ -436,32 +441,29 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
                   height="1264"
                   fetchPriority="high"
                 />
-                <div className="lp3-glass-badge">
-                  <span>
-                    <small>E-Rechnung</small>
-                    ZUGFeRD · XRechnung
-                  </span>
-                  <em>2027-fertig</em>
-                </div>
               </figure>
 
-              <div className="lp3-side">
-                <figure className="lp3-photo">
-                  <img src="/images/app/mitarbeiter-handy.webp" alt="Mitarbeiter-App am Handy mit laufender Arbeitszeit" width="700" height="1526" />
-                  <figcaption>
-                    <small>Mobil auf der Baustelle</small>
-                    Arbeitszeit, Fotos, Material
-                  </figcaption>
-                </figure>
-                <div className="lp3-chip">
-                  <span className="lp3-chip-icon">
-                    <Sparkles size={16} aria-hidden="true" />
-                  </span>
-                  <span>
-                    <b>Mit KI</b>
-                    <small>Aufmaß, Belege, Telefon</small>
-                  </span>
-                </div>
+              <figure className="lp3-hero-phone">
+                <img src="/images/app/mitarbeiter-handy.webp" alt="Mitarbeiter-App am Handy mit laufender Arbeitszeit" width="700" height="1526" />
+              </figure>
+
+              <div className="lp3-chip lp3-chip-erech">
+                <span className="lp3-chip-icon">
+                  <FileText size={16} aria-hidden="true" />
+                </span>
+                <span>
+                  <b>E-Rechnung</b>
+                  <small>ZUGFeRD · XRechnung</small>
+                </span>
+              </div>
+              <div className="lp3-chip lp3-chip-ai">
+                <span className="lp3-chip-icon">
+                  <Sparkles size={16} aria-hidden="true" />
+                </span>
+                <span>
+                  <b>Mit KI</b>
+                  <small>Aufmaß, Belege, Telefon</small>
+                </span>
               </div>
             </div>
           </div>

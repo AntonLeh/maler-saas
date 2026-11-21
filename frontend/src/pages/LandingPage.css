@@ -1742,7 +1742,11 @@ body:has(.landing-page) { background: #fbf8f3; }
   width: 44%;
   height: 700px;
   border-bottom-left-radius: 64px;
-  background: linear-gradient(225deg, #162b40 0%, #1e3a54 50%, #2c4e6e 100%);
+  background:
+    linear-gradient(90deg, #1e3a54 0%, rgba(30, 58, 84, 0.86) 22%, rgba(30, 58, 84, 0.25) 52%, rgba(30, 58, 84, 0) 70%),
+    linear-gradient(0deg, rgba(22, 43, 64, 0.55) 0%, rgba(22, 43, 64, 0) 30%),
+    url("/images/maler-tablet.webp") 72% 18% / cover no-repeat,
+    #1e3a54;
   box-shadow: 0 25px 60px rgba(15, 32, 50, 0.25);
   pointer-events: none;
 }
@@ -1888,7 +1892,14 @@ body:has(.landing-page) { background: #fbf8f3; }
   .landing-page::after { display: none; }
   .landing-page > .lp3-header { padding: 12px 16px; }
   .landing-hero.landing-hero-premium { grid-template-columns: 1fr; padding-top: 40px; padding-bottom: 40px; }
-  .lp3-visual { padding: 26px 20px 22px; border-radius: 28px; background: linear-gradient(225deg, #162b40 0%, #1e3a54 50%, #2c4e6e 100%); }
+  .lp3-visual {
+    padding: 30px 18px 26px;
+    border-radius: 28px;
+    background:
+      linear-gradient(90deg, rgba(30, 58, 84, 0.92) 0%, rgba(30, 58, 84, 0.55) 45%, rgba(30, 58, 84, 0.1) 80%),
+      url("/images/maler-tablet.webp") 85% 15% / cover no-repeat,
+      #1e3a54;
+  }
 }
 @media (max-width: 700px) {
   .lp3-visual-grid { grid-template-columns: 1fr; }
@@ -1896,4 +1907,57 @@ body:has(.landing-page) { background: #fbf8f3; }
   .lp3-dim i { width: 60px; }
   .lp3-bento-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .lp3-art { height: 96px; }
+}
+
+/* Bühne: schwebende App-Ansicht vor dem Foto (Stand 21.11.2026) */
+.lp3-stage { position: relative; height: 520px; perspective: 1400px; }
+.lp3-stage::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  top: 22%;
+  width: 70%;
+  height: 60%;
+  background: radial-gradient(closest-side, rgba(56, 189, 248, 0.45), transparent);
+  filter: blur(30px);
+  z-index: 0;
+}
+.lp3-lines { position: absolute; inset: 0; width: 100%; height: 100%; color: rgba(186, 230, 253, 0.6); z-index: 1; pointer-events: none; }
+.lp3-float {
+  position: absolute;
+  left: 0;
+  top: 78px;
+  width: 70%;
+  padding: 12px;
+  transform: rotateY(-16deg) rotateX(7deg) rotateZ(-3deg);
+  transform-origin: 40% 50%;
+  background: rgba(30, 57, 82, 0.72);
+  box-shadow: 0 40px 90px rgba(2, 6, 23, 0.5), 0 0 60px rgba(56, 189, 248, 0.22);
+}
+.lp3-hero-phone {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  left: -4%;
+  bottom: 0;
+  width: 25%;
+  padding: 6px;
+  border-radius: 26px;
+  background: #0f172a;
+  box-shadow: 0 30px 60px rgba(2, 6, 23, 0.55), 0 0 30px rgba(56, 189, 248, 0.25);
+  transform: rotateZ(-6deg);
+}
+.lp3-hero-phone img { display: block; width: 100%; height: auto; border-radius: 20px; }
+.lp3-chip-erech, .lp3-chip-ai { position: absolute; z-index: 4; }
+.lp3-chip-erech { left: 24%; bottom: 18px; }
+.lp3-chip-ai { right: 34%; top: -6px; }
+@media (prefers-reduced-motion: no-preference) {
+  .lp3-float { transition: transform 0.6s ease; }
+  .lp3-stage:hover .lp3-float { transform: rotateY(-8deg) rotateX(3deg) rotateZ(-1deg); }
+}
+@media (max-width: 900px) {
+  .lp3-stage { height: auto; perspective: none; }
+  .lp3-stage::before, .lp3-lines, .lp3-hero-phone { display: none; }
+  .lp3-float { position: relative; top: 0; width: 82%; transform: none; }
+  .lp3-chip-erech, .lp3-chip-ai { position: relative; inset: auto; margin-top: 12px; max-width: 280px; }
 }
