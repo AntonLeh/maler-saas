@@ -4,8 +4,8 @@
 
 .landing-page {
   min-height: 100vh;
-  /* Helles Naturweiß (21.11.2026, vorher Sandweiß) */
-  background: #f7f7f2;
+  /* Naturweiß (21.11.2026, vorher Sandweiß) – etwas dunkler, damit die weißen Kästen hervortreten */
+  background: #ecece5;
   color: #0f172a;
 }
 
@@ -1686,7 +1686,7 @@
 }
 
 /* Seitenränder neben der Startseite und den Funktionsseiten im selben warmen Ton */
-body:has(.landing-page) { background: #f7f7f2; }
+body:has(.landing-page) { background: #ecece5; }
 
 /* Umschalter monatlich / jährlich */
 .lp2-interval { display: inline-flex; gap: 4px; padding: 5px; margin-top: 22px; border-radius: 999px; background: #fff; border: 1px solid #e2e4dc; box-shadow: 0 6px 18px rgba(15, 32, 50, 0.08); }
@@ -1757,7 +1757,7 @@ body:has(.landing-page) { background: #f7f7f2; }
   max-width: none;
   margin: 0;
   padding: 14px max(22px, calc((100% - 1180px) / 2));
-  background: rgba(247, 247, 242, 0.82);
+  background: rgba(236, 236, 229, 0.85);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid rgba(203, 213, 225, 0.7);
@@ -1965,3 +1965,21 @@ body:has(.landing-page) { background: #f7f7f2; }
 .lp3-art-img img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform 0.5s ease; }
 .lp3-tile:hover .lp3-art-img img { transform: scale(1.06); }
 @media (prefers-reduced-motion: reduce) { .lp3-art-img img { transition: none; } }
+
+/* Weiße Kästen heben sich vom Naturweiß ab: feiner Rahmen und Schatten */
+.landing-page .lp-pain-grid article,
+.landing-page .how-grid > *,
+.landing-page .growth-grid article,
+.landing-page .lp-faq-item,
+.landing-page .lp2-plan,
+.landing-page .lp2-more-item,
+.landing-page .lp3-tile,
+.landing-page .lp-doc,
+.landing-page .lp-form,
+.landing-page .lp-card,
+.landing-page .landing-highlight-box {
+  background: #fff;
+  border: 1px solid #dcdfd5;
+  box-shadow: 0 14px 34px rgba(15, 32, 50, 0.1), 0 2px 4px rgba(15, 32, 50, 0.05);
+}
+.landing-page .lp2-plan.is-top { border: 2px solid #2563eb; }
