@@ -123,7 +123,7 @@ const bento = [
   { title: "Materialverwaltung", cat: "Lager & Objekt", icon: Package, art: "material", href: "/materialverwaltung" },
   { title: "Mobil auf der Baustelle", cat: "App", icon: Smartphone, art: "mobil", href: "/zeiterfassung" },
   { title: "Kundenportal", cat: "Transparenz", icon: Users, art: "portal", href: "/kundenportal" },
-  { title: "Rechnungen & E-Rechnung", cat: "Abrechnung", icon: FileText, art: "rechnung", href: "/rechnungen" },
+  { title: "Rechnungen & E\u2011Rechnung", cat: "Abrechnung", icon: FileText, art: "rechnung", href: "/rechnungen" },
 ];
 
 const showcase: { label: string; title: string; text: string; points: string[]; img: string; w: number; h: number; alt: string; href: string; phone?: boolean }[] = [
@@ -477,46 +477,8 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
           <div className="lp3-bento-grid">
             {bento.map((b) => (
               <a key={b.title} href={b.href} className="lp3-tile">
-                <span className={`lp3-art lp3-art-${b.art}`} aria-hidden="true">
-                  {b.art === "aufmass" && (
-                    <>
-                      <span className="lp3-room">48,5 m²</span>
-                      <small>4,10 × 5,20 m</small>
-                    </>
-                  )}
-                  {b.art === "planung" && (
-                    <>
-                      <i />
-                      <i />
-                      <i />
-                    </>
-                  )}
-                  {b.art === "material" && (
-                    <>
-                      <i />
-                      <i />
-                      <i />
-                    </>
-                  )}
-                  {b.art === "mobil" && <img src="/images/app/mitarbeiter-handy.webp" alt="" loading="lazy" decoding="async" />}
-                  {b.art === "portal" && (
-                    <>
-                      <span>
-                        Projektfortschritt: <b>75 %</b>
-                      </span>
-                      <i>
-                        <i />
-                      </i>
-                    </>
-                  )}
-                  {b.art === "rechnung" && (
-                    <span className="lp3-sheet">
-                      <i />
-                      <i />
-                      <i />
-                      <em>E-Rechnung</em>
-                    </span>
-                  )}
+                <span className="lp3-art lp3-art-img" aria-hidden="true">
+                  <img src={`/images/kacheln/${b.art}.webp`} alt="" width="600" height="526" loading="lazy" decoding="async" />
                 </span>
                 <span className="lp3-tile-cat">
                   <b.icon size={14} aria-hidden="true" /> {b.cat}
