@@ -1,19 +1,21 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./AufmassAngebotePage.css";
 
 export default function AufmassAngebotePage({
   onRegister,
+  onLogin,
   onOpenImpressum,
   onOpenDatenschutz,
   onOpenAgb,
 }: {
   onRegister: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -23,52 +25,7 @@ export default function AufmassAngebotePage({
       />
 
       <div className="aufmass-angebote-page">
-        <header className="aufmass-angebote-header">
-  <a href="/" className="aufmass-angebote-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="aufmass-angebote-logo-image"
-    />
-
-    <div className="aufmass-angebote-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="aufmass-angebote-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`aufmass-angebote-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a
-      href="/"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Startseite
-    </a>
-
-    <a
-      href="/maler-software"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Software
-    </a>
-  </nav>
-</header>
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
         <main>
           <section className="aufmass-angebote-hero">
   <div className="aufmass-angebote-hero-content">
@@ -319,32 +276,13 @@ export default function AufmassAngebotePage({
   </div>
 </section>
 
-<footer className="aufmass-angebote-footer">
-  <div className="aufmass-angebote-footer-brand">
-    <strong>MalerSaaS</strong>
-    <span>Software für Malerbetriebe</span>
-  </div>
-
-  <div className="aufmass-angebote-footer-links">
-    <a href="/">Startseite</a>
-
-    <button type="button" onClick={onOpenImpressum}>
-      Impressum
-    </button>
-
-    <button type="button" onClick={onOpenDatenschutz}>
-      Datenschutz
-    </button>
-
-    <button type="button" onClick={onOpenAgb}>
-      AGB
-    </button>
-  </div>
-
-  <div className="aufmass-angebote-footer-copy">
-    © 2026 MalerSaaS
-  </div>
-</footer>
+<SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
 
         </main>
       </div>

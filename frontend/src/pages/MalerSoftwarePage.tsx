@@ -1,5 +1,6 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./MalerSoftwarePage.css";
 
 const SEO_TITLE = "Maler Software & Malerprogramm für Malerbetriebe | MalerSaaS";
@@ -88,12 +89,11 @@ export default function MalerSoftwarePage({
   onOpenAgb,
 }: {
   onRegister: () => void;
-  onLogin: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
   <SeoMeta
@@ -104,63 +104,7 @@ export default function MalerSoftwarePage({
   <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_LD }} />
 
   <div className="maler-software-page">
-    <header className="maler-software-header">
-  <a href="/" className="maler-software-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="maler-software-logo-image"
-    />
-
-    <div className="maler-software-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="maler-software-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`maler-software-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a
-      href="/"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Startseite
-    </a>
-
-    <a
-      href="#funktionen"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Funktionen
-    </a>
-
-    <button
-      type="button"
-      className="maler-software-login-btn"
-      onClick={() => {
-        setMobileMenuOpen(false);
-        onLogin();
-      }}
-    >
-      Login
-    </button>
-  </nav>
-</header>
+    <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
 
     <main>
     <section className="maler-software-hero">
@@ -612,33 +556,13 @@ export default function MalerSoftwarePage({
 
   </main>
 
-<footer className="maler-software-footer">
-  <div className="maler-software-footer-brand">
-    <strong>MalerSaaS</strong>
-    <span>Software für Malerbetriebe</span>
-  </div>
-
-  <div className="maler-software-footer-links">
-    <a href="/">Startseite</a>
-    <a href="/ratgeber">Ratgeber</a>
-
-    <button type="button" onClick={onOpenImpressum}>
-      Impressum
-    </button>
-
-    <button type="button" onClick={onOpenDatenschutz}>
-      Datenschutz
-    </button>
-
-    <button type="button" onClick={onOpenAgb}>
-      AGB
-    </button>
-  </div>
-
-  <div className="maler-software-footer-copy">
-    © 2026 MalerSaaS
-  </div>
-</footer>
+<SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
 
   </div>
   </>

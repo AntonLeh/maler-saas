@@ -1,6 +1,6 @@
 .zeiterfassung-page {
   min-height: 100vh;
-  background: radial-gradient(circle at top left, rgba(214, 170, 110, 0.2), transparent 34%), linear-gradient(180deg, #fbf8f3 0%, #f5ede2 45%, #fffdf9 100%);
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.1), transparent 34%), linear-gradient(180deg, #ecece5 0%, #e6e6de 45%, #f2f2ec 100%);
   color: #0f172a;
 }
 
@@ -61,7 +61,7 @@
 }
 
 .zeiterfassung-nav a:hover {
-  color: #1d4ed8;
+  color: #234361;
 }
 
 .zeiterfassung-hero {
@@ -84,7 +84,7 @@
   padding: 8px 14px;
   border-radius: 999px;
   background: #ecfdf5;
-  color: #1e3a8a;
+  color: #1e3a54;
   font-size: 14px;
   font-weight: 700;
 }
@@ -111,7 +111,7 @@
   padding: 14px 24px;
   border: 0;
   border-radius: 10px;
-  background: #1d4ed8;
+  background: #234361;
   color: #ffffff;
   font: inherit;
   font-size: 16px;
@@ -120,7 +120,7 @@
 }
 
 .zeiterfassung-cta-button:hover {
-  background: #1e40af;
+  background: #1e3a54;
 }
 
 .zeiterfassung-hero-visual {
@@ -240,7 +240,7 @@
 
 .zeiterfassung-section-label {
   margin: 0 0 10px;
-  color: #1d4ed8;
+  color: #234361;
   font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
@@ -303,7 +303,7 @@
 }
 
 .zeiterfassung-evaluation {
-  background: #f7f1e8;
+  background: #f0f0ea;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -453,7 +453,7 @@
 
 .zeiterfassung-cta-label {
   margin: 0 0 12px;
-  color: #93c5fd;
+  color: #9fb6cc;
   font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
@@ -523,7 +523,7 @@
 }
 
 .zeiterfassung-footer-links button:hover {
-  color: #1d4ed8;
+  color: #234361;
 }
 
 @media (max-width: 640px) {

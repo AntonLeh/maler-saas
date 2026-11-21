@@ -6187,6 +6187,7 @@ if (
   return (
     <AufmassAngebotePage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}
@@ -6202,6 +6203,7 @@ if (
   return (
     <AuftragsverwaltungPage
       onRegister={() => setShowCompanyRegister(true)}
+      onLogin={() => setShowLoginPage(true)}
       onOpenImpressum={() => setCurrentPage("impressum")}
       onOpenDatenschutz={() => setCurrentPage("datenschutz")}
       onOpenAgb={() => setCurrentPage("agb")}
@@ -6217,6 +6219,7 @@ if (
   return (
     <ZeiterfassungPage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}
@@ -6232,6 +6235,7 @@ if (
   return (
     <MaterialverwaltungPage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}
@@ -6247,6 +6251,7 @@ if (
   return (
     <RechnungenPage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}
@@ -6262,6 +6267,7 @@ if (
   return (
     <KundenportalPage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}
@@ -6277,6 +6283,7 @@ if (
   return (
     <LeistungsbewertungPage
   onRegister={() => setShowCompanyRegister(true)}
+  onLogin={() => setShowLoginPage(true)}
   onOpenImpressum={() => setCurrentPage("impressum")}
   onOpenDatenschutz={() => setCurrentPage("datenschutz")}
   onOpenAgb={() => setCurrentPage("agb")}

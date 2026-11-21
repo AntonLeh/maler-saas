@@ -1,9 +1,11 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./KundenportalPage.css";
 
 type KundenportalPageProps = {
   onRegister: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
@@ -11,11 +13,11 @@ type KundenportalPageProps = {
 
 export default function KundenportalPage({
   onRegister,
+  onLogin,
   onOpenImpressum,
   onOpenDatenschutz,
   onOpenAgb,
 }: KundenportalPageProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -25,49 +27,7 @@ export default function KundenportalPage({
       />
 
       <div className="kundenportal-page">
-        <header className="kundenportal-header">
-  <a href="/" className="kundenportal-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="kundenportal-logo-image"
-    />
-
-    <div className="kundenportal-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="kundenportal-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`kundenportal-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a href="/" onClick={() => setMobileMenuOpen(false)}>
-      Startseite
-    </a>
-
-    <a
-      href="/maler-software"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Software
-    </a>
-  </nav>
-</header>
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
 
         <main>
           <section className="kundenportal-hero">
@@ -326,28 +286,13 @@ export default function KundenportalPage({
   </div>
 </section>
         </main>
-        <footer className="kundenportal-footer">
-  <div className="kundenportal-footer-content">
-    <div>
-      <strong>MalerSaaS</strong>
-      <p>Digitale Software für moderne Malerbetriebe.</p>
-    </div>
-
-    <div className="kundenportal-footer-links">
-      <button type="button" onClick={onOpenImpressum}>
-        Impressum
-      </button>
-
-      <button type="button" onClick={onOpenDatenschutz}>
-        Datenschutz
-      </button>
-
-      <button type="button" onClick={onOpenAgb}>
-        AGB
-      </button>
-    </div>
-  </div>
-</footer>
+        <SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
       </div>
     </>
   );

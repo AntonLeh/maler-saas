@@ -1,9 +1,11 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./LeistungsbewertungPage.css";
 
 type LeistungsbewertungPageProps = {
   onRegister: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
@@ -11,11 +13,11 @@ type LeistungsbewertungPageProps = {
 
 export default function LeistungsbewertungPage({
   onRegister,
+  onLogin,
   onOpenImpressum,
   onOpenDatenschutz,
   onOpenAgb,
 }: LeistungsbewertungPageProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -25,49 +27,7 @@ export default function LeistungsbewertungPage({
       />
 
       <div className="leistungsbewertung-page">
-        <header className="leistungsbewertung-header">
-  <a href="/" className="leistungsbewertung-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="leistungsbewertung-logo-image"
-    />
-
-    <div className="leistungsbewertung-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="leistungsbewertung-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`leistungsbewertung-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a href="/" onClick={() => setMobileMenuOpen(false)}>
-      Startseite
-    </a>
-
-    <a
-      href="/maler-software"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Software
-    </a>
-  </nav>
-</header>
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
 
         <main>
           <section className="leistungsbewertung-hero">
@@ -324,28 +284,13 @@ export default function LeistungsbewertungPage({
   </div>
 </section>
         </main>
-        <footer className="leistungsbewertung-footer">
-  <div className="leistungsbewertung-footer-content">
-    <div>
-      <strong>MalerSaaS</strong>
-      <p>Digitale Software für moderne Malerbetriebe.</p>
-    </div>
-
-    <div className="leistungsbewertung-footer-links">
-      <button type="button" onClick={onOpenImpressum}>
-        Impressum
-      </button>
-
-      <button type="button" onClick={onOpenDatenschutz}>
-        Datenschutz
-      </button>
-
-      <button type="button" onClick={onOpenAgb}>
-        AGB
-      </button>
-    </div>
-  </div>
-</footer>
+        <SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
       </div>
     </>
   );

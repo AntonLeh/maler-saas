@@ -119,15 +119,32 @@ code {
 
 /* Öffentliche Website: Seitenränder im warmen Sandweiß (wie die Startseite) */
 body:has(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page, .fk-page, .mt-page, .legal-page) {
-  background: #fbf8f3;
+  background: #ecece5;
 }
 
-/* Öffentliche Produktseiten: Karten auf Sandweiß deutlich sichtbar */
+/* Öffentliche Produktseiten: Karten auf Naturweiß deutlich sichtbar */
 :is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-grid"] > article,
 :is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-steps"] > article,
 :is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-points"] > article,
 :is(.maler-software-page) .maler-software-benefit-list > article {
   background: #ffffff;
-  border: 1px solid #e7dccb;
-  box-shadow: 0 10px 30px rgba(120, 90, 50, 0.1);
+  border: 1px solid #dcdfd5;
+  box-shadow: 0 14px 34px rgba(15, 32, 50, 0.1), 0 2px 4px rgba(15, 32, 50, 0.05);
+}
+
+/* Produktseiten wie Startseite: fette Überschrift, Abzeichen in Stahlblau, am Computer linksbündig (21.11.2026) */
+:is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-hero"] h1 {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: #142333;
+}
+:is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-badge"] {
+  background: rgba(35, 67, 97, 0.08);
+  color: #234361;
+  border: 1px solid rgba(35, 67, 97, 0.18);
+}
+@media (min-width: 901px) {
+  :is(.maler-software-page, .aufmass-angebote-page, .auftragsverwaltung-page, .kundenportal-page, .leistungsbewertung-page, .materialverwaltung-page, .rechnungen-page, .zeiterfassung-page) [class$="-hero-content"] {
+    text-align: left;
+  }
 }

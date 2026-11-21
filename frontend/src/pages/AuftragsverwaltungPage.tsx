@@ -1,9 +1,11 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./AuftragsverwaltungPage.css";
 
 type AuftragsverwaltungPageProps = {
   onRegister: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
@@ -11,11 +13,11 @@ type AuftragsverwaltungPageProps = {
 
 export default function AuftragsverwaltungPage({
   onRegister,
+  onLogin,
   onOpenImpressum,
   onOpenDatenschutz,
   onOpenAgb,
 }: AuftragsverwaltungPageProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -25,49 +27,7 @@ export default function AuftragsverwaltungPage({
       />
 
       <div className="auftragsverwaltung-page">
-  <header className="auftragsverwaltung-header">
-  <a href="/" className="auftragsverwaltung-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="auftragsverwaltung-logo-image"
-    />
-
-    <div className="auftragsverwaltung-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="auftragsverwaltung-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`auftragsverwaltung-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a href="/" onClick={() => setMobileMenuOpen(false)}>
-      Startseite
-    </a>
-
-    <a
-      href="/maler-software"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Software
-    </a>
-  </nav>
-</header>
+  <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
 
   <main>
   <section className="auftragsverwaltung-hero">
@@ -287,28 +247,13 @@ export default function AuftragsverwaltungPage({
 
 </main>
 
-<footer className="auftragsverwaltung-footer">
-  <div className="auftragsverwaltung-footer-inner">
-    <div>
-      <strong>MalerSaaS</strong>
-      <p>Digitale Software für moderne Malerbetriebe.</p>
-    </div>
-
-    <nav className="auftragsverwaltung-footer-links">
-      <button type="button" onClick={onOpenImpressum}>
-        Impressum
-      </button>
-
-      <button type="button" onClick={onOpenDatenschutz}>
-        Datenschutz
-      </button>
-
-      <button type="button" onClick={onOpenAgb}>
-        AGB
-      </button>
-    </nav>
-  </div>
-</footer>
+<SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
 
 </div>
     </>

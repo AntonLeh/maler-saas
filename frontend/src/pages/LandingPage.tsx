@@ -3,6 +3,8 @@ import { ArrowRight, Calendar, Check, FileText, Layers, Megaphone, MessageCircle
 import type { LucideIcon } from "lucide-react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import BeforeAfter from "../components/BeforeAfter";
 import { euro, firstYearMonthly, monthlyEquivalent, SEAT_MONTHLY } from "../lib/prices";
 
@@ -310,74 +312,14 @@ function useScrollToHash() {
 }
 
 export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOpenDatenschutz, onOpenAgb }: LandingPageProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [yearly, setYearly] = useState(true);
   useFaqSchema();
   useScrollToHash();
-  const close = () => setMobileMenuOpen(false);
 
   return (
-    <div className="landing-page">
-      <header className="landing-header lp3-header">
-        <a href="/" className="landing-logo" style={{ textDecoration: "none", color: "inherit" }}>
-          <img src="/images/logo.webp" alt="MalerSaaS Logo" className="landing-logo-image" width="56" height="56" />
-          <div className="landing-logo-text">
-            <strong>MalerSaaS</strong>
-            <span>Software für Malerbetriebe</span>
-          </div>
-        </a>
-
-        <button
-          type="button"
-          className="landing-menu-toggle"
-          aria-label="Menü öffnen"
-          aria-expanded={mobileMenuOpen}
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-
-        <nav className={`landing-nav ${mobileMenuOpen ? "is-open" : ""}`}>
-          <a href="#funktionen" onClick={close}>
-            Funktionen
-          </a>
-          <a href="#fuer-wen" onClick={close}>
-            Für wen
-          </a>
-          <a href="#preise" onClick={close}>
-            Preise
-          </a>
-          <a href="#fragen" onClick={close}>
-            Fragen
-          </a>
-          <a href="#kontakt" onClick={close}>
-            Kontakt
-          </a>
-          <button
-            type="button"
-            className="landing-login-btn"
-            onClick={() => {
-              close();
-              onLogin();
-            }}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            className="lp3-nav-cta"
-            onClick={() => {
-              close();
-              onRegister();
-            }}
-          >
-            14 Tage kostenlos testen
-          </button>
-        </nav>
-      </header>
+    <div className="landing-page is-home">
+      <SiteHeader home onLogin={onLogin} onRegister={onRegister} />
 
       <main>
         {/* ---------- Titel ---------- */}
@@ -871,77 +813,14 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
         </section>
       </main>
 
-      <footer className="landing-footer lp3-footer">
-        <div className="lp3-footer-inner">
-          <div className="lp3-footer-brand">
-            <a href="/" className="lp3-footer-logo">
-              <img src="/images/logo.webp" alt="" width="44" height="44" loading="lazy" />
-              <span>
-                <strong>MalerSaaS</strong>
-                <small>Software für Malerbetriebe</small>
-              </span>
-            </a>
-            <p>Aufmaß, Angebote, Aufträge, Zeiterfassung, Rechnungen und Buchhaltung in einer App – für Malerbetriebe in Deutschland, Österreich und der Schweiz.</p>
-            <a className="lp3-footer-mail" href="mailto:info@maler-saas.com">
-              info@maler-saas.com
-            </a>
-            <button type="button" className="lp3-footer-cta" onClick={onRegister}>
-              14 Tage kostenlos testen <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          </div>
-
-          <nav className="lp3-footer-col" aria-label="Funktionen">
-            <b>Funktionen</b>
-            <a href="/maler-software">Maler-Software</a>
-            <a href="/aufmass-angebote">Aufmaß & Angebote</a>
-            <a href="/auftragsverwaltung">Auftragsverwaltung</a>
-            <a href="/zeiterfassung">Zeiterfassung</a>
-            <a href="/rechnungen">Rechnungen & E-Rechnung</a>
-            <a href="/materialverwaltung">Materialverwaltung</a>
-            <a href="/kundenportal">Kundenportal</a>
-            <a href="/buchhaltung">Buchhaltung</a>
-          </nav>
-
-          <nav className="lp3-footer-col" aria-label="Mehr">
-            <b>Mehr</b>
-            <a href="/ki-funktionen">KI-Funktionen</a>
-            <a href="/ki-telefon">KI-Telefon</a>
-            <a href="/werbung-mit-ki">Werbung mit KI</a>
-            <a href="/firmen-website">Firmen-Website</a>
-            <a href="/auswertungen">Auswertungen</a>
-            <a href="/leistungsbewertung">Leistungsbewertung</a>
-            <a href="/fachkraefte-finden">Fachkräfte finden</a>
-          </nav>
-
-          <nav className="lp3-footer-col" aria-label="Service">
-            <b>Service</b>
-            <a href="/ratgeber">Ratgeber</a>
-            <a href="#preise">Preise</a>
-            <a href="#fragen">Häufige Fragen</a>
-            <a href="#kontakt">Kontakt</a>
-            <button type="button" onClick={onLogin}>
-              Login
-            </button>
-            <a href="/fachkraefte">Arbeit gesucht? Fachkräfte-Pool</a>
-          </nav>
-        </div>
-
-        <div className="lp3-footer-bottom">
-          <span>© {new Date().getFullYear()} MalerSaaS · Server in der EU</span>
-          <div className="landing-footer-links lp3-footer-legal">
-            <button type="button" onClick={onOpenImpressum}>
-              Impressum
-            </button>
-            <button type="button" onClick={onOpenDatenschutz}>
-              Datenschutz
-            </button>
-            <button type="button" onClick={onOpenAgb}>
-              AGB
-            </button>
-            <a href="/avv">AVV</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        home
+        onRegister={onRegister}
+        onLogin={onLogin}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
     </div>
   );
 }

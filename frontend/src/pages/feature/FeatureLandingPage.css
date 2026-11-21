@@ -72,3 +72,11 @@
 /* Vorher/Nachher-Fotos statt Übersichtsbox */
 .fp-ba { width: min(440px, 100%); display: grid; gap: 14px; }
 .fp-ba .lp-ba { border-radius: 22px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25); }
+
+/* Neuer Look wie Startseite (21.11.2026) */
+.fp-crumbs a { color: var(--site-steel); }
+.fp-plan { background: rgba(35, 67, 97, 0.08); color: var(--site-steel); border: 1px solid rgba(35, 67, 97, 0.14); }
+.fp-visual-card { background: var(--site-dark); box-shadow: 0 24px 60px rgba(15, 32, 50, 0.28); }
+.landing-page .fp-grid article { border: 1px solid var(--site-line); box-shadow: var(--site-card-shadow); }
+.fp-tile-plan { color: var(--site-steel); background: rgba(35, 67, 97, 0.08); border-color: rgba(35, 67, 97, 0.18); }
+.fp-hero, .fp-hero .landing-hero-content { text-align: left; }

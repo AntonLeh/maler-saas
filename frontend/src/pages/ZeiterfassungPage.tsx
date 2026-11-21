@@ -1,9 +1,11 @@
-import { useState } from "react";
 import SeoMeta from "../components/SeoMeta";
+import SiteHeader from "../components/site/SiteHeader";
+import SiteFooter from "../components/site/SiteFooter";
 import "./ZeiterfassungPage.css";
 
 type ZeiterfassungPageProps = {
   onRegister: () => void;
+  onLogin?: () => void;
   onOpenImpressum: () => void;
   onOpenDatenschutz: () => void;
   onOpenAgb: () => void;
@@ -11,11 +13,11 @@ type ZeiterfassungPageProps = {
 
 export default function ZeiterfassungPage({
   onRegister,
+  onLogin,
   onOpenImpressum,
   onOpenDatenschutz,
   onOpenAgb,
 }: ZeiterfassungPageProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
       <SeoMeta
@@ -25,49 +27,7 @@ export default function ZeiterfassungPage({
       />
 
       <div className="zeiterfassung-page">
-        <header className="zeiterfassung-header">
-  <a href="/" className="zeiterfassung-logo">
-    <img
-      src="/images/logo.png"
-      alt="MalerSaaS"
-      className="zeiterfassung-logo-image"
-    />
-
-    <div className="zeiterfassung-logo-text">
-      <strong>MalerSaaS</strong>
-      <span>Digitale Komplettlösung</span>
-    </div>
-  </a>
-
-  <button
-    type="button"
-    className="zeiterfassung-menu-toggle"
-    aria-label="Menü öffnen"
-    aria-expanded={mobileMenuOpen}
-    onClick={() => setMobileMenuOpen((prev) => !prev)}
-  >
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-
-  <nav
-    className={`zeiterfassung-nav ${
-      mobileMenuOpen ? "is-open" : ""
-    }`}
-  >
-    <a href="/" onClick={() => setMobileMenuOpen(false)}>
-      Startseite
-    </a>
-
-    <a
-      href="/maler-software"
-      onClick={() => setMobileMenuOpen(false)}
-    >
-      Software
-    </a>
-  </nav>
-</header>
+        <SiteHeader onLogin={onLogin ?? (() => (window.location.href = "/"))} onRegister={onRegister} />
 
         <main>
           <section className="zeiterfassung-hero">
@@ -335,28 +295,13 @@ export default function ZeiterfassungPage({
 </section>
         </main>
 
-<footer className="zeiterfassung-footer">
-  <div className="zeiterfassung-footer-inner">
-    <div>
-      <strong>MalerSaaS</strong>
-      <p>Digitale Software für moderne Malerbetriebe.</p>
-    </div>
-
-    <nav className="zeiterfassung-footer-links">
-      <button type="button" onClick={onOpenImpressum}>
-        Impressum
-      </button>
-
-      <button type="button" onClick={onOpenDatenschutz}>
-        Datenschutz
-      </button>
-
-      <button type="button" onClick={onOpenAgb}>
-        AGB
-      </button>
-    </nav>
-  </div>
-</footer>
+<SiteFooter
+        onRegister={onRegister}
+        onLogin={onLogin ?? (() => (window.location.href = "/"))}
+        onOpenImpressum={onOpenImpressum}
+        onOpenDatenschutz={onOpenDatenschutz}
+        onOpenAgb={onOpenAgb}
+      />
 
       </div>
     </>

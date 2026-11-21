@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import SeoMeta from "../../components/SeoMeta";
 import BeforeAfter from "../../components/BeforeAfter";
+import SiteHeader from "../../components/site/SiteHeader";
+import SiteFooter from "../../components/site/SiteFooter";
 import type { FeaturePageData } from "./featurePages";
 import "../LandingPage.css";
 import "./FeatureLandingPage.css";
@@ -23,7 +25,6 @@ export default function FeatureLandingPage({
   onOpenDatenschutz,
   onOpenAgb,
 }: Props) {
-  const [menu, setMenu] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // FAQ als strukturierte Daten für Google
@@ -54,49 +55,7 @@ export default function FeatureLandingPage({
         canonical={`https://maler-saas.com${page.path}`}
       />
       <div className="landing-page">
-        <header className="landing-header">
-          <a
-            href="/"
-            className="landing-logo"
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
-            <img
-              src="/images/logo.webp"
-              alt="MalerSaaS Logo"
-              className="landing-logo-image"
-              width="56"
-              height="56"
-            />
-            <div className="landing-logo-text">
-              <strong>MalerSaaS</strong>
-              <span>Software für Malerbetriebe</span>
-            </div>
-          </a>
-          <button
-            type="button"
-            className="landing-menu-toggle"
-            aria-label="Menü öffnen"
-            aria-expanded={menu}
-            onClick={() => setMenu((m) => !m)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          <nav className={`landing-nav ${menu ? "is-open" : ""}`}>
-            <a href="/">Startseite</a>
-            <a href="/#funktionen">Funktionen</a>
-            <a href="/#preise">Preise</a>
-            <a href="/#kontakt">Kontakt</a>
-            <button
-              type="button"
-              className="landing-login-btn"
-              onClick={onLogin}
-            >
-              Login
-            </button>
-          </nav>
-        </header>
+        <SiteHeader onLogin={onLogin} onRegister={onRegister} />
 
         <main>
           <nav className="fp-crumbs" aria-label="Brotkrumen">
@@ -260,26 +219,13 @@ export default function FeatureLandingPage({
           </section>
         </main>
 
-        <footer className="landing-footer">
-          <div>
-            <strong>MalerSaaS</strong>
-            <span>Software für Malerbetriebe · info@maler-saas.com</span>
-          </div>
-          <div className="landing-footer-links">
-            <a href="/">Startseite</a>
-            <a href="/maler-software">Funktionen</a>
-            <a href="/ki-funktionen">KI-Funktionen</a>
-            <button type="button" onClick={onOpenImpressum}>
-              Impressum
-            </button>
-            <button type="button" onClick={onOpenDatenschutz}>
-              Datenschutz
-            </button>
-            <button type="button" onClick={onOpenAgb}>
-              AGB
-            </button>
-          </div>
-        </footer>
+        <SiteFooter
+          onRegister={onRegister}
+          onLogin={onLogin}
+          onOpenImpressum={onOpenImpressum}
+          onOpenDatenschutz={onOpenDatenschutz}
+          onOpenAgb={onOpenAgb}
+        />
       </div>
     </>
   );

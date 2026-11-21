@@ -1,6 +1,6 @@
 .maler-software-page {
   min-height: 100vh;
-  background: #fbf8f3;
+  background: #ecece5;
   color: #0f172a;
 }
 
@@ -14,8 +14,8 @@
   margin: 0 auto;
   padding: 96px max(24px, calc((100% - 1180px) / 2)) 56px;
   background:
-    radial-gradient(circle at 85% 15%, rgba(214, 170, 110, 0.22), transparent 32%),
-    linear-gradient(135deg, #fbf8f3 0%, #f5ede2 100%);
+    radial-gradient(circle at 85% 15%, rgba(56, 189, 248, 0.11), transparent 32%),
+    linear-gradient(135deg, #ecece5 0%, #e6e6de 100%);
 }
 
 .maler-software-hero-visual {
@@ -44,10 +44,10 @@
   display: inline-block;
   margin: 0 0 22px;
   padding: 8px 14px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(35, 67, 97, 0.18);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
-  color: #1e40af;
+  color: #1e3a54;
   font-size: 14px;
   font-weight: 700;
 }
@@ -79,12 +79,12 @@
   border: 0;
   border-radius: 12px;
   padding: 15px 24px;
-  background: #1d4ed8;
+  background: #234361;
   color: #ffffff;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 10px 28px rgba(35, 67, 97, 0.2);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -92,7 +92,7 @@
 
 .maler-software-primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 34px rgba(37, 99, 235, 0.26);
+  box-shadow: 0 14px 34px rgba(35, 67, 97, 0.26);
 }
 
 .maler-software-trust-row {
@@ -190,7 +190,7 @@
 
 .maler-software-features {
   padding: 88px 24px;
-  background: #f7f1e8;
+  background: #f0f0ea;
 }
 
 .maler-software-features h2 {
@@ -218,7 +218,7 @@
 
 .maler-software-feature-grid article {
   padding: 30px;
-  border: 1px solid #eadfce;
+  border: 1px solid #dcdfd5;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
@@ -297,8 +297,8 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #f3e8d8;
-  color: #1d4ed8;
+  background: #e6e6de;
+  color: #234361;
   font-size: 16px;
   font-weight: 800;
 }
@@ -338,7 +338,7 @@
 
 .maler-software-target {
   padding: 88px 24px;
-  background: #f7f1e8;
+  background: #f0f0ea;
 }
 
 .maler-software-target h2 {
@@ -366,7 +366,7 @@
 
 .maler-software-target-grid article {
   padding: 30px;
-  border: 1px solid #eadfce;
+  border: 1px solid #dcdfd5;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
@@ -428,14 +428,14 @@
       rgba(255, 255, 255, 0.12),
       transparent 30%
     ),
-    linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    linear-gradient(135deg, #1e3a54 0%, #234361 100%);
   text-align: center;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14);
 }
 
 .maler-software-cta-label {
   margin: 0 0 14px;
-  color: #dbeafe;
+  color: #dfe7ef;
   font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
@@ -464,7 +464,7 @@
   border-radius: 12px;
   padding: 16px 26px;
   background: #ffffff;
-  color: #1e40af;
+  color: #1e3a54;
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -481,7 +481,7 @@
 
 .maler-software-cta-note {
   margin: 18px 0 0;
-  color: #dbeafe;
+  color: #dfe7ef;
   font-size: 14px;
 }
 
@@ -569,7 +569,7 @@
 }
 
 .maler-software-nav a:hover {
-  color: #1d4ed8;
+  color: #234361;
 }
 
 .maler-software-login-btn {
@@ -577,7 +577,7 @@
   border-radius: 10px;
   padding: 10px 18px;
   background: #ffffff;
-  color: #1e40af;
+  color: #1e3a54;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -588,8 +588,8 @@
 }
 
 .maler-software-login-btn:hover {
-  border-color: #1d4ed8;
-  background: #f7f1e8;
+  border-color: #234361;
+  background: #f0f0ea;
 }
 
 .maler-software-menu-toggle {
@@ -636,7 +636,7 @@
     padding: 8px;
 
     background: #ffffff;
-    border: 1px solid #eadfce;
+    border: 1px solid #dcdfd5;
     border-radius: 18px;
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
   }
@@ -701,7 +701,7 @@
   padding: 18px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 24px;
-  background: #fbf8f3;
+  background: #ecece5;
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1);
 }
 
@@ -791,7 +791,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 14px;
-  color: #1d4ed8;
+  color: #234361;
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
@@ -801,20 +801,20 @@
 }
 
 .maler-software-feature-link:hover {
-  color: #1e3a8a;
+  color: #1e3a54;
   transform: translateX(3px);
   text-decoration: none;
 }
 
 .maler-software-feature-link:visited {
-  color: #1d4ed8;
+  color: #234361;
 }
 /* Häufige Fragen */
 .maler-software-faq details { max-width: 860px; margin: 10px auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 18px; text-align: left; }
 .maler-software-faq summary { font-weight: 700; cursor: pointer; color: #0f172a; font-size: 1.02rem; }
 .maler-software-faq details p { margin: 10px 0 0; color: #475569; line-height: 1.6; }
 .maler-software-faq-more { text-align: center; margin-top: 18px; }
-.maler-software-faq-more a { color: #1d4ed8; font-weight: 700; }
+.maler-software-faq-more a { color: #234361; font-weight: 700; }
 
 /* ---------- Mehr als ein Malerprogramm ---------- */
 .maler-software-more {
@@ -851,7 +851,7 @@
 /* ---------- Checkliste ---------- */
 .maler-software-checklist {
   padding: 88px 24px;
-  background: #f7f1e8;
+  background: #f0f0ea;
 }
 .maler-software-checklist-list {
   list-style: none;
@@ -868,7 +868,7 @@
   position: relative;
   padding: 22px 24px 22px 74px;
   background: #ffffff;
-  border: 1px solid #eadfce;
+  border: 1px solid #dcdfd5;
   border-radius: 18px;
 }
 .maler-software-checklist-list li::before {
@@ -879,7 +879,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #1d4ed8;
+  background: #234361;
   color: #ffffff;
   font-weight: 800;
   display: grid;
@@ -910,7 +910,7 @@
   text-align: center;
 }
 .maler-software-dach-note a {
-  color: #1d4ed8;
+  color: #234361;
   font-weight: 600;
 }
 
