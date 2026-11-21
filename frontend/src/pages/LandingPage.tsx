@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Calendar, Check, FileText, Layers, Package, Smartphone, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Calendar, Check, FileText, Layers, Megaphone, MessageCircle, Mic, Package, PenLine, PhoneCall, Receipt, ScanLine, ShieldCheck, Smartphone, Sparkles, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import "./LandingPage.css";
 import ContactForm from "../components/ContactForm";
 import BeforeAfter from "../components/BeforeAfter";
@@ -176,14 +177,14 @@ const showcase: { label: string; title: string; text: string; points: string[]; 
 ];
 
 /** Die 7 KI-Funktionen (siehe /ki-funktionen) */
-const aiTasks: { icon: string; title: string; text: string; plan: string }[] = [
-  { icon: "🎤", title: "Aufmaß per Sprache", text: "Räume und Maße ansagen statt tippen.", plan: "Alle Tarife" },
-  { icon: "📷", title: "Lieferscheine einlesen", text: "Foto genügt – Positionen landen im Lager.", plan: "Ab Business" },
-  { icon: "🧾", title: "Belege erfassen", text: "Betrag, Datum und Steuersatz automatisch.", plan: "Ab Business" },
-  { icon: "📞", title: "KI-Telefon", text: "Nimmt Anrufe an, wenn niemand abhebt.", plan: "Ab Business" },
-  { icon: "✨", title: "Werbung aus Fotos", text: "Beiträge für Website, Instagram & Co.", plan: "Enterprise" },
-  { icon: "✍️", title: "Website-Texte", text: "Aus Stichworten werden Textvorschläge.", plan: "Enterprise" },
-  { icon: "💬", title: "Fragen beantworten", text: "Hilfe-Chat in der App, rund um die Uhr.", plan: "Alle Tarife" },
+const aiTasks: { icon: LucideIcon; title: string; text: string; plan: string }[] = [
+  { icon: Mic, title: "Aufmaß per Sprache", text: "Räume und Maße ansagen statt tippen.", plan: "Alle Tarife" },
+  { icon: ScanLine, title: "Lieferscheine einlesen", text: "Foto genügt – Positionen landen im Lager.", plan: "Ab Business" },
+  { icon: Receipt, title: "Belege erfassen", text: "Betrag, Datum und Steuersatz automatisch.", plan: "Ab Business" },
+  { icon: PhoneCall, title: "KI-Telefon", text: "Nimmt Anrufe an, wenn niemand abhebt.", plan: "Ab Business" },
+  { icon: Megaphone, title: "Werbung aus Fotos", text: "Beiträge für Website, Instagram & Co.", plan: "Enterprise" },
+  { icon: PenLine, title: "Website-Texte", text: "Aus Stichworten werden Textvorschläge.", plan: "Enterprise" },
+  { icon: MessageCircle, title: "Fragen beantworten", text: "Hilfe-Chat in der App, rund um die Uhr.", plan: "Alle Tarife" },
 ];
 
 /** Tarife – Preise netto pro Monat */
@@ -490,29 +491,32 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
         </section>
 
         {/* ---------- KI ---------- */}
-        <section className="landing-section lp2-ai" aria-labelledby="lp2-ai-title">
-          <div className="lp2-ai-box">
-            <div className="lp2-ai-head">
-              <p className="landing-section-label lp-label-light">Künstliche Intelligenz</p>
-              <h2 id="lp2-ai-title">7 Aufgaben, die die KI für Sie übernimmt.</h2>
-              <p>Die KI macht Vorschläge – Sie prüfen und entscheiden. Gespeichert oder veröffentlicht wird nur, was Sie freigeben.</p>
-            </div>
-            <ul className="lp2-ai-grid">
-              {aiTasks.map((t) => (
-                <li key={t.title}>
-                  <span className="lp2-ai-icon" aria-hidden="true">
-                    {t.icon}
-                  </span>
-                  <b>{t.title}</b>
-                  <span>{t.text}</span>
-                  <small>{t.plan}</small>
-                </li>
-              ))}
-            </ul>
-            <a className="lp2-ai-link" href="/ki-funktionen">
-              Alle KI-Funktionen im Überblick →
-            </a>
+        <section className="landing-section lp2-ai lp3-ai" aria-labelledby="lp2-ai-title">
+          <div className="lp3-ai-head">
+            <p className="landing-section-label">Künstliche Intelligenz</p>
+            <h2 id="lp2-ai-title">7 Aufgaben, die die KI für Sie übernimmt.</h2>
           </div>
+          <ul className="lp3-ai-grid">
+            <li className="lp3-ai-lead">
+              <span className="lp3-ai-icon is-light" aria-hidden="true">
+                <ShieldCheck size={20} />
+              </span>
+              <p>Die KI macht Vorschläge – Sie prüfen und entscheiden. Gespeichert oder veröffentlicht wird nur, was Sie freigeben.</p>
+              <a href="/ki-funktionen">
+                Alle KI-Funktionen im Überblick <ArrowRight size={16} aria-hidden="true" />
+              </a>
+            </li>
+            {aiTasks.map((t) => (
+              <li key={t.title} className="lp3-ai-card">
+                <span className="lp3-ai-icon" aria-hidden="true">
+                  <t.icon size={20} />
+                </span>
+                <b>{t.title}</b>
+                <span>{t.text}</span>
+                <small className={t.plan === "Alle Tarife" ? "is-all" : t.plan === "Enterprise" ? "is-ent" : "is-biz"}>{t.plan}</small>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* ---------- Kennen Sie das? ---------- */}
