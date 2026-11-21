@@ -80,3 +80,14 @@
 .landing-page .fp-grid article { border: 1px solid var(--site-line); box-shadow: var(--site-card-shadow); }
 .fp-tile-plan { color: var(--site-steel); background: rgba(35, 67, 97, 0.08); border-color: rgba(35, 67, 97, 0.18); }
 .fp-hero, .fp-hero .landing-hero-content { text-align: left; }
+/* Test-Kasten rechts im „Warum sich das lohnt“-Bereich (21.11.2026) */
+.fp-cta-box {
+  align-self: center;
+  text-align: left;
+  padding: 26px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.fp-cta-box p { margin: 0; color: #e2e8f0; font-size: 17px; line-height: 1.55; }
+.fp-cta-box { gap: 18px; }

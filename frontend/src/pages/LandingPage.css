@@ -2120,3 +2120,6 @@ body:has(.landing-page) { background: #ecece5; }
 .landing-page .lp2-plan-badge { background: #234361; }
 .landing-page .fp-grid article { text-align: left; }
 .landing-page { --lp3-steel: #234361; --lp3-steel-d: #183047; }
+/* Weißer Knopf in den dunklen Abschluss-Kästen (darf nicht vom Stahlblau-Knopf überschrieben werden) */
+.landing-page .landing-primary-btn.lp-final-btn { background: #fff; color: #142333; box-shadow: 0 14px 30px rgba(2, 6, 23, 0.3); }
+.landing-page .landing-primary-btn.lp-final-btn:hover { background: #eef2f6; }
