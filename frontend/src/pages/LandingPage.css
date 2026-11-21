@@ -2102,3 +2102,6 @@ body:has(.landing-page) { background: #ecece5; }
   .lp3-footer-inner { gap: 26px 18px; }
   .lp3-footer-bottom { flex-direction: column; align-items: flex-start; }
 }
+/* Rechtliche Links unten: alle gleich (Unterstrich beim Drüberfahren) */
+.lp3-footer .lp3-footer-legal a:hover, .lp3-footer .lp3-footer-legal button:hover,
+.lp3-footer .lp3-footer-legal a:focus-visible, .lp3-footer .lp3-footer-legal button:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
