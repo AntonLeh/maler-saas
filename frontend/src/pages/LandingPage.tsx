@@ -871,28 +871,75 @@ export default function LandingPage({ onLogin, onRegister, onOpenImpressum, onOp
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <div>
-          <strong>MalerSaaS</strong>
-          <span>Software für Malerbetriebe · info@maler-saas.com</span>
+      <footer className="landing-footer lp3-footer">
+        <div className="lp3-footer-inner">
+          <div className="lp3-footer-brand">
+            <a href="/" className="lp3-footer-logo">
+              <img src="/images/logo.webp" alt="" width="44" height="44" loading="lazy" />
+              <span>
+                <strong>MalerSaaS</strong>
+                <small>Software für Malerbetriebe</small>
+              </span>
+            </a>
+            <p>Aufmaß, Angebote, Aufträge, Zeiterfassung, Rechnungen und Buchhaltung in einer App – für Malerbetriebe in Deutschland, Österreich und der Schweiz.</p>
+            <a className="lp3-footer-mail" href="mailto:info@maler-saas.com">
+              info@maler-saas.com
+            </a>
+            <button type="button" className="lp3-footer-cta" onClick={onRegister}>
+              14 Tage kostenlos testen <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          <nav className="lp3-footer-col" aria-label="Funktionen">
+            <b>Funktionen</b>
+            <a href="/maler-software">Maler-Software</a>
+            <a href="/aufmass-angebote">Aufmaß & Angebote</a>
+            <a href="/auftragsverwaltung">Auftragsverwaltung</a>
+            <a href="/zeiterfassung">Zeiterfassung</a>
+            <a href="/rechnungen">Rechnungen & E-Rechnung</a>
+            <a href="/materialverwaltung">Materialverwaltung</a>
+            <a href="/kundenportal">Kundenportal</a>
+            <a href="/buchhaltung">Buchhaltung</a>
+          </nav>
+
+          <nav className="lp3-footer-col" aria-label="Mehr">
+            <b>Mehr</b>
+            <a href="/ki-funktionen">KI-Funktionen</a>
+            <a href="/ki-telefon">KI-Telefon</a>
+            <a href="/werbung-mit-ki">Werbung mit KI</a>
+            <a href="/firmen-website">Firmen-Website</a>
+            <a href="/auswertungen">Auswertungen</a>
+            <a href="/leistungsbewertung">Leistungsbewertung</a>
+            <a href="/fachkraefte-finden">Fachkräfte finden</a>
+          </nav>
+
+          <nav className="lp3-footer-col" aria-label="Service">
+            <b>Service</b>
+            <a href="/ratgeber">Ratgeber</a>
+            <a href="#preise">Preise</a>
+            <a href="#fragen">Häufige Fragen</a>
+            <a href="#kontakt">Kontakt</a>
+            <button type="button" onClick={onLogin}>
+              Login
+            </button>
+            <a href="/fachkraefte">Arbeit gesucht? Fachkräfte-Pool</a>
+          </nav>
         </div>
 
-        <div className="landing-footer-links">
-          <a href="/maler-software">Maler-Software</a>
-          <a href="/rechnungen">Rechnungen</a>
-          <a href="/zeiterfassung">Zeiterfassung</a>
-          <a href="/ratgeber">Ratgeber</a>
-          <button type="button" onClick={onOpenImpressum}>
-            Impressum
-          </button>
-          <button type="button" onClick={onOpenDatenschutz}>
-            Datenschutz
-          </button>
-          <button type="button" onClick={onOpenAgb}>
-            AGB
-          </button>
-          <a href="/avv">AVV</a>
-          <a href="/fachkraefte">Arbeit gesucht? Fachkräfte-Pool</a>
+        <div className="lp3-footer-bottom">
+          <span>© {new Date().getFullYear()} MalerSaaS · Server in der EU</span>
+          <div className="landing-footer-links lp3-footer-legal">
+            <button type="button" onClick={onOpenImpressum}>
+              Impressum
+            </button>
+            <button type="button" onClick={onOpenDatenschutz}>
+              Datenschutz
+            </button>
+            <button type="button" onClick={onOpenAgb}>
+              AGB
+            </button>
+            <a href="/avv">AVV</a>
+          </div>
         </div>
       </footer>
     </div>
